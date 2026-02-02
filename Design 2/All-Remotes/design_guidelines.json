@@ -1,0 +1,130 @@
+{
+  "identity": {
+    "name": "All Remotes",
+    "persona": "The Performance Pro",
+    "tone": "Professional, Trustworthy, Fast, Technical",
+    "description": "Australia's leading supplier of automotive and garage remotes. Precision tools for locksmiths."
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Chivo, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "bold": 700,
+      "black": 900
+    },
+    "sizes": {
+      "h1": "text-5xl md:text-6xl tracking-tight font-black",
+      "h2": "text-4xl md:text-5xl tracking-tight font-bold",
+      "h3": "text-2xl md:text-3xl font-bold",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm font-medium tracking-wide uppercase"
+    }
+  },
+  "colors": {
+    "primary": {
+      "DEFAULT": "#D90429",
+      "foreground": "#FFFFFF",
+      "hover": "#EF233C"
+    },
+    "secondary": {
+      "DEFAULT": "#2B2D42",
+      "foreground": "#FFFFFF"
+    },
+    "background": {
+      "DEFAULT": "#F8F9FA",
+      "paper": "#FFFFFF",
+      "dark": "#1A1A1A"
+    },
+    "text": {
+      "primary": "#1A1A1A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8"
+    },
+    "border": {
+      "DEFAULT": "#E2E8F0",
+      "focus": "#D90429"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "visual_enhancers": {
+    "radius": "rounded-sm",
+    "shadows": {
+      "card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "hover": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05)",
+      "glow": "0 0 15px rgba(217, 4, 41, 0.3)"
+    },
+    "borders": "border border-border",
+    "glass": "bg-white/80 backdrop-blur-md border-white/20"
+  },
+  "layout": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_system": {
+      "bento": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4",
+      "catalog": "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "detail": "grid grid-cols-1 lg:grid-cols-2 gap-12"
+    },
+    "spacing": {
+      "section": "py-16 md:py-24",
+      "element": "mb-6"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 rounded-sm font-bold uppercase tracking-wide transition-all duration-200 shadow-sm hover:shadow-md",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/90 h-11 px-8 rounded-sm font-medium",
+      "outline": "border-2 border-primary text-primary hover:bg-primary hover:text-white h-11 px-8 rounded-sm font-bold uppercase tracking-wide transition-all"
+    },
+    "cards": {
+      "product": "group relative bg-white border border-border rounded-sm overflow-hidden hover:shadow-hover transition-all duration-300",
+      "feature": "bg-background-paper p-8 border border-border rounded-sm hover:border-primary/50 transition-colors"
+    },
+    "inputs": {
+      "default": "flex h-11 w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    }
+  },
+  "image_urls": {
+    "hero": {
+      "main": "https://images.unsplash.com/photo-1761264889404-a194af20ae90",
+      "alt": "Premium car keys on leather seat"
+    },
+    "categories": {
+      "automotive": "https://images.unsplash.com/photo-1745242666792-6cd30907f7ff",
+      "garage": "https://images.unsplash.com/photo-1675747158954-4a32e28812c0",
+      "machinery": "https://images.unsplash.com/photo-1749477417968-2bc986bc6a42",
+      "tools": "https://images.unsplash.com/photo-1759419282068-eb664e0f0a17"
+    },
+    "placeholders": {
+      "product": "https://images.unsplash.com/photo-1710006548777-bb4c5c159f86"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use the 'Chivo' font for all headings to give a technical, automotive feel. Import it from Google Fonts.",
+    "Implement a 'Garage Mode' (Dark Mode) toggle in the footer, but default to Light Mode for trust.",
+    "Use the 'Bento' grid layout for the homepage categories section.",
+    "Ensure all product cards have a 'Quick View' button that appears on hover.",
+    "The primary red color (#D90429) should be used for 'Add to Cart' and primary CTAs only. Do not overuse it.",
+    "Use 'sonner' for all toast notifications.",
+    "For the product catalog, use a sidebar filter on desktop and a drawer filter on mobile.",
+    "Ensure the checkout process is streamlined with clear progress indicators.",
+    "Use the provided image URLs for the respective sections. Do not use placeholders.",
+    "Add 'data-testid' to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Do not use generic centered layouts.",
+    "Create depth through layered design elements.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Every interaction needs micro-animations.",
+    "Use specific properties for transitions (NOT transition: all).",
+    "Never use AI assistant Emoji characters."
+  ]
+}
