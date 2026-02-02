@@ -1,0 +1,203 @@
+.car-finder-section {
+  padding: 60px 0;
+  background: linear-gradient(135deg, rgba(46, 107, 111, 0.05) 0%, rgba(160, 49, 45, 0.05) 100%);
+}
+
+.car-finder-box {
+  background-color: var(--white);
+  border-radius: 0px;
+  padding: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border: 2px solid;
+  border-image: var(--gradient-mixed) 1;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.car-finder-box h2 {
+  font-size: 36px;
+  background: var(--gradient-mixed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.finder-subtitle {
+  text-align: center;
+  color: var(--gray-dark);
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+.finder-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--gray-light);
+}
+
+.finder-tab {
+  flex: 1;
+  padding: 15px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-dark);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.finder-tab:hover {
+  color: var(--primary-teal);
+  background-color: rgba(46, 107, 111, 0.05);
+}
+
+.finder-tab.active {
+  color: var(--primary-teal);
+  border-bottom-color: var(--primary-teal);
+  background-color: rgba(46, 107, 111, 0.08);
+}
+
+.finder-content {
+  margin-bottom: 30px;
+}
+
+.finder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.finder-form .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.finder-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finder-form label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 14px;
+}
+
+.finder-form input,
+.finder-form select {
+  padding: 14px 18px;
+  border: 2px solid var(--gray-medium);
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.finder-form input:focus,
+.finder-form select:focus {
+  outline: none;
+  border-color: var(--primary-teal);
+  box-shadow: 0 0 0 3px rgba(46, 107, 111, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.btn-finder {
+  background: var(--gradient-secondary);
+  color: var(--white);
+  padding: 14px 40px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(160, 49, 45, 0.3);
+}
+
+.btn-finder:hover {
+  background: var(--red-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(160, 49, 45, 0.4);
+}
+
+.finder-results {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid var(--gray-light);
+}
+
+.finder-results h3 {
+  font-size: 24px;
+  color: var(--primary-teal);
+  margin-bottom: 25px;
+  font-weight: 700;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 25px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray-dark);
+}
+
+.no-results p {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.no-results a {
+  color: var(--primary-teal);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .car-finder-box {
+    padding: 30px 20px;
+  }
+
+  .car-finder-box h2 {
+    font-size: 28px;
+  }
+
+  .finder-tabs {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .finder-tab {
+    border-bottom: 1px solid var(--gray-light);
+    border-left: 3px solid transparent;
+  }
+
+  .finder-tab.active {
+    border-left-color: var(--primary-teal);
+    border-bottom-color: var(--gray-light);
+  }
+
+  .finder-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
