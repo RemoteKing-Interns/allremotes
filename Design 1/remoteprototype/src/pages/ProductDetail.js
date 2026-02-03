@@ -1,122 +1,107 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getProductById } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { ShoppingCart, ArrowLeft, Heart, Check } from 'lucide-react';
 import './ProductDetail.css';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = getProductById(id);
   const { addToCart } = useCart();
+  const product = getProductById(id);
+
+  const [quantity, setQuantity] = useState(1);
+  const [inWishlist, setInWishlist] = useState(false);
 
   if (!product) {
     return (
-      <div className="product-detail-page">
-        <div className="container">
-          <div className="not-found">
-            <h2>Product not found</h2>
-            <button onClick={() => navigate('/')} className="btn btn-primary">
-              Go to Home
-            </button>
-          </div>
-        </div>
+      <div className="container py-12 text-center">
+        <h2>Product not found</h2>
+        <button onClick={() => navigate('/')} className="btn btn-primary">
+          Go Home
+        </button>
       </div>
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart(product);
-  };
-
   return (
     <div className="product-detail-page">
-      <div className="container">
-        <div className="product-detail">
-          <div className="product-detail-image">
+      <div className="container py-8">
+
+        <Link to="/" className="back-link">
+          <ArrowLeft size={16} /> Back to Products
+        </Link>
+
+        <div className="product-grid">
+          {/* LEFT: IMAGE */}
+          <div className="product-image-box">
             <img
               src={product.image}
               alt={product.name}
-              onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/600x450?text=Remote+Control';
-              }}
+              onError={(e) =>
+                (e.target.src = 'https://via.placeholder.com/600x450')
+              }
             />
           </div>
-          <div className="product-detail-info">
-            <span className="product-category-badge">
-              {product.category === 'car' ? '🚗 Car Remote' : '🚪 Garage Remote'}
-            </span>
+
+          {/* RIGHT: INFO */}
+          <div className="product-info">
+            <p className="brand">{product.brand}</p>
+
             <h1>{product.name}</h1>
-            <p className="product-price-large">AU${product.price.toFixed(2)}</p>
-            <p className="product-description">{product.description}</p>
-            <div className="product-actions">
-              <button
-                className="btn btn-primary btn-large"
-                onClick={handleAddToCart}
-                disabled={!product.inStock}
-              >
-                {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-              </button>
-              <button
-                className="btn btn-outline btn-large"
-                onClick={() => navigate(-1)}
-              >
-                Back to Products
-              </button>
+
+            <div className="price-stock">
+              <p className="price">AU${product.price.toFixed(2)}</p>
+              {product.inStock && (
+                <span className="stock">
+                  <Check size={16} /> In Stock
+                </span>
+              )}
             </div>
-            <div className="product-specs">
-              <h3>Product Details</h3>
-              <div className="specs-grid">
-                {product.brand && (
-                  <div className="spec-item">
-                    <span className="spec-label">Brand:</span>
-                    <span className="spec-value">{product.brand}</span>
-                  </div>
-                )}
-                {product.condition && (
-                  <div className="spec-item">
-                    <span className="spec-label">Condition:</span>
-                    <span className="spec-value">{product.condition}</span>
-                  </div>
-                )}
-                {product.location && (
-                  <div className="spec-item">
-                    <span className="spec-label">Location:</span>
-                    <span className="spec-value">{product.location}</span>
-                  </div>
-                )}
-                {product.returns && (
-                  <div className="spec-item">
-                    <span className="spec-label">Returns:</span>
-                    <span className="spec-value">{product.returns}</span>
-                  </div>
-                )}
-                {product.seller && (
-                  <div className="spec-item">
-                    <span className="spec-label">Seller:</span>
-                    <span className="spec-value">{product.seller}</span>
-                  </div>
-                )}
-                {product.bulkPricing && (
-                  <div className="spec-item">
-                    <span className="spec-label">Bulk Pricing:</span>
-                    <span className="spec-value">Available</span>
-                  </div>
-                )}
+
+            <p className="description">{product.description}</p>
+
+            {/* Quantity */}
+            {product.inStock && (
+              <div className="quantity-box">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
+                <span>{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)}>+</button>
               </div>
-            </div>
-            <div className="product-features">
-              <h3>Features</h3>
+            )}
+
+            {/* Buttons */}
+            <button
+              className="btn btn-primary full"
+              disabled={!product.inStock}
+              onClick={() => addToCart(product, quantity)}
+            >
+              <ShoppingCart size={18} />
+              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+            </button>
+
+            <button
+              className={`btn btn-outline full ${inWishlist ? 'active' : ''}`}
+              onClick={() => setInWishlist(!inWishlist)}
+            >
+              <Heart size={18} />
+              {inWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+            </button>
+
+            {/* Specs */}
+            <div className="specs">
+              <h3>Product Details</h3>
               <ul>
-                <li>Genuine product with full compatibility</li>
-                <li>Long-range transmission</li>
-                <li>Easy to program</li>
-                <li>High-quality construction</li>
-                <li>Compatible with specified systems</li>
+                {product.brand && <li><b>Brand:</b> {product.brand}</li>}
+                {product.condition && <li><b>Condition:</b> {product.condition}</li>}
+                {product.location && <li><b>Location:</b> {product.location}</li>}
+                {product.returns && <li><b>Returns:</b> {product.returns}</li>}
               </ul>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
