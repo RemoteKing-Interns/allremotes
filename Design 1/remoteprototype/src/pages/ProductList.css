@@ -1,6 +1,6 @@
 /* HERO */
 .shop-hero {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  background: rgba(160, 49, 45, 0.85) 100%;
   color: white;
   padding: 60px 0;
 }

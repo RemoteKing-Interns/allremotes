@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
-import CarFinder from '../components/CarFinder';
+// import CarFinder from '../components/CarFinder.js';
 import heroImage from '../Images/hero.jpg';
 import heroImg1 from '../Images/heroimg.jpg';
 import heroImg2 from '../Images/heroimg2.jpg';
@@ -35,7 +35,7 @@ const Home = () => {
         <div className="hero-overlay"></div>
         <div className="container">
           <div className="hero-content">
-            <h1>Welcome to ALLREMOTES</h1>
+            <h1>Garage Door & Gate Remotes</h1>
             <p className="hero-subtitle">Quality is Guaranteed</p>
             <p className="hero-description">
               Your trusted source for premium car and garage remotes. 
@@ -64,7 +64,7 @@ const Home = () => {
         </div>
       </section>
 
-      <CarFinder />
+      {/* <CarFinder /> */}
 
       <section className="features">
         <div className="features-background" style={{ backgroundImage: `url(${heroImg1})` }}>

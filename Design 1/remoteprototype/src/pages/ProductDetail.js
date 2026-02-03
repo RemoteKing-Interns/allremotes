@@ -35,15 +35,37 @@ const ProductDetail = () => {
 
         <div className="product-grid">
           {/* LEFT: IMAGE */}
-          <div className="product-image-box">
+          <div
+            className="product-image-box"
+            onMouseMove={(e) => {
+              const box = e.currentTarget;
+              const img = box.querySelector("img");
+
+              const { left, top, width, height } = box.getBoundingClientRect();
+              const x = ((e.clientX - left) / width) * 100;
+              const y = ((e.clientY - top) / height) * 100;
+
+              img.style.transformOrigin = `${x}% ${y}%`;
+            }}
+            onMouseLeave={(e) => {
+              const img = e.currentTarget.querySelector("img");
+              img.style.transformOrigin = "center center";
+              img.style.transform = "scale(1)";
+            }}
+            onMouseEnter={(e) => {
+              const img = e.currentTarget.querySelector("img");
+              img.style.transform = "scale(2)";
+            }}
+            >
             <img
               src={product.image}
               alt={product.name}
               onError={(e) =>
-                (e.target.src = 'https://via.placeholder.com/600x450')
+                (e.target.src = "https://via.placeholder.com/600x450")
               }
             />
           </div>
+
 
           {/* RIGHT: INFO */}
           <div className="product-info">
