@@ -13,6 +13,7 @@ const ProductDetail = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
+  const [activeTab, setActiveTab] = useState('description');
 
   if (!product) {
     return (
@@ -82,7 +83,7 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <p className="description">{product.description}</p>
+          
 
             {/* Quantity */}
             {product.inStock && (
@@ -124,6 +125,52 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* TAB NAVIGATION */}
+        <div className="tabs-section">
+          <div className="tabs-header">
+            <button
+              className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`}
+              onClick={() => setActiveTab('description')}
+            >
+              DESCRIPTION
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'instructions' ? 'active' : ''}`}
+              onClick={() => setActiveTab('instructions')}
+            >
+              INSTRUCTIONS
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'warnings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('warnings')}
+            >
+              WARNINGS & DISCLAIMERS
+            </button>
+          </div>
+
+          <div className="tabs-content">
+            {activeTab === 'description' && (
+              <div className="tab-pane">
+                <h3>Description</h3>
+                <p>{product.description}</p>
+              </div>
+            )}
+
+            {activeTab === 'instructions' && (
+              <div className="tab-pane">
+                <h3>Instructions</h3>
+                <p>{product.instructions || 'No instructions provided.'}</p>
+              </div>
+            )}
+
+            {activeTab === 'warnings' && (
+              <div className="tab-pane">
+                <h3>Warnings & Disclaimers</h3>
+                <p>{product.warnings || 'No warnings provided.'}</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
