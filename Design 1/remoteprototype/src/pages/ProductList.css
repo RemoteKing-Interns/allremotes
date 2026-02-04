@@ -36,12 +36,16 @@
 }
 
 /* FILTERS */
+
 .filters {
   background: white;
   padding: 24px;
   border-radius: 8px;
+  margin-left: -50px;
   position: sticky;
-  top: 100px;
+  top: 200px;
+  align-self: start;
+  height: fit-content;
 }
 
 .filters label {
