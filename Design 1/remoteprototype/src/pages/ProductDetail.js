@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getProductById } from '../data/products';
+import { getProductById, products } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { ShoppingCart, ArrowLeft, Heart, Check } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
 import './ProductDetail.css';
 
 const ProductDetail = () => {
@@ -10,6 +11,9 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const product = getProductById(id);
+  const relatedProducts = products
+    .filter((item) => item.category === product?.category && item.id !== product?.id)
+    .slice(0, 4);
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
@@ -118,7 +122,6 @@ const ProductDetail = () => {
               <ul>
                 {product.brand && <li><b>Brand:</b> {product.brand}</li>}
                 {product.condition && <li><b>Condition:</b> {product.condition}</li>}
-                {product.location && <li><b>Location:</b> {product.location}</li>}
                 {product.returns && <li><b>Returns:</b> {product.returns}</li>}
               </ul>
             </div>
@@ -171,6 +174,23 @@ const ProductDetail = () => {
             )}
           </div>
         </div>
+
+        {relatedProducts.length > 0 && (
+          <div className="related-section">
+            <div className="related-header">
+              <h2>Related Products</h2>
+              <p className="related-subtitle">
+                More {product.category === 'car' ? 'car' : 'garage'} remotes you might like
+              </p>
+            </div>
+            <div className="related-grid">
+              {relatedProducts.map((item) => (
+                <ProductCard key={item.id} product={item} />
+              ))}
+            </div>
+            <br /> <br/>
+          </div>
+        )}
       </div>
     </div>
   );
