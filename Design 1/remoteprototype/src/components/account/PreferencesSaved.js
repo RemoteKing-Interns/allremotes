@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { products } from '../../data/products';
+import { useStore } from '../../context/StoreContext';
 import ProductCard from '../ProductCard';
 import './AccountSection.css';
 
 const PreferencesSaved = () => {
+  const { getProducts } = useStore();
+  const products = getProducts() || [];
   const [wishlist] = useState([
     products[0],
     products[2],
     products[6]
-  ]);
+  ].filter(Boolean));
 
   const [recentlyViewed] = useState([
     products[1],
     products[5],
     products[7]
-  ]);
+  ].filter(Boolean));
 
   const [savedSearches] = useState([
     { id: 1, query: 'garage remote', count: 12 },

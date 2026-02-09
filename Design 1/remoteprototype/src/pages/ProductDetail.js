@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getProductById, products } from '../data/products';
+import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
 import { ShoppingCart, ArrowLeft, Heart, Check } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -9,11 +9,13 @@ import './ProductDetail.css';
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
-  const product = getProductById(id);
-  const relatedProducts = products
+  const { getProducts } = useStore();
+  const products = getProducts();
+  const product = products.find((p) => p.id === id);
+  const relatedProducts = (products || [])
     .filter((item) => item.category === product?.category && item.id !== product?.id)
     .slice(0, 4);
+  const { addToCart } = useCart();
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);

@@ -2,14 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { navigationMenu } from '../data/navigation';
-import { products } from '../data/products';
+import { useStore } from '../context/StoreContext';
 import logo from '../Images/mainlogo.png';
 import './Header.css';
 
 const Header = () => {
   const { user, logout } = useAuth();
   const { getCartItemCount } = useCart();
+  const { getNavigation, getProducts } = useStore();
+  const navigationMenu = getNavigation();
+  const products = getProducts();
   const navigate = useNavigate();
   const cartCount = getCartItemCount();
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -34,24 +36,25 @@ const Header = () => {
     setActiveDropdown(null);
   };
 
-  // Search functionality
+  // Search functionality - only depend on searchQuery and getProducts (not products array, which is a new ref every render and would cause infinite loop)
   useEffect(() => {
+    const list = getProducts() || [];
     if (searchQuery.trim().length > 0) {
-      const filtered = products.filter(product => {
+      const filtered = list.filter(product => {
         const query = searchQuery.toLowerCase();
         return (
-          product.name.toLowerCase().includes(query) ||
-          product.description.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query)
+          (product.name && product.name.toLowerCase().includes(query)) ||
+          (product.description && product.description.toLowerCase().includes(query)) ||
+          (product.category && product.category.toLowerCase().includes(query))
         );
       });
-      setSearchResults(filtered.slice(0, 8)); // Limit to 8 results
+      setSearchResults(filtered.slice(0, 8));
       setShowSearchResults(true);
     } else {
       setSearchResults([]);
       setShowSearchResults(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, getProducts]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);

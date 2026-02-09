@@ -1,16 +1,17 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { navigationMenu } from '../data/navigation';
+import { useLocation, Link } from 'react-router-dom';
+import { useStore } from '../context/StoreContext';
 import ProductCard from '../components/ProductCard';
-import { getProductsByCategory } from '../data/products';
 import heroImg2 from '../Images/heroimg2.jpg';
 import './CategoryPage.css';
 
 const CategoryPage = () => {
   const location = useLocation();
+  const { getNavigation, getProducts } = useStore();
+  const navigationMenu = getNavigation();
+  const allProducts = getProducts();
   const category = location.pathname.split('/')[1] || '';
   
-  // Map URL-friendly category names to menu keys
   const categoryMap = {
     'garage-gate': 'garage-gate',
     'automotive': 'automotive',
@@ -23,14 +24,13 @@ const CategoryPage = () => {
 
   const menuItem = navigationMenu[categoryMap[category] || category];
   
-  // Get products based on category
   let products = [];
   if (category === 'garage-gate') {
-    products = getProductsByCategory('garage');
+    products = (allProducts || []).filter((p) => p.category === 'garage');
   } else if (category === 'automotive') {
-    products = getProductsByCategory('car');
+    products = (allProducts || []).filter((p) => p.category === 'car');
   } else {
-    products = getProductsByCategory('all');
+    products = allProducts || [];
   }
 
   if (!menuItem) {
@@ -69,12 +69,12 @@ const CategoryPage = () => {
                 <h2 className="section-title">{column.title}</h2>
                 <div className="section-links">
                   {column.items.map((item, itemIndex) => (
-                    <a key={itemIndex} href={item.path} className="section-link">
+                    <Link key={itemIndex} to={item.path} className="section-link">
                       <span className="link-icon">
                         <img src={item.icon} alt={item.name} />
                       </span>
                       <span>{item.name}</span>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </section>

@@ -1,22 +1,29 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { products, getProductsByCategory } from '../data/products';
+import { useStore } from '../context/StoreContext';
 import './ProductList.css';
 
+const PAGE_SIZE = 15;
+
 const ProductList = () => {
-  const [searchParams] = useSearchParams();
+  const { getProducts } = useStore();
+  const products = getProducts();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedBrand, setSelectedBrand] = useState('all');
 
+  const pageFromUrl = Number(searchParams.get('page') || '1');
+  const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
+
   const brands = useMemo(() => {
-    return ['all', ...new Set(products.map(p => p.brand))];
-  }, []);
+    return ['all', ...new Set((products || []).map(p => p.brand).filter(Boolean))];
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let result = getProductsByCategory(selectedCategory);
+    let result = selectedCategory === 'all' ? (products || []) : (products || []).filter(p => p.category === selectedCategory);
 
     if (selectedBrand !== 'all') {
       result = result.filter(p => p.brand === selectedBrand);
@@ -31,7 +38,51 @@ const ProductList = () => {
     }
 
     return result;
+  }, [products, selectedCategory, selectedBrand, searchQuery]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  }, [filteredProducts.length]);
+
+  const clampedPage = useMemo(() => {
+    return Math.min(Math.max(1, currentPage), totalPages);
+  }, [currentPage, totalPages]);
+
+  const pageProducts = useMemo(() => {
+    const start = (clampedPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, clampedPage]);
+
+  // Keep URL in sync so pagination is shareable/bookmarkable.
+  useEffect(() => {
+    if (clampedPage === pageFromUrl) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('page', String(clampedPage));
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clampedPage]);
+
+  // If filters change, reset to page 1.
+  useEffect(() => {
+    setCurrentPage(1);
   }, [selectedCategory, selectedBrand, searchQuery]);
+
+  const visiblePages = useMemo(() => {
+    // Show a compact range like: 1 … 4 5 6 … 20
+    const pages = new Set([1, totalPages]);
+    for (let p = clampedPage - 2; p <= clampedPage + 2; p += 1) {
+      if (p >= 1 && p <= totalPages) pages.add(p);
+    }
+    const sorted = Array.from(pages).sort((a, b) => a - b);
+    const out = [];
+    for (let i = 0; i < sorted.length; i += 1) {
+      const p = sorted[i];
+      const prev = sorted[i - 1];
+      if (i > 0 && p - prev > 1) out.push('…');
+      out.push(p);
+    }
+    return out;
+  }, [clampedPage, totalPages]);
 
   return (
     <div className="shop-page">
@@ -104,14 +155,21 @@ const ProductList = () => {
           {/* PRODUCTS */}
           <main>
             <p className="product-count">
-              Showing {filteredProducts.length} products
+              Showing {filteredProducts.length === 0 ? 0 : ((clampedPage - 1) * PAGE_SIZE + 1)}
+              {' '}
+              –
+              {' '}
+              {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)}
+              {' '}
+              of {filteredProducts.length} products
             </p>
 
             {filteredProducts.length === 0 ? (
               <div className="no-products">No products found.</div>
             ) : (
-              <div className="products-grid">
-                {filteredProducts.map(product => (
+              <>
+                <div className="products-grid">
+                  {pageProducts.map(product => (
                   <Link
                     to={`/product/${product.id}`}
                     key={product.id}
@@ -144,7 +202,47 @@ const ProductList = () => {
                     </div>
                   </Link>
                 ))}
-              </div>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="pager" aria-label="Pagination">
+                    <button
+                      type="button"
+                      className="pager-btn"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={clampedPage <= 1}
+                    >
+                      Prev
+                    </button>
+
+                    <div className="pager-pages">
+                      {visiblePages.map((p, idx) => (
+                        p === '…' ? (
+                          <span key={`dots-${idx}`} className="pager-dots">…</span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`pager-page ${p === clampedPage ? 'active' : ''}`}
+                            onClick={() => setCurrentPage(p)}
+                          >
+                            {p}
+                          </button>
+                        )
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="pager-btn"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={clampedPage >= totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </main>
 

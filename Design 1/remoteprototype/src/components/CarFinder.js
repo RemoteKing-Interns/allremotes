@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { products } from '../data/products';
+import { Link } from 'react-router-dom';
+import { useStore } from '../context/StoreContext';
 import ProductCard from './ProductCard';
 import './CarFinder.css';
 
 const CarFinder = () => {
+  const { getProducts } = useStore();
+  const products = getProducts() || [];
   const [activeTab, setActiveTab] = useState('rego');
   const [regoData, setRegoData] = useState({
     rego: '',
@@ -209,7 +212,7 @@ const CarFinder = () => {
               ) : (
                 <div className="no-results">
                   <p>We couldn't find any remotes matching your vehicle details.</p>
-                  <p>Please try different search criteria or <a href="/products/car">browse all car remotes</a>.</p>
+                  <p>Please try different search criteria or <Link to="/products/car">browse all car remotes</Link>.</p>
                 </div>
               )}
             </div>

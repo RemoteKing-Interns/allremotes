@@ -30,8 +30,8 @@ import remote28 from '../Remotes/028_s-l500.webp';
 import remote29 from '../Remotes/029_s-l500.webp';
 import remote30 from '../Remotes/030_s-l500.webp';
 
-// Array of remote images to cycle through
-const remoteImages = [
+// Array of remote images to cycle through (exported for StoreContext/product images)
+export const remoteImages = [
   remote1, remote2, remote3, remote4, remote5, remote6, remote7, remote8, remote9, remote10,
   remote11, remote12, remote13, remote14, remote15, remote16, remote17, remote18, remote19, remote20,
   remote21, remote22, remote23, remote24, remote25, remote26, remote27, remote28, remote29, remote30

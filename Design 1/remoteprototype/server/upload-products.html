@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin · Upload Products (CSV)</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: rgba(255, 255, 255, 0.06);
+        --muted: rgba(255, 255, 255, 0.72);
+        --text: rgba(255, 255, 255, 0.92);
+        --border: rgba(255, 255, 255, 0.12);
+        --good: #38bdf8;
+        --bad: #fb7185;
+        --ok: #34d399;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+        background: radial-gradient(1200px 800px at 10% 10%, rgba(56, 189, 248, 0.18), transparent 60%),
+          radial-gradient(900px 600px at 90% 20%, rgba(52, 211, 153, 0.12), transparent 60%),
+          var(--bg);
+        color: var(--text);
+      }
+      a {
+        color: var(--good);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 48px auto;
+        padding: 0 18px;
+      }
+      .title-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 18px 0;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        margin: 14px 0;
+        backdrop-filter: blur(10px);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed var(--border);
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--text);
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.55);
+        background: rgba(56, 189, 248, 0.18);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .metric {
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.14);
+      }
+      .metric .n {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .metric .l {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .metric.good .n {
+        color: var(--ok);
+      }
+      .metric.bad .n {
+        color: var(--bad);
+      }
+      .hr {
+        height: 1px;
+        background: var(--border);
+        margin: 14px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      th {
+        text-align: left;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .err {
+        color: var(--bad);
+        font-weight: 700;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      .hidden {
+        display: none;
+      }
+      .footer {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title-row">
+        <h1>Upload Products (CSV)</h1>
+        <span class="pill">Route: <span class="mono">/admin/upload-products</span></span>
+      </div>
+      <p class="sub">
+        Upload a <strong>.csv</strong> file to bulk create/update products. Required columns:
+        <span class="mono">Product Code</span> and <span class="mono">Product Description</span>.
+        If a product with the same <strong>Brand + Name</strong> already exists in
+        <span class="mono">products.json</span>, it will be updated instead of duplicated.
+      </p>
+
+      <div class="card">
+        <div class="row">
+          <div>
+            <label for="csv">CSV file</label>
+            <input id="csv" name="csv" type="file" accept=".csv" />
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-end">
+            <button id="uploadBtn" type="button">Upload</button>
+            <a href="/admin/upload-products/template.csv" class="pill">Download CSV template</a>
+          </div>
+        </div>
+        <div class="footer">
+          Tip: Duplicate Brand+Name pairs in a single upload are rejected for clarity.
+        </div>
+      </div>
+
+      <div id="resultCard" class="card hidden">
+        <h2 style="margin: 0 0 10px 0; font-size: 18px">Upload results</h2>
+
+        <div id="metrics" class="grid"></div>
+
+        <div id="failuresWrap" class="hidden">
+          <div class="hr"></div>
+          <h3 style="margin: 0 0 10px 0; font-size: 16px">Failed rows</h3>
+          <div style="overflow: auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Row</th>
+                  <th>Brand</th>
+                  <th>Name</th>
+                  <th>Errors</th>
+                  <th>Row data</th>
+                </tr>
+              </thead>
+              <tbody id="failuresBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="errorCard" class="card hidden">
+        <div class="err">Upload failed</div>
+        <div id="errorMsg" class="mono" style="margin-top: 8px"></div>
+      </div>
+    </div>
+
+    <script>
+      // Frontend logic (no framework): upload via FormData, then render server response.
+      const csvInput = document.getElementById('csv');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      const resultCard = document.getElementById('resultCard');
+      const metrics = document.getElementById('metrics');
+      const failuresWrap = document.getElementById('failuresWrap');
+      const failuresBody = document.getElementById('failuresBody');
+
+      const errorCard = document.getElementById('errorCard');
+      const errorMsg = document.getElementById('errorMsg');
+
+      function showError(message) {
+        errorMsg.textContent = message || 'Unknown error';
+        errorCard.classList.remove('hidden');
+      }
+
+      function hideError() {
+        errorCard.classList.add('hidden');
+        errorMsg.textContent = '';
+      }
+
+      function setBusy(isBusy) {
+        uploadBtn.disabled = isBusy;
+        uploadBtn.textContent = isBusy ? 'Uploading…' : 'Upload';
+      }
+
+      function metricCard(label, value, variant) {
+        const div = document.createElement('div');
+        div.className = `metric ${variant || ''}`.trim();
+        const n = document.createElement('div');
+        n.className = 'n';
+        n.textContent = String(value);
+        const l = document.createElement('div');
+        l.className = 'l';
+        l.textContent = label;
+        div.appendChild(n);
+        div.appendChild(l);
+        return div;
+      }
+
+      function renderResults(data) {
+        metrics.innerHTML = '';
+        failuresBody.innerHTML = '';
+
+        metrics.appendChild(metricCard('Rows processed', data.totalRows ?? 0));
+        metrics.appendChild(metricCard('Created', data.created ?? 0, 'good'));
+        metrics.appendChild(metricCard('Updated', data.updated ?? 0, 'good'));
+
+        const failed = data.failed ?? (data.failures ? data.failures.length : 0);
+        if (failed > 0) {
+          metrics.appendChild(metricCard('Failed', failed, 'bad'));
+        }
+
+        const failures = Array.isArray(data.failures) ? data.failures : [];
+        if (failures.length === 0) {
+          failuresWrap.classList.add('hidden');
+        } else {
+          failuresWrap.classList.remove('hidden');
+          for (const f of failures) {
+            const tr = document.createElement('tr');
+
+            const tdRow = document.createElement('td');
+            tdRow.textContent = String(f.rowNumber ?? '');
+
+            const tdBrand = document.createElement('td');
+            tdBrand.className = 'mono';
+            tdBrand.textContent = f.brand || '';
+
+            const tdName = document.createElement('td');
+            tdName.textContent = f.name || '';
+
+            const tdErr = document.createElement('td');
+            tdErr.innerHTML = (f.errors || []).map((e) => `<div class="err">${escapeHtml(e)}</div>`).join('');
+
+            const tdData = document.createElement('td');
+            tdData.className = 'mono';
+            tdData.textContent = JSON.stringify(f.row || {}, null, 0);
+
+            tr.appendChild(tdRow);
+            tr.appendChild(tdBrand);
+            tr.appendChild(tdName);
+            tr.appendChild(tdErr);
+            tr.appendChild(tdData);
+            failuresBody.appendChild(tr);
+          }
+        }
+
+        resultCard.classList.remove('hidden');
+      }
+
+      function escapeHtml(unsafe) {
+        return String(unsafe || '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      uploadBtn.addEventListener('click', async () => {
+        hideError();
+        resultCard.classList.add('hidden');
+
+        const file = csvInput.files && csvInput.files[0];
+        if (!file) return showError('Please choose a .csv file first.');
+        if (!String(file.name).toLowerCase().endsWith('.csv')) return showError('Only .csv files are allowed.');
+
+        setBusy(true);
+        try {
+          const form = new FormData();
+          form.append('csv', file, file.name);
+
+          const res = await fetch('/admin/upload-products', { method: 'POST', body: form });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const msg = data && (data.error || data.details) ? `${data.error || ''} ${data.details || ''}`.trim() : 'Server error';
+            return showError(msg);
+          }
+          renderResults(data);
+        } catch (err) {
+          showError(err && err.message ? err.message : String(err));
+        } finally {
+          setBusy(false);
+        }
+      });
+    </script>
+  </body>
+</html>

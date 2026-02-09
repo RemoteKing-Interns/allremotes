@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './AccountSection.css';
 
 const PaymentsBilling = () => {
-  const [paymentMethods, setPaymentMethods] = useState([
+  const [paymentMethods] = useState([
     {
       id: 1,
       type: 'card',
@@ -21,7 +21,7 @@ const PaymentsBilling = () => {
     }
   ]);
 
-  const [billingAddresses, setBillingAddresses] = useState([
+  const [billingAddresses] = useState([
     {
       id: 1,
       name: 'Home Address',

@@ -24,7 +24,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (email, password) => {
-    // Simple authentication (in production, this would be an API call)
+    // Admin login (no code change needed: use this email + password)
+    const adminEmail = 'admin@allremotes.com';
+    const adminPassword = 'Admin123!';
+    if (email === adminEmail && password === adminPassword) {
+      const userData = { id: 'admin', name: 'Admin', email: adminEmail, role: 'admin' };
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return { success: true };
+    }
+    // Regular user login
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const foundUser = users.find(u => u.email === email && u.password === password);
     
