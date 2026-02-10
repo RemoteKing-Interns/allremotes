@@ -11,9 +11,6 @@
   min-height: 470px;
   display: flex;
   align-items: center;
-  border-radius: 30px;
-  margin-left: 5px;
-  margin-right: 5px;
 }
 
 .hero-slider {
@@ -89,24 +86,37 @@
 }
 
 .hero-overlay::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+  background: radial-gradient(
+    circle at 30% 50%,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 50%
+  );
   animation: pulse 4s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeInUp {
@@ -132,7 +142,9 @@
   font-size: 48px;
   margin-bottom: 15px;
   font-weight: 700;
-  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  text-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
   animation: fadeInUp 0.8s ease-out;
 }
 
@@ -264,14 +276,16 @@
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 4px 6px var(--shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   border: 2px solid transparent;
   position: relative;
   overflow: hidden;
 }
 
 .feature-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -288,7 +302,9 @@
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(46, 107, 111, 0.15), 0 8px 20px rgba(160, 49, 45, 0.15);
+  box-shadow:
+    0 8px 20px rgba(46, 107, 111, 0.15),
+    0 8px 20px rgba(160, 49, 45, 0.15);
   border-color: var(--primary-teal);
 }
 
@@ -335,7 +351,7 @@
 }
 
 .feature-link::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 0;
@@ -381,7 +397,7 @@
 }
 
 .cta-overlay::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -461,7 +477,11 @@
 
 .why-buy-section {
   padding: 80px 0;
-  background: linear-gradient(135deg, var(--gray-light) 0%, rgba(245, 245, 245, 0.5) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gray-light) 0%,
+    rgba(245, 245, 245, 0.5) 100%
+  );
 }
 
 .why-buy-grid {
@@ -484,7 +504,7 @@
 }
 
 .why-buy-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -501,7 +521,9 @@
 
 .why-buy-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(46, 107, 111, 0.15), 0 8px 24px rgba(160, 49, 45, 0.15);
+  box-shadow:
+    0 8px 24px rgba(46, 107, 111, 0.15),
+    0 8px 24px rgba(160, 49, 45, 0.15);
   border-color: var(--primary-teal);
 }
 
