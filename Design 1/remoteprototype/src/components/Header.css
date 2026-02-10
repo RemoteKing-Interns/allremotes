@@ -521,23 +521,47 @@
   border-bottom: 1px solid rgba(46, 107, 111, 0.1);
   position: relative;
   backdrop-filter: blur(10px);
+  margin-left: 12%;
 }
 
 .nav-inner {
   display: flex;
   align-items: center;
+<<<<<<< Updated upstream
   justify-content: center;
+=======
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  margin-left: -14%;
+>>>>>>> Stashed changes
 }
 
 .nav-links {
   display: flex;
   align-items: center;
+<<<<<<< Updated upstream
   justify-content: center;
+=======
+  justify-content: flex-start;
+  gap: 0;
+>>>>>>> Stashed changes
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  z-index: 1;
+  padding-right: 8px;
+}
+
+.nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-item-wrapper {
   position: static;
+  flex: 0 0 auto;
 }
 
 .nav-link {
@@ -553,6 +577,7 @@
   text-decoration: none;
   white-space: nowrap;
   letter-spacing: 0.3px;
+  flex: 0 0 auto;
 }
 
 .nav-link::before {
@@ -610,10 +635,17 @@
   letter-spacing: 0.08em;
   text-decoration: none;
   white-space: nowrap;
+  margin-left: auto;
   box-shadow: 0 10px 18px rgba(160, 49, 45, 0.2);
+<<<<<<< Updated upstream
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+=======
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex: 0 0 auto;
+  z-index: 2;
+>>>>>>> Stashed changes
 }
 
 .nav-cta:hover {
@@ -974,7 +1006,7 @@
   }
 
   .nav-links {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-start;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -983,13 +1015,14 @@
   }
 
   .nav-inner {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 8px 0 4px;
+    justify-content: flex-start;
+    padding: 8px 0 6px;
   }
 
   .nav-cta {
     margin: 6px 0 10px;
+    font-size: 12px;
+    padding: 8px 14px;
   }
 
   .nav-links::-webkit-scrollbar {
@@ -1075,6 +1108,13 @@
   .nav-link {
     padding: 14px 16px;
     font-size: 13px;
+  }
+
+  .nav-cta {
+    width: 100%;
+    max-width: 240px;
+    font-size: 11px;
+    padding: 8px 12px;
   }
 
   .mega-menu {

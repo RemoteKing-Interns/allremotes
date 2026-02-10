@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import './Checkout.css';
@@ -8,7 +8,11 @@ const Checkout = () => {
   const { cart, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isGuest = searchParams.get('guest') === '1';
   const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
     address: '',
     city: '',
     state: '',
@@ -21,7 +25,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
 
-  if (!user) {
+  if (!user && !isGuest) {
     navigate('/login');
     return null;
   }
@@ -57,7 +61,7 @@ const Checkout = () => {
           <div className="order-success">
             <div className="success-icon">✓</div>
             <h1>Order Placed Successfully!</h1>
-            <p>Thank you for your purchase, {user.name}!</p>
+            <p>Thank you for your purchase{user ? `, ${user.name}` : ''}!</p>
             <p>Your order has been confirmed and will be shipped soon.</p>
             <button onClick={() => navigate('/')} className="btn btn-primary btn-large">
               Continue Shopping
@@ -78,11 +82,25 @@ const Checkout = () => {
               <h2>Shipping Information</h2>
               <div className="form-group">
                 <label>Full Name</label>
-                <input type="text" value={user.name} disabled />
+                <input
+                  type="text"
+                  name="fullName"
+                  value={user ? user.name : formData.fullName}
+                  onChange={handleChange}
+                  required
+                  disabled={Boolean(user)}
+                />
               </div>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" value={user.email} disabled />
+                <input
+                  type="email"
+                  name="email"
+                  value={user ? user.email : formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={Boolean(user)}
+                />
               </div>
               <div className="form-group">
                 <label>Address</label>

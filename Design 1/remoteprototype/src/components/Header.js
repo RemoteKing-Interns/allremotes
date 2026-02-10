@@ -303,10 +303,10 @@ const Header = () => {
                   </div>
                 );
               })}
+              <Link to="/products/all" className="nav-cta">
+                View Products
+              </Link>
             </div>
-            <Link to="/products/all" className="nav-cta">
-              View Products
-            </Link>
           </div>
         </div>
       </nav>

@@ -345,6 +345,33 @@
   min-width: 160px;
 }
 
+.checkout-modal-body {
+  padding: 36px 40px;
+  text-align: center;
+}
+
+.checkout-modal-body h3 {
+  font-size: 24px;
+  margin: 0 0 10px;
+  color: var(--text-dark);
+}
+
+.checkout-modal-body p {
+  color: var(--gray-dark);
+  margin: 0 0 24px;
+}
+
+.checkout-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checkout-modal-actions .btn {
+  min-width: 180px;
+}
+
 @media (max-width: 968px) {
   .cart-content {
     grid-template-columns: 1fr;
@@ -395,6 +422,10 @@
   }
 
   .cart-modal-actions .btn {
+    width: 100%;
+  }
+
+  .checkout-modal-actions .btn {
     width: 100%;
   }
 }

@@ -9,14 +9,17 @@ const Cart = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const isModalOpen = Boolean(selectedItem);
+  const isAnyModalOpen = isModalOpen || showCheckoutModal;
 
   useEffect(() => {
-    if (!isModalOpen) return;
+    if (!isAnyModalOpen) return;
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setSelectedItem(null);
+        setShowCheckoutModal(false);
       }
     };
 
@@ -27,7 +30,7 @@ const Cart = () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isModalOpen]);
+  }, [isAnyModalOpen]);
 
   if (cart.length === 0) {
     return (
@@ -47,7 +50,7 @@ const Cart = () => {
 
   const handleCheckout = () => {
     if (!user) {
-      navigate('/login');
+      setShowCheckoutModal(true);
       return;
     }
     navigate('/checkout');
@@ -209,6 +212,52 @@ const Cart = () => {
                     Go to Checkout
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showCheckoutModal && (
+        <div className="cart-modal-backdrop" onClick={() => setShowCheckoutModal(false)}>
+          <div
+            className="cart-modal checkout-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Checkout options"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="cart-modal-close"
+              onClick={() => setShowCheckoutModal(false)}
+              aria-label="Close"
+            >
+              x
+            </button>
+            <div className="checkout-modal-body">
+              <h3>Continue to Checkout</h3>
+              <p>Select how you want to checkout.</p>
+              <div className="checkout-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setShowCheckoutModal(false);
+                    navigate('/login');
+                  }}
+                >
+                  Login & Checkout
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowCheckoutModal(false);
+                    navigate('/checkout?guest=1');
+                  }}
+                >
+                  Guest Checkout
+                </button>
               </div>
             </div>
           </div>

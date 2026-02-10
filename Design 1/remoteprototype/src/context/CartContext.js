@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
@@ -12,19 +13,150 @@ export const useCart = () => {
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
+  const { user, loading } = useAuth();
+  const cartRef = useRef(cart);
+  const prevUserKeyRef = useRef(null);
 
-  useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+  const guestKey = 'cart_guest';
+
+  const getUserKey = (u) => {
+    if (!u) return null;
+    return u.id || u.email || null;
+  };
+
+  const makeUserCartKey = (key) => `cart_user_${key}`;
+
+  const readCookie = (key) => {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(new RegExp(`(?:^|; )${key}=([^;]*)`));
+    return match ? decodeURIComponent(match[1]) : null;
+  };
+
+  const writeCookie = (key, value, days = 30) => {
+    if (typeof document === 'undefined') return false;
+    const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+    return true;
+  };
+
+  const removeCookie = (key) => {
+    if (typeof document === 'undefined') return;
+    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  };
+
+  const safeParseCart = (value) => {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-  }, []);
+  };
+
+  const readCartFromStorage = (key) => {
+    const cookieValue = readCookie(key);
+    if (cookieValue) return safeParseCart(cookieValue);
+    const localValue = localStorage.getItem(key);
+    return safeParseCart(localValue);
+  };
+
+  const writeCartToStorage = (key, value) => {
+    const payload = JSON.stringify(value || []);
+    const cookieWritten = writeCookie(key, payload);
+    if (!cookieWritten) {
+      localStorage.setItem(key, payload);
+      return;
+    }
+    localStorage.setItem(key, payload);
+  };
+
+  const removeCartFromStorage = (key) => {
+    removeCookie(key);
+    localStorage.removeItem(key);
+  };
+
+  const normalizeCart = (items) => {
+    return (items || [])
+      .filter((item) => item && item.id)
+      .map((item) => ({
+        ...item,
+        quantity: Math.max(1, Number(item.quantity) || 1),
+      }));
+  };
+
+  const mergeCarts = (...carts) => {
+    const merged = new Map();
+    carts.forEach((list) => {
+      normalizeCart(list).forEach((item) => {
+        const existing = merged.get(item.id);
+        if (existing) {
+          merged.set(item.id, {
+            ...existing,
+            quantity: existing.quantity + item.quantity,
+          });
+        } else {
+          merged.set(item.id, { ...item });
+        }
+      });
+    });
+    return Array.from(merged.values());
+  };
+
+  const areCartsEqual = (a, b) => {
+    const normA = normalizeCart(a).sort((x, y) => String(x.id).localeCompare(String(y.id)));
+    const normB = normalizeCart(b).sort((x, y) => String(x.id).localeCompare(String(y.id)));
+    if (normA.length !== normB.length) return false;
+    for (let i = 0; i < normA.length; i += 1) {
+      if (normA[i].id !== normB[i].id) return false;
+      if (normA[i].quantity !== normB[i].quantity) return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
-    // Save cart to localStorage whenever it changes
-    localStorage.setItem('cart', JSON.stringify(cart));
+    cartRef.current = cart;
   }, [cart]);
+
+  useEffect(() => {
+    if (loading) return;
+    const userKey = getUserKey(user);
+    const prevKey = prevUserKeyRef.current;
+
+    if (userKey && userKey !== prevKey) {
+      const userCartKey = makeUserCartKey(userKey);
+      const savedUserCart = readCartFromStorage(userCartKey);
+      const guestCart = readCartFromStorage(guestKey);
+      const currentCart = cartRef.current || [];
+      const merged = mergeCarts(savedUserCart, currentCart, guestCart);
+      if (!areCartsEqual(merged, currentCart)) {
+        setCart(merged);
+      }
+      writeCartToStorage(userCartKey, merged);
+      if (guestCart.length) {
+        removeCartFromStorage(guestKey);
+      }
+    }
+
+    if (!userKey) {
+      const guestCart = readCartFromStorage(guestKey);
+      if (!areCartsEqual(guestCart, cartRef.current)) {
+        setCart(guestCart);
+      }
+    }
+
+    prevUserKeyRef.current = userKey;
+  }, [user, loading]);
+
+  useEffect(() => {
+    if (loading) return;
+    const userKey = getUserKey(user);
+    if (userKey) {
+      writeCartToStorage(makeUserCartKey(userKey), cart);
+      return;
+    }
+    writeCartToStorage(guestKey, cart);
+  }, [cart, user, loading]);
 
   const addToCart = (product) => {
     setCart(prevCart => {
