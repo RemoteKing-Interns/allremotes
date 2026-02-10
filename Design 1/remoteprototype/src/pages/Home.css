@@ -294,7 +294,20 @@
 
 .feature-icon {
   font-size: 48px;
-  margin-bottom: 20px;
+  margin: 0 auto 20px;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(245, 245, 245, 0.9);
+}
+
+.feature-icon img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 }
 
 .feature-card h3 {

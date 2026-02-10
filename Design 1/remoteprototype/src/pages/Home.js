@@ -5,6 +5,9 @@ import ProductCard from '../components/ProductCard';
 import heroImage from '../Images/hero.jpg';
 import heroImg1 from '../Images/heroimg.jpg';
 import heroImg2 from '../Images/heroimg2.jpg';
+import featureCar from '../Remotes/010_s-l500.webp';
+import featureGarage from '../Remotes/002_s-l500.webp';
+import featureQuality from '../Remotes/011_s-l500.webp';
 import './Home.css';
 //testing commit
 const Home = () => {
@@ -26,6 +29,11 @@ const Home = () => {
   const features = home?.features || [];
   const whyBuy = home?.whyBuy || [];
   const cta = home?.ctaSection || {};
+  const featureImagesByTitle = {
+    'Car Remotes': featureCar,
+    'Garage Remotes': featureGarage,
+    'Quality Guaranteed': featureQuality,
+  };
 
   return (
     <div className="home">
@@ -75,7 +83,16 @@ const Home = () => {
           <div className="features-grid">
             {features.map((f, i) => (
               <div key={i} className="feature-card">
-                <div className="feature-icon">{f.icon || '✓'}</div>
+                <div className="feature-icon">
+  {(f.image || featureImagesByTitle[f.title]) ? (
+    <img
+      src={f.image || featureImagesByTitle[f.title]}
+      alt={f.title || 'Feature'}
+    />
+  ) : (
+    f.icon || '✓'
+  )}
+</div>
                 <h3>{f.title || ''}</h3>
                 <p>{f.description || ''}</p>
                 {f.path && f.linkText && (
@@ -157,3 +174,4 @@ const Home = () => {
 };
 
 export default Home;
+

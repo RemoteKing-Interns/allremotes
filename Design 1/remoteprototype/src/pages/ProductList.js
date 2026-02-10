@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
+import { useCart } from '../context/CartContext';
 import './ProductList.css';
 
 const PAGE_SIZE = 15;
 
 const ProductList = () => {
   const { getProducts } = useStore();
+  const { addToCart } = useCart();
   const products = getProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
@@ -14,6 +16,8 @@ const ProductList = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedBrand, setSelectedBrand] = useState('all');
+  const [addedItem, setAddedItem] = useState(null);
+  const isModalOpen = Boolean(addedItem);
 
   const pageFromUrl = Number(searchParams.get('page') || '1');
   const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
@@ -83,6 +87,31 @@ const ProductList = () => {
     }
     return out;
   }, [clampedPage, totalPages]);
+
+  const handleAddToCart = (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+    setAddedItem(product);
+  };
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setAddedItem(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
 
   return (
     <div className="shop-page">
@@ -199,6 +228,14 @@ const ProductList = () => {
                           {product.inStock ? 'In Stock' : 'Out'}
                         </span>
                       </div>
+                      <button
+                        type="button"
+                        className="add-to-cart"
+                        onClick={(e) => handleAddToCart(e, product)}
+                        disabled={!product.inStock}
+                      >
+                        {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                      </button>
                     </div>
                   </Link>
                 ))}
@@ -248,6 +285,78 @@ const ProductList = () => {
 
         </div>
       </div>
+      {isModalOpen && (
+        <div className="cart-modal-backdrop" onClick={() => setAddedItem(null)}>
+          <div
+            className="cart-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Added to cart"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="cart-modal-close"
+              onClick={() => setAddedItem(null)}
+              aria-label="Close"
+            >
+              x
+            </button>
+            <div className="cart-modal-body">
+              <img
+                src={addedItem?.image}
+                alt={addedItem?.name || 'Product'}
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/300x300?text=Remote';
+                }}
+              />
+              <div className="cart-modal-info">
+                <p className="cart-modal-brand">{addedItem?.brand || 'Remote Pro'}</p>
+                <h3>{addedItem?.name}</h3>
+                {addedItem?.description && (
+                  <p className="cart-modal-description">{addedItem.description}</p>
+                )}
+                <div className="cart-modal-meta">
+                  <div>
+                    <span>Category</span>
+                    <strong>{addedItem?.category === 'car' ? 'Car Remote' : 'Garage Remote'}</strong>
+                  </div>
+                  <div>
+                    <span>Condition</span>
+                    <strong>{addedItem?.condition || 'Brand New'}</strong>
+                  </div>
+                </div>
+                <div className="cart-modal-pricing">
+                  <div>
+                    <span>Price</span>
+                    <strong>AU${addedItem?.price?.toFixed(2)}</strong>
+                  </div>
+                  <div>
+                    <span>Quantity</span>
+                    <strong>1</strong>
+                  </div>
+                  <div>
+                    <span>Total</span>
+                    <strong>AU${addedItem?.price?.toFixed(2)}</strong>
+                  </div>
+                </div>
+                <div className="cart-modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setAddedItem(null)}
+                  >
+                    Continue Shopping
+                  </button>
+                  <Link to="/cart" className="btn btn-primary">
+                    View Cart
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
