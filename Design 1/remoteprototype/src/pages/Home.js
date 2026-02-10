@@ -6,7 +6,7 @@ import heroImage from '../Images/hero.jpg';
 import heroImg1 from '../Images/heroimg.jpg';
 import heroImg2 from '../Images/heroimg2.jpg';
 import './Home.css';
-
+//testing commit
 const Home = () => {
   const { getProducts, getHomeContent, getReviews } = useStore();
   const products = getProducts() || [];
