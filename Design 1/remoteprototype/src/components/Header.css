@@ -889,7 +889,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+@media (max-width: 1350px) {
   .mega-menu {
     width: min(1100px, 95vw);
     padding: 35px 40px;
