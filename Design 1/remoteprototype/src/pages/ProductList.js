@@ -16,6 +16,7 @@ const ProductList = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedBrand, setSelectedBrand] = useState('all');
+  const [stockStatus, setStockStatus] = useState('all'); // all | in | out
   const [addedItem, setAddedItem] = useState(null);
   const isModalOpen = Boolean(addedItem);
 
@@ -41,8 +42,13 @@ const ProductList = () => {
       );
     }
 
+    if (stockStatus !== 'all') {
+      const wantInStock = stockStatus === 'in';
+      result = result.filter((p) => Boolean(p.inStock) === wantInStock);
+    }
+
     return result;
-  }, [products, selectedCategory, selectedBrand, searchQuery]);
+  }, [products, selectedCategory, selectedBrand, searchQuery, stockStatus]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
@@ -69,7 +75,7 @@ const ProductList = () => {
   // If filters change, reset to page 1.
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedBrand, searchQuery]);
+  }, [selectedCategory, selectedBrand, searchQuery, stockStatus]);
 
   const visiblePages = useMemo(() => {
     // Show a compact range like: 1 … 4 5 6 … 20
@@ -169,12 +175,20 @@ const ProductList = () => {
               ))}
             </select>
 
+            <label>Stock</label>
+            <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value)}>
+              <option value="all">All</option>
+              <option value="in">In Stock</option>
+              <option value="out">Out of Stock</option>
+            </select>
+
             <button
               className="clear-btn"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
                 setSelectedBrand('all');
+                setStockStatus('all');
               }}
             >
               Clear Filters
