@@ -1,6 +1,6 @@
 .product-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 0.4fr 0.4fr;
   gap: 48px;
 }
 
@@ -13,7 +13,9 @@
 }
 
 .product-image-box img {
-  width: 100%;
+  width: 80%;
+  margin: 0 auto;
+  display: block;
   object-fit: contain;
   transition: transform 0.15s ease-out;
 }
