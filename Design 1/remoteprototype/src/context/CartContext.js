@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
@@ -19,32 +19,32 @@ export const CartProvider = ({ children }) => {
 
   const guestKey = 'cart_guest';
 
-  const getUserKey = (u) => {
+  const getUserKey = useCallback((u) => {
     if (!u) return null;
     return u.id || u.email || null;
-  };
+  }, []);
 
-  const makeUserCartKey = (key) => `cart_user_${key}`;
+  const makeUserCartKey = useCallback((key) => `cart_user_${key}`, []);
 
-  const readCookie = (key) => {
+  const readCookie = useCallback((key) => {
     if (typeof document === 'undefined') return null;
     const match = document.cookie.match(new RegExp(`(?:^|; )${key}=([^;]*)`));
     return match ? decodeURIComponent(match[1]) : null;
-  };
+  }, []);
 
-  const writeCookie = (key, value, days = 30) => {
+  const writeCookie = useCallback((key, value, days = 30) => {
     if (typeof document === 'undefined') return false;
     const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
     document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
     return true;
-  };
+  }, []);
 
-  const removeCookie = (key) => {
+  const removeCookie = useCallback((key) => {
     if (typeof document === 'undefined') return;
     document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-  };
+  }, []);
 
-  const safeParseCart = (value) => {
+  const safeParseCart = useCallback((value) => {
     if (!value) return [];
     try {
       const parsed = JSON.parse(value);
@@ -52,16 +52,16 @@ export const CartProvider = ({ children }) => {
     } catch {
       return [];
     }
-  };
+  }, []);
 
-  const readCartFromStorage = (key) => {
+  const readCartFromStorage = useCallback((key) => {
     const cookieValue = readCookie(key);
     if (cookieValue) return safeParseCart(cookieValue);
     const localValue = localStorage.getItem(key);
     return safeParseCart(localValue);
-  };
+  }, [readCookie, safeParseCart]);
 
-  const writeCartToStorage = (key, value) => {
+  const writeCartToStorage = useCallback((key, value) => {
     const payload = JSON.stringify(value || []);
     const cookieWritten = writeCookie(key, payload);
     if (!cookieWritten) {
@@ -69,23 +69,23 @@ export const CartProvider = ({ children }) => {
       return;
     }
     localStorage.setItem(key, payload);
-  };
+  }, [writeCookie]);
 
-  const removeCartFromStorage = (key) => {
+  const removeCartFromStorage = useCallback((key) => {
     removeCookie(key);
     localStorage.removeItem(key);
-  };
+  }, [removeCookie]);
 
-  const normalizeCart = (items) => {
+  const normalizeCart = useCallback((items) => {
     return (items || [])
       .filter((item) => item && item.id)
       .map((item) => ({
         ...item,
         quantity: Math.max(1, Number(item.quantity) || 1),
       }));
-  };
+  }, []);
 
-  const mergeCarts = (...carts) => {
+  const mergeCarts = useCallback((...carts) => {
     const merged = new Map();
     carts.forEach((list) => {
       normalizeCart(list).forEach((item) => {
@@ -101,9 +101,9 @@ export const CartProvider = ({ children }) => {
       });
     });
     return Array.from(merged.values());
-  };
+  }, [normalizeCart]);
 
-  const areCartsEqual = (a, b) => {
+  const areCartsEqual = useCallback((a, b) => {
     const normA = normalizeCart(a).sort((x, y) => String(x.id).localeCompare(String(y.id)));
     const normB = normalizeCart(b).sort((x, y) => String(x.id).localeCompare(String(y.id)));
     if (normA.length !== normB.length) return false;
@@ -112,7 +112,7 @@ export const CartProvider = ({ children }) => {
       if (normA[i].quantity !== normB[i].quantity) return false;
     }
     return true;
-  };
+  }, [normalizeCart]);
 
   useEffect(() => {
     cartRef.current = cart;
@@ -146,7 +146,18 @@ export const CartProvider = ({ children }) => {
     }
 
     prevUserKeyRef.current = userKey;
-  }, [user, loading]);
+  }, [
+    user,
+    loading,
+    getUserKey,
+    makeUserCartKey,
+    readCartFromStorage,
+    mergeCarts,
+    areCartsEqual,
+    writeCartToStorage,
+    removeCartFromStorage,
+    guestKey,
+  ]);
 
   useEffect(() => {
     if (loading) return;
@@ -156,7 +167,7 @@ export const CartProvider = ({ children }) => {
       return;
     }
     writeCartToStorage(guestKey, cart);
-  }, [cart, user, loading]);
+  }, [cart, user, loading, getUserKey, makeUserCartKey, writeCartToStorage, guestKey]);
 
   const addToCart = (product) => {
     setCart(prevCart => {

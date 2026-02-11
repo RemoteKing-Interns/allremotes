@@ -11,7 +11,6 @@ const Header = () => {
   const { getCartItemCount } = useCart();
   const { getNavigation, getProducts } = useStore();
   const navigationMenu = getNavigation();
-  const products = getProducts();
   const navigate = useNavigate();
   const cartCount = getCartItemCount();
   const [activeDropdown, setActiveDropdown] = useState(null);
