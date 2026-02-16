@@ -8,7 +8,7 @@ const PAGE_SIZE = 15;
 
 const ProductList = () => {
   const { getProducts } = useStore();
-  const { addToCart } = useCart();
+  const { cart, addToCart, updateQuantity } = useCart();
   const products = getProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
@@ -94,11 +94,25 @@ const ProductList = () => {
     return out;
   }, [clampedPage, totalPages]);
 
+  const modalCartItem = useMemo(() => {
+    if (!addedItem) return null;
+    return (cart || []).find((item) => item.id === addedItem.id) || null;
+  }, [addedItem, cart]);
+
+  const modalQuantity = modalCartItem?.quantity ?? 1;
+
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product);
     setAddedItem(product);
+  };
+
+  const handleModalQuantityChange = (nextQuantity) => {
+    if (!addedItem) return;
+    const parsed = Number(nextQuantity);
+    if (!Number.isFinite(parsed)) return;
+    updateQuantity(addedItem.id, Math.max(1, Math.floor(parsed)));
   };
 
   useEffect(() => {
@@ -347,11 +361,36 @@ const ProductList = () => {
                   </div>
                   <div>
                     <span>Quantity</span>
-                    <strong>1</strong>
+                    <div className="cart-modal-qty-controls">
+                      <button
+                        type="button"
+                        className="cart-modal-qty-btn"
+                        onClick={() => handleModalQuantityChange(modalQuantity - 1)}
+                        disabled={modalQuantity <= 1}
+                        aria-label="Decrease quantity"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={modalQuantity}
+                        onChange={(e) => handleModalQuantityChange(e.target.value)}
+                        aria-label="Quantity"
+                      />
+                      <button
+                        type="button"
+                        className="cart-modal-qty-btn"
+                        onClick={() => handleModalQuantityChange(modalQuantity + 1)}
+                        aria-label="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <span>Total</span>
-                    <strong>AU${addedItem?.price?.toFixed(2)}</strong>
+                    <strong>AU${((addedItem?.price || 0) * modalQuantity).toFixed(2)}</strong>
                   </div>
                 </div>
                 <div className="cart-modal-actions">
