@@ -359,7 +359,7 @@ const ProductList = () => {
                     <span>Price</span>
                     <strong>AU${addedItem?.price?.toFixed(2)}</strong>
                   </div>
-                  <div>
+                  <div className="cart-modal-pricing-qty">
                     <span>Quantity</span>
                     <div className="cart-modal-qty-controls">
                       <button
