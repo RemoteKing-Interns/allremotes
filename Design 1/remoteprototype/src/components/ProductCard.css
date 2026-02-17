@@ -97,13 +97,24 @@
   margin-top: auto;
 }
 
+.product-price-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.product-price-original {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-dark);
+  text-decoration: line-through;
+}
+
 .product-price {
   font-size: 24px;
   font-weight: 700;
-  background: var(--gradient-mixed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary-teal);
 }
 
 .btn-add-cart {

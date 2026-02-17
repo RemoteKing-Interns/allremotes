@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { MEMBER_DISCOUNT_RATE, getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 
 const CartContext = createContext();
 
@@ -14,6 +15,7 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const { user, loading } = useAuth();
+  const hasDiscount = isDiscountEligible(user);
   const cartRef = useRef(cart);
   const prevUserKeyRef = useRef(null);
 
@@ -169,17 +171,18 @@ export const CartProvider = ({ children }) => {
     writeCartToStorage(guestKey, cart);
   }, [cart, user, loading, getUserKey, makeUserCartKey, writeCartToStorage, guestKey]);
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1) => {
+    const qtyToAdd = Math.max(1, Math.floor(Number(quantity) || 1));
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
         return prevCart.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity: qtyToAdd }];
     });
   };
 
@@ -203,9 +206,29 @@ export const CartProvider = ({ children }) => {
     setCart([]);
   };
 
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
+  const getItemPriceBreakdown = useCallback((item) => {
+    return getPriceBreakdown(item?.price || 0, hasDiscount);
+  }, [hasDiscount]);
+
+  const getItemUnitPrice = useCallback((item) => {
+    return getItemPriceBreakdown(item).finalPrice;
+  }, [getItemPriceBreakdown]);
+
+  const getItemLineTotal = useCallback((item) => {
+    return getLineTotal(item?.price || 0, item?.quantity || 1, hasDiscount);
+  }, [hasDiscount]);
+
+  const getCartOriginalTotal = useCallback(() => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cart]);
+
+  const getCartTotal = useCallback(() => {
+    return cart.reduce((total, item) => total + getItemLineTotal(item), 0);
+  }, [cart, getItemLineTotal]);
+
+  const getCartDiscountTotal = useCallback(() => {
+    return Math.max(0, getCartOriginalTotal() - getCartTotal());
+  }, [getCartOriginalTotal, getCartTotal]);
 
   const getCartItemCount = () => {
     return cart.reduce((count, item) => count + item.quantity, 0);
@@ -219,6 +242,13 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        hasDiscount,
+        discountRate: MEMBER_DISCOUNT_RATE,
+        getItemPriceBreakdown,
+        getItemUnitPrice,
+        getItemLineTotal,
+        getCartOriginalTotal,
+        getCartDiscountTotal,
         getCartTotal,
         getCartItemCount,
       }}

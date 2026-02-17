@@ -102,6 +102,38 @@
   color: var(--gray-dark);
 }
 
+.summary-item-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.summary-item-price-old {
+  font-size: 12px;
+  text-decoration: line-through;
+  color: var(--gray-dark);
+  font-weight: 700;
+}
+
+.summary-item-price-new {
+  color: var(--primary-teal);
+  font-weight: 700;
+}
+
+.summary-subtotal,
+.summary-discount {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.summary-discount {
+  color: #0f766e;
+  font-weight: 700;
+}
+
 .summary-total {
   display: flex;
   justify-content: space-between;

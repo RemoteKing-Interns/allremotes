@@ -5,7 +5,17 @@ import { useAuth } from '../context/AuthContext';
 import './Checkout.css';
 
 const Checkout = () => {
-  const { cart, getCartTotal, clearCart } = useCart();
+  const {
+    cart,
+    hasDiscount,
+    discountRate,
+    getCartTotal,
+    getCartOriginalTotal,
+    getCartDiscountTotal,
+    getItemPriceBreakdown,
+    getItemLineTotal,
+    clearCart,
+  } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,6 +34,9 @@ const Checkout = () => {
   });
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const originalTotal = getCartOriginalTotal();
+  const discountTotal = getCartDiscountTotal();
+  const discountedTotal = getCartTotal();
 
   if (!user && !isGuest) {
     navigate('/login');
@@ -205,7 +218,7 @@ const Checkout = () => {
               className="btn btn-primary btn-large"
               disabled={loading}
             >
-              {loading ? 'Processing...' : `Place Order - AU$${getCartTotal().toFixed(2)}`}
+              {loading ? 'Processing...' : `Place Order - AU$${discountedTotal.toFixed(2)}`}
             </button>
           </form>
 
@@ -215,13 +228,37 @@ const Checkout = () => {
               {cart.map(item => (
                 <div key={item.id} className="summary-item">
                   <span>{item.name} x{item.quantity}</span>
-                  <span>AU${(item.price * item.quantity).toFixed(2)}</span>
+                  {(() => {
+                    const pricing = getItemPriceBreakdown(item);
+                    const originalLine = pricing.originalPrice * item.quantity;
+                    const lineTotal = getItemLineTotal(item);
+                    return (
+                      <span className="summary-item-price">
+                        {pricing.hasDiscount && (
+                          <span className="summary-item-price-old">AU${originalLine.toFixed(2)}</span>
+                        )}
+                        <span className="summary-item-price-new">AU${lineTotal.toFixed(2)}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
+            {hasDiscount && (
+              <div className="summary-subtotal">
+                <span>Subtotal</span>
+                <span>AU${originalTotal.toFixed(2)}</span>
+              </div>
+            )}
+            {hasDiscount && (
+              <div className="summary-discount">
+                <span>Member Discount ({Math.round(discountRate * 100)}%)</span>
+                <span>-AU${discountTotal.toFixed(2)}</span>
+              </div>
+            )}
             <div className="summary-total">
               <span>Total</span>
-              <span>AU${getCartTotal().toFixed(2)}</span>
+              <span>AU${discountedTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>

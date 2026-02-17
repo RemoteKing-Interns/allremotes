@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 import './ProductList.css';
 
 const PAGE_SIZE = 15;
@@ -9,6 +11,7 @@ const PAGE_SIZE = 15;
 const ProductList = () => {
   const { getProducts } = useStore();
   const { cart, addToCart, updateQuantity } = useCart();
+  const { user } = useAuth();
   const products = getProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
@@ -100,6 +103,8 @@ const ProductList = () => {
   }, [addedItem, cart]);
 
   const modalQuantity = modalCartItem?.quantity ?? 1;
+  const hasDiscount = isDiscountEligible(user);
+  const modalPrice = getPriceBreakdown(addedItem?.price || 0, hasDiscount);
 
   const handleAddToCart = (e, product) => {
     e.preventDefault();
@@ -248,7 +253,18 @@ const ProductList = () => {
 
                       <div className="price-row">
                         <span className="price">
-                          AU${product.price.toFixed(2)}
+                          {(() => {
+                            const pricing = getPriceBreakdown(product.price, hasDiscount);
+                            if (!pricing.hasDiscount) {
+                              return `AU$${pricing.finalPrice.toFixed(2)}`;
+                            }
+                            return (
+                              <span className="price-discount-wrap">
+                                <span className="price-original">AU${pricing.originalPrice.toFixed(2)}</span>
+                                <span className="price-discounted">AU${pricing.finalPrice.toFixed(2)}</span>
+                              </span>
+                            );
+                          })()}
                         </span>
                         <span
                           className={`stock ${product.inStock ? 'in' : 'out'}`}
@@ -357,7 +373,14 @@ const ProductList = () => {
                 <div className="cart-modal-pricing">
                   <div>
                     <span>Price</span>
-                    <strong>AU${addedItem?.price?.toFixed(2)}</strong>
+                    {modalPrice.hasDiscount ? (
+                      <div className="modal-price-stack">
+                        <span className="modal-price-original">AU${modalPrice.originalPrice.toFixed(2)}</span>
+                        <strong className="modal-price-discounted">AU${modalPrice.finalPrice.toFixed(2)}</strong>
+                      </div>
+                    ) : (
+                      <strong>AU${modalPrice.finalPrice.toFixed(2)}</strong>
+                    )}
                   </div>
                   <div className="cart-modal-pricing-qty">
                     <span>Quantity</span>
@@ -390,7 +413,7 @@ const ProductList = () => {
                   </div>
                   <div>
                     <span>Total</span>
-                    <strong>AU${((addedItem?.price || 0) * modalQuantity).toFixed(2)}</strong>
+                    <strong>AU${getLineTotal(addedItem?.price || 0, modalQuantity, hasDiscount).toFixed(2)}</strong>
                   </div>
                 </div>
                 <div className="cart-modal-actions">

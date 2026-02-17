@@ -1,10 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
+  const { user } = useAuth();
+  const pricing = getPriceBreakdown(product.price, isDiscountEligible(user));
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -33,7 +37,12 @@ const ProductCard = ({ product }) => {
           {product.category === 'car' ? '🚗 Car Remote' : '🚪 Garage Remote'}
         </p>
         <div className="product-footer">
-          <span className="product-price">AU${product.price.toFixed(2)}</span>
+          <div className="product-price-wrap">
+            {pricing.hasDiscount && (
+              <span className="product-price-original">AU${pricing.originalPrice.toFixed(2)}</span>
+            )}
+            <span className="product-price">AU${pricing.finalPrice.toFixed(2)}</span>
+          </div>
           <button
             className="btn-add-cart"
             onClick={handleAddToCart}

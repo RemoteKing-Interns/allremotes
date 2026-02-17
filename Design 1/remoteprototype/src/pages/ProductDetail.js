@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, ArrowLeft, Heart, Check } from 'lucide-react';
+import { getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 import ProductCard from '../components/ProductCard';
 import './ProductDetail.css';
 
@@ -10,12 +12,15 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getProducts } = useStore();
+  const { user } = useAuth();
   const products = getProducts();
   const product = products.find((p) => p.id === id);
   const relatedProducts = (products || [])
     .filter((item) => item.category === product?.category && item.id !== product?.id)
     .slice(0, 4);
   const { addToCart } = useCart();
+  const hasDiscount = isDiscountEligible(user);
+  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount);
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
@@ -81,7 +86,14 @@ const ProductDetail = () => {
             <h1>{product.name}</h1>
 
             <div className="price-stock">
-              <p className="price">AU${product.price.toFixed(2)}</p>
+              {pricing.hasDiscount ? (
+                <div className="price-block">
+                  <p className="price-old">AU${pricing.originalPrice.toFixed(2)}</p>
+                  <p className="price-new">AU${pricing.finalPrice.toFixed(2)}</p>
+                </div>
+              ) : (
+                <p className="price">AU${pricing.finalPrice.toFixed(2)}</p>
+              )}
               {product.inStock && (
                 <span className="stock">
                   <Check size={16} /> In Stock

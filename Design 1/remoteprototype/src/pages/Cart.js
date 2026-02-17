@@ -5,7 +5,19 @@ import { useAuth } from '../context/AuthContext';
 import './Cart.css';
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+  const {
+    cart,
+    hasDiscount,
+    discountRate,
+    removeFromCart,
+    updateQuantity,
+    getCartTotal,
+    getCartOriginalTotal,
+    getCartDiscountTotal,
+    getItemPriceBreakdown,
+    getItemLineTotal,
+    clearCart,
+  } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState(null);
@@ -56,6 +68,10 @@ const Cart = () => {
     navigate('/checkout');
   };
 
+  const originalTotal = getCartOriginalTotal();
+  const discountedTotal = getCartTotal();
+  const discountTotal = getCartDiscountTotal();
+
   return (
     <div className="cart-page">
       <div className="container">
@@ -77,7 +93,17 @@ const Cart = () => {
                   <p className="cart-item-category">
                     {item.category === 'car' ? '🚗 Car Remote' : '🚪 Garage Remote'}
                   </p>
-                  <p className="cart-item-price">AU${item.price.toFixed(2)}</p>
+                  {(() => {
+                    const pricing = getItemPriceBreakdown(item);
+                    return (
+                      <p className="cart-item-price">
+                        {pricing.hasDiscount && (
+                          <span className="price-original">AU${pricing.originalPrice.toFixed(2)}</span>
+                        )}
+                        <span className="price-current">AU${pricing.finalPrice.toFixed(2)}</span>
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div className="cart-item-controls">
                   <div className="quantity-controls">
@@ -109,9 +135,19 @@ const Cart = () => {
                     Remove
                   </button>
                 </div>
-                <div className="cart-item-total">
-                  AU${(item.price * item.quantity).toFixed(2)}
-                </div>
+                {(() => {
+                  const pricing = getItemPriceBreakdown(item);
+                  const originalLine = pricing.originalPrice * item.quantity;
+                  const lineTotal = getItemLineTotal(item);
+                  return (
+                    <div className="cart-item-total">
+                      {pricing.hasDiscount && (
+                        <span className="line-total-original">AU${originalLine.toFixed(2)}</span>
+                      )}
+                      <span>AU${lineTotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -119,15 +155,21 @@ const Cart = () => {
             <h2>Order Summary</h2>
             <div className="summary-row">
               <span>Subtotal</span>
-              <span>AU${getCartTotal().toFixed(2)}</span>
+              <span>AU${originalTotal.toFixed(2)}</span>
             </div>
+            {hasDiscount && (
+              <div className="summary-row discount">
+                <span>Member Discount ({Math.round(discountRate * 100)}%)</span>
+                <span>-AU${discountTotal.toFixed(2)}</span>
+              </div>
+            )}
             <div className="summary-row">
               <span>Shipping</span>
               <span>Free</span>
             </div>
             <div className="summary-row total">
               <span>Total</span>
-              <span>AU${getCartTotal().toFixed(2)}</span>
+              <span>AU${discountedTotal.toFixed(2)}</span>
             </div>
             <button onClick={handleCheckout} className="btn btn-primary btn-large btn-checkout">
               Proceed to Checkout
@@ -185,7 +227,17 @@ const Cart = () => {
                 <div className="cart-modal-pricing">
                   <div>
                     <span>Price</span>
-                    <strong>AU${selectedItem?.price?.toFixed(2)}</strong>
+                    {(() => {
+                      const pricing = getItemPriceBreakdown(selectedItem || {});
+                      return pricing.hasDiscount ? (
+                        <div className="modal-price-stack">
+                          <span className="modal-price-original">AU${pricing.originalPrice.toFixed(2)}</span>
+                          <strong className="modal-price-discounted">AU${pricing.finalPrice.toFixed(2)}</strong>
+                        </div>
+                      ) : (
+                        <strong>AU${pricing.finalPrice.toFixed(2)}</strong>
+                      );
+                    })()}
                   </div>
                   <div>
                     <span>Quantity</span>
@@ -193,7 +245,19 @@ const Cart = () => {
                   </div>
                   <div>
                     <span>Total</span>
-                    <strong>AU${(selectedItem?.price * selectedItem?.quantity).toFixed(2)}</strong>
+                    {(() => {
+                      const lineTotal = getItemLineTotal(selectedItem || {});
+                      const pricing = getItemPriceBreakdown(selectedItem || {});
+                      const originalLine = pricing.originalPrice * (selectedItem?.quantity || 1);
+                      return pricing.hasDiscount ? (
+                        <div className="modal-price-stack">
+                          <span className="modal-price-original">AU${originalLine.toFixed(2)}</span>
+                          <strong className="modal-price-discounted">AU${lineTotal.toFixed(2)}</strong>
+                        </div>
+                      ) : (
+                        <strong>AU${lineTotal.toFixed(2)}</strong>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className="cart-modal-actions">

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useStore } from "../context/StoreContext";
+import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
 import logo from "../Images/mainlogo.png";
 import "./Header.css";
 
@@ -18,6 +19,7 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const hasDiscount = isDiscountEligible(user);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const hamburgerRef = useRef(null);
@@ -432,9 +434,21 @@ const Header = () => {
                           <div className="search-result-name">
                             {product.name}
                           </div>
-                          <div className="search-result-price">
-                            AU${product.price.toFixed(2)}
-                          </div>
+                          {(() => {
+                            const pricing = getPriceBreakdown(product.price, hasDiscount);
+                            return (
+                              <div className="search-result-price">
+                                {pricing.hasDiscount && (
+                                  <span className="search-result-price-old">
+                                    AU${pricing.originalPrice.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="search-result-price-new">
+                                  AU${pricing.finalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                            );
+                          })()}
                           <div className="search-result-category">
                             {product.category === "car"
                               ? "🚗 Car Remote"
