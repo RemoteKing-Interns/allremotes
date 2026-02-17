@@ -32,7 +32,13 @@ const Header = () => {
   };
 
   const handleMouseEnter = (key) => {
-    if (navigationMenu[key] && navigationMenu[key].columns) {
+    const section = navigationMenu[key];
+    if (!section || section.hidden) return;
+    const visibleColumns = (section.columns || [])
+      .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
+      .filter((col) => (col.items || []).length > 0);
+
+    if (visibleColumns.length > 0) {
       setActiveDropdown(key);
     }
   };
@@ -604,7 +610,7 @@ const Header = () => {
 
               {/* Navigation Links */}
               <nav className="drawer-nav">
-                {Object.keys(navigationMenu).map((key, index) => {
+                {Object.keys(navigationMenu).filter((key) => !navigationMenu[key]?.hidden).map((key, index) => {
                   const menuItem = navigationMenu[key];
                   const isFirst = index === 0;
                   return (
@@ -677,8 +683,11 @@ const Header = () => {
         <div className="container">
           <div className="nav-inner">
             <div className="nav-links">
-              {Object.keys(navigationMenu).map((key) => {
+              {Object.keys(navigationMenu).filter((key) => !navigationMenu[key]?.hidden).map((key) => {
                 const menuItem = navigationMenu[key];
+                const visibleColumns = (menuItem.columns || [])
+                  .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
+                  .filter((col) => (col.items || []).length > 0);
                 const isActive = activeDropdown === key;
 
                 return (
@@ -693,7 +702,7 @@ const Header = () => {
                       className={`nav-link ${isActive ? "active" : ""}`}
                     >
                       {menuItem.title}
-                      {menuItem.columns && (
+                      {visibleColumns.length > 0 && (
                         <svg
                           className={`chevron ${isActive ? "up" : "down"}`}
                           width="12"
@@ -712,11 +721,11 @@ const Header = () => {
                       )}
                     </Link>
 
-                    {isActive && menuItem.columns && (
+                    {isActive && visibleColumns.length > 0 && (
                       <div className="mega-menu-wrapper">
                         <div className="mega-menu">
                           <div className="mega-menu-content">
-                            {menuItem.columns.map((column, colIndex) => (
+                            {visibleColumns.map((column, colIndex) => (
                               <div key={colIndex} className="mega-menu-column">
                                 <h3 className="column-title">{column.title}</h3>
                                 <ul className="column-items">

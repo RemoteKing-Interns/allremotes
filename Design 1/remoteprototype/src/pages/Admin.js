@@ -533,6 +533,15 @@ function AdminNavigation() {
     }
   };
 
+  const updateSection = (sectionKey, field, value) => {
+    setNav((prev) => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (!next?.[sectionKey]) return prev;
+      next[sectionKey][field] = value;
+      return next;
+    });
+  };
+
   const updateItem = (sectionKey, colIndex, itemIndex, field, value) => {
     setNav((prev) => {
       const next = JSON.parse(JSON.stringify(prev));
@@ -546,7 +555,7 @@ function AdminNavigation() {
 
   if (!nav) return <p>Loading…</p>;
 
-  const sectionKeys = Object.keys(nav).filter((k) => nav[k]?.columns);
+  const sectionKeys = Object.keys(nav);
 
   return (
     <>
@@ -555,10 +564,30 @@ function AdminNavigation() {
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
       {saved && <div className="admin-success">Navigation saved.</div>}
-      <p style={{ marginBottom: 20 }}>Edit menu item names and paths. Icon = image index (0–29).</p>
+      <p style={{ marginBottom: 20 }}>Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
       {sectionKeys.map((sectionKey) => (
         <div key={sectionKey} className="admin-card">
-          <h3>{nav[sectionKey]?.title || sectionKey}</h3>
+          <div className="nav-section-editor">
+            <input
+              value={nav[sectionKey]?.title || ''}
+              onChange={(e) => updateSection(sectionKey, 'title', e.target.value)}
+              placeholder="Section title"
+            />
+            <input
+              value={nav[sectionKey]?.path || ''}
+              onChange={(e) => updateSection(sectionKey, 'path', e.target.value)}
+              placeholder="Section path"
+            />
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+              <input
+                type="checkbox"
+                checked={!nav[sectionKey]?.hidden}
+                onChange={(e) => updateSection(sectionKey, 'hidden', !e.target.checked)}
+              />
+              Show
+            </label>
+          </div>
+
           {(nav[sectionKey]?.columns || []).map((col, colIndex) => (
             <div key={colIndex} className="nav-editor-section">
               <h4>{col.title}</h4>
@@ -577,11 +606,20 @@ function AdminNavigation() {
                   <select
                     value={item.iconIndex ?? 0}
                     onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'iconIndex', Number(e.target.value))}
+                    aria-label="Icon index"
                   >
                     {Array.from({ length: (remoteImages || []).length }, (_, i) => (
                       <option key={i} value={i}>{i}</option>
                     ))}
                   </select>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+                    <input
+                      type="checkbox"
+                      checked={!item.hidden}
+                      onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'hidden', !e.target.checked)}
+                    />
+                    Show
+                  </label>
                 </div>
               ))}
             </div>
