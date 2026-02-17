@@ -31,6 +31,10 @@ There is also a backend-powered bulk upload tool that writes products to a local
 3. Open the upload page: `http://localhost:3001/admin/upload-products`
 4. Download the template CSV from the page, fill it out, then upload it.
 
+### Troubleshooting
+
+- **Upload failed (HTTP 431):** Your browser is sending oversized request headers (usually large cookies like `cart_*`). Clear site cookies for `localhost` / your domain and retry.
+
 ### CSV requirements
 
 - File must be `.csv`

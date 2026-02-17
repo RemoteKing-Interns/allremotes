@@ -6,6 +6,13 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 In the project directory, you can run:
 
+## Address autocomplete (Checkout)
+
+This app supports address autocomplete on the Checkout page via Geoapify.
+
+- Create a `.env` file (see `.env.example`) and set `REACT_APP_GEOAPIFY_API_KEY`.
+- Restart `npm start` after changing env vars.
+
 ### `npm run server`
 
 Runs the Express backend for the admin CSV upload feature.\

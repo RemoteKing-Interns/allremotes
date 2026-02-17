@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { MEMBER_DISCOUNT_RATE, getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 
 const CartContext = createContext();
+const MAX_CART_COOKIE_CHARS = 3500;
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -57,21 +58,26 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const readCartFromStorage = useCallback((key) => {
-    const cookieValue = readCookie(key);
-    if (cookieValue) return safeParseCart(cookieValue);
     const localValue = localStorage.getItem(key);
-    return safeParseCart(localValue);
+    if (localValue) return safeParseCart(localValue);
+    const cookieValue = readCookie(key);
+    return safeParseCart(cookieValue);
   }, [readCookie, safeParseCart]);
 
   const writeCartToStorage = useCallback((key, value) => {
     const payload = JSON.stringify(value || []);
-    const cookieWritten = writeCookie(key, payload);
-    if (!cookieWritten) {
-      localStorage.setItem(key, payload);
+    localStorage.setItem(key, payload);
+
+    // Cookies are shared across ports on the same domain (e.g. localhost:3000 and localhost:3001).
+    // If the cart cookie grows too large it can push request headers over Node/Express limits,
+    // causing HTTP 431 errors on unrelated endpoints (like CSV uploads). Keep cookies small.
+    const encodedLen = encodeURIComponent(payload).length;
+    if (encodedLen > MAX_CART_COOKIE_CHARS) {
+      removeCookie(key);
       return;
     }
-    localStorage.setItem(key, payload);
-  }, [writeCookie]);
+    writeCookie(key, payload);
+  }, [writeCookie, removeCookie]);
 
   const removeCartFromStorage = useCallback((key) => {
     removeCookie(key);

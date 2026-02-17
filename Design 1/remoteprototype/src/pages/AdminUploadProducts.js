@@ -72,13 +72,23 @@ export default function AdminUploadProducts() {
       const form = new FormData();
       form.append('csv', file, file.name);
 
-      const res = await fetch(`${apiBase}/api/admin/upload-products`, { method: 'POST', body: form });
+      const res = await fetch(`${apiBase}/api/admin/upload-products`, {
+        method: 'POST',
+        body: form,
+        // Avoid sending cookies (e.g. large cart cookies) that can trigger HTTP 431.
+        credentials: 'omit',
+      });
       const contentType = res.headers.get('content-type') || '';
       const isJson = contentType.toLowerCase().includes('application/json');
       const data = isJson ? await res.json().catch(() => ({})) : null;
       if (!res.ok) {
         // When the backend isn't running, CRA often returns an HTML error page or a proxy failure.
         // Show enough details so you can diagnose quickly.
+        if (res.status === 431) {
+          setError('Upload failed (HTTP 431) — request headers too large.');
+          setDebugDetails('Fix: clear cookies for this site (especially cart_*), then retry the upload.');
+          return;
+        }
         if (data) {
           const msg = [data.error, data.details].filter(Boolean).join(' — ') || `Upload failed (HTTP ${res.status})`;
           setError(msg);

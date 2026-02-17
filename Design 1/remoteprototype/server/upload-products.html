@@ -340,9 +340,15 @@
           const form = new FormData();
           form.append('csv', file, file.name);
 
-          const res = await fetch('/admin/upload-products', { method: 'POST', body: form });
+          const res = await fetch('/admin/upload-products', {
+            method: 'POST',
+            body: form,
+            // Avoid sending cookies (e.g. large cart cookies) that can trigger HTTP 431.
+            credentials: 'omit',
+          });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
+            if (res.status === 431) return showError('HTTP 431: Request headers too large. Clear site cookies (especially cart_*), then retry.');
             const msg = data && (data.error || data.details) ? `${data.error || ''} ${data.details || ''}`.trim() : 'Server error';
             return showError(msg);
           }

@@ -18,6 +18,7 @@ const fsp = require('fs/promises');
 const crypto = require('crypto');
 
 const express = require('express');
+const http = require('http');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use((req, res, next) => {
 // ---- Config -----------------------------------------------------------------
 
 const PORT = Number(process.env.PORT || 3001);
+const MAX_HEADER_SIZE = Number(process.env.MAX_HEADER_SIZE || 64 * 1024);
 
 // Store products in a local JSON file (no DB yet).
 const PRODUCTS_JSON_PATH = path.resolve(__dirname, '..', 'products.json');
@@ -688,7 +690,8 @@ async function main() {
   await ensureDir(UPLOADS_DIR);
   await ensureProductsFile();
 
-  app.listen(PORT, () => {
+  const server = http.createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
+  server.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Admin CSV upload server running on http://localhost:${PORT}`);
     // eslint-disable-next-line no-console
