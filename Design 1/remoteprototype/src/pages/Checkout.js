@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,8 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = searchParams.get('guest') === '1';
+  const geoapifyApiKey = process.env.REACT_APP_GEOAPIFY_API_KEY;
+  const geoapifyCountryFilter = 'au';
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -34,25 +36,143 @@ const Checkout = () => {
   });
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const blurTimeoutRef = useRef(null);
   const originalTotal = getCartOriginalTotal();
   const discountTotal = getCartDiscountTotal();
   const discountedTotal = getCartTotal();
 
-  if (!user && !isGuest) {
-    navigate('/login');
-    return null;
-  }
+  const shouldRedirectToLogin = !user && !isGuest;
+  const shouldRedirectToCart = cart.length === 0 && !orderPlaced;
 
-  if (cart.length === 0 && !orderPlaced) {
-    navigate('/cart');
-    return null;
-  }
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  const normalizedAddressQuery = useMemo(() => formData.address.trim(), [formData.address]);
+
+  useEffect(() => {
+    if (!geoapifyApiKey) return;
+    if (normalizedAddressQuery.length < 3) {
+      setAddressSuggestions([]);
+      setIsAddressLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsAddressLoading(true);
+        const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
+        url.searchParams.set('text', normalizedAddressQuery);
+        url.searchParams.set('limit', '5');
+        url.searchParams.set('format', 'json');
+        url.searchParams.set('apiKey', geoapifyApiKey);
+        if (geoapifyCountryFilter) {
+          url.searchParams.set('filter', `countrycode:${geoapifyCountryFilter}`);
+        }
+
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          redirect: 'follow',
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          setAddressSuggestions([]);
+          return;
+        }
+        const data = await response.json();
+        const results = Array.isArray(data?.results) ? data.results : [];
+        const suggestions = results
+          .map((r, idx) => ({
+            id: String(r.place_id ?? r.rank?.popularity ?? r.formatted ?? idx),
+            formatted: r.formatted ?? '',
+            addressLine1: r.address_line1 ?? '',
+            addressLine2: r.address_line2 ?? '',
+            city: r.city ?? r.town ?? r.village ?? r.suburb ?? '',
+            state: r.state ?? '',
+            postcode: r.postcode ?? '',
+            country: r.country ?? ''
+          }))
+          .filter((s) => s.formatted || s.addressLine1);
+
+        setAddressSuggestions(suggestions);
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          setAddressSuggestions([]);
+        }
+      } finally {
+        setIsAddressLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [geoapifyApiKey, geoapifyCountryFilter, normalizedAddressQuery]);
+
+  useEffect(() => {
+    if (shouldRedirectToLogin) navigate('/login');
+  }, [navigate, shouldRedirectToLogin]);
+
+  useEffect(() => {
+    if (shouldRedirectToCart) navigate('/cart');
+  }, [navigate, shouldRedirectToCart]);
+
+  if (shouldRedirectToLogin || shouldRedirectToCart) return null;
 
   const handleChange = (e) => {
+    if (e.target.name === 'address') {
+      setActiveSuggestionIndex(-1);
+      setShowAddressSuggestions(true);
+    }
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const applyAddressSuggestion = (suggestion) => {
+    setFormData((prev) => ({
+      ...prev,
+      address: suggestion.addressLine1 || suggestion.formatted || prev.address,
+      city: suggestion.city || prev.city,
+      state: suggestion.state || prev.state,
+      zipCode: suggestion.postcode || prev.zipCode
+    }));
+    setShowAddressSuggestions(false);
+    setActiveSuggestionIndex(-1);
+  };
+
+  const handleAddressKeyDown = (e) => {
+    if (!showAddressSuggestions) return;
+    if (addressSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestionIndex((i) => Math.min(i + 1, addressSuggestions.length - 1));
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestionIndex((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (e.key === 'Enter' && activeSuggestionIndex >= 0) {
+      e.preventDefault();
+      applyAddressSuggestion(addressSuggestions[activeSuggestionIndex]);
+      return;
+    }
+    if (e.key === 'Escape') {
+      setShowAddressSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -117,14 +237,62 @@ const Checkout = () => {
               </div>
               <div className="form-group">
                 <label>Address</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
-                  placeholder="Street address"
-                />
+                <div className="address-autocomplete">
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    onKeyDown={handleAddressKeyDown}
+                    onFocus={() => setShowAddressSuggestions(true)}
+                    onBlur={() => {
+                      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+                      blurTimeoutRef.current = setTimeout(() => {
+                        setShowAddressSuggestions(false);
+                        setActiveSuggestionIndex(-1);
+                      }, 150);
+                    }}
+                    required
+                    placeholder="Start typing your address"
+                    autoComplete="street-address"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showAddressSuggestions && (isAddressLoading || addressSuggestions.length > 0)}
+                    aria-controls="address-suggestions"
+                    aria-activedescendant={
+                      activeSuggestionIndex >= 0 ? `address-suggestion-${activeSuggestionIndex}` : undefined
+                    }
+                  />
+                  {geoapifyApiKey && showAddressSuggestions && (isAddressLoading || addressSuggestions.length > 0) && (
+                    <div id="address-suggestions" className="address-suggestions" role="listbox">
+                      {isAddressLoading && (
+                        <div className="address-suggestion address-suggestion--meta">
+                          Searching…
+                        </div>
+                      )}
+                      {!isAddressLoading &&
+                        addressSuggestions.map((s, idx) => (
+                          <button
+                            key={s.id}
+                            id={`address-suggestion-${idx}`}
+                            type="button"
+                            className={`address-suggestion${idx === activeSuggestionIndex ? ' address-suggestion--active' : ''}`}
+                            role="option"
+                            aria-selected={idx === activeSuggestionIndex}
+                            onMouseDown={(ev) => ev.preventDefault()}
+                            onClick={() => applyAddressSuggestion(s)}
+                          >
+                            {s.formatted || s.addressLine1}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {!geoapifyApiKey && (
+                    <div className="address-helper">
+                      Address autocomplete is disabled (missing `REACT_APP_GEOAPIFY_API_KEY`).
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -135,6 +303,7 @@ const Checkout = () => {
                     value={formData.city}
                     onChange={handleChange}
                     required
+                    autoComplete="address-level2"
                   />
                 </div>
                 <div className="form-group">
@@ -145,6 +314,7 @@ const Checkout = () => {
                     value={formData.state}
                     onChange={handleChange}
                     required
+                    autoComplete="address-level1"
                   />
                 </div>
                 <div className="form-group">
@@ -155,6 +325,7 @@ const Checkout = () => {
                     value={formData.zipCode}
                     onChange={handleChange}
                     required
+                    autoComplete="postal-code"
                   />
                 </div>
               </div>
