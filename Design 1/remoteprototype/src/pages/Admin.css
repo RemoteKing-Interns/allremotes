@@ -234,6 +234,20 @@
   flex-wrap: wrap;
 }
 
+.nav-section-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.nav-section-editor input {
+  padding: 8px 10px;
+  border: 1px solid var(--gray-medium);
+  border-radius: 6px;
+}
+
 .nav-editor-section {
   margin-bottom: 24px;
 }
@@ -246,7 +260,7 @@
 
 .nav-editor-item {
   display: grid;
-  grid-template-columns: 1fr 1fr 80px 40px;
+  grid-template-columns: 1fr 1fr 80px 120px;
   gap: 12px;
   align-items: center;
   margin-bottom: 8px;
@@ -291,6 +305,10 @@
   }
 
   .admin-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-section-editor {
     grid-template-columns: 1fr;
   }
 
