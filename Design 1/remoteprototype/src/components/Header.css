@@ -1247,12 +1247,6 @@
 }
 
 /* Drawer Navigation Links */
-.drawer-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .drawer-nav-link {
   display: flex;
   align-items: center;
@@ -1269,7 +1263,8 @@
 }
 
 .drawer-nav-link:hover,
-.drawer-nav-link:focus {
+.drawer-nav-link:focus,
+.drawer-nav-link.active {
   background: linear-gradient(
     135deg,
     rgba(46, 107, 111, 0.08) 0%,
@@ -1299,7 +1294,8 @@
 }
 
 .drawer-nav-cta:hover,
-.drawer-nav-cta:focus {
+.drawer-nav-cta:focus,
+.drawer-nav-cta.active {
   background: var(--gradient-mixed-reverse);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(160, 49, 45, 0.3);
@@ -1332,7 +1328,8 @@
 }
 
 .drawer-auth-link:hover,
-.drawer-auth-link:focus {
+.drawer-auth-link:focus,
+.drawer-auth-link.active {
   background: rgba(46, 107, 111, 0.08);
   border-color: var(--primary-teal);
 }
@@ -1367,7 +1364,8 @@
 }
 
 .drawer-auth-outline:hover,
-.drawer-auth-outline:focus {
+.drawer-auth-outline:focus,
+.drawer-auth-outline.active {
   background: rgba(46, 107, 111, 0.08);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(46, 107, 111, 0.2);
@@ -1381,7 +1379,8 @@
 }
 
 .drawer-auth-primary:hover,
-.drawer-auth-primary:focus {
+.drawer-auth-primary:focus,
+.drawer-auth-primary.active {
   background: var(--gradient-mixed-reverse);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(160, 49, 45, 0.3);
