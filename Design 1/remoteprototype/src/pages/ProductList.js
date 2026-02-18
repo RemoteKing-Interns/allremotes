@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useStore } from '../context/StoreContext';
-import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
-import { getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
-import './ProductList.css';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useStore } from "../context/StoreContext";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import {
+  getLineTotal,
+  getPriceBreakdown,
+  isDiscountEligible,
+} from "../utils/pricing";
+import "./ProductList.css";
 
 const PAGE_SIZE = 15;
 
@@ -14,39 +18,51 @@ const ProductList = () => {
   const { user } = useAuth();
   const products = getProducts();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialCategory = searchParams.get('category') || 'all';
+  const initialCategory = searchParams.get("category") || "all";
+  const initialBrand = searchParams.get("brand") || "all";
 
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || "",
+  );
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedBrand, setSelectedBrand] = useState('all');
-  const [stockStatus, setStockStatus] = useState('all'); // all | in | out
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
+  const [stockStatus, setStockStatus] = useState("all"); // all | in | out
   const [addedItem, setAddedItem] = useState(null);
   const isModalOpen = Boolean(addedItem);
 
-  const pageFromUrl = Number(searchParams.get('page') || '1');
-  const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
+  const pageFromUrl = Number(searchParams.get("page") || "1");
+  const [currentPage, setCurrentPage] = useState(
+    Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1,
+  );
 
   const brands = useMemo(() => {
-    return ['all', ...new Set((products || []).map(p => p.brand).filter(Boolean))];
+    return [
+      "all",
+      ...new Set((products || []).map((p) => p.brand).filter(Boolean)),
+    ];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let result = selectedCategory === 'all' ? (products || []) : (products || []).filter(p => p.category === selectedCategory);
+    let result =
+      selectedCategory === "all"
+        ? products || []
+        : (products || []).filter((p) => p.category === selectedCategory);
 
-    if (selectedBrand !== 'all') {
-      result = result.filter(p => p.brand === selectedBrand);
+    if (selectedBrand !== "all") {
+      result = result.filter((p) => p.brand === selectedBrand);
     }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q),
       );
     }
 
-    if (stockStatus !== 'all') {
-      const wantInStock = stockStatus === 'in';
+    if (stockStatus !== "all") {
+      const wantInStock = stockStatus === "in";
       result = result.filter((p) => Boolean(p.inStock) === wantInStock);
     }
 
@@ -70,7 +86,7 @@ const ProductList = () => {
   useEffect(() => {
     if (clampedPage === pageFromUrl) return;
     const next = new URLSearchParams(searchParams);
-    next.set('page', String(clampedPage));
+    next.set("page", String(clampedPage));
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clampedPage]);
@@ -91,7 +107,7 @@ const ProductList = () => {
     for (let i = 0; i < sorted.length; i += 1) {
       const p = sorted[i];
       const prev = sorted[i - 1];
-      if (i > 0 && p - prev > 1) out.push('…');
+      if (i > 0 && p - prev > 1) out.push("…");
       out.push(p);
     }
     return out;
@@ -124,23 +140,47 @@ const ProductList = () => {
     if (!isModalOpen) return;
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setAddedItem(null);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [isModalOpen]);
 
+  // Keep URL in sync so pagination is shareable/bookmarkable.
+  useEffect(() => {
+    if (clampedPage === pageFromUrl) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("page", String(clampedPage));
+    setSearchParams(next, { replace: true });
+  }, [clampedPage]);
+
+  // Update URL when brand changes
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("brand", selectedBrand);
+    setSearchParams(next, { replace: true });
+  }, [selectedBrand]);
+
+  // If filters change, reset to page 1.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedBrand, searchQuery, stockStatus]);
+
+  useEffect(() => {
+    const brandFromUrl = searchParams.get("brand") || "all";
+    setSelectedBrand(brandFromUrl);
+  }, [searchParams]);
+
   return (
     <div className="shop-page">
-
       {/* HERO */}
       <div className="shop-hero">
         <div className="container">
@@ -157,7 +197,6 @@ const ProductList = () => {
       {/* CONTENT */}
       <div className="shop-content">
         <div className="container shop-grid">
-
           {/* FILTERS */}
           <aside className="filters">
             <h3>Filters</h3>
@@ -187,15 +226,18 @@ const ProductList = () => {
               value={selectedBrand}
               onChange={(e) => setSelectedBrand(e.target.value)}
             >
-              {brands.map(brand => (
+              {brands.map((brand) => (
                 <option key={brand} value={brand}>
-                  {brand === 'all' ? 'All Brands' : brand}
+                  {brand === "all" ? "All Brands" : brand}
                 </option>
               ))}
             </select>
 
             <label>Stock</label>
-            <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value)}>
+            <select
+              value={stockStatus}
+              onChange={(e) => setStockStatus(e.target.value)}
+            >
               <option value="all">All</option>
               <option value="in">In Stock</option>
               <option value="out">Out of Stock</option>
@@ -204,10 +246,10 @@ const ProductList = () => {
             <button
               className="clear-btn"
               onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setSelectedBrand('all');
-                setStockStatus('all');
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setSelectedBrand("all");
+                setStockStatus("all");
               }}
             >
               Clear Filters
@@ -217,13 +259,12 @@ const ProductList = () => {
           {/* PRODUCTS */}
           <main>
             <p className="product-count">
-              Showing {filteredProducts.length === 0 ? 0 : ((clampedPage - 1) * PAGE_SIZE + 1)}
-              {' '}
-              –
-              {' '}
-              {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)}
-              {' '}
-              of {filteredProducts.length} products
+              Showing{" "}
+              {filteredProducts.length === 0
+                ? 0
+                : (clampedPage - 1) * PAGE_SIZE + 1}{" "}
+              – {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)} of{" "}
+              {filteredProducts.length} products
             </p>
 
             {filteredProducts.length === 0 ? (
@@ -231,58 +272,65 @@ const ProductList = () => {
             ) : (
               <>
                 <div className="products-grid">
-                  {pageProducts.map(product => (
-                  <Link
-                    to={`/product/${product.id}`}
-                    key={product.id}
-                    className="product-card"
-                  >
-                    <div className="image-box">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        onError={(e) =>
-                          (e.target.src = 'https://via.placeholder.com/300')
-                        }
-                      />
-                    </div>
-
-                    <div className="card-body">
-                      <p className="brand">{product.brand}</p>
-                      <h3>{product.name}</h3>
-
-                      <div className="price-row">
-                        <span className="price">
-                          {(() => {
-                            const pricing = getPriceBreakdown(product.price, hasDiscount);
-                            if (!pricing.hasDiscount) {
-                              return `AU$${pricing.finalPrice.toFixed(2)}`;
-                            }
-                            return (
-                              <span className="price-discount-wrap">
-                                <span className="price-original">AU${pricing.originalPrice.toFixed(2)}</span>
-                                <span className="price-discounted">AU${pricing.finalPrice.toFixed(2)}</span>
-                              </span>
-                            );
-                          })()}
-                        </span>
-                        <span
-                          className={`stock ${product.inStock ? 'in' : 'out'}`}
-                        >
-                          {product.inStock ? 'In Stock' : 'Out'}
-                        </span>
+                  {pageProducts.map((product) => (
+                    <Link
+                      to={`/product/${product.id}`}
+                      key={product.id}
+                      className="product-card"
+                    >
+                      <div className="image-box">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          onError={(e) =>
+                            (e.target.src = "https://via.placeholder.com/300")
+                          }
+                        />
                       </div>
-                      <button
-                        type="button"
-                        className="add-to-cart"
-                        onClick={(e) => handleAddToCart(e, product)}
-                        disabled={!product.inStock}
-                      >
-                        {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-                      </button>
-                    </div>
-                  </Link>
-                ))}
+
+                      <div className="card-body">
+                        <p className="brand">{product.brand}</p>
+                        <h3>{product.name}</h3>
+
+                        <div className="price-row">
+                          <span className="price">
+                            {(() => {
+                              const pricing = getPriceBreakdown(
+                                product.price,
+                                hasDiscount,
+                              );
+                              if (!pricing.hasDiscount) {
+                                return `AU$${pricing.finalPrice.toFixed(2)}`;
+                              }
+                              return (
+                                <span className="price-discount-wrap">
+                                  <span className="price-original">
+                                    AU${pricing.originalPrice.toFixed(2)}
+                                  </span>
+                                  <span className="price-discounted">
+                                    AU${pricing.finalPrice.toFixed(2)}
+                                  </span>
+                                </span>
+                              );
+                            })()}
+                          </span>
+                          <span
+                            className={`stock ${product.inStock ? "in" : "out"}`}
+                          >
+                            {product.inStock ? "In Stock" : "Out"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="add-to-cart"
+                          onClick={(e) => handleAddToCart(e, product)}
+                          disabled={!product.inStock}
+                        >
+                          {product.inStock ? "Add to Cart" : "Out of Stock"}
+                        </button>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
 
                 {totalPages > 1 && (
@@ -297,26 +345,30 @@ const ProductList = () => {
                     </button>
 
                     <div className="pager-pages">
-                      {visiblePages.map((p, idx) => (
-                        p === '…' ? (
-                          <span key={`dots-${idx}`} className="pager-dots">…</span>
+                      {visiblePages.map((p, idx) =>
+                        p === "…" ? (
+                          <span key={`dots-${idx}`} className="pager-dots">
+                            …
+                          </span>
                         ) : (
                           <button
                             key={p}
                             type="button"
-                            className={`pager-page ${p === clampedPage ? 'active' : ''}`}
+                            className={`pager-page ${p === clampedPage ? "active" : ""}`}
                             onClick={() => setCurrentPage(p)}
                           >
                             {p}
                           </button>
-                        )
-                      ))}
+                        ),
+                      )}
                     </div>
 
                     <button
                       type="button"
                       className="pager-btn"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={clampedPage >= totalPages}
                     >
                       Next
@@ -326,7 +378,6 @@ const ProductList = () => {
               </>
             )}
           </main>
-
         </div>
       </div>
       {isModalOpen && (
@@ -349,25 +400,34 @@ const ProductList = () => {
             <div className="cart-modal-body">
               <img
                 src={addedItem?.image}
-                alt={addedItem?.name || 'Product'}
+                alt={addedItem?.name || "Product"}
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/300x300?text=Remote';
+                  e.target.src =
+                    "https://via.placeholder.com/300x300?text=Remote";
                 }}
               />
               <div className="cart-modal-info">
-                <p className="cart-modal-brand">{addedItem?.brand || 'Remote Pro'}</p>
+                <p className="cart-modal-brand">
+                  {addedItem?.brand || "Remote Pro"}
+                </p>
                 <h3>{addedItem?.name}</h3>
                 {addedItem?.description && (
-                  <p className="cart-modal-description">{addedItem.description}</p>
+                  <p className="cart-modal-description">
+                    {addedItem.description}
+                  </p>
                 )}
                 <div className="cart-modal-meta">
                   <div>
                     <span>Category</span>
-                    <strong>{addedItem?.category === 'car' ? 'Car Remote' : 'Garage Remote'}</strong>
+                    <strong>
+                      {addedItem?.category === "car"
+                        ? "Car Remote"
+                        : "Garage Remote"}
+                    </strong>
                   </div>
                   <div>
                     <span>Condition</span>
-                    <strong>{addedItem?.condition || 'Brand New'}</strong>
+                    <strong>{addedItem?.condition || "Brand New"}</strong>
                   </div>
                 </div>
                 <div className="cart-modal-pricing">
@@ -375,8 +435,12 @@ const ProductList = () => {
                     <span>Price</span>
                     {modalPrice.hasDiscount ? (
                       <div className="modal-price-stack">
-                        <span className="modal-price-original">AU${modalPrice.originalPrice.toFixed(2)}</span>
-                        <strong className="modal-price-discounted">AU${modalPrice.finalPrice.toFixed(2)}</strong>
+                        <span className="modal-price-original">
+                          AU${modalPrice.originalPrice.toFixed(2)}
+                        </span>
+                        <strong className="modal-price-discounted">
+                          AU${modalPrice.finalPrice.toFixed(2)}
+                        </strong>
                       </div>
                     ) : (
                       <strong>AU${modalPrice.finalPrice.toFixed(2)}</strong>
@@ -388,7 +452,9 @@ const ProductList = () => {
                       <button
                         type="button"
                         className="cart-modal-qty-btn"
-                        onClick={() => handleModalQuantityChange(modalQuantity - 1)}
+                        onClick={() =>
+                          handleModalQuantityChange(modalQuantity - 1)
+                        }
                         disabled={modalQuantity <= 1}
                         aria-label="Decrease quantity"
                       >
@@ -398,13 +464,17 @@ const ProductList = () => {
                         type="number"
                         min="1"
                         value={modalQuantity}
-                        onChange={(e) => handleModalQuantityChange(e.target.value)}
+                        onChange={(e) =>
+                          handleModalQuantityChange(e.target.value)
+                        }
                         aria-label="Quantity"
                       />
                       <button
                         type="button"
                         className="cart-modal-qty-btn"
-                        onClick={() => handleModalQuantityChange(modalQuantity + 1)}
+                        onClick={() =>
+                          handleModalQuantityChange(modalQuantity + 1)
+                        }
                         aria-label="Increase quantity"
                       >
                         +
@@ -413,7 +483,14 @@ const ProductList = () => {
                   </div>
                   <div>
                     <span>Total</span>
-                    <strong>AU${getLineTotal(addedItem?.price || 0, modalQuantity, hasDiscount).toFixed(2)}</strong>
+                    <strong>
+                      AU$
+                      {getLineTotal(
+                        addedItem?.price || 0,
+                        modalQuantity,
+                        hasDiscount,
+                      ).toFixed(2)}
+                    </strong>
                   </div>
                 </div>
                 <div className="cart-modal-actions">

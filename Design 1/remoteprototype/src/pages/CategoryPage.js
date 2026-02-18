@@ -25,9 +25,12 @@ const CategoryPage = () => {
   const menuItem = navigationMenu[categoryMap[category] || category];
 
   const visibleColumns = (menuItem?.columns || [])
-    .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
+    .map((col) => ({
+      ...col,
+      items: (col.items || []).filter((i) => !i?.hidden),
+    }))
     .filter((col) => (col.items || []).length > 0);
-  
+
   let products = [];
   if (category === "garage-gate") {
     products = (allProducts || []).filter((p) => p.category === "garage");
@@ -77,6 +80,33 @@ const CategoryPage = () => {
         </div>
       )}
 
+      {/* {visibleColumns.length > 0 && (
+        <div className="category-sections">
+          <div className="container">
+            {visibleColumns.map((column, index) => (
+              <section key={index} className="category-section">
+                <h2 className="section-title">{column.title}</h2>
+                <div className="section-links">
+                  {column.items.map((item, itemIndex) => (
+                    <Link
+                      key={itemIndex}
+                      //to={item.path}
+                      to="/products/all"
+                      className="section-link"
+                    >
+                      <span className="link-icon">
+                        <img src={item.icon} alt={item.name} />
+                      </span>
+                      <span>{item.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      )} */}
+
       {visibleColumns.length > 0 && (
         <div className="category-sections">
           <div className="container">
@@ -87,7 +117,7 @@ const CategoryPage = () => {
                   {column.items.map((item, itemIndex) => (
                     <Link
                       key={itemIndex}
-                      to={item.path}
+                      to={`/products/all?brand=${encodeURIComponent(item.name)}`}
                       className="section-link"
                     >
                       <span className="link-icon">
