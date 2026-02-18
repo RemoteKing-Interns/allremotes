@@ -145,7 +145,7 @@ export default function AdminUploadProducts() {
           <div className="admin-card">
             <h3>Upload</h3>
             <p style={{ marginTop: 0 }}>
-              This imports into <code>products.json</code> on the server and upserts by <strong>Brand + Name</strong>.
+              This imports into the server datastore (MongoDB if configured, otherwise <code>products.json</code>) and upserts by <strong>Product Code</strong>.
             </p>
 
             {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
@@ -201,8 +201,8 @@ export default function AdminUploadProducts() {
                       <thead>
                         <tr>
                           <th>Row</th>
-                          <th>Brand</th>
-                          <th>Name</th>
+                          <th>Product Code</th>
+                          <th>Description</th>
                           <th>Errors</th>
                         </tr>
                       </thead>
@@ -210,7 +210,7 @@ export default function AdminUploadProducts() {
                         {result.failures.map((f) => (
                           <tr key={`${f.rowNumber}-${f.key || ''}`}>
                             <td>{f.rowNumber}</td>
-                            <td>{f.brand}</td>
+                            <td>{f.sku ?? f.brand}</td>
                             <td>{f.name}</td>
                             <td>{(f.errors || []).join('; ')}</td>
                           </tr>

@@ -175,8 +175,8 @@
       <p class="sub">
         Upload a <strong>.csv</strong> file to bulk create/update products. Required columns:
         <span class="mono">Product Code</span> and <span class="mono">Product Description</span>.
-        If a product with the same <strong>Brand + Name</strong> already exists in
-        <span class="mono">products.json</span>, it will be updated instead of duplicated.
+        If a product with the same <strong>Product Code</strong> already exists in
+        the server datastore (MongoDB if configured, otherwise <span class="mono">products.json</span>), it will be updated instead of duplicated.
       </p>
 
       <div class="card">
@@ -191,7 +191,7 @@
           </div>
         </div>
         <div class="footer">
-          Tip: Duplicate Brand+Name pairs in a single upload are rejected for clarity.
+          Tip: Duplicate Product Codes in a single upload are rejected for clarity.
         </div>
       </div>
 
