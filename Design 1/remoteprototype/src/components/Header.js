@@ -26,6 +26,8 @@ const Header = () => {
   const drawerRef = useRef(null);
   const firstFocusableRef = useRef(null);
 
+  const hasDiscount = isDiscountEligible(user);
+
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -35,7 +37,10 @@ const Header = () => {
     const section = navigationMenu[key];
     if (!section || section.hidden) return;
     const visibleColumns = (section.columns || [])
-      .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
+      .map((col) => ({
+        ...col,
+        items: (col.items || []).filter((i) => !i?.hidden),
+      }))
       .filter((col) => (col.items || []).length > 0);
 
     if (visibleColumns.length > 0) {
@@ -397,22 +402,24 @@ const Header = () => {
 
               {/* Navigation Links */}
               <nav className="drawer-nav">
-                {Object.keys(navigationMenu).filter((key) => !navigationMenu[key]?.hidden).map((key, index) => {
-                  const menuItem = navigationMenu[key];
-                  const isFirst = index === 0;
-                  const isActive = location.pathname === menuItem.path;
-                  return (
-                    <Link
-                      key={key}
-                      ref={isFirst ? firstFocusableRef : null}
-                      to={menuItem.path}
-                      className={`drawer-nav-link ${isActive ? "active" : ""}`}
-                      onClick={handleNavLinkClick}
-                    >
-                      {menuItem.title}
-                    </Link>
-                  );
-                })}
+                {Object.keys(navigationMenu)
+                  .filter((key) => !navigationMenu[key]?.hidden)
+                  .map((key, index) => {
+                    const menuItem = navigationMenu[key];
+                    const isFirst = index === 0;
+                    const isActive = location.pathname === menuItem.path;
+                    return (
+                      <Link
+                        key={key}
+                        ref={isFirst ? firstFocusableRef : null}
+                        to={menuItem.path}
+                        className={`drawer-nav-link ${isActive ? "active" : ""}`}
+                        onClick={handleNavLinkClick}
+                      >
+                        {menuItem.title}
+                      </Link>
+                    );
+                  })}
                 <Link
                   to="/products/all"
                   className={`drawer-nav-link drawer-nav-cta ${location.pathname === "/products/all" ? "active" : ""}`}
@@ -471,94 +478,106 @@ const Header = () => {
         <div className="container">
           <div className="nav-inner">
             <div className="nav-links">
-              {Object.keys(navigationMenu).filter((key) => !navigationMenu[key]?.hidden).map((key) => {
-                const menuItem = navigationMenu[key];
-                const visibleColumns = (menuItem.columns || [])
-                  .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
-                  .filter((col) => (col.items || []).length > 0);
-                const isActive = activeDropdown === key;
+              {Object.keys(navigationMenu)
+                .filter((key) => !navigationMenu[key]?.hidden)
+                .map((key) => {
+                  const menuItem = navigationMenu[key];
+                  const visibleColumns = (menuItem.columns || [])
+                    .map((col) => ({
+                      ...col,
+                      items: (col.items || []).filter((i) => !i?.hidden),
+                    }))
+                    .filter((col) => (col.items || []).length > 0);
+                  const isActive = activeDropdown === key;
 
-                return (
-                  <div
-                    key={key}
-                    className="nav-item-wrapper"
-                    onMouseEnter={() => handleMouseEnter(key)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    <Link
-                      to={menuItem.path}
-                      className={`nav-link ${isActive ? "active" : ""}`}
+                  return (
+                    <div
+                      key={key}
+                      className="nav-item-wrapper"
+                      onMouseEnter={() => handleMouseEnter(key)}
+                      onMouseLeave={handleMouseLeave}
                     >
-                      {menuItem.title}
-                      {visibleColumns.length > 0 && (
-                        <svg
-                          className={`chevron ${isActive ? "up" : "down"}`}
-                          width="12"
-                          height="12"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          {isActive ? (
-                            <path d="M2 8l4-4 4 4" />
-                          ) : (
-                            <path d="M2 4l4 4 4-4" />
-                          )}
-                        </svg>
-                      )}
-                    </Link>
+                      <Link
+                        to={menuItem.path}
+                        className={`nav-link ${isActive ? "active" : ""}`}
+                      >
+                        {menuItem.title}
+                        {visibleColumns.length > 0 && (
+                          <svg
+                            className={`chevron ${isActive ? "up" : "down"}`}
+                            width="12"
+                            height="12"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            {isActive ? (
+                              <path d="M2 8l4-4 4 4" />
+                            ) : (
+                              <path d="M2 4l4 4 4-4" />
+                            )}
+                          </svg>
+                        )}
+                      </Link>
 
-                    {isActive && visibleColumns.length > 0 && (
-                      <div className="mega-menu-wrapper">
-                        <div className="mega-menu">
-                          <div className="mega-menu-content">
-                            {visibleColumns.map((column, colIndex) => (
-                              <div key={colIndex} className="mega-menu-column">
-                                <h3 className="column-title">{column.title}</h3>
-                                <ul className="column-items">
-                                  {column.items.map((item, itemIndex) => (
-                                    <li key={itemIndex}>
-                                      <Link
-                                        to={item.path}
-                                        className={`menu-item-link ${item.isShopAll ? "shop-all" : ""}`}
-                                        onClick={() => setActiveDropdown(null)}
-                                      >
-                                        <span className="menu-item-icon">
-                                          <img
-                                            src={item.icon}
-                                            alt={item.name}
-                                          />
-                                        </span>
-                                        <span className="menu-item-text">
-                                          {item.name}
-                                        </span>
-                                        {item.isShopAll && (
-                                          <svg
-                                            className="arrow-icon"
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 16 16"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                          >
-                                            <path d="M6 3l5 5-5 5" />
-                                          </svg>
-                                        )}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ))}
+                      {isActive && visibleColumns.length > 0 && (
+                        <div className="mega-menu-wrapper">
+                          <div className="mega-menu">
+                            <div className="mega-menu-content">
+                              {visibleColumns.map((column, colIndex) => (
+                                <div
+                                  key={colIndex}
+                                  className="mega-menu-column"
+                                >
+                                  <h3 className="column-title">
+                                    {column.title}
+                                  </h3>
+                                  <ul className="column-items">
+                                    {column.items.map((item, itemIndex) => (
+                                      <li key={itemIndex}>
+                                        <Link
+                                          to={item.path}
+                                          className={`menu-item-link ${item.isShopAll ? "shop-all" : ""}`}
+                                          onClick={() =>
+                                            setActiveDropdown(null)
+                                          }
+                                        >
+                                          <span className="menu-item-icon">
+                                            <img
+                                              src={item.icon}
+                                              alt={item.name}
+                                            />
+                                          </span>
+                                          <span className="menu-item-text">
+                                            {item.name}
+                                          </span>
+                                          {item.isShopAll && (
+                                            <svg
+                                              className="arrow-icon"
+                                              width="16"
+                                              height="16"
+                                              viewBox="0 0 16 16"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                            >
+                                              <path d="M6 3l5 5-5 5" />
+                                            </svg>
+                                          )}
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })}
               <Link to="/products/all" className="nav-cta">
                 View Products
               </Link>
