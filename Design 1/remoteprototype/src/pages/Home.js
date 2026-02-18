@@ -167,6 +167,7 @@ const Home = () => {
               {cta.buttonText || 'View All Products'}
             </Link>
           </div>
+          
         </div>
       </section>
     </div>

@@ -24,6 +24,10 @@ const CategoryPage = () => {
 
   const menuItem = navigationMenu[categoryMap[category] || category];
 
+  const visibleColumns = (menuItem?.columns || [])
+    .map((col) => ({ ...col, items: (col.items || []).filter((i) => !i?.hidden) }))
+    .filter((col) => (col.items || []).length > 0);
+  
   let products = [];
   if (category === "garage-gate") {
     products = (allProducts || []).filter((p) => p.category === "garage");
@@ -33,7 +37,7 @@ const CategoryPage = () => {
     products = allProducts || [];
   }
 
-  if (!menuItem) {
+  if (!menuItem || menuItem.hidden) {
     return (
       <div className="category-page">
         <div className="container">
@@ -73,10 +77,10 @@ const CategoryPage = () => {
         </div>
       )}
 
-      {menuItem.columns && (
+      {visibleColumns.length > 0 && (
         <div className="category-sections">
           <div className="container">
-            {menuItem.columns.map((column, index) => (
+            {visibleColumns.map((column, index) => (
               <section key={index} className="category-section">
                 <h2 className="section-title">{column.title}</h2>
                 <div className="section-links">
