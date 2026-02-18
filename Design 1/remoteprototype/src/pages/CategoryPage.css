@@ -3,7 +3,11 @@
 }
 
 .category-hero {
-  background: linear-gradient(135deg, var(--primary-teal) 0%, var(--teal-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-teal) 0%,
+    var(--teal-dark) 100%
+  );
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -33,13 +37,17 @@
 }
 
 .category-hero-overlay::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
 }
 
 @keyframes fadeInUp {
@@ -62,7 +70,9 @@
   font-size: 48px;
   margin-bottom: 15px;
   font-weight: 700;
-  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  text-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
   animation: fadeInUp 0.8s ease-out;
 }
 
@@ -130,7 +140,11 @@
   height: 50px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(46, 107, 111, 0.1) 0%, rgba(46, 107, 111, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(46, 107, 111, 0.1) 0%,
+    rgba(46, 107, 111, 0.05) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,7 +155,11 @@
 
 .section-link:hover .link-icon {
   border-color: var(--primary-teal);
-  background: linear-gradient(135deg, rgba(46, 107, 111, 0.2) 0%, rgba(46, 107, 111, 0.15) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(46, 107, 111, 0.2) 0%,
+    rgba(46, 107, 111, 0.15) 100%
+  );
   transform: scale(1.1);
 }
 
@@ -188,7 +206,7 @@
 .contact-form h2 {
   font-size: 32px;
   color: var(--primary-teal);
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   font-weight: 700;
 }
 
@@ -216,6 +234,10 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.contact-form .form-group {
+  margin-bottom: 0px;
 }
 
 .contact-form .form-group input,
