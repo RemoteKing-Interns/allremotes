@@ -227,7 +227,7 @@ const Header = () => {
                           {(() => {
                             const pricing = getPriceBreakdown(
                               product.price,
-                              hasDiscount,
+                              isDiscountEligible(user),
                             );
                             return (
                               <div className="search-result-price">
