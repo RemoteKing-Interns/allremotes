@@ -68,9 +68,11 @@ function resolveProducts(productsData) {
   if (!productsData || !productsData.length) return defaultProductsFromFile;
   return productsData.map((p) => ({
     ...p,
-    image: typeof p.imageIndex === 'number' && productImagePool[p.imageIndex]
-      ? productImagePool[p.imageIndex]
-      : productImagePool[0],
+    image: (typeof p.image === 'string' && p.image.trim())
+      ? p.image
+      : (typeof p.imageIndex === 'number' && productImagePool[p.imageIndex])
+        ? productImagePool[p.imageIndex]
+        : productImagePool[0],
   }));
 }
 
@@ -87,6 +89,8 @@ function coerceServerProductsToLocal(productsFromServer) {
     description: p?.description ?? '',
     inStock: typeof p?.inStock === 'boolean' ? p.inStock : true,
     brand: p?.brand ?? '',
+    sku: p?.sku ?? p?.product_code ?? '',
+    image: p?.image ?? '',
     imageIndex: typeof p?.imageIndex === 'number' ? p.imageIndex : 0,
     condition: p?.condition ?? 'Brand New',
     returns: p?.returns ?? 'No returns accepted',
@@ -98,7 +102,10 @@ function saveProducts(productsWithImages) {
   const toSave = productsWithImages.map((p) => {
     const { image, ...rest } = p;
     const imageIndex = productImagePool.indexOf(image);
-    return { ...rest, imageIndex: imageIndex >= 0 ? imageIndex : 0 };
+    if (imageIndex >= 0) return { ...rest, imageIndex };
+    // If the image isn't from our local pool (e.g. a URL from the CSV upload),
+    // persist it directly so the UI can render it.
+    return { ...rest, imageIndex: null, image: typeof image === 'string' ? image : '' };
   });
   localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(toSave));
 }
@@ -122,6 +129,33 @@ export const StoreProvider = ({ children }) => {
       ? 'http://127.0.0.1:3001'
       : '';
 
+  const postJson = useCallback(async (path, body, { method = 'POST' } = {}) => {
+    if (apiBase == null) return null;
+    try {
+      const res = await fetch(`${apiBase}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? null),
+        credentials: 'omit',
+      });
+      if (!res.ok) return null;
+      return await res.json().catch(() => ({}));
+    } catch {
+      return null;
+    }
+  }, [apiBase]);
+
+  const getJson = useCallback(async (path) => {
+    if (apiBase == null) return null;
+    try {
+      const res = await fetch(`${apiBase}${path}`, { credentials: 'omit' });
+      if (!res.ok) return null;
+      return await res.json().catch(() => ({}));
+    } catch {
+      return null;
+    }
+  }, [apiBase]);
+
   const getProducts = useCallback(() => {
     const stored = loadProducts();
     return resolveProducts(stored);
@@ -131,7 +165,11 @@ export const StoreProvider = ({ children }) => {
   const setProducts = useCallback((productsArray) => {
     saveProducts(productsArray);
     setProductsVersion((v) => v + 1);
-  }, []);
+
+    // Best-effort: persist to backend when MongoDB is enabled there.
+    // If the backend isn't running / Mongo isn't configured, we silently keep localStorage behavior.
+    postJson('/api/admin/products', productsArray, { method: 'PUT' });
+  }, [postJson]);
 
   const refreshProductsFromServer = useCallback(async () => {
     // Best-effort: if the backend isn't running, we simply keep current local data.
@@ -145,9 +183,6 @@ export const StoreProvider = ({ children }) => {
 
   // Try to hydrate products from the server on first load (non-blocking).
   useEffect(() => {
-    // Important: do not overwrite a browser's locally edited products.
-    const stored = loadProducts();
-    if (stored && stored.length) return;
     refreshProductsFromServer().catch(() => {});
   }, [refreshProductsFromServer]);
 
@@ -165,7 +200,8 @@ export const StoreProvider = ({ children }) => {
   const setHomeContent = useCallback((content) => {
     localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(content));
     setHomeVersion((v) => v + 1);
-  }, []);
+    postJson('/api/content/home', content);
+  }, [postJson]);
 
   const resolveNavIcons = useCallback((nav) => {
     if (!nav || typeof nav !== 'object') return nav;
@@ -240,7 +276,8 @@ export const StoreProvider = ({ children }) => {
     const serialized = serializeNavIcons(nav);
     localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(serialized));
     setNavVersion((v) => v + 1);
-  }, [serializeNavIcons]);
+    postJson('/api/content/navigation', serialized);
+  }, [serializeNavIcons, postJson]);
 
   const getNavigationForAdmin = useCallback(() => {
     try {
@@ -264,7 +301,27 @@ export const StoreProvider = ({ children }) => {
   const setReviews = useCallback((reviews) => {
     localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(reviews));
     setReviewsVersion((v) => v + 1);
-  }, []);
+    postJson('/api/content/reviews', reviews);
+  }, [postJson]);
+
+  // Hydrate shared content (Mongo-backed) into localStorage on startup.
+  useEffect(() => {
+    getJson('/api/content/home').then((resp) => {
+      if (!resp || !resp.data) return;
+      localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(resp.data));
+      setHomeVersion((v) => v + 1);
+    });
+    getJson('/api/content/navigation').then((resp) => {
+      if (!resp || !resp.data) return;
+      localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(resp.data));
+      setNavVersion((v) => v + 1);
+    });
+    getJson('/api/content/reviews').then((resp) => {
+      if (!resp || !resp.data) return;
+      localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(resp.data));
+      setReviewsVersion((v) => v + 1);
+    });
+  }, [getJson]);
 
   const value = {
     getProducts,

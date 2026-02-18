@@ -4,7 +4,7 @@
  * Goals:
  * - Provide an admin page at GET /admin/upload-products
  * - Accept a CSV upload at POST /admin/upload-products
- * - Validate each CSV row, upsert by Brand+Name, and persist to ../products.json
+ * - Validate each CSV row and upsert by Product Code (MongoDB if configured; otherwise ../products.json)
  * - Delete the uploaded CSV file after processing
  *
  * Notes:
@@ -20,7 +20,35 @@ const crypto = require('crypto');
 const express = require('express');
 const http = require('http');
 
+const { mongoEnabled, getDb } = require('./mongo');
+
 const app = express();
+
+function loadEnvFile(envPath) {
+  try {
+    if (!fs.existsSync(envPath)) return;
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = String(line || '').trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      if (!key) continue;
+      if (process.env[key] != null && String(process.env[key]).length > 0) continue;
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      process.env[key] = val;
+    }
+  } catch {
+    // Best-effort only.
+  }
+}
+
+// Load env vars for the backend when running locally (CRA loads its own .env, but Node doesn't).
+loadEnvFile(path.resolve(__dirname, '..', '.env'));
 
 // ---- CORS (development convenience) -----------------------------------------
 //
@@ -39,7 +67,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -95,6 +123,104 @@ async function writeProducts(products) {
   await fsp.rename(tmpPath, PRODUCTS_JSON_PATH);
 }
 
+function normalizeSkuKey(value) {
+  return normalizeKeyPart(value).replace(/\s+/g, '');
+}
+
+async function getProductsCollection() {
+  const db = await getDb();
+  const col = db.collection('products');
+  await col.createIndex({ id: 1 }, { unique: true });
+  await col.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
+  return col;
+}
+
+async function getContentCollection() {
+  const db = await getDb();
+  const col = db.collection('content');
+  // MongoDB always has a unique index on `_id`; no need to create one.
+  return col;
+}
+
+async function seedContentDefaultsIfMissing() {
+  if (!mongoEnabled()) return;
+  const col = await getContentCollection();
+  const keys = ['home', 'navigation', 'reviews'];
+  for (const key of keys) {
+    const existing = await col.findOne({ _id: key });
+    if (!existing) {
+      await col.insertOne({
+        _id: key,
+        data: null,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }
+}
+
+async function migrateProductsJsonToMongoIfEmpty() {
+  if (!mongoEnabled()) return;
+  const col = await getProductsCollection();
+  const count = await col.estimatedDocumentCount();
+  if (count > 0) return;
+
+  try {
+    const products = await readProducts();
+    if (!products || products.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const docs = products
+      .filter((p) => p && typeof p === 'object')
+      .map((p) => {
+        const sku = getProductSkuForKey(p);
+        const skuKey = sku ? normalizeSkuKey(sku) : null;
+        return {
+          ...p,
+          id: p.id || crypto.randomUUID(),
+          sku: p.sku ?? sku ?? '',
+          skuKey: skuKey || undefined,
+          updatedAt: p.updatedAt || nowIso,
+          createdAt: p.createdAt || nowIso,
+        };
+      });
+    if (docs.length === 0) return;
+
+    // Dedupe by `id`, then by `skuKey` (when present), before inserting.
+    const seenIds = new Set();
+    const seenSkuKeys = new Set();
+    const uniqueDocs = [];
+    for (const d of docs) {
+      const id = String(d.id || '').trim();
+      if (!id) continue;
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      const skuKey = d.skuKey ? String(d.skuKey) : '';
+      if (skuKey) {
+        if (seenSkuKeys.has(skuKey)) continue;
+        seenSkuKeys.add(skuKey);
+      }
+      uniqueDocs.push(d);
+    }
+
+    if (uniqueDocs.length === 0) return;
+    await col.insertMany(uniqueDocs, { ordered: false });
+  } catch {
+    // Ignore seed failures; server should still start.
+  }
+}
+
+async function verifyMongoConnectionOrDisable() {
+  if (!mongoEnabled()) return false;
+  try {
+    const db = await getDb();
+    await db.command({ ping: 1 });
+    return true;
+  } catch {
+    // If MongoDB is configured but unreachable, fall back to JSON mode.
+    process.env.MONGODB_DISABLED = '1';
+    return false;
+  }
+}
+
 function normalizeHeader(header) {
   // Normalize headers so we can accept slightly different exports.
   // Examples supported:
@@ -112,6 +238,8 @@ function normalizeHeader(header) {
   // Canonicalize common variants to the keys our importer expects.
   const compact = h.replace(/_/g, '');
   switch (compact) {
+    case 'productgroupgroupname':
+      return 'product_group';
     case 'productcode':
       return 'product_code';
     case 'productdescription':
@@ -122,6 +250,12 @@ function normalizeHeader(header) {
       return 'base_pack';
     case 'onhand':
       return 'on_hand';
+    case 'sellprice':
+      return 'sell_price';
+    case 'defaultsellprice':
+      return 'default_sell_price';
+    case 'imageurl':
+      return 'image_url';
     default:
       return h;
   }
@@ -147,82 +281,72 @@ function rowToPublicShape(row) {
     product_code: row.product_code,
     product_description: row.product_description,
     product_group: row.product_group,
-    base_pack: row.base_pack,
-    on_hand: row.on_hand,
+    sell_price: row.sell_price,
+    default_sell_price: row.default_sell_price,
+    image_url: row.image_url,
   };
 }
 
 /**
  * CSV column mapping requirements (after header normalization):
- * - Product Code -> product_code -> Brand
- * - Product Description -> product_description -> Name
- * - Product Group -> product_group -> Category (optional)
- * - Base Pack -> base_pack -> Price (AU$) (optional)
- * - Allocated -> allocated -> ignored
- * - On Hand -> on_hand -> In stock (optional)
- * - Image -> image -> leave empty (always)
- * - Description -> description -> copy from product_description
+ * - ProductCode / Product Code -> product_code -> SKU (required)
+ * - ProductDescription / Product Description -> product_description -> Name (required)
+ * - ProductGroup.GroupName / Product Group -> product_group -> Category (optional)
+ * - SellPrice / DefaultSellPrice -> sell_price / default_sell_price -> Price (optional)
+ * - ImageUrl -> image_url -> Image URL (optional)
  */
 function mapRowToProduct(row) {
-  const brand = String(row.product_code || '').trim();
+  const sku = String(row.product_code || '').trim();
   const name = String(row.product_description || '').trim();
 
-  const category = String(row.product_group || '').trim() || null;
-
-  const basePackRaw = String(row.base_pack || '').trim();
-  const price = basePackRaw ? coercePrice(basePackRaw) : null;
-
-  const onHandRaw = String(row.on_hand || '').trim();
-  let inStock = null;
-  if (onHandRaw) {
-    const qty = Number(onHandRaw);
-    inStock = Number.isFinite(qty) ? qty > 0 : NaN;
+  const groupRaw = String(row.product_group || '').trim();
+  let category = groupRaw || null;
+  if (groupRaw) {
+    const g = groupRaw.toLowerCase();
+    if (g.includes('garage') || g.includes('gate')) category = 'garage';
+    else if (g.includes('auto') || g.includes('car')) category = 'car';
   }
 
-  // "Description -> copy from Product Description"
+  const sellPriceRaw = String(row.sell_price || '').trim();
+  const defaultSellPriceRaw = String(row.default_sell_price || '').trim();
+  const sellPrice = sellPriceRaw ? coercePrice(sellPriceRaw) : null;
+  const defaultSellPrice = defaultSellPriceRaw ? coercePrice(defaultSellPriceRaw) : null;
+  const price = Number.isFinite(sellPrice) ? sellPrice : (Number.isFinite(defaultSellPrice) ? defaultSellPrice : null);
+
+  const image = String(row.image_url || '').trim();
+
+  const inStock = null;
   const description = name || null;
 
-  // "Image -> leave empty"
-  const image = '';
+  // No explicit "Brand" column exists in this CSV export. Keep the UI stable by
+  // storing the SKU in `brand` (so the "Brand" field isn't empty).
+  const brand = sku || null;
 
-  return { brand, name, category, price, inStock, image, description };
+  return { sku, brand, name, category, price, inStock, image, description };
 }
 
-function buildBrandNameKey(brand, name) {
-  return `${normalizeKeyPart(brand)}::${normalizeKeyPart(name)}`;
+function buildSkuKey(sku) {
+  return normalizeSkuKey(sku);
 }
 
 function validateRow(row, { existingKeys, seenKeysInUpload }) {
   const errors = [];
 
-  // Change: we now upsert by Brand + Name instead of SKU, using the mapped columns.
   const product = mapRowToProduct(row);
-  const key = buildBrandNameKey(product.brand, product.name);
+  const key = buildSkuKey(product.sku);
 
-  if (!product.brand) errors.push('Missing required field: Brand (Product Code)');
+  if (!product.sku) errors.push('Missing required field: Product Code');
   if (!product.name) errors.push('Missing required field: Name (Product Description)');
 
-  // Change: optional fields no longer block the import if missing.
-  // If provided, we still validate them.
   if (product.price !== null) {
     if (!Number.isFinite(product.price)) {
-      errors.push('Price must be a number (Base Pack)');
+      errors.push('Price must be a number (SellPrice/DefaultSellPrice)');
     } else if (product.price <= 0) {
-      errors.push('Price must be greater than 0 (Base Pack)');
+      errors.push('Price must be greater than 0 (SellPrice/DefaultSellPrice)');
     }
   }
 
-  if (product.inStock !== null) {
-    if (Number.isNaN(product.inStock)) {
-      errors.push('On Hand must be a number');
-    }
-  }
-
-  if (product.brand && product.name) {
-    if (seenKeysInUpload.has(key)) {
-      errors.push('Duplicate Brand+Name in uploaded CSV');
-    }
-  }
+  if (product.sku && seenKeysInUpload.has(key)) errors.push('Duplicate Product Code in uploaded CSV');
 
   return {
     ok: errors.length === 0,
@@ -231,6 +355,22 @@ function validateRow(row, { existingKeys, seenKeysInUpload }) {
     willUpdate: existingKeys.has(key),
     product,
   };
+}
+
+function looksLikeSku(value) {
+  const v = String(value || '').trim();
+  if (!v) return false;
+  if (v.length > 80) return false;
+  if (/\s/.test(v)) return false;
+  return /[0-9]/.test(v) || /[-_]/.test(v);
+}
+
+function getProductSkuForKey(product) {
+  if (!product || typeof product !== 'object') return '';
+  if (product.sku) return String(product.sku);
+  if (product.product_code) return String(product.product_code);
+  if (looksLikeSku(product.brand)) return String(product.brand);
+  return '';
 }
 
 // ---- Minimal multipart parser (no extra deps) --------------------------------
@@ -520,12 +660,112 @@ app.get('/api/products', async (req, res) => {
   // Allows the website UI to load the latest `products.json` without a database.
   // We keep this read-only endpoint intentionally small and predictable.
   try {
-    const products = await readProducts();
+    let products;
+    if (mongoEnabled()) {
+      const col = await getProductsCollection();
+      products = await col.find({}).project({ _id: 0 }).toArray();
+    } else {
+      products = await readProducts();
+    }
     res.setHeader('Cache-Control', 'no-store');
     return res.json(products);
   } catch (err) {
     return res.status(500).json({
       error: 'Failed to load products',
+      details: err && err.message ? err.message : String(err),
+    });
+  }
+});
+
+app.put('/api/admin/products', express.json({ limit: '8mb' }), async (req, res) => {
+  if (!mongoEnabled()) {
+    return res.status(400).json({
+      error: 'MongoDB is not configured. Set MONGODB_URI.',
+    });
+  }
+
+  try {
+    const list = req.body;
+    if (!Array.isArray(list)) {
+      return res.status(400).json({ error: 'Body must be an array of products.' });
+    }
+
+    const col = await getProductsCollection();
+    const ops = [];
+    const nowIso = new Date().toISOString();
+
+    for (const raw of list) {
+      if (!raw || typeof raw !== 'object') continue;
+      const id = String(raw.id || '').trim() || crypto.randomUUID();
+      const sku = String(raw.sku || getProductSkuForKey(raw) || '').trim();
+      const skuKey = sku ? normalizeSkuKey(sku) : null;
+      const doc = {
+        ...raw,
+        id,
+        sku: sku || '',
+        skuKey: skuKey || undefined,
+        updatedAt: nowIso,
+        createdAt: raw.createdAt || nowIso,
+      };
+      ops.push({
+        updateOne: {
+          filter: { id },
+          update: { $set: doc },
+          upsert: true,
+        },
+      });
+    }
+
+    if (ops.length > 0) {
+      await col.bulkWrite(ops, { ordered: false });
+    }
+    return res.json({ ok: true, saved: ops.length });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to save products',
+      details: err && err.message ? err.message : String(err),
+    });
+  }
+});
+
+app.get('/api/content/:key', async (req, res) => {
+  if (!mongoEnabled()) {
+    return res.status(400).json({ error: 'MongoDB is not configured. Set MONGODB_URI.' });
+  }
+  try {
+    const key = String(req.params.key || '').trim().toLowerCase();
+    const allowed = new Set(['home', 'navigation', 'reviews']);
+    if (!allowed.has(key)) return res.status(404).json({ error: 'Unknown content key' });
+    const col = await getContentCollection();
+    const doc = await col.findOne({ _id: key });
+    return res.json({ key, data: doc?.data ?? null, updatedAt: doc?.updatedAt ?? null });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to load content',
+      details: err && err.message ? err.message : String(err),
+    });
+  }
+});
+
+app.post('/api/content/:key', express.json({ limit: '2mb' }), async (req, res) => {
+  if (!mongoEnabled()) {
+    return res.status(400).json({ error: 'MongoDB is not configured. Set MONGODB_URI.' });
+  }
+  try {
+    const key = String(req.params.key || '').trim().toLowerCase();
+    const allowed = new Set(['home', 'navigation', 'reviews']);
+    if (!allowed.has(key)) return res.status(404).json({ error: 'Unknown content key' });
+    const col = await getContentCollection();
+    const now = new Date().toISOString();
+    await col.updateOne(
+      { _id: key },
+      { $set: { data: req.body ?? null, updatedAt: now } },
+      { upsert: true }
+    );
+    return res.json({ ok: true, key, updatedAt: now });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Failed to save content',
       details: err && err.message ? err.message : String(err),
     });
   }
@@ -553,7 +793,6 @@ async function handleUploadProductsCsv(req, res) {
     }
 
     // Required columns in the CSV.
-    // Change: required columns are now based on the new mapping.
     const requiredCols = ['product_code', 'product_description'];
     const headerSet = new Set(headers);
     const missingCols = requiredCols.filter((c) => !headerSet.has(c));
@@ -567,14 +806,23 @@ async function handleUploadProductsCsv(req, res) {
       });
     }
 
-    const existingProducts = await readProducts();
-    const existingByBrandName = new Map(
-      existingProducts
-        .filter((p) => p && typeof p === 'object')
-        .map((p) => [buildBrandNameKey(p.brand, p.name), p])
-        .filter(([key]) => key !== '::')
-    );
-    const existingKeys = new Set(existingByBrandName.keys());
+    let existingProducts = [];
+    let existingBySku = new Map();
+    const existingKeys = new Set();
+    let productsCol = null;
+
+    if (mongoEnabled()) {
+      productsCol = await getProductsCollection();
+    } else {
+      existingProducts = await readProducts();
+      existingBySku = new Map(
+        existingProducts
+          .filter((p) => p && typeof p === 'object')
+          .map((p) => [buildSkuKey(getProductSkuForKey(p)), p])
+          .filter(([key]) => key !== '')
+      );
+      for (const k of existingBySku.keys()) existingKeys.add(k);
+    }
 
     const seenKeysInUpload = new Set();
 
@@ -590,12 +838,13 @@ async function handleUploadProductsCsv(req, res) {
         seenKeysInUpload,
       });
 
-      if (product.brand && product.name) seenKeysInUpload.add(key);
+      if (product.sku) seenKeysInUpload.add(key);
 
       if (!ok) {
         failures.push({
           rowNumber,
           key,
+          sku: product.sku || null,
           brand: product.brand || null,
           name: product.name || null,
           errors,
@@ -606,12 +855,41 @@ async function handleUploadProductsCsv(req, res) {
 
       const nowIso = new Date().toISOString();
 
-      // Change: Upsert is now based on Brand + Name.
-      if (existingByBrandName.has(key)) {
-        const existing = existingByBrandName.get(key);
+      // Upsert is based on Product Code (SKU).
+      if (mongoEnabled()) {
+        const skuKey = normalizeSkuKey(product.sku);
+        const result = await productsCol.updateOne(
+          { skuKey },
+          {
+            $set: {
+              sku: product.sku,
+              skuKey,
+              name: product.name,
+              category: product.category,
+              price: product.price,
+              inStock: product.inStock,
+              image: product.image,
+              description: product.description,
+              updatedAt: nowIso,
+            },
+            // Preserve any existing `brand` if it was manually curated in the UI.
+            $setOnInsert: {
+              id: crypto.randomUUID(),
+              brand: product.brand || product.sku,
+              createdAt: nowIso,
+            },
+          },
+          { upsert: true }
+        );
+        if (result.upsertedCount === 1) createdCount += 1;
+        else updatedCount += 1;
+      } else if (existingBySku.has(key)) {
+        const existing = existingBySku.get(key);
         // Update in place but preserve any fields we don't manage here.
         Object.assign(existing, {
-          brand: product.brand,
+          sku: product.sku,
+          // Preserve `brand` if it was manually curated in the UI (CSV doesn't contain a brand column).
+          brand: existing.brand || product.brand || product.sku,
           name: product.name,
           category: product.category,
           price: product.price,
@@ -624,7 +902,8 @@ async function handleUploadProductsCsv(req, res) {
       } else {
         const newProduct = {
           id: crypto.randomUUID(),
-          brand: product.brand,
+          sku: product.sku,
+          brand: product.brand || product.sku,
           name: product.name,
           category: product.category,
           price: product.price,
@@ -635,13 +914,30 @@ async function handleUploadProductsCsv(req, res) {
           updatedAt: nowIso,
         };
         existingProducts.push(newProduct);
-        existingByBrandName.set(key, newProduct);
+        existingBySku.set(key, newProduct);
         existingKeys.add(key);
         createdCount += 1;
       }
     }
 
-    await writeProducts(existingProducts);
+    if (!mongoEnabled()) {
+      // Dedupe any historical duplicates by SKU key (common when the old upsert key included description).
+      // Keep the first occurrence we saw in the list (which will have been updated above if present in this upload).
+      const finalProducts = [];
+      const seenSkuKeys = new Set();
+      for (const p of existingProducts) {
+        const skuKey = buildSkuKey(getProductSkuForKey(p));
+        if (!skuKey) {
+          finalProducts.push(p);
+          continue;
+        }
+        if (seenSkuKeys.has(skuKey)) continue;
+        seenSkuKeys.add(skuKey);
+        finalProducts.push(p);
+      }
+
+      await writeProducts(finalProducts);
+    }
 
     return res.json({
       created: createdCount,
@@ -689,6 +985,13 @@ if (fs.existsSync(buildDir)) {
 async function main() {
   await ensureDir(UPLOADS_DIR);
   await ensureProductsFile();
+  const mongoOk = await verifyMongoConnectionOrDisable();
+  if (!mongoOk && String(process.env.MONGODB_URI || '').trim()) {
+    // eslint-disable-next-line no-console
+    console.warn('MongoDB configured but unreachable; falling back to products.json/localStorage mode.');
+  }
+  await seedContentDefaultsIfMissing();
+  await migrateProductsJsonToMongoIfEmpty();
 
   const server = http.createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
   server.listen(PORT, () => {
@@ -696,6 +999,8 @@ async function main() {
     console.log(`Admin CSV upload server running on http://localhost:${PORT}`);
     // eslint-disable-next-line no-console
     console.log(`Upload page: http://localhost:${PORT}/admin/upload-products`);
+    // eslint-disable-next-line no-console
+    console.log(`MongoDB: ${mongoEnabled() ? 'enabled' : 'disabled'}`);
   });
 }
 
