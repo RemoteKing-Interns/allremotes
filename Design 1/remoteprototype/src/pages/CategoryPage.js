@@ -117,7 +117,11 @@ const CategoryPage = () => {
                   {column.items.map((item, itemIndex) => (
                     <Link
                       key={itemIndex}
-                      to={`/products/all?brand=${encodeURIComponent(item.name.toUpperCase())}`}
+                      to={
+                        category === "shop-by-brand"
+                          ? `/products/all?brand=${encodeURIComponent(item.name.toUpperCase())}`
+                          : "/products/all"
+                      }
                       className="section-link"
                     >
                       <span className="link-icon">
