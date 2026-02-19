@@ -26,8 +26,9 @@ const ProductList = () => {
   );
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedBrand, setSelectedBrand] = useState(initialBrand);
-  const [stockStatus, setStockStatus] = useState("all"); // all | in | out
+  const [stockStatus, setStockStatus] = useState("all");
   const [addedItem, setAddedItem] = useState(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const isModalOpen = Boolean(addedItem);
 
   const pageFromUrl = Number(searchParams.get("page") || "1");
@@ -82,22 +83,18 @@ const ProductList = () => {
     return filteredProducts.slice(start, start + PAGE_SIZE);
   }, [filteredProducts, clampedPage]);
 
-  // Keep URL in sync so pagination is shareable/bookmarkable.
   useEffect(() => {
     if (clampedPage === pageFromUrl) return;
     const next = new URLSearchParams(searchParams);
     next.set("page", String(clampedPage));
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clampedPage]);
 
-  // If filters change, reset to page 1.
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, selectedBrand, searchQuery, stockStatus]);
 
   const visiblePages = useMemo(() => {
-    // Show a compact range like: 1 … 4 5 6 … 20
     const pages = new Set([1, totalPages]);
     for (let p = clampedPage - 2; p <= clampedPage + 2; p += 1) {
       if (p >= 1 && p <= totalPages) pages.add(p);
@@ -154,30 +151,94 @@ const ProductList = () => {
     };
   }, [isModalOpen]);
 
-  // Keep URL in sync so pagination is shareable/bookmarkable.
   useEffect(() => {
-    if (clampedPage === pageFromUrl) return;
-    const next = new URLSearchParams(searchParams);
-    next.set("page", String(clampedPage));
-    setSearchParams(next, { replace: true });
-  }, [clampedPage]);
+    if (!isFilterDrawerOpen) return;
 
-  // Update URL when brand changes
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsFilterDrawerOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isFilterDrawerOpen]);
+
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     next.set("brand", selectedBrand);
     setSearchParams(next, { replace: true });
   }, [selectedBrand]);
 
-  // If filters change, reset to page 1.
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, selectedBrand, searchQuery, stockStatus]);
-
   useEffect(() => {
     const brandFromUrl = searchParams.get("brand") || "all";
     setSelectedBrand(brandFromUrl);
   }, [searchParams]);
+
+  const FilterContent = () => (
+    <>
+      <h3>Filters</h3>
+
+      <label>Search</label>
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+
+      <label>Category</label>
+      <select
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
+      >
+        <option value="all">All Products</option>
+        <option value="garage">Garage & Gate</option>
+        <option value="car">Automotive</option>
+        <option value="home">For The Home</option>
+        <option value="locksmith">Locksmithing</option>
+      </select>
+
+      <label>Brand</label>
+      <select
+        value={selectedBrand}
+        onChange={(e) => setSelectedBrand(e.target.value)}
+      >
+        {brands.map((brand) => (
+          <option key={brand} value={brand}>
+            {brand === "all" ? "All Brands" : brand}
+          </option>
+        ))}
+      </select>
+
+      <label>Stock</label>
+      <select
+        value={stockStatus}
+        onChange={(e) => setStockStatus(e.target.value)}
+      >
+        <option value="all">All</option>
+        <option value="in">In Stock</option>
+        <option value="out">Out of Stock</option>
+      </select>
+
+      <button
+        className="clear-btn"
+        onClick={() => {
+          setSearchQuery("");
+          setSelectedCategory("all");
+          setSelectedBrand("all");
+          setStockStatus("all");
+        }}
+      >
+        Clear Filters
+      </button>
+    </>
+  );
 
   return (
     <div className="shop-page">
@@ -197,75 +258,59 @@ const ProductList = () => {
       {/* CONTENT */}
       <div className="shop-content">
         <div className="container shop-grid">
-          {/* FILTERS */}
-          <aside className="filters">
-            <h3>Filters</h3>
-
-            <label>Search</label>
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-
-            <label>Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="all">All Products</option>
-              <option value="garage">Garage & Gate</option>
-              <option value="car">Automotive</option>
-              <option value="home">For The Home</option>
-              <option value="locksmith">Locksmithing</option>
-            </select>
-
-            <label>Brand</label>
-            <select
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-            >
-              {brands.map((brand) => (
-                <option key={brand} value={brand}>
-                  {brand === "all" ? "All Brands" : brand}
-                </option>
-              ))}
-            </select>
-
-            <label>Stock</label>
-            <select
-              value={stockStatus}
-              onChange={(e) => setStockStatus(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="in">In Stock</option>
-              <option value="out">Out of Stock</option>
-            </select>
-
-            <button
-              className="clear-btn"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
-                setSelectedBrand("all");
-                setStockStatus("all");
-              }}
-            >
-              Clear Filters
-            </button>
+          {/* FILTERS - DESKTOP */}
+          <aside className="filters filters-desktop">
+            <FilterContent />
           </aside>
+
+          {/* FILTER DRAWER - MOBILE/TABLET */}
+          {isFilterDrawerOpen && (
+            <div
+              className="filter-drawer-backdrop"
+              onClick={() => setIsFilterDrawerOpen(false)}
+            >
+              <div
+                className="filter-drawer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="filter-drawer-header">
+                  <h2>Filters</h2>
+                  <button
+                    type="button"
+                    className="filter-drawer-close"
+                    onClick={() => setIsFilterDrawerOpen(false)}
+                    aria-label="Close filters"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="filter-drawer-content">
+                  <FilterContent />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* PRODUCTS */}
           <main>
-            <p className="product-count">
-              Showing{" "}
-              {filteredProducts.length === 0
-                ? 0
-                : (clampedPage - 1) * PAGE_SIZE + 1}{" "}
-              – {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)} of{" "}
-              {filteredProducts.length} products
-            </p>
+            <div className="products-header">
+              <p className="product-count">
+                Showing{" "}
+                {filteredProducts.length === 0
+                  ? 0
+                  : (clampedPage - 1) * PAGE_SIZE + 1}{" "}
+                – {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)}{" "}
+                of {filteredProducts.length} products
+              </p>
+              <button
+                type="button"
+                className="filter-toggle-btn"
+                onClick={() => setIsFilterDrawerOpen(true)}
+                aria-label="Open filters"
+              >
+                ☰ Filters
+              </button>
+            </div>
 
             {filteredProducts.length === 0 ? (
               <div className="no-products">No products found.</div>
