@@ -43,7 +43,17 @@ async function getMongoClient() {
   }
 
   if (!global._allremotesMongoClientPromise) {
-    const client = new MongoClient(getMongoUri());
+    const tlsInsecure = String(process.env.MONGODB_TLS_INSECURE || "").trim() === "1";
+    const client = new MongoClient(getMongoUri(), {
+      serverSelectionTimeoutMS: 10_000,
+      ...(tlsInsecure
+        ? {
+            tls: true,
+            tlsAllowInvalidCertificates: true,
+            tlsAllowInvalidHostnames: true,
+          }
+        : null),
+    });
     global._allremotesMongoClientPromise = client.connect().then(() => client);
   }
 
