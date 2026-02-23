@@ -380,15 +380,13 @@ export default function ProductListClient({
                     <Link
                       href={`/product/${product.id}`}
                       key={product.id}
-                      className="product-card"
+                      className="product-card product-card--shop"
                     >
                       <div className="image-box">
                         <img
                           src={product.image}
                           alt={product.name}
-                          onError={(e: any) =>
-                            (e.target.src = "https://via.placeholder.com/300")
-                          }
+                          onError={(e: any) => (e.currentTarget.src = "/images/logo.png")}
                         />
                       </div>
 
