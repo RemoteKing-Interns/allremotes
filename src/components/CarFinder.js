@@ -1,8 +1,9 @@
+"use client";
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useStore } from '../context/StoreContext';
 import ProductCard from './ProductCard';
-import './CarFinder.css';
 
 const CarFinder = () => {
   const { getProducts } = useStore();
@@ -212,7 +213,10 @@ const CarFinder = () => {
               ) : (
                 <div className="no-results">
                   <p>We couldn't find any remotes matching your vehicle details.</p>
-                  <p>Please try different search criteria or <Link to="/products/car">browse all car remotes</Link>.</p>
+                  <p>
+                    Please try different search criteria or{" "}
+                    <Link href="/products/car">browse all car remotes</Link>.
+                  </p>
                 </div>
               )}
             </div>

@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import './Footer.css';
+import Link from 'next/link';
 
 const Footer = () => {
   return (
@@ -14,22 +13,22 @@ const Footer = () => {
           </div>
           <div className="footer-section">
             <h4>Categories</h4>
-            <Link to="/garage-gate">Garage & Gate</Link>
-            <Link to="/automotive">Automotive</Link>
-            <Link to="/for-the-home">For The Home</Link>
-            <Link to="/locksmithing">Locksmithing</Link>
-            <Link to="/shop-by-brand">Shop By Brand</Link>
+            <Link href="/garage-gate">Garage & Gate</Link>
+            <Link href="/automotive">Automotive</Link>
+            <Link href="/for-the-home">For The Home</Link>
+            <Link href="/locksmithing">Locksmithing</Link>
+            <Link href="/shop-by-brand">Shop By Brand</Link>
           </div>
           <div className="footer-section">
             <h4>Account</h4>
-            <Link to="/login">Login</Link>
-            <Link to="/register">Register</Link>
-            <Link to="/cart">Shopping Cart</Link>
+            <Link href="/login">Login</Link>
+            <Link href="/register">Register</Link>
+            <Link href="/cart">Shopping Cart</Link>
           </div>
           <div className="footer-section">
             <h4>Support</h4>
-            <Link to="/support">Support Center</Link>
-            <Link to="/contact">Contact Us</Link>
+            <Link href="/support">Support Center</Link>
+            <Link href="/contact">Contact Us</Link>
             <p>Email: support@allremotes.com</p>
             <p>Phone: 1-800-REMOTES</p>
           </div>

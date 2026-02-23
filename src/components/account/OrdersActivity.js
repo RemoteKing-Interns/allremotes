@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import './AccountSection.css';
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
 
 const OrdersActivity = () => {
   const [orders] = useState([
@@ -51,7 +52,7 @@ const OrdersActivity = () => {
         {orders.length === 0 ? (
           <div className="empty-state">
             <p>No orders yet</p>
-            <Link to="/products/all" className="btn btn-gradient">
+            <Link href="/products/all" className="btn btn-gradient">
               Start Shopping
             </Link>
           </div>

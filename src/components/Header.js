@@ -1,19 +1,20 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useStore } from "../context/StoreContext";
 import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
-import logo from "../Images/mainlogo.png";
-import "./Header.css";
 
 const Header = () => {
   const { user, logout } = useAuth();
   const { getCartItemCount } = useCart();
   const { getNavigation, getProducts } = useStore();
   const navigationMenu = getNavigation();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const cartCount = getCartItemCount();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -30,7 +31,7 @@ const Header = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    router.push("/");
   };
 
   const handleMouseEnter = (key) => {
@@ -121,7 +122,7 @@ const Header = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/products/all?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/products/all?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
       setShowSearchResults(false);
     }
@@ -179,8 +180,8 @@ const Header = () => {
       <div className="main-header">
         <div className="container">
           <div className="header-content">
-            <Link to="/" className="logo-container">
-              <img src={logo} alt="ALLREMOTES" className="logo" />
+            <Link href="/" className="logo-container">
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="logo" />
             </Link>
 
             <div className="search-container" ref={searchRef}>
@@ -218,7 +219,7 @@ const Header = () => {
                     {searchResults.map((product) => (
                       <Link
                         key={product.id}
-                        to={`/product/${product.id}`}
+                        href={`/product/${product.id}`}
                         className="search-result-item"
                         onClick={handleProductClick}
                       >
@@ -309,7 +310,7 @@ const Header = () => {
                     }}
                   >
                     <Link
-                      to="/account"
+                      href="/account"
                       className="user-icon"
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
@@ -340,7 +341,7 @@ const Header = () => {
                         </div>
 
                         <Link
-                          to="/account?tab=basics"
+                          href="/account?tab=basics"
                           className="account-menu-item"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
@@ -348,7 +349,7 @@ const Header = () => {
                           Account Settings
                         </Link>
                         <Link
-                          to="/account?tab=orders"
+                          href="/account?tab=orders"
                           className="account-menu-item"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
@@ -356,7 +357,7 @@ const Header = () => {
                           Orders
                         </Link>
                         <Link
-                          to="/account?tab=notifications"
+                          href="/account?tab=notifications"
                           className="account-menu-item"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
@@ -364,7 +365,7 @@ const Header = () => {
                           Notifications
                         </Link>
                         <Link
-                          to="/account?tab=help"
+                          href="/account?tab=help"
                           className="account-menu-item"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
@@ -391,15 +392,15 @@ const Header = () => {
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="btn btn-outline btn-small">
+                  <Link href="/login" className="btn btn-outline btn-small">
                     Login
                   </Link>
-                  <Link to="/register" className="btn btn-primary btn-small">
+                  <Link href="/register" className="btn btn-primary btn-small">
                     Register
                   </Link>
                 </>
               )}
-              <Link to="/cart" className="cart-icon-new">
+              <Link href="/cart" className="cart-icon-new">
                 <div className="cart-icon-wrapper">
                   <svg
                     width="26"
@@ -489,12 +490,12 @@ const Header = () => {
                   .map((key, index) => {
                     const menuItem = navigationMenu[key];
                     const isFirst = index === 0;
-                    const isActive = location.pathname === menuItem.path;
+                    const isActive = pathname === menuItem.path;
                     return (
                       <Link
                         key={key}
                         ref={isFirst ? firstFocusableRef : null}
-                        to={menuItem.path}
+                        href={menuItem.path}
                         className={`drawer-nav-link ${isActive ? "active" : ""}`}
                         onClick={handleNavLinkClick}
                       >
@@ -503,8 +504,8 @@ const Header = () => {
                     );
                   })}
                 <Link
-                  to="/products/all"
-                  className={`drawer-nav-link drawer-nav-cta ${location.pathname === "/products/all" ? "active" : ""}`}
+                  href="/products/all"
+                  className={`drawer-nav-link drawer-nav-cta ${pathname === "/products/all" ? "active" : ""}`}
                   onClick={handleNavLinkClick}
                 >
                   View Products
@@ -516,8 +517,8 @@ const Header = () => {
                 {user ? (
                   <>
                     <Link
-                      to="/account"
-                      className={`drawer-auth-link ${location.pathname === "/account" ? "active" : ""}`}
+                      href="/account"
+                      className={`drawer-auth-link ${pathname === "/account" ? "active" : ""}`}
                       onClick={handleNavLinkClick}
                     >
                       My Account
@@ -535,15 +536,15 @@ const Header = () => {
                 ) : (
                   <>
                     <Link
-                      to="/login"
-                      className={`drawer-auth-btn drawer-auth-outline ${location.pathname === "/login" ? "active" : ""}`}
+                      href="/login"
+                      className={`drawer-auth-btn drawer-auth-outline ${pathname === "/login" ? "active" : ""}`}
                       onClick={handleNavLinkClick}
                     >
                       Login
                     </Link>
                     <Link
-                      to="/register"
-                      className={`drawer-auth-btn drawer-auth-primary ${location.pathname === "/register" ? "active" : ""}`}
+                      href="/register"
+                      className={`drawer-auth-btn drawer-auth-primary ${pathname === "/register" ? "active" : ""}`}
                       onClick={handleNavLinkClick}
                     >
                       Register
@@ -580,7 +581,7 @@ const Header = () => {
                       onMouseLeave={handleMouseLeave}
                     >
                       <Link
-                        to={menuItem.path}
+                        href={menuItem.path}
                         className={`nav-link ${isActive ? "active" : ""}`}
                       >
                         {menuItem.title}
@@ -619,7 +620,7 @@ const Header = () => {
                                     {column.items.map((item, itemIndex) => (
                                       <li key={itemIndex}>
                                         <Link
-                                          to={item.path}
+                                          href={item.path}
                                           className={`menu-item-link ${item.isShopAll ? "shop-all" : ""}`}
                                           onClick={() =>
                                             setActiveDropdown(null)
@@ -660,7 +661,7 @@ const Header = () => {
                     </div>
                   );
                 })}
-              <Link to="/products/all" className="nav-cta">
+              <Link href="/products/all" className="nav-cta">
                 View Products
               </Link>
             </div>

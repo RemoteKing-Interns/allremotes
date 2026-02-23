@@ -1,4 +1,6 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+"use client";
+
+import React, { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
 import { navigationMenu as defaultNavFromFile } from '../data/navigation';
 import { remoteImages } from '../data/navigation';
 
@@ -54,6 +56,7 @@ const productImagePool = remoteImages.slice(0, 12);
 
 function loadProducts() {
   try {
+    if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem(STORAGE_KEYS.products);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
@@ -98,6 +101,7 @@ function coerceServerProductsToLocal(productsFromServer) {
 }
 
 function saveProducts(productsWithImages) {
+  if (typeof window === 'undefined') return;
   const toSave = productsWithImages.map((p) => {
     const { image, ...rest } = p;
     const imageIndex = productImagePool.indexOf(image);
@@ -122,11 +126,14 @@ export const StoreProvider = ({ children }) => {
   const [homeVersion, setHomeVersion] = useState(0);
   const [navVersion, setNavVersion] = useState(0);
   const [reviewsVersion, setReviewsVersion] = useState(0);
-  const apiBase = (window.location.hostname === 'localhost' && window.location.port === '3000')
-    ? 'http://localhost:3001'
-    : (window.location.hostname === '127.0.0.1' && window.location.port === '3000')
-      ? 'http://127.0.0.1:3001'
-      : '';
+  const apiBase = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const { hostname } = window.location;
+    if (hostname === 'localhost') return 'http://localhost:3001';
+    if (hostname === '127.0.0.1') return 'http://127.0.0.1:3001';
+    // In production, prefer same-origin (assumes you proxy the API behind Next or host it on the same domain).
+    return '';
+  }, []);
 
   const postJson = useCallback(async (path, body, { method = 'POST' } = {}) => {
     if (apiBase == null) return null;
@@ -171,6 +178,7 @@ export const StoreProvider = ({ children }) => {
   }, [postJson]);
 
   const refreshProductsFromServer = useCallback(async () => {
+    if (apiBase == null) return;
     // Best-effort: if the backend isn't running, we simply keep current local data.
     const res = await fetch(`${apiBase}/api/products`);
     if (!res.ok) throw new Error('Failed to refresh products from server');
@@ -182,11 +190,13 @@ export const StoreProvider = ({ children }) => {
 
   // Try to hydrate products from the server on first load (non-blocking).
   useEffect(() => {
+    if (apiBase == null) return;
     refreshProductsFromServer().catch(() => {});
   }, [refreshProductsFromServer]);
 
   const getHomeContent = useCallback(() => {
     try {
+      if (typeof window === 'undefined') return defaultHomeContent;
       const raw = localStorage.getItem(STORAGE_KEYS.homeContent);
       if (!raw) return defaultHomeContent;
       return { ...defaultHomeContent, ...JSON.parse(raw) };
@@ -197,6 +207,7 @@ export const StoreProvider = ({ children }) => {
   }, [homeVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setHomeContent = useCallback((content) => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(content));
     setHomeVersion((v) => v + 1);
     postJson('/api/content/home', content);
@@ -261,6 +272,7 @@ export const StoreProvider = ({ children }) => {
 
   const getNavigation = useCallback(() => {
     try {
+      if (typeof window === 'undefined') return defaultNavFromFile;
       const raw = localStorage.getItem(STORAGE_KEYS.navigation);
       if (!raw) return defaultNavFromFile;
       const parsed = JSON.parse(raw);
@@ -272,6 +284,7 @@ export const StoreProvider = ({ children }) => {
   }, [navVersion, resolveNavIcons]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setNavigation = useCallback((nav) => {
+    if (typeof window === 'undefined') return;
     const serialized = serializeNavIcons(nav);
     localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(serialized));
     setNavVersion((v) => v + 1);
@@ -280,6 +293,7 @@ export const StoreProvider = ({ children }) => {
 
   const getNavigationForAdmin = useCallback(() => {
     try {
+      if (typeof window === 'undefined') return serializeNavIcons(defaultNavFromFile);
       const raw = localStorage.getItem(STORAGE_KEYS.navigation);
       if (raw) return JSON.parse(raw);
     } catch {}
@@ -288,6 +302,7 @@ export const StoreProvider = ({ children }) => {
 
   const getReviews = useCallback(() => {
     try {
+      if (typeof window === 'undefined') return defaultReviews;
       const raw = localStorage.getItem(STORAGE_KEYS.reviews);
       if (!raw) return defaultReviews;
       return JSON.parse(raw);
@@ -298,6 +313,7 @@ export const StoreProvider = ({ children }) => {
   }, [reviewsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setReviews = useCallback((reviews) => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(reviews));
     setReviewsVersion((v) => v + 1);
     postJson('/api/content/reviews', reviews);
@@ -305,6 +321,7 @@ export const StoreProvider = ({ children }) => {
 
   // Hydrate shared content (Mongo-backed) into localStorage on startup.
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     getJson('/api/content/home').then((resp) => {
       if (!resp || !resp.data) return;
       localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(resp.data));

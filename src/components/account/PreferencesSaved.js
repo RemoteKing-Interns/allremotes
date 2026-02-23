@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
 import { useStore } from '../../context/StoreContext';
 import ProductCard from '../ProductCard';
-import './AccountSection.css';
 
 const PreferencesSaved = () => {
   const { getProducts } = useStore();
@@ -31,9 +32,9 @@ const PreferencesSaved = () => {
       
       <div className="section-content">
         <div className="wishlist-section">
-          <div className="section-header">
-            <h3>Wishlist / Favorites</h3>
-            <Link to="/products/all" className="btn btn-gradient btn-small">
+            <div className="section-header">
+              <h3>Wishlist / Favorites</h3>
+            <Link href="/products/all" className="btn btn-gradient btn-small">
               Browse More
             </Link>
           </div>
@@ -41,7 +42,7 @@ const PreferencesSaved = () => {
           {wishlist.length === 0 ? (
             <div className="empty-state">
               <p>Your wishlist is empty</p>
-              <Link to="/products/all" className="btn btn-gradient">
+              <Link href="/products/all" className="btn btn-gradient">
                 Start Shopping
               </Link>
             </div>
@@ -86,7 +87,7 @@ const PreferencesSaved = () => {
               {savedSearches.map(search => (
                 <div key={search.id} className="search-item">
                   <div>
-                    <Link to={`/products/all?search=${search.query}`} className="search-query">
+                    <Link href={`/products/all?search=${search.query}`} className="search-query">
                       "{search.query}"
                     </Link>
                     <p className="search-count">{search.count} products found</p>

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { MEMBER_DISCOUNT_RATE, getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';

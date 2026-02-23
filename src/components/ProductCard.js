@@ -1,9 +1,10 @@
+"use client";
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
-import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
@@ -17,7 +18,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <Link to={`/product/${product.id}`} className="product-card">
+    <Link href={`/product/${product.id}`} className="product-card">
       <div className="product-image-container">
         <img 
           src={product.image} 

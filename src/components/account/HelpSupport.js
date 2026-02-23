@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import './AccountSection.css';
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
 
 const HelpSupport = () => {
   const [tickets] = useState([
@@ -142,7 +143,7 @@ const HelpSupport = () => {
               </div>
             ))}
           </div>
-          <Link to="/support" className="btn btn-gradient">
+          <Link href="/support" className="btn btn-gradient">
             View All FAQs
           </Link>
         </div>

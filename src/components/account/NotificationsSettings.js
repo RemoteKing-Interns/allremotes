@@ -1,5 +1,6 @@
+"use client";
+
 import React, { useState } from 'react';
-import './AccountSection.css';
 
 const NotificationsSettings = () => {
   const [notifications, setNotifications] = useState({

@@ -1,67 +1,35 @@
-// Import remote images from Remotes folder
-import remote1 from "../Remotes/001_s-l140.webp";
-import remote2 from "../Remotes/002_s-l500.webp";
-import remote3 from "../Remotes/003_s-l140.webp";
-import remote4 from "../Remotes/004_s-l140.webp";
-import remote5 from "../Remotes/005_s-l140.webp";
-import remote6 from "../Remotes/006_s-l500.webp";
-import remote7 from "../Remotes/007_s-l500.webp";
-import remote8 from "../Remotes/008_s-l500.webp";
-import remote9 from "../Remotes/009_s-l500.webp";
-import remote10 from "../Remotes/010_s-l500.webp";
-import remote11 from "../Remotes/011_s-l500.webp";
-import remote12 from "../Remotes/012_s-l500.webp";
-import remote13 from "../Remotes/013_s-l500.webp";
-import remote14 from "../Remotes/014_sprds3_18.png";
-import remote15 from "../Remotes/015_s-l140.webp";
-import remote16 from "../Remotes/016_s-l500.webp";
-import remote17 from "../Remotes/017_s-l500.webp";
-import remote18 from "../Remotes/018_s-l140.webp";
-import remote19 from "../Remotes/019_s-l500.webp";
-import remote20 from "../Remotes/020_s-l500.webp";
-import remote21 from "../Remotes/021_s-l500.webp";
-import remote22 from "../Remotes/022_s-l500.webp";
-import remote23 from "../Remotes/023_s-l500.webp";
-import remote24 from "../Remotes/024_s-l500.webp";
-import remote25 from "../Remotes/025_s-l140.webp";
-import remote26 from "../Remotes/026_s-l500.webp";
-import remote27 from "../Remotes/027_s-l500.webp";
-import remote28 from "../Remotes/028_s-l500.webp";
-import remote29 from "../Remotes/029_s-l500.webp";
-import remote30 from "../Remotes/030_s-l500.webp";
-
 // Array of remote images to cycle through (exported for StoreContext/product images)
 export const remoteImages = [
-  remote1,
-  remote2,
-  remote3,
-  remote4,
-  remote5,
-  remote6,
-  remote7,
-  remote8,
-  remote9,
-  remote10,
-  remote11,
-  remote12,
-  remote13,
-  remote14,
-  remote15,
-  remote16,
-  remote17,
-  remote18,
-  remote19,
-  remote20,
-  remote21,
-  remote22,
-  remote23,
-  remote24,
-  remote25,
-  remote26,
-  remote27,
-  remote28,
-  remote29,
-  remote30,
+  "/remotes/001_s-l140.webp",
+  "/remotes/002_s-l500.webp",
+  "/remotes/003_s-l140.webp",
+  "/remotes/004_s-l140.webp",
+  "/remotes/005_s-l140.webp",
+  "/remotes/006_s-l500.webp",
+  "/remotes/007_s-l500.webp",
+  "/remotes/008_s-l500.webp",
+  "/remotes/009_s-l500.webp",
+  "/remotes/010_s-l500.webp",
+  "/remotes/011_s-l500.webp",
+  "/remotes/012_s-l500.webp",
+  "/remotes/013_s-l500.webp",
+  "/remotes/014_sprds3_18.png",
+  "/remotes/015_s-l140.webp",
+  "/remotes/016_s-l500.webp",
+  "/remotes/017_s-l500.webp",
+  "/remotes/018_s-l140.webp",
+  "/remotes/019_s-l500.webp",
+  "/remotes/020_s-l500.webp",
+  "/remotes/021_s-l500.webp",
+  "/remotes/022_s-l500.webp",
+  "/remotes/023_s-l500.webp",
+  "/remotes/024_s-l500.webp",
+  "/remotes/025_s-l140.webp",
+  "/remotes/026_s-l500.webp",
+  "/remotes/027_s-l500.webp",
+  "/remotes/028_s-l500.webp",
+  "/remotes/029_s-l500.webp",
+  "/remotes/030_s-l500.webp",
 ];
 
 // Helper function to get icon for menu item

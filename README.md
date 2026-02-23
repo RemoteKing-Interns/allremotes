@@ -10,7 +10,7 @@ In the project directory, you can run:
 
 This app supports address autocomplete on the Checkout page via Geoapify.
 
-- Create a `.env` file (see `.env.example`) and set `REACT_APP_GEOAPIFY_API_KEY`.
+- Create a `.env.local` file and set `NEXT_PUBLIC_GEOAPIFY_API_KEY`.
 - Restart `npm start` after changing env vars.
 
 ### `npm run server`
