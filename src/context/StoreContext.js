@@ -190,7 +190,11 @@ export const StoreProvider = ({ children }) => {
 
   // Try to hydrate products from the server on first load (non-blocking).
   useEffect(() => {
-    refreshProductsFromServer().catch(() => {});
+    refreshProductsFromServer().catch((err) => {
+      // Helpful in production debugging (e.g. Vercel DB connectivity).
+      // eslint-disable-next-line no-console
+      console.warn('refreshProductsFromServer failed', err);
+    });
   }, [refreshProductsFromServer]);
 
   const getHomeContent = useCallback(() => {
