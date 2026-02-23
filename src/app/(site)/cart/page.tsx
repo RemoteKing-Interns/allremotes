@@ -87,8 +87,7 @@ const Cart = () => {
                   alt={item.name}
                   className="cart-item-image"
                   onError={(e) => {
-                    e.currentTarget.src =
-                      "https://via.placeholder.com/150x150?text=Remote";
+                    e.currentTarget.src = "/images/logo.png";
                   }}
                 />
                 <div className="cart-item-info">
@@ -208,8 +207,7 @@ const Cart = () => {
                 src={selectedItem?.image}
                 alt={selectedItem?.name || 'Product'}
                 onError={(e) => {
-                  e.currentTarget.src =
-                    "https://via.placeholder.com/300x300?text=Remote";
+                  e.currentTarget.src = "/images/logo.png";
                 }}
               />
               <div className="cart-modal-info">

@@ -25,7 +25,7 @@ const ProductCard = ({ product }) => {
           alt={product.name}
           className="product-image"
           onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/400x300?text=Remote+Control';
+            e.currentTarget.src = '/images/logo.png';
           }}
         />
         {!product.inStock && (
