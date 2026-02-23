@@ -26,14 +26,14 @@ If you run the backend with **MongoDB** configured, admin changes are also persi
 
 ## Bulk upload products (CSV)
 
-There is also a backend-powered bulk upload tool. It writes to MongoDB when configured, otherwise it falls back to a local JSON file.
+There is also a bulk upload tool at **`/admin/upload-products`**. It writes to MongoDB when configured.
 
 1. Install dependencies (first time only): `npm install`
-2. (Optional) Configure MongoDB:
-   - Set `MONGODB_URI` (example: `mongodb://127.0.0.1:27017`)
+2. Configure MongoDB (recommended, and required on Vercel):
+   - Set `MONGODB_URI`
    - Optionally set `MONGODB_DB` (default: `allremotes`)
-3. Start the upload server: `npm run server`
-4. Open the upload page: `http://localhost:3001/admin/upload-products`
+3. Start the app: `npm run dev`
+4. Open the upload page: `http://localhost:3000/admin/upload-products`
 5. Download the template CSV from the page, fill it out, then upload it.
 
 ### Troubleshooting
@@ -50,8 +50,8 @@ There is also a backend-powered bulk upload tool. It writes to MongoDB when conf
 
 ### Where products are stored
 
-- If `MONGODB_URI` is set when running the backend, products are saved to MongoDB.
-- Otherwise, products are saved to `products.json` in the project root.
+- If `MONGODB_URI` is set, products are saved to MongoDB (recommended; required on Vercel for persistence).
+- Otherwise, products may fall back to `products.json` during local development only.
 
 ## Changing the admin password
 

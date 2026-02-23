@@ -127,16 +127,11 @@ export const StoreProvider = ({ children }) => {
   const [navVersion, setNavVersion] = useState(0);
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const apiBase = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    const { hostname } = window.location;
-    if (hostname === 'localhost') return 'http://localhost:3001';
-    if (hostname === '127.0.0.1') return 'http://127.0.0.1:3001';
-    // In production, prefer same-origin (assumes you proxy the API behind Next or host it on the same domain).
-    return '';
+    // Prefer same-origin by default. Override when hosting the API elsewhere.
+    return String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
   }, []);
 
   const postJson = useCallback(async (path, body, { method = 'POST' } = {}) => {
-    if (apiBase == null) return null;
     try {
       const res = await fetch(`${apiBase}${path}`, {
         method,
@@ -152,7 +147,6 @@ export const StoreProvider = ({ children }) => {
   }, [apiBase]);
 
   const getJson = useCallback(async (path) => {
-    if (apiBase == null) return null;
     try {
       const res = await fetch(`${apiBase}${path}`, { credentials: 'omit' });
       if (!res.ok) return null;
@@ -178,7 +172,6 @@ export const StoreProvider = ({ children }) => {
   }, [postJson]);
 
   const refreshProductsFromServer = useCallback(async () => {
-    if (apiBase == null) return;
     // Best-effort: if the backend isn't running, we simply keep current local data.
     const res = await fetch(`${apiBase}/api/products`);
     if (!res.ok) throw new Error('Failed to refresh products from server');
@@ -190,7 +183,6 @@ export const StoreProvider = ({ children }) => {
 
   // Try to hydrate products from the server on first load (non-blocking).
   useEffect(() => {
-    if (apiBase == null) return;
     refreshProductsFromServer().catch(() => {});
   }, [refreshProductsFromServer]);
 

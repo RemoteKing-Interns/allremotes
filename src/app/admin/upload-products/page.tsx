@@ -21,14 +21,7 @@ export default function AdminUploadProducts() {
   const [result, setResult] = useState(null);
   const [debugDetails, setDebugDetails] = useState('');
 
-  const apiBase = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    // Prefer same-origin in production. In local dev, use the backend directly
-    // so we don't depend on CRA's proxy being configured/restarted correctly.
-    if (window.location.hostname === 'localhost' && window.location.port === '3000') return 'http://localhost:3001';
-    if (window.location.hostname === '127.0.0.1' && window.location.port === '3000') return 'http://127.0.0.1:3001';
-    return '';
-  }, []);
+  const apiBase = useMemo(() => String(process.env.NEXT_PUBLIC_API_BASE || '').trim(), []);
 
   const templateHref = useMemo(() => `${apiBase}/api/admin/upload-products/template.csv`, [apiBase]);
 
@@ -116,7 +109,7 @@ export default function AdminUploadProducts() {
       const msg = err?.message || String(err);
       setError(msg);
       if (String(msg).toLowerCase().includes('failed to fetch')) {
-        setDebugDetails('Backend not reachable. Start it with: `npm run server` (port 3001).');
+        setDebugDetails('API not reachable. If your API is hosted separately, set `NEXT_PUBLIC_API_BASE` (and redeploy).');
       }
     } finally {
       setBusy(false);
