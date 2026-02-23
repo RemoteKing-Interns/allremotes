@@ -4,8 +4,27 @@ function getMongoUri() {
   return String(process.env.MONGODB_URI || "").trim();
 }
 
+function inferDbNameFromUri(uri: string) {
+  try {
+    const withoutQuery = uri.split("?")[0] || "";
+    const slashIndex = withoutQuery.lastIndexOf("/");
+    if (slashIndex === -1) return "";
+    const dbPart = withoutQuery.slice(slashIndex + 1).trim();
+    // Atlas URIs often end with "/" (no db specified).
+    if (!dbPart) return "";
+    // If the dbPart still contains "@" it's not a db name; it's an auth segment.
+    if (dbPart.includes("@")) return "";
+    return dbPart;
+  } catch {
+    return "";
+  }
+}
+
 function getMongoDbName() {
-  return String(process.env.MONGODB_DB || "allremotes").trim() || "allremotes";
+  const explicit = String(process.env.MONGODB_DB || "").trim();
+  if (explicit) return explicit;
+  const inferred = inferDbNameFromUri(getMongoUri());
+  return inferred || "allremotes";
 }
 
 export function mongoEnabled() {
@@ -35,4 +54,3 @@ export async function getDb(): Promise<Db> {
   const client = await getMongoClient();
   return client.db(getMongoDbName());
 }
-

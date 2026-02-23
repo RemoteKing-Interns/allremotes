@@ -128,7 +128,14 @@ export const StoreProvider = ({ children }) => {
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const apiBase = useMemo(() => {
     // Prefer same-origin by default. Override when hosting the API elsewhere.
-    return String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
+    const fromEnv = String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+      const pointsToLocal = /localhost|127\.0\.0\.1/.test(fromEnv);
+      if (!isLocalHost && pointsToLocal) return '';
+    }
+    return fromEnv;
   }, []);
 
   const postJson = useCallback(async (path, body, { method = 'POST' } = {}) => {

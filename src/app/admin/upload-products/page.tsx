@@ -21,7 +21,16 @@ export default function AdminUploadProducts() {
   const [result, setResult] = useState(null);
   const [debugDetails, setDebugDetails] = useState('');
 
-  const apiBase = useMemo(() => String(process.env.NEXT_PUBLIC_API_BASE || '').trim(), []);
+  const apiBase = useMemo(() => {
+    const fromEnv = String(process.env.NEXT_PUBLIC_API_BASE || "").trim();
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      const isLocalHost = host === "localhost" || host === "127.0.0.1";
+      const pointsToLocal = /localhost|127\.0\.0\.1/.test(fromEnv);
+      if (!isLocalHost && pointsToLocal) return "";
+    }
+    return fromEnv;
+  }, []);
 
   const templateHref = useMemo(() => `${apiBase}/api/admin/upload-products/template.csv`, [apiBase]);
 
