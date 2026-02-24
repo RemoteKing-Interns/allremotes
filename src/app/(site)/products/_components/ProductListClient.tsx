@@ -15,6 +15,76 @@ function applyParam(searchParams: URLSearchParams, key: string, value: string | 
   else searchParams.set(key, value);
 }
 
+function FiltersPanel({
+  brands,
+  searchQuery,
+  selectedCategory,
+  selectedBrand,
+  stockStatus,
+  onSearchQueryChange,
+  onSelectedCategoryChange,
+  onSelectedBrandChange,
+  onStockStatusChange,
+  onClear,
+}: {
+  brands: string[];
+  searchQuery: string;
+  selectedCategory: string;
+  selectedBrand: string;
+  stockStatus: string;
+  onSearchQueryChange: (next: string) => void;
+  onSelectedCategoryChange: (next: string) => void;
+  onSelectedBrandChange: (next: string) => void;
+  onStockStatusChange: (next: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <>
+      <h3>Filters</h3>
+
+      <label>Search</label>
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={searchQuery}
+        onChange={(e) => onSearchQueryChange(e.target.value)}
+      />
+
+      <label>Category</label>
+      <select value={selectedCategory} onChange={(e) => onSelectedCategoryChange(e.target.value)}>
+        <option value="all">All Products</option>
+        <option value="garage">Garage & Gate</option>
+        <option value="car">Automotive</option>
+        <option value="home">For The Home</option>
+        <option value="locksmith">Locksmithing</option>
+      </select>
+
+      <label>Brand</label>
+      <select value={selectedBrand} onChange={(e) => onSelectedBrandChange(e.target.value)}>
+        {brands.map((brand) => {
+          const b = String(brand);
+          return (
+            <option key={b} value={b}>
+              {b === "all" ? "All Brands" : b}
+            </option>
+          );
+        })}
+      </select>
+
+      <label>Stock</label>
+      <select value={stockStatus} onChange={(e) => onStockStatusChange(e.target.value)}>
+        <option value="all">All</option>
+        <option value="in">In Stock</option>
+        <option value="out">Out of Stock</option>
+      </select>
+
+      <button type="button" className="clear-btn" onClick={onClear}>
+        Clear Filters
+      </button>
+    </>
+  );
+}
+
 export default function ProductListClient({
   routeCategory,
 }: {
@@ -64,14 +134,11 @@ export default function ProductListClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString(), routeCategory]);
 
-  const brands = useMemo(() => {
-    const unique = Array.from(
-      new Set(
-        (products || [])
-          .map((p: any) => (p?.brand ? String(p.brand) : ""))
-          .filter(Boolean),
-      ),
-    );
+  const brands = useMemo<string[]>(() => {
+    const brandValues = (products || [])
+      .map((p: any) => (p?.brand ? String(p.brand) : ""))
+      .filter(Boolean) as string[];
+    const unique = Array.from(new Set<string>(brandValues));
     return ["all", ...unique];
   }, [products]);
 
@@ -215,73 +282,6 @@ export default function ProductListClient({
     updateQuantity(addedItem.id, Math.max(1, Math.floor(parsed)));
   };
 
-  const FilterContent = () => (
-    <>
-      <h3>Filters</h3>
-
-      <label>Search</label>
-      <input
-        type="text"
-        placeholder="Search products..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-
-      <label>Category</label>
-      <select
-        value={selectedCategory}
-        onChange={(e) => {
-          const next = e.target.value;
-          setSelectedCategory(next);
-          if (routeCategory && routeCategory !== "all") {
-            router.push(`/products/${next === "all" ? "all" : next}`);
-          }
-        }}
-      >
-        <option value="all">All Products</option>
-        <option value="garage">Garage & Gate</option>
-        <option value="car">Automotive</option>
-        <option value="home">For The Home</option>
-        <option value="locksmith">Locksmithing</option>
-      </select>
-
-      <label>Brand</label>
-      <select
-        value={selectedBrand}
-        onChange={(e) => setSelectedBrand(e.target.value)}
-      >
-        {brands.map((brand) => {
-          const b = String(brand);
-          return (
-            <option key={b} value={b}>
-              {b === "all" ? "All Brands" : b}
-            </option>
-          );
-        })}
-      </select>
-
-      <label>Stock</label>
-      <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value)}>
-        <option value="all">All</option>
-        <option value="in">In Stock</option>
-        <option value="out">Out of Stock</option>
-      </select>
-
-      <button
-        type="button"
-        className="clear-btn"
-        onClick={() => {
-          setSearchQuery("");
-          setSelectedCategory(routeCategory && routeCategory !== "all" ? routeCategory : "all");
-          setSelectedBrand("all");
-          setStockStatus("all");
-        }}
-      >
-        Clear Filters
-      </button>
-    </>
-  );
-
   return (
     <div className="shop-page">
       <div className="shop-hero">
@@ -296,14 +296,35 @@ export default function ProductListClient({
         </div>
       </div>
 
-      <div className="shop-content">
-        <div className="container shop-grid">
-          <aside className="filters filters-desktop">
-            <FilterContent />
-          </aside>
+	      <div className="shop-content">
+	        <div className="container shop-grid">
+	          <aside className="filters filters-desktop">
+	            <FiltersPanel
+	              brands={brands}
+	              searchQuery={searchQuery}
+	              selectedCategory={selectedCategory}
+	              selectedBrand={selectedBrand}
+	              stockStatus={stockStatus}
+	              onSearchQueryChange={(next) => setSearchQuery(next)}
+	              onSelectedCategoryChange={(next) => {
+	                setSelectedCategory(next);
+	                if (routeCategory && routeCategory !== "all") {
+	                  router.push(`/products/${next === "all" ? "all" : next}`);
+	                }
+	              }}
+	              onSelectedBrandChange={(next) => setSelectedBrand(next)}
+	              onStockStatusChange={(next) => setStockStatus(next)}
+	              onClear={() => {
+	                setSearchQuery("");
+	                setSelectedCategory(routeCategory && routeCategory !== "all" ? routeCategory : "all");
+	                setSelectedBrand("all");
+	                setStockStatus("all");
+	              }}
+	            />
+	          </aside>
 
-          {isFilterDrawerOpen && (
-            <div
+	          {isFilterDrawerOpen && (
+	            <div
               className="filter-drawer-backdrop"
               onClick={() => setIsFilterDrawerOpen(false)}
             >
@@ -318,13 +339,36 @@ export default function ProductListClient({
                   >
                     ✕
                   </button>
-                </div>
-                <div className="filter-drawer-content">
-                  <FilterContent />
-                </div>
-              </div>
-            </div>
-          )}
+	                </div>
+	                <div className="filter-drawer-content">
+	                  <FiltersPanel
+	                    brands={brands}
+	                    searchQuery={searchQuery}
+	                    selectedCategory={selectedCategory}
+	                    selectedBrand={selectedBrand}
+	                    stockStatus={stockStatus}
+	                    onSearchQueryChange={(next) => setSearchQuery(next)}
+	                    onSelectedCategoryChange={(next) => {
+	                      setSelectedCategory(next);
+	                      if (routeCategory && routeCategory !== "all") {
+	                        router.push(`/products/${next === "all" ? "all" : next}`);
+	                      }
+	                    }}
+	                    onSelectedBrandChange={(next) => setSelectedBrand(next)}
+	                    onStockStatusChange={(next) => setStockStatus(next)}
+	                    onClear={() => {
+	                      setSearchQuery("");
+	                      setSelectedCategory(
+	                        routeCategory && routeCategory !== "all" ? routeCategory : "all",
+	                      );
+	                      setSelectedBrand("all");
+	                      setStockStatus("all");
+	                    }}
+	                  />
+	                </div>
+	              </div>
+	            </div>
+	          )}
 
           <main>
             <div className="products-header">
