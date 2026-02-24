@@ -10,17 +10,9 @@ import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing
 
 const PAGE_SIZE = 15;
 
-function setParam(
-  pathname: string,
-  searchParams: URLSearchParams,
-  key: string,
-  value: string | null,
-) {
-  const next = new URLSearchParams(searchParams.toString());
-  if (value == null || value === "") next.delete(key);
-  else next.set(key, value);
-  const qs = next.toString();
-  return qs ? `${pathname}?${qs}` : pathname;
+function applyParam(searchParams: URLSearchParams, key: string, value: string | null) {
+  if (value == null || value === "") searchParams.delete(key);
+  else searchParams.set(key, value);
 }
 
 export default function ProductListClient({
@@ -118,16 +110,15 @@ export default function ProductListClient({
     return Math.min(Math.max(1, currentPage), totalPages);
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    if (currentPage === clampedPage) return;
+    setCurrentPage(clampedPage);
+  }, [clampedPage, currentPage]);
+
   const pageProducts = useMemo(() => {
     const start = (clampedPage - 1) * PAGE_SIZE;
     return filteredProducts.slice(start, start + PAGE_SIZE);
   }, [filteredProducts, clampedPage]);
-
-  useEffect(() => {
-    if (clampedPage === pageFromUrl) return;
-    router.replace(setParam(pathname, new URLSearchParams(searchParams.toString()), "page", String(clampedPage)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clampedPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -165,43 +156,25 @@ export default function ProductListClient({
     };
   }, [isFilterDrawerOpen]);
 
-  // Persist brand/search/category into the URL (same behavior as before).
+  // Persist brand/search/category/page into the URL without triggering Next.js navigation,
+  // to avoid remounting this component (which can drop focus while typing in the filter input).
   useEffect(() => {
-    router.replace(
-      setParam(
-        pathname,
-        new URLSearchParams(searchParams.toString()),
-        "brand",
-        selectedBrand,
-      ),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBrand]);
+    if (typeof window === "undefined") return;
 
-  useEffect(() => {
-    router.replace(
-      setParam(
-        pathname,
-        new URLSearchParams(searchParams.toString()),
-        "search",
-        searchQuery || null,
-      ),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+    const next = new URLSearchParams(window.location.search);
+    applyParam(next, "brand", selectedBrand);
+    applyParam(next, "search", searchQuery || null);
+    applyParam(next, "page", String(clampedPage));
 
-  useEffect(() => {
-    if (routeCategory && routeCategory !== "all") return;
-    router.replace(
-      setParam(
-        pathname,
-        new URLSearchParams(searchParams.toString()),
-        "category",
-        selectedCategory === "all" ? null : selectedCategory,
-      ),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, routeCategory]);
+    if (!routeCategory || routeCategory === "all") {
+      applyParam(next, "category", selectedCategory === "all" ? null : selectedCategory);
+    }
+
+    const nextQs = next.toString();
+    const nextUrl = nextQs ? `${pathname}?${nextQs}` : pathname;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) window.history.replaceState(null, "", nextUrl);
+  }, [pathname, selectedBrand, searchQuery, selectedCategory, clampedPage, routeCategory]);
 
   const visiblePages = useMemo(() => {
     const pages = new Set<number | string>([1, totalPages]);
