@@ -11,8 +11,9 @@ import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
 const Header = () => {
   const { user, logout } = useAuth();
   const { getCartItemCount } = useCart();
-  const { getNavigation, getProducts } = useStore();
+  const { getNavigation, getProducts, getPromotions } = useStore();
   const navigationMenu = getNavigation();
+  const promotions = getPromotions();
   const router = useRouter();
   const pathname = usePathname();
   const cartCount = getCartItemCount();
@@ -161,21 +162,21 @@ const Header = () => {
 
   return (
     <header className="header">
-      <div className="top-info-bar">
-        <div className="container">
-          <div className="info-items">
-            <span className="info-item">12 MONTH WARRANTY</span>
-            <span className="info-item">30 DAY RETURNS</span>
-            <span className="info-item">SAFE & SECURE</span>
-            <span className="info-item">TRADE PRICING</span>
-
-            <span className="info-item">12 MONTH WARRANTY</span>
-            <span className="info-item">30 DAY RETURNS</span>
-            <span className="info-item">SAFE & SECURE</span>
-            <span className="info-item">TRADE PRICING</span>
+      {promotions?.topInfoBar?.enabled && (promotions?.topInfoBar?.items || []).length > 0 && (
+        <div className="top-info-bar">
+          <div className="container">
+            <div className="info-items">
+              {(promotions.topInfoBar.items || [])
+                .concat(promotions.topInfoBar.items || [])
+                .map((text, idx) => (
+                  <span key={`${idx}-${text}`} className="info-item">
+                    {text}
+                  </span>
+                ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="main-header">
         <div className="container">
@@ -240,6 +241,7 @@ const Header = () => {
                             const pricing = getPriceBreakdown(
                               product.price,
                               isDiscountEligible(user),
+                              { promotions, product },
                             );
                             return (
                               <div className="search-result-price">

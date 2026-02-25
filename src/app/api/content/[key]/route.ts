@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const ALLOWED = new Set(["home", "navigation", "reviews"]);
+const ALLOWED = new Set(["home", "navigation", "reviews", "promotions"]);
 
 export async function GET(_: Request, context: { params: Promise<{ key: string }> }) {
   if (!mongoEnabled()) {

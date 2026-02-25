@@ -90,7 +90,8 @@ export default function ProductListClient({
 }: {
   routeCategory: string;
 }) {
-  const { getProducts } = useStore();
+  const { getProducts, getPromotions } = useStore();
+  const promotions = getPromotions();
   const { cart, addToCart, updateQuantity } = useCart();
   const { user } = useAuth();
   const router = useRouter();
@@ -266,7 +267,7 @@ export default function ProductListClient({
 
   const modalQuantity = modalCartItem?.quantity ?? 1;
   const hasDiscount = isDiscountEligible(user);
-  const modalPrice = getPriceBreakdown(addedItem?.price || 0, hasDiscount);
+  const modalPrice = getPriceBreakdown(addedItem?.price || 0, hasDiscount, { promotions, product: addedItem });
 
   const handleAddToCart = (e: React.MouseEvent, product: any) => {
     e.preventDefault();
@@ -417,6 +418,7 @@ export default function ProductListClient({
                               const pricing = getPriceBreakdown(
                                 product.price,
                                 hasDiscount,
+                                { promotions, product },
                               );
                               if (!pricing.hasDiscount) {
                                 return `AU$${pricing.finalPrice.toFixed(2)}`;

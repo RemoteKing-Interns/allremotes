@@ -9,9 +9,11 @@ const STORAGE_KEYS = {
   homeContent: 'allremotes_home_content',
   navigation: 'allremotes_navigation',
   reviews: 'allremotes_reviews',
+  promotions: 'allremotes_promotions',
 };
 
 const defaultHomeContent = {
+  heroImages: ["/images/hero.jpg", "/images/heroimg.jpg"],
   hero: {
     title: 'Garage Door & Gate Remotes',
     subtitle: 'Quality is Guaranteed',
@@ -39,6 +41,32 @@ const defaultHomeContent = {
     description: 'Browse our collection and find the perfect remote for your needs',
     buttonText: 'View All Products',
     buttonPath: '/products/all',
+  },
+};
+
+const defaultPromotions = {
+  topInfoBar: {
+    enabled: true,
+    items: ["12 MONTH WARRANTY", "30 DAY RETURNS", "SAFE & SECURE", "TRADE PRICING"],
+  },
+  offers: {
+    categories: [
+      { id: "black-friday", name: "Black Friday" },
+      { id: "boxing-day", name: "Boxing Day" },
+    ],
+    offers: [
+      {
+        id: "black-friday-sale",
+        categoryId: "black-friday",
+        name: "Black Friday Sale",
+        enabled: false,
+        appliesTo: "all", // all | car | garage
+        discountPercent: 20,
+        startDate: "",
+        endDate: "",
+      },
+    ],
+    stackWithMemberDiscount: false,
   },
 };
 
@@ -126,6 +154,7 @@ export const StoreProvider = ({ children }) => {
   const [homeVersion, setHomeVersion] = useState(0);
   const [navVersion, setNavVersion] = useState(0);
   const [reviewsVersion, setReviewsVersion] = useState(0);
+  const [promotionsVersion, setPromotionsVersion] = useState(0);
   const apiBase = useMemo(() => {
     // Prefer same-origin by default. Override when hosting the API elsewhere.
     const fromEnv = String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
@@ -322,6 +351,26 @@ export const StoreProvider = ({ children }) => {
     postJson('/api/content/reviews', reviews);
   }, [postJson]);
 
+  const getPromotions = useCallback(() => {
+    try {
+      if (typeof window === 'undefined') return defaultPromotions;
+      const raw = localStorage.getItem(STORAGE_KEYS.promotions);
+      if (!raw) return defaultPromotions;
+      const parsed = JSON.parse(raw);
+      return { ...defaultPromotions, ...parsed };
+    } catch {
+      return defaultPromotions;
+    }
+    // promotionsVersion forces re-render after setPromotions
+  }, [promotionsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPromotions = useCallback((promotions) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(promotions));
+    setPromotionsVersion((v) => v + 1);
+    postJson('/api/content/promotions', promotions);
+  }, [postJson]);
+
   // Hydrate shared content (Mongo-backed) into localStorage on startup.
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -340,6 +389,11 @@ export const StoreProvider = ({ children }) => {
       localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(resp.data));
       setReviewsVersion((v) => v + 1);
     });
+    getJson('/api/content/promotions').then((resp) => {
+      if (!resp || !resp.data) return;
+      localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(resp.data));
+      setPromotionsVersion((v) => v + 1);
+    });
   }, [getJson]);
 
   const value = {
@@ -353,10 +407,13 @@ export const StoreProvider = ({ children }) => {
     setNavigation,
     getReviews,
     setReviews,
+    getPromotions,
+    setPromotions,
     productImagePool,
     remoteImages,
     defaultHomeContent,
     defaultReviews,
+    defaultPromotions,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

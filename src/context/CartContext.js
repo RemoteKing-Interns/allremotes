@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useStore } from './StoreContext';
 import { MEMBER_DISCOUNT_RATE, getLineTotal, getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 
 const CartContext = createContext();
@@ -18,6 +19,8 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const { user, loading } = useAuth();
+  const { getPromotions } = useStore();
+  const promotions = getPromotions();
   const hasDiscount = isDiscountEligible(user);
   const cartRef = useRef(cart);
   const prevUserKeyRef = useRef(null);
@@ -215,16 +218,16 @@ export const CartProvider = ({ children }) => {
   };
 
   const getItemPriceBreakdown = useCallback((item) => {
-    return getPriceBreakdown(item?.price || 0, hasDiscount);
-  }, [hasDiscount]);
+    return getPriceBreakdown(item?.price || 0, hasDiscount, { promotions, product: item });
+  }, [hasDiscount, promotions]);
 
   const getItemUnitPrice = useCallback((item) => {
     return getItemPriceBreakdown(item).finalPrice;
   }, [getItemPriceBreakdown]);
 
   const getItemLineTotal = useCallback((item) => {
-    return getLineTotal(item?.price || 0, item?.quantity || 1, hasDiscount);
-  }, [hasDiscount]);
+    return getLineTotal(item?.price || 0, item?.quantity || 1, hasDiscount, { promotions, product: item });
+  }, [hasDiscount, promotions]);
 
   const getCartOriginalTotal = useCallback(() => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);

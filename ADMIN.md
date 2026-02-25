@@ -12,13 +12,14 @@ Staff can manage the website content without touching any code.
    - **Dashboard** – Overview of products, nav sections, and hero.
    - **Products** – Add, edit, or remove products. Change name, price, category, description, image, and stock.
    - **Home content** – Edit hero title/subtitle/description and buttons, feature cards, “Why buy” section, and bottom CTA.
+   - **Promotions** – Edit the top info bar (scrolling messages) and manage offer categories + discount offers (e.g. Black Friday, Boxing Day).
    - **Navigation** – Edit menu item labels and links (and icon index 0–29).
    - **Reviews** – Edit customer review text, author, rating, and verified badge.
 
 ## Saving changes
 
 - **Products:** Click **“Save all changes”** after editing.
-- **Home content / Navigation / Reviews:** Click **“Save changes”** in that section.
+- **Home content / Promotions / Navigation / Reviews:** Click **“Save changes”** in that section.
 
 By default, changes are stored in this browser (localStorage) and appear on the site immediately.
 

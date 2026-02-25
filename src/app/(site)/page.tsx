@@ -11,7 +11,9 @@ const Home = () => {
   const home = getHomeContent();
   const reviews = getReviews() || [];
   const [currentSlide, setCurrentSlide] = useState(0);
-  const heroImages = ["/images/hero.jpg", "/images/heroimg.jpg"];
+  const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
+    ? home.heroImages
+    : ["/images/hero.jpg", "/images/heroimg.jpg"];
 
   useEffect(() => {
     const interval = setInterval(() => {

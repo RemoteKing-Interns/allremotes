@@ -4,12 +4,15 @@ import React from 'react';
 import Link from 'next/link';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useStore } from '../context/StoreContext';
 import { getPriceBreakdown, isDiscountEligible } from '../utils/pricing';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const pricing = getPriceBreakdown(product.price, isDiscountEligible(user));
+  const { getPromotions } = useStore();
+  const promotions = getPromotions();
+  const pricing = getPriceBreakdown(product.price, isDiscountEligible(user), { promotions, product });
 
   const handleAddToCart = (e) => {
     e.preventDefault();

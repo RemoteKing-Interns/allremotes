@@ -14,8 +14,9 @@ const ProductDetail = () => {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
-  const { getProducts } = useStore();
+  const { getProducts, getPromotions } = useStore();
   const { user } = useAuth();
+  const promotions = getPromotions();
   const products = getProducts() || [];
   const product = products.find((p) => p.id === id);
   const relatedProducts = products
@@ -23,7 +24,7 @@ const ProductDetail = () => {
     .slice(0, 4);
   const { addToCart } = useCart();
   const hasDiscount = isDiscountEligible(user);
-  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount);
+  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount, { promotions, product });
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
