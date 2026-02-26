@@ -565,6 +565,7 @@
   grid-template-columns: 1fr 1.2fr; /* slightly tighter */
   gap: 18px; /* was 24px */
   padding: 20px; /* was 32px */
+  max-height: 500px;
 }
 
 .cart-modal-body img {
