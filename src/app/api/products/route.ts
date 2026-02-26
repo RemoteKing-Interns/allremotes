@@ -17,7 +17,10 @@ function mongoTroubleshootingHint(err: unknown) {
   if (msg.includes("IP") && msg.toLowerCase().includes("not allowed")) {
     return "MongoDB Atlas blocked this connection (IP not allowlisted). Atlas → Network Access → add the required IP range (quick test: 0.0.0.0/0), then redeploy.";
   }
-  if (msg.includes("Authentication failed") || msg.toLowerCase().includes("bad auth")) {
+  if (
+    msg.includes("Authentication failed") ||
+    msg.toLowerCase().includes("bad auth")
+  ) {
     return "MongoDB authentication failed. Re-check the DB username/password in MONGODB_URI (URL-encode special characters) and ensure the user has access to the target database.";
   }
   if (msg.includes("ENOTFOUND")) {
@@ -29,6 +32,26 @@ function mongoTroubleshootingHint(err: unknown) {
 export async function GET() {
   try {
     let products: any[];
+
+    // ✅ LOCAL MOCK (uncomment to use when testing, comment out for production)
+
+    // products = [
+    //   {
+    //     id: 1,
+    //     skuKey: "MOCK-001",
+    //     title: "Mock Product",
+    //     brand: "Test Brand",
+    //     description: "This is a local mock product for testing.",
+    //     price: 49.99,
+    //     stock: 10,
+    //     image: "/public/images/hero.jpg",
+    //     category: "all",
+    //   },
+    // ];
+    // return NextResponse.json(products, {
+    //   headers: { "Cache-Control": "no-store" },
+    // });
+
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("products");
@@ -50,7 +73,7 @@ export async function GET() {
         details: err?.message || String(err),
         ...(hint ? { hint } : null),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
