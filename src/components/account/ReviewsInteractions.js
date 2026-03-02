@@ -1,36 +1,88 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 const ReviewsInteractions = () => {
-  const [reviews] = useState([
-    {
-      id: 1,
-      productName: 'Universal Car Remote Key Fob',
-      rating: 5,
-      review: 'Great product! Works perfectly with my car.',
-      date: '2026-01-20',
-      helpful: 3
-    },
-    {
-      id: 2,
-      productName: 'Smart Garage Remote',
-      rating: 4,
-      review: 'Good quality, easy to program.',
-      date: '2026-01-15',
-      helpful: 1
-    }
-  ]);
+  const { user } = useAuth();
+  const userKey = useMemo(() => user?.id || user?.email || null, [user]);
+  const reviewsKey = useMemo(() => (userKey ? `allremotes_user_reviews_${userKey}` : null), [userKey]);
+  const questionsKey = useMemo(() => (userKey ? `allremotes_user_questions_${userKey}` : null), [userKey]);
 
-  const [questions] = useState([
-    {
-      id: 1,
-      productName: 'Premium Car Remote Control',
-      question: 'Does this work with Toyota?',
-      answer: 'Yes, this remote is compatible with most Toyota models.',
-      date: '2026-01-18'
+  const [reviews, setReviews] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [newReview, setNewReview] = useState({ productName: '', rating: 5, review: '' });
+  const [newQuestion, setNewQuestion] = useState({ productName: '', question: '' });
+
+  const persist = (key, value) => {
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(value || [])); } catch {}
+  };
+
+  useEffect(() => {
+    if (!reviewsKey) return;
+    try {
+      const raw = localStorage.getItem(reviewsKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setReviews(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setReviews([]);
     }
-  ]);
+  }, [reviewsKey]);
+
+  useEffect(() => {
+    if (!questionsKey) return;
+    try {
+      const raw = localStorage.getItem(questionsKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setQuestions(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setQuestions([]);
+    }
+  }, [questionsKey]);
+
+  const submitReview = (e) => {
+    e.preventDefault();
+    const productName = newReview.productName.trim();
+    const reviewText = newReview.review.trim();
+    if (!productName || !reviewText) return;
+    const row = {
+      id: Date.now(),
+      productName,
+      rating: Math.max(1, Math.min(5, Number(newReview.rating) || 5)),
+      review: reviewText,
+      date: new Date().toISOString(),
+      helpful: 0,
+    };
+    const next = [row, ...reviews];
+    setReviews(next);
+    persist(reviewsKey, next);
+    setNewReview({ productName: '', rating: 5, review: '' });
+  };
+
+  const deleteReview = (id) => {
+    const next = reviews.filter((r) => r.id !== id);
+    setReviews(next);
+    persist(reviewsKey, next);
+  };
+
+  const submitQuestion = (e) => {
+    e.preventDefault();
+    const productName = newQuestion.productName.trim();
+    const questionText = newQuestion.question.trim();
+    if (!productName || !questionText) return;
+    const row = {
+      id: Date.now(),
+      productName,
+      question: questionText,
+      answer: '',
+      date: new Date().toISOString(),
+    };
+    const next = [row, ...questions];
+    setQuestions(next);
+    persist(questionsKey, next);
+    setNewQuestion({ productName: '', question: '' });
+  };
 
   return (
     <div className="account-section">
@@ -39,6 +91,44 @@ const ReviewsInteractions = () => {
       <div className="section-content">
         <div className="reviews-section">
           <h3>Reviews You've Written</h3>
+
+          <form onSubmit={submitReview} className="account-form" style={{ marginBottom: 16 }}>
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Product</label>
+                <input
+                  value={newReview.productName}
+                  onChange={(e) => setNewReview({ ...newReview, productName: e.target.value })}
+                  placeholder="Product name"
+                />
+              </div>
+              <div className="form-group" style={{ width: 160 }}>
+                <label>Rating</label>
+                <select
+                  value={newReview.rating}
+                  onChange={(e) => setNewReview({ ...newReview, rating: Number(e.target.value) })}
+                >
+                  <option value={5}>5</option>
+                  <option value={4}>4</option>
+                  <option value={3}>3</option>
+                  <option value={2}>2</option>
+                  <option value={1}>1</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Review</label>
+              <textarea
+                rows="3"
+                value={newReview.review}
+                onChange={(e) => setNewReview({ ...newReview, review: e.target.value })}
+                placeholder="Write your review…"
+              />
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={!newReview.productName.trim() || !newReview.review.trim()}>
+              Submit Review
+            </button>
+          </form>
           
           {reviews.length === 0 ? (
             <div className="empty-state">
@@ -64,8 +154,8 @@ const ReviewsInteractions = () => {
                     <span className="review-helpful">{review.helpful} people found this helpful</span>
                   </div>
                   <div className="review-actions">
-                    <button className="btn btn-outline btn-small">Edit</button>
-                    <button className="btn btn-outline-red btn-small">Delete</button>
+                    <button className="btn btn-outline btn-small" type="button" disabled title="Editing coming soon">Edit</button>
+                    <button className="btn btn-outline-red btn-small" type="button" onClick={() => deleteReview(review.id)}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -77,6 +167,31 @@ const ReviewsInteractions = () => {
 
         <div className="questions-section">
           <h3>Questions & Answers</h3>
+
+          <form onSubmit={submitQuestion} className="account-form" style={{ marginBottom: 16 }}>
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Product</label>
+                <input
+                  value={newQuestion.productName}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, productName: e.target.value })}
+                  placeholder="Product name"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Question</label>
+              <textarea
+                rows="3"
+                value={newQuestion.question}
+                onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
+                placeholder="Ask a question…"
+              />
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={!newQuestion.productName.trim() || !newQuestion.question.trim()}>
+              Submit Question
+            </button>
+          </form>
           
           {questions.length === 0 ? (
             <div className="empty-state">
@@ -93,7 +208,7 @@ const ReviewsInteractions = () => {
                   </div>
                   <div className="question-item">
                     <p className="answer-label">A:</p>
-                    <p className="answer-text">{q.answer}</p>
+                    <p className="answer-text">{q.answer || 'No answer yet'}</p>
                   </div>
                   <span className="question-date">{new Date(q.date).toLocaleDateString()}</span>
                 </div>

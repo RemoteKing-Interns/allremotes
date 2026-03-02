@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useStore } from '../../context/StoreContext';
 
 const NotificationsSettings = () => {
+  const { user } = useAuth();
+  const { getSettings } = useStore();
+  const siteSettings = getSettings?.() || {};
+  const userKey = useMemo(() => user?.id || user?.email || null, [user]);
+  const storageKey = useMemo(() => (userKey ? `allremotes_notifications_${userKey}` : null), [userKey]);
+
   const [notifications, setNotifications] = useState({
     email: {
       orderUpdates: true,
@@ -20,9 +28,21 @@ const NotificationsSettings = () => {
 
   const [preferences, setPreferences] = useState({
     language: 'en',
-    currency: 'USD',
-    timezone: 'America/New_York'
+    currency: siteSettings.currency || 'AUD',
+    timezone: siteSettings.timezone || 'Australia/Melbourne'
   });
+
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed?.notifications) setNotifications(parsed.notifications);
+      if (parsed?.preferences) setPreferences((p) => ({ ...p, ...parsed.preferences }));
+    } catch {}
+  }, [storageKey]);
 
   const handleNotificationChange = (type, key) => {
     setNotifications({
@@ -39,6 +59,16 @@ const NotificationsSettings = () => {
       ...preferences,
       [key]: value
     });
+    setSaved(false);
+  };
+
+  const save = () => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ notifications, preferences }));
+    } catch {}
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   return (
@@ -140,9 +170,12 @@ const NotificationsSettings = () => {
                 <option value="America/Chicago">Central Time (CT)</option>
                 <option value="America/Denver">Mountain Time (MT)</option>
                 <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="Australia/Melbourne">Melbourne</option>
+                <option value="Australia/Sydney">Sydney</option>
               </select>
             </div>
-            <button type="button" className="btn btn-gradient">Save Preferences</button>
+            {saved && <div className="success-message">Saved.</div>}
+            <button type="button" className="btn btn-gradient" onClick={save}>Save Preferences</button>
           </form>
         </div>
       </div>

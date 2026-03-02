@@ -98,6 +98,7 @@ const Admin = () => {
     { id: 'analytics', label: 'Analytics', icon: '📈' },
     { id: 'users', label: 'Users', icon: '👥' },
     { id: 'products', label: 'Products', icon: '📦' },
+    { id: 'orders', label: 'Orders', icon: '🧾' },
     { id: 'home', label: 'Home content', icon: '🏠' },
     { id: 'promotions', label: 'Promotions', icon: '🏷️' },
     { id: 'navigation', label: 'Navigation', icon: '🧭' },
@@ -138,6 +139,7 @@ const Admin = () => {
           {activeTab === 'analytics' && <AdminAnalytics />}
           {activeTab === 'users' && <AdminUsers />}
           {activeTab === 'products' && <AdminProducts />}
+          {activeTab === 'orders' && <AdminOrders />}
           {activeTab === 'home' && <AdminHome />}
           {activeTab === 'promotions' && <AdminPromotions />}
           {activeTab === 'navigation' && <AdminNavigation />}
@@ -148,6 +150,111 @@ const Admin = () => {
     </div>
   );
 };
+
+function AdminOrders() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const resp = await fetch("/api/admin/orders", { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to load orders");
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setOrders([]);
+      setError(err?.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const updateStatus = async (id: string, status: string) => {
+    setSavingId(id);
+    setError("");
+    try {
+      const resp = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to update order");
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    } catch (err: any) {
+      setError(err?.message || "Failed to update order");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="admin-header-row">
+        <h1>Orders</h1>
+        <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}>
+          Refresh
+        </button>
+      </div>
+
+      {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+
+      <div className="admin-card">
+        {loading ? (
+          <div style={{ padding: 12 }}>Loading…</div>
+        ) : orders.length === 0 ? (
+          <div style={{ padding: 12 }}>No orders yet.</div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id}>
+                    <td style={{ fontWeight: 600 }}>{o.id}</td>
+                    <td>{new Date(o.createdAt || Date.now()).toLocaleString()}</td>
+                    <td>{o?.customer?.email || "—"}</td>
+                    <td>{Array.isArray(o.items) ? o.items.length : 0}</td>
+                    <td>AU${Number(o?.pricing?.total || 0).toFixed(2)}</td>
+                    <td>
+                      <select
+                        value={o.status || "processing"}
+                        onChange={(e) => updateStatus(o.id, e.target.value)}
+                        disabled={savingId === o.id}
+                      >
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 
 function AdminDashboard() {
   const { getProducts, getHomeContent, getNavigation, getReviews } = useStore();
@@ -1157,23 +1264,6 @@ function AdminPromotions() {
 
 function AdminAnalytics() {
   const [timeRange, setTimeRange] = useState('7d');
-  
-  const analyticsData = {
-    visitors: { today: 1247, week: 8432, month: 32156 },
-    pageViews: { today: 3421, week: 23456, month: 89234 },
-    conversion: { today: 3.2, week: 2.8, month: 3.1 },
-    revenue: { today: 1247, week: 8432, month: 32156 }
-  };
-
-  const chartData = [
-    { day: 'Mon', visitors: 1200, pageViews: 3400 },
-    { day: 'Tue', visitors: 1400, pageViews: 3800 },
-    { day: 'Wed', visitors: 1100, pageViews: 3200 },
-    { day: 'Thu', visitors: 1600, pageViews: 4200 },
-    { day: 'Fri', visitors: 1800, pageViews: 4800 },
-    { day: 'Sat', visitors: 2100, pageViews: 5200 },
-    { day: 'Sun', visitors: 1900, pageViews: 4600 },
-  ];
 
   return (
     <>
@@ -1187,131 +1277,111 @@ function AdminAnalytics() {
         </select>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 32 }}>
-        <div className="admin-card" style={{ marginBottom: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#666' }}>Visitors</span>
-            <span style={{ fontSize: 20 }}>👥</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#667eea' }}>{analyticsData.visitors[timeRange]?.toLocaleString() || 'N/A'}</div>
-          <div style={{ fontSize: 12, color: '#10b981', marginTop: 4 }}>↑ 12% from last period</div>
-        </div>
-
-        <div className="admin-card" style={{ marginBottom: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#666' }}>Page Views</span>
-            <span style={{ fontSize: 20 }}>📄</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#764ba2' }}>{analyticsData.pageViews[timeRange]?.toLocaleString() || 'N/A'}</div>
-          <div style={{ fontSize: 12, color: '#10b981', marginTop: 4 }}>↑ 8% from last period</div>
-        </div>
-
-        <div className="admin-card" style={{ marginBottom: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#666' }}>Conversion Rate</span>
-            <span style={{ fontSize: 20 }}>🎯</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b' }}>{analyticsData.conversion[timeRange] || 'N/A'}%</div>
-          <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>↓ 2% from last period</div>
-        </div>
-
-        <div className="admin-card" style={{ marginBottom: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#666' }}>Revenue</span>
-            <span style={{ fontSize: 20 }}>💰</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#10b981' }}>${analyticsData.revenue[timeRange]?.toLocaleString() || 'N/A'}</div>
-          <div style={{ fontSize: 12, color: '#10b981', marginTop: 4 }}>↑ 18% from last period</div>
-        </div>
-      </div>
-
       <div className="admin-card">
-        <h3>Traffic Overview</h3>
-        <div style={{ height: 300, background: 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#667eea' }}>Analytics Chart</div>
-            <div style={{ fontSize: 14, color: '#666', marginTop: 8 }}>Interactive charts would be displayed here</div>
-            <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Integration with Chart.js or similar library needed</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <div className="admin-card">
-          <h3>Top Pages</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {['Home', 'Products', 'About', 'Contact', 'Blog'].map((page, index) => (
-              <div key={page} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#667eea' }}>#{index + 1}</span>
-                  <span>{page}</span>
-                </div>
-                <span style={{ fontSize: 14, color: '#666' }}>{Math.floor(Math.random() * 5000 + 1000).toLocaleString()} views</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="admin-card">
-          <h3>Traffic Sources</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { source: 'Organic Search', percentage: 45, color: '#667eea' },
-              { source: 'Direct', percentage: 25, color: '#764ba2' },
-              { source: 'Social Media', percentage: 20, color: '#f59e0b' },
-              { source: 'Referral', percentage: 10, color: '#10b981' },
-            ].map(({ source, percentage, color }) => (
-              <div key={source} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, fontSize: 12, fontWeight: 600, color }}>{percentage}%</div>
-                <div style={{ flex: 1, height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${percentage}%`, height: '100%', background: color, borderRadius: 4 }}></div>
-                </div>
-                <span style={{ fontSize: 14, color: '#666' }}>{source}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <h3>Analytics (not configured)</h3>
+        <p style={{ margin: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+          Real analytics for {timeRange} requires an analytics provider + event tracking. This section currently shows no
+          hardcoded numbers.
+        </p>
+        <p style={{ marginTop: 10, marginBottom: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+          Recommended: add a tracking provider (GA4/Plausible/PostHog) and capture checkout + product view events.
+        </p>
       </div>
     </>
   );
 }
 
 function AdminUsers() {
-  const [users, setUsers] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'customer', joined: '2024-01-15', status: 'active' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'admin', joined: '2024-01-10', status: 'active' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'customer', joined: '2024-01-20', status: 'inactive' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'customer', joined: '2024-01-25', status: 'active' },
-  ]);
+  const [users, setUsers] = useState<any[]>([]);
 
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'customer' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'customer' });
+
+  const persistUsersToLocalStorage = (list) => {
+    try {
+      const toSave = (list || [])
+        .filter((u) => u && u.id !== 'admin')
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          password: u.password,
+          role: u.role || 'customer',
+          status: u.status || 'active',
+          createdAt: u.createdAt || new Date().toISOString(),
+        }));
+      localStorage.setItem('users', JSON.stringify(toSave));
+    } catch {}
+  };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('users') || '[]';
+      const list = JSON.parse(raw);
+      const normalized = Array.isArray(list) ? list : [];
+      const adminRow = {
+        id: 'admin',
+        name: 'Admin',
+        email: 'admin@allremotes.com',
+        role: 'admin',
+        status: 'active',
+        joined: '—',
+      };
+      setUsers([
+        adminRow,
+        ...normalized.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          password: u.password,
+          role: u.role || 'customer',
+          status: u.status || 'active',
+          createdAt: u.createdAt || '',
+          joined: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : '—',
+        })),
+      ]);
+    } catch {
+      setUsers([
+        { id: 'admin', name: 'Admin', email: 'admin@allremotes.com', role: 'admin', status: 'active', joined: '—' },
+      ]);
+    }
+  }, []);
 
   const addUser = () => {
-    if (newUser.name && newUser.email) {
-      setUsers([...users, {
-        id: users.length + 1,
+    if (newUser.name && newUser.email && newUser.password) {
+      const createdAt = new Date().toISOString();
+      const row = {
+        id: String(Date.now()),
         ...newUser,
-        joined: new Date().toISOString().split('T')[0],
-        status: 'active'
-      }]);
-      setNewUser({ name: '', email: '', role: 'customer' });
+        status: 'active',
+        createdAt,
+        joined: createdAt.split('T')[0],
+      };
+      const next = [...users, row];
+      setUsers(next);
+      persistUsersToLocalStorage(next);
+      setNewUser({ name: '', email: '', password: '', role: 'customer' });
       setShowAddUser(false);
     }
   };
 
   const toggleUserStatus = (userId) => {
-    setUsers(users.map(user => 
-      user.id === userId 
+    if (userId === 'admin') return;
+    const next = users.map(user =>
+      user.id === userId
         ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
         : user
-    ));
+    );
+    setUsers(next);
+    persistUsersToLocalStorage(next);
   };
 
   const deleteUser = (userId) => {
+    if (userId === 'admin') return;
     if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(user => user.id !== userId));
+      const next = users.filter(user => user.id !== userId);
+      setUsers(next);
+      persistUsersToLocalStorage(next);
     }
   };
 
@@ -1322,6 +1392,13 @@ function AdminUsers() {
         <button className="btn btn-primary" onClick={() => setShowAddUser(true)}>
           <span>➕</span> Add User
         </button>
+      </div>
+
+      <div className="admin-card" style={{ marginBottom: 20 }}>
+        <p style={{ margin: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+          Users are stored in this browser's <code>localStorage</code> (demo auth). To make users global + secure,
+          replace client-side auth with a backend auth/session system.
+        </p>
       </div>
 
       {showAddUser && (
@@ -1349,6 +1426,18 @@ function AdminUsers() {
             </div>
             <div className="form-row">
               <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="Set a password"
+                />
+              </div>
+              <div className="form-group" />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
                 <label>Role</label>
                 <select
                   value={newUser.role}
@@ -1359,7 +1448,7 @@ function AdminUsers() {
                 </select>
               </div>
               <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
-                <button className="btn btn-primary" onClick={addUser}>Add User</button>
+                <button className="btn btn-primary" onClick={addUser} disabled={!newUser.name || !newUser.email || !newUser.password}>Add User</button>
                 <button className="btn btn-secondary" onClick={() => setShowAddUser(false)}>Cancel</button>
               </div>
             </div>
@@ -1415,12 +1504,14 @@ function AdminUsers() {
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => toggleUserStatus(user.id)}
+                        disabled={user.id === 'admin'}
                       >
                         {user.status === 'active' ? 'Disable' : 'Enable'}
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteUser(user.id)}
+                        disabled={user.id === 'admin'}
                       >
                         Delete
                       </button>
@@ -1483,20 +1574,19 @@ function AdminUsers() {
 }
 
 function AdminSettings() {
-  const [settings, setSettings] = useState({
-    siteName: 'AllRemotes',
-    siteEmail: 'contact@allremotes.com',
-    maintenanceMode: false,
-    enableRegistration: true,
-    enableReviews: true,
-    itemsPerPage: 12,
-    currency: 'USD',
-    timezone: 'UTC',
-  });
+  const { getSettings, setSettings: persistSettings } = useStore();
+  const [settings, setSettings] = useState<any>({});
 
   const [saved, setSaved] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+
+  useEffect(() => {
+    setSettings(getSettings());
+  }, [getSettings]);
 
   const saveSettings = () => {
+    persistSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -1505,16 +1595,68 @@ function AdminSettings() {
     setSettings({ ...settings, [key]: value });
   };
 
+  const resetAllData = async () => {
+    if (!window.confirm("This will delete ALL local test data (products, content, orders) and clear this browser's saved admin/user/cart data. Continue?")) {
+      return;
+    }
+    setResetError("");
+    setResetting(true);
+    try {
+      const resp = await fetch("/api/admin/reset", { method: "POST" });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        throw new Error(data?.error || "Reset failed");
+      }
+
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          if (
+            k.startsWith("allremotes_") ||
+            k.startsWith("cart_") ||
+            k === "user" ||
+            k === "users"
+          ) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch {}
+
+      try {
+        (document.cookie || "")
+          .split(";")
+          .map((c) => c.split("=")[0]?.trim())
+          .filter((name) => name && name.startsWith("cart_"))
+          .forEach((name) => {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          });
+      } catch {}
+
+      window.location.href = "/";
+    } catch (err: any) {
+      setResetError(err?.message || "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <>
       <div className="admin-header-row">
         <h1>Site Settings</h1>
-        <button className="btn btn-primary" onClick={saveSettings}>
-          <span>💾</span> Save Settings
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button className="btn btn-primary" onClick={saveSettings}>
+            <span>💾</span> Save Settings
+          </button>
+          <button className="btn btn-danger" onClick={resetAllData} disabled={resetting}>
+            <span>🧹</span> {resetting ? "Resetting…" : "Reset Test Data"}
+          </button>
+        </div>
       </div>
 
       {saved && <div className="admin-success">Settings saved successfully!</div>}
+      {resetError && <div className="error-message" style={{ marginBottom: 16 }}>{resetError}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
         <div className="admin-card">
@@ -1571,6 +1713,7 @@ function AdminSettings() {
                 <option value="Europe/London">London</option>
                 <option value="Europe/Paris">Paris</option>
                 <option value="Asia/Tokyo">Tokyo</option>
+                <option value="Australia/Melbourne">Melbourne</option>
                 <option value="Australia/Sydney">Sydney</option>
               </select>
             </div>
@@ -1630,19 +1773,19 @@ function AdminSettings() {
             <strong>Version:</strong> 1.0.0
           </div>
           <div>
-            <strong>Environment:</strong> Development
+            <strong>Environment:</strong> {process.env.NODE_ENV || 'unknown'}
           </div>
           <div>
-            <strong>Database:</strong> MongoDB
+            <strong>Database:</strong> MongoDB (if configured) / Local JSON fallback
           </div>
           <div>
-            <strong>Last Backup:</strong> 2 hours ago
+            <strong>Persistence:</strong> `/api/content/*` + `/api/products` + `/api/orders`
           </div>
           <div>
-            <strong>Storage Used:</strong> 2.3 GB
+            <strong>Reset:</strong> Disabled in prod unless `ALLOW_ADMIN_RESET=1`
           </div>
           <div>
-            <strong>Uptime:</strong> 99.9%
+            <strong>Note:</strong> Analytics/users need integration
           </div>
         </div>
       </div>

@@ -1,39 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 const Addresses = () => {
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      label: 'Home',
-      name: 'John Doe',
-      street: '123 Main Street',
-      city: 'New York',
-      state: 'NY',
-      zip: '10001',
-      country: 'United States',
-      phone: '+1 (555) 123-4567',
-      isDefault: true
-    },
-    {
-      id: 2,
-      label: 'Work',
-      name: 'John Doe',
-      street: '456 Business Ave',
-      city: 'New York',
-      state: 'NY',
-      zip: '10002',
-      country: 'United States',
-      phone: '+1 (555) 987-6543',
-      isDefault: false
-    }
-  ]);
+  const { user } = useAuth();
+  const [addresses, setAddresses] = useState([]);
+  const [editingId, setEditingId] = useState(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     label: '',
-    name: '',
+    name: user?.name || '',
     street: '',
     city: '',
     state: '',
@@ -43,16 +21,50 @@ const Addresses = () => {
     isDefault: false
   });
 
+  const userKey = useMemo(() => user?.id || user?.email || null, [user]);
+  const storageKey = useMemo(
+    () => (userKey ? `allremotes_addresses_${userKey}` : null),
+    [userKey],
+  );
+
+  const persist = (list) => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(list || []));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setAddresses(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setAddresses([]);
+    }
+  }, [storageKey]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newAddress = {
-      id: Date.now(),
-      ...formData
+    const base = {
+      ...formData,
+      id: editingId || Date.now(),
     };
-    setAddresses([...addresses, newAddress]);
+
+    const next = editingId
+      ? addresses.map((a) => (a.id === editingId ? base : a))
+      : [...addresses, base];
+
+    const withDefaultNormalized = base.isDefault
+      ? next.map((a) => ({ ...a, isDefault: a.id === base.id }))
+      : next;
+
+    setAddresses(withDefaultNormalized);
+    persist(withDefaultNormalized);
     setFormData({
       label: '',
-      name: '',
+      name: user?.name || '',
       street: '',
       city: '',
       state: '',
@@ -62,13 +74,42 @@ const Addresses = () => {
       isDefault: false
     });
     setShowAddForm(false);
+    setEditingId(null);
   };
 
   const setDefaultAddress = (id) => {
-    setAddresses(addresses.map(addr => ({
+    const next = addresses.map(addr => ({
       ...addr,
       isDefault: addr.id === id
-    })));
+    }));
+    setAddresses(next);
+    persist(next);
+  };
+
+  const startEdit = (addr) => {
+    setEditingId(addr.id);
+    setFormData({
+      label: addr.label || '',
+      name: addr.name || (user?.name || ''),
+      street: addr.street || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      zip: addr.zip || '',
+      country: addr.country || 'United States',
+      phone: addr.phone || '',
+      isDefault: Boolean(addr.isDefault),
+    });
+    setShowAddForm(true);
+  };
+
+  const removeAddress = (id) => {
+    const next = addresses.filter((a) => a.id !== id);
+    setAddresses(next);
+    persist(next);
+    if (editingId === id) {
+      setEditingId(null);
+      setShowAddForm(false);
+    }
   };
 
   return (
@@ -177,11 +218,18 @@ const Addresses = () => {
                 Set as default delivery address
               </label>
             </div>
-            <button type="submit" className="btn btn-secondary">Save Address</button>
+            <button type="submit" className="btn btn-secondary">
+              {editingId ? 'Update Address' : 'Save Address'}
+            </button>
           </form>
         )}
 
-        <div className="addresses-grid">
+        {addresses.length === 0 ? (
+          <div className="empty-state">
+            <p>No saved addresses</p>
+          </div>
+        ) : (
+          <div className="addresses-grid">
           {addresses.map(address => (
             <div key={address.id} className="address-card">
               <div className="address-header">
@@ -204,12 +252,17 @@ const Addresses = () => {
                     Set as Default
                   </button>
                 )}
-                <button className="btn btn-outline btn-small">Edit</button>
-                <button className="btn btn-outline-red btn-small">Delete</button>
+                <button className="btn btn-outline btn-small" type="button" onClick={() => startEdit(address)}>
+                  Edit
+                </button>
+                <button className="btn btn-outline-red btn-small" type="button" onClick={() => removeAddress(address.id)}>
+                  Delete
+                </button>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

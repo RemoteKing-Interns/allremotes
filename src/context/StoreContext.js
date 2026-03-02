@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   navigation: 'allremotes_navigation',
   reviews: 'allremotes_reviews',
   promotions: 'allremotes_promotions',
+  settings: 'allremotes_settings',
 };
 
 const defaultHomeContent = {
@@ -78,6 +79,17 @@ const defaultReviews = [
   { rating: 5, text: 'Professional service and high-quality remotes. The warranty gives me confidence in my purchase. Thank you!', author: 'David R.', verified: true },
   { rating: 5, text: 'Fast delivery, great prices, and the remote works perfectly. The free shipping is a huge bonus. Highly satisfied!', author: 'Lisa W.', verified: true },
 ];
+
+const defaultSettings = {
+  siteName: 'AllRemotes',
+  siteEmail: 'contact@allremotes.com',
+  maintenanceMode: false,
+  enableRegistration: true,
+  enableReviews: true,
+  itemsPerPage: 12,
+  currency: 'AUD',
+  timezone: 'Australia/Melbourne',
+};
 
 // Product images: use first 12 from remoteImages for product catalog
 const productImagePool = remoteImages.slice(0, 12);
@@ -155,6 +167,7 @@ export const StoreProvider = ({ children }) => {
   const [navVersion, setNavVersion] = useState(0);
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const [promotionsVersion, setPromotionsVersion] = useState(0);
+  const [settingsVersion, setSettingsVersion] = useState(0);
   const apiBase = useMemo(() => {
     // Prefer same-origin by default. Override when hosting the API elsewhere.
     const fromEnv = String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
@@ -371,6 +384,26 @@ export const StoreProvider = ({ children }) => {
     postJson('/api/content/promotions', promotions);
   }, [postJson]);
 
+  const getSettings = useCallback(() => {
+    try {
+      if (typeof window === 'undefined') return defaultSettings;
+      const raw = localStorage.getItem(STORAGE_KEYS.settings);
+      if (!raw) return defaultSettings;
+      const parsed = JSON.parse(raw);
+      return { ...defaultSettings, ...(parsed || {}) };
+    } catch {
+      return defaultSettings;
+    }
+    // settingsVersion forces re-render after setSettings
+  }, [settingsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setSettings = useCallback((settings) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+    setSettingsVersion((v) => v + 1);
+    postJson('/api/content/settings', settings);
+  }, [postJson]);
+
   // Hydrate shared content (Mongo-backed) into localStorage on startup.
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -394,6 +427,11 @@ export const StoreProvider = ({ children }) => {
       localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(resp.data));
       setPromotionsVersion((v) => v + 1);
     });
+    getJson('/api/content/settings').then((resp) => {
+      if (!resp || !resp.data) return;
+      localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(resp.data));
+      setSettingsVersion((v) => v + 1);
+    });
   }, [getJson]);
 
   const value = {
@@ -409,11 +447,14 @@ export const StoreProvider = ({ children }) => {
     setReviews,
     getPromotions,
     setPromotions,
+    getSettings,
+    setSettings,
     productImagePool,
     remoteImages,
     defaultHomeContent,
     defaultReviews,
     defaultPromotions,
+    defaultSettings,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -1,25 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "../../context/AuthContext";
 
 const HelpSupport = () => {
-  const [tickets] = useState([
-    {
-      id: 'TKT-001',
-      subject: 'Order delivery issue',
-      status: 'open',
-      date: '2026-01-22',
-      lastUpdate: '2026-01-23'
-    },
-    {
-      id: 'TKT-002',
-      subject: 'Product compatibility question',
-      status: 'resolved',
-      date: '2026-01-15',
-      lastUpdate: '2026-01-16'
-    }
-  ]);
+  const { user } = useAuth();
+  const userKey = useMemo(() => user?.id || user?.email || null, [user]);
+  const ticketsKey = useMemo(() => (userKey ? `allremotes_support_tickets_${userKey}` : null), [userKey]);
+
+  const [tickets, setTickets] = useState([]);
 
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [ticketForm, setTicketForm] = useState({
@@ -45,10 +35,38 @@ const HelpSupport = () => {
 
   const handleSubmitTicket = (e) => {
     e.preventDefault();
-    alert('Support ticket submitted successfully!');
+    const subject = ticketForm.subject.trim();
+    const message = ticketForm.message.trim();
+    if (!subject || !message) return;
+    const now = new Date().toISOString();
+    const row = {
+      id: `TKT-${Date.now()}`,
+      subject,
+      category: ticketForm.category,
+      message,
+      status: 'open',
+      date: now,
+      lastUpdate: now,
+    };
+    const next = [row, ...tickets];
+    setTickets(next);
+    if (ticketsKey) {
+      try { localStorage.setItem(ticketsKey, JSON.stringify(next)); } catch {}
+    }
     setTicketForm({ subject: '', category: 'general', message: '' });
     setShowNewTicket(false);
   };
+
+  useEffect(() => {
+    if (!ticketsKey) return;
+    try {
+      const raw = localStorage.getItem(ticketsKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setTickets(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setTickets([]);
+    }
+  }, [ticketsKey]);
 
   return (
     <div className="account-section">
@@ -124,7 +142,9 @@ const HelpSupport = () => {
                     <p>Created: {new Date(ticket.date).toLocaleDateString()}</p>
                     <p>Last Update: {new Date(ticket.lastUpdate).toLocaleDateString()}</p>
                   </div>
-                  <button className="btn btn-outline btn-small">View Details</button>
+                  <button className="btn btn-outline btn-small" type="button" disabled title="Ticket threads coming soon">
+                    View Details
+                  </button>
                 </div>
               ))}
             </div>

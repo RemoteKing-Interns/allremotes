@@ -21,9 +21,15 @@ Staff can manage the website content without touching any code.
 - **Products:** Click **“Save all changes”** after editing.
 - **Home content / Promotions / Navigation / Reviews:** Click **“Save changes”** in that section.
 
-By default, changes are stored in this browser (localStorage) and appear on the site immediately.
+Changes are applied immediately in the current browser (localStorage) so you can preview updates instantly.
 
-If you run the backend with **MongoDB** configured, admin changes are also persisted to MongoDB so other devices/browsers can see them.
+Persistence (shared across browsers/devices) depends on your backend configuration:
+
+- If `MONGODB_URI` is set, admin changes are persisted to **MongoDB**.
+- If MongoDB is not configured, admin changes fall back to local JSON files during local development:
+  - Products → `products.json`
+  - Site content (home/navigation/reviews/promotions/settings) → `content.json`
+  - Orders → `orders.json`
 
 ## Bulk upload products (CSV)
 
@@ -53,6 +59,21 @@ There is also a bulk upload tool at **`/admin/upload-products`**. It writes to M
 
 - If `MONGODB_URI` is set, products are saved to MongoDB (recommended; required on Vercel for persistence).
 - Otherwise, products may fall back to `products.json` during local development only.
+
+## Orders (Admin)
+
+There is an **Orders** tab in `/admin` that shows recent orders and lets staff update the order status.
+
+- In production, the admin orders API is disabled unless you set `ALLOW_ADMIN_ORDERS=1`.
+
+## Reset test data
+
+To clear out local test products/content/orders (and remove local admin/user/cart data in your browser):
+
+1. Go to `/admin` → **Settings**
+2. Click **Reset Test Data**
+
+- In production, resets are disabled unless you set `ALLOW_ADMIN_RESET=1`.
 
 ## Changing the admin password
 

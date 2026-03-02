@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useStore } from "../../../../context/StoreContext";
@@ -29,6 +29,50 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+
+  const userKey = useMemo(() => user?.id || user?.email || 'guest', [user]);
+  const wishlistKey = useMemo(() => `allremotes_wishlist_${userKey}`, [userKey]);
+  const recentlyKey = useMemo(() => `allremotes_recently_viewed_${userKey}`, [userKey]);
+
+  const readJsonArray = (key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeJsonArray = (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value || []));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const wished = readJsonArray(wishlistKey);
+    setInWishlist(wished.some((x) => String(x) === String(product.id)));
+  }, [wishlistKey, product?.id]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const existing = readJsonArray(recentlyKey).map((x) => String(x));
+    const next = [String(product.id), ...existing.filter((x) => x !== String(product.id))].slice(0, 12);
+    writeJsonArray(recentlyKey, next);
+  }, [recentlyKey, product?.id]);
+
+  const toggleWishlist = () => {
+    if (!product?.id) return;
+    const existing = readJsonArray(wishlistKey).map((x) => String(x));
+    const idStr = String(product.id);
+    const next = existing.includes(idStr)
+      ? existing.filter((x) => x !== idStr)
+      : [idStr, ...existing];
+    writeJsonArray(wishlistKey, next);
+    setInWishlist(next.includes(idStr));
+  };
 
   if (!product) {
     return (
@@ -128,7 +172,7 @@ const ProductDetail = () => {
 
             <button
               className={`btn btn-outline full ${inWishlist ? 'active' : ''}`}
-              onClick={() => setInWishlist(!inWishlist)}
+              onClick={toggleWishlist}
             >
               <Heart size={18} />
               {inWishlist ? 'In Wishlist' : 'Add to Wishlist'}

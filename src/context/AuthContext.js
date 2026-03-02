@@ -81,6 +81,29 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const changePassword = (currentPassword, newPassword) => {
+    if (!user) return { success: false, error: 'Not signed in' };
+
+    const adminEmail = 'admin@allremotes.com';
+    const adminPassword = 'Admin123!';
+    if (user.email === adminEmail) {
+      if (String(currentPassword) !== adminPassword) {
+        return { success: false, error: 'Current password is incorrect' };
+      }
+      return { success: false, error: 'Admin password is set in code and cannot be changed here' };
+    }
+
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const idx = users.findIndex(u => u.id === user.id);
+    if (idx === -1) return { success: false, error: 'User not found' };
+    if (String(users[idx].password || '') !== String(currentPassword || '')) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+    users[idx] = { ...users[idx], password: String(newPassword || '') };
+    localStorage.setItem('users', JSON.stringify(users));
+    return { success: true };
+  };
+
   const updateUser = (updatedData) => {
     const updatedUser = { ...user, ...updatedData };
     setUser(updatedUser);
@@ -96,7 +119,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, changePassword, loading }}>
       {children}
     </AuthContext.Provider>
   );

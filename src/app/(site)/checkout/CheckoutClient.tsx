@@ -37,6 +37,8 @@ const Checkout = () => {
   });
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placeError, setPlaceError] = useState<string>("");
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
@@ -178,14 +180,63 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setPlaceError("");
     setLoading(true);
 
-    // Simulate order processing
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const customer = {
+        fullName: user ? user.name : formData.fullName,
+        email: user ? user.email : formData.email,
+      };
+
+      const pricing = {
+        currency: "AUD",
+        subtotal: originalTotal,
+        discountTotal,
+        total: discountedTotal,
+        hasMemberDiscount: Boolean(hasDiscount),
+        memberDiscountRate: Number(discountRate || 0),
+      };
+
+      const items = cart.map((item) => {
+        const unit = getItemPriceBreakdown(item).finalPrice;
+        const line = getItemLineTotal(item);
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unitPrice: unit,
+          lineTotal: line,
+        };
+      });
+
+      const shipping = {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: "AU",
+      };
+
+      const resp = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ customer, items, pricing, shipping }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        throw new Error(data?.error || "Failed to place order");
+      }
+
+      setPlacedOrderId(data?.id || null);
       setOrderPlaced(true);
       clearCart();
-    }, 2000);
+    } catch (err: any) {
+      setPlaceError(err?.message || "Failed to place order");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (orderPlaced) {
@@ -197,6 +248,7 @@ const Checkout = () => {
             <h1>Order Placed Successfully!</h1>
             <p>Thank you for your purchase{user ? `, ${user.name}` : ''}!</p>
             <p>Your order has been confirmed and will be shipped soon.</p>
+            {placedOrderId && <p style={{ marginTop: 10, opacity: 0.9 }}>Order ID: <strong>{placedOrderId}</strong></p>}
             <button
               onClick={() => router.push("/")}
               className="btn btn-primary btn-large"
@@ -213,6 +265,7 @@ const Checkout = () => {
     <div className="checkout-page">
       <div className="container">
         <h1>Checkout</h1>
+        {placeError && <div className="error-message" style={{ marginBottom: 16 }}>{placeError}</div>}
         <div className="checkout-content">
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="form-section">

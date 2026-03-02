@@ -1,35 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "../../context/AuthContext";
 
 const OrdersActivity = () => {
-  const [orders] = useState([
-    {
-      id: 'ORD-001',
-      date: '2026-01-25',
-      status: 'delivered',
-      items: 2,
-      total: 64.98,
-      itemsList: ['Universal Car Remote Key Fob', 'Universal Garage Door Remote']
-    },
-    {
-      id: 'ORD-002',
-      date: '2026-01-20',
-      status: 'shipped',
-      items: 1,
-      total: 49.99,
-      itemsList: ['Premium Car Remote Control']
-    },
-    {
-      id: 'ORD-003',
-      date: '2026-01-15',
-      status: 'processing',
-      items: 3,
-      total: 134.97,
-      itemsList: ['Smart Car Key Fob', 'Smart Garage Remote', 'Rolling Code Garage Remote']
-    },
-  ]);
+  const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+
+  const email = useMemo(() => (user?.email || "").trim(), [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!email) return;
+      setLoading(true);
+      setError("");
+      try {
+        const resp = await fetch(`/api/orders?email=${encodeURIComponent(email)}`, { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load orders");
+        if (cancelled) return;
+        setOrders(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (cancelled) return;
+        setOrders([]);
+        setError(err?.message || "Failed to load orders");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -49,7 +57,12 @@ const OrdersActivity = () => {
       <h2>Orders & Shopping Activity</h2>
       
       <div className="section-content">
-        {orders.length === 0 ? (
+        {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+        {loading ? (
+          <div className="empty-state">
+            <p>Loading orders…</p>
+          </div>
+        ) : orders.length === 0 ? (
           <div className="empty-state">
             <p>No orders yet</p>
             <Link href="/products/all" className="btn btn-gradient">
@@ -63,7 +76,7 @@ const OrdersActivity = () => {
                 <div className="order-header">
                   <div>
                     <h3>Order {order.id}</h3>
-                    <p className="order-date">Placed on {new Date(order.date).toLocaleDateString()}</p>
+                    <p className="order-date">Placed on {new Date(order.createdAt || Date.now()).toLocaleDateString()}</p>
                   </div>
                   <span 
                     className="order-status"
@@ -82,10 +95,10 @@ const OrdersActivity = () => {
                 </div>
                 
                 <div className="order-items">
-                  <p className="order-items-count">{order.items} item{order.items > 1 ? 's' : ''}</p>
+                  <p className="order-items-count">{(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}</p>
                   <ul>
-                    {order.itemsList.map((item, idx) => (
-                      <li key={idx}>{item}</li>
+                    {(order.items || []).slice(0, 6).map((item, idx) => (
+                      <li key={idx}>{item?.name || 'Item'}</li>
                     ))}
                   </ul>
                 </div>
@@ -93,16 +106,38 @@ const OrdersActivity = () => {
                 <div className="order-footer">
                   <div className="order-total">
                     <span>Total: </span>
-                    <strong>${order.total.toFixed(2)}</strong>
+                    <strong>AU${Number(order?.pricing?.total || 0).toFixed(2)}</strong>
                   </div>
                   <div className="order-actions">
-                    <button className="btn btn-outline btn-small">View Details</button>
-                    <button className="btn btn-outline-red btn-small">Download Invoice</button>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-small"
+                      onClick={() => setExpandedId((id) => (id === order.id ? null : order.id))}
+                    >
+                      {expandedId === order.id ? "Hide Details" : "View Details"}
+                    </button>
+                    <button className="btn btn-outline-red btn-small" disabled title="Invoice downloads coming soon">
+                      Download Invoice
+                    </button>
                     {order.status === 'delivered' && (
-                      <button className="btn btn-secondary btn-small">Return</button>
+                      <button className="btn btn-secondary btn-small" disabled title="Returns coming soon">Return</button>
                     )}
                   </div>
                 </div>
+
+                {expandedId === order.id && (
+                  <div style={{ marginTop: 14, fontSize: 14, color: "#444" }}>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div><strong>Status:</strong> {order.status}</div>
+                      <div><strong>Ship to:</strong> {order?.shipping?.address}, {order?.shipping?.city} {order?.shipping?.state} {order?.shipping?.zipCode}</div>
+                      <div><strong>Subtotal:</strong> AU${Number(order?.pricing?.subtotal || 0).toFixed(2)}</div>
+                      {order?.pricing?.discountTotal ? (
+                        <div><strong>Discount:</strong> -AU${Number(order?.pricing?.discountTotal || 0).toFixed(2)}</div>
+                      ) : null}
+                      <div><strong>Total:</strong> AU${Number(order?.pricing?.total || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

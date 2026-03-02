@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const AccountBasics = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, changePassword } = useAuth();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -18,6 +18,8 @@ const AccountBasics = () => {
   });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
   const [saved, setSaved] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const handleInputChange = (e) => {
     setFormData({
@@ -43,16 +45,22 @@ const AccountBasics = () => {
 
   const handleChangePassword = (e) => {
     e.preventDefault();
+    setPasswordError('');
+    setPasswordSaved(false);
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Passwords do not match');
+      setPasswordError('Passwords do not match');
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
+      setPasswordError('Password must be at least 6 characters');
       return;
     }
-    // Update password logic here
-    alert('Password updated successfully');
+    const result = changePassword(passwordData.currentPassword, passwordData.newPassword);
+    if (!result?.success) {
+      setPasswordError(result?.error || 'Failed to update password');
+      return;
+    }
+    setPasswordSaved(true);
     setPasswordData({
       currentPassword: '',
       newPassword: '',
@@ -156,6 +164,8 @@ const AccountBasics = () => {
         <div className="password-section">
           <h3>Password & Security</h3>
           <form onSubmit={handleChangePassword} className="account-form">
+            {passwordError && <div className="error-message">{passwordError}</div>}
+            {passwordSaved && <div className="success-message">Password updated.</div>}
             <div className="form-group">
               <label htmlFor="currentPassword">Current Password</label>
               <input
@@ -213,7 +223,11 @@ const AccountBasics = () => {
               <input
                 type="checkbox"
                 checked={twoFactorEnabled}
-                onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setTwoFactorEnabled(next);
+                  updateUser({ twoFactorEnabled: next });
+                }}
               />
               <span className="toggle-slider"></span>
             </label>

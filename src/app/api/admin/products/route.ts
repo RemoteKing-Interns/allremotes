@@ -2,19 +2,13 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { getProductSkuForKey, normalizeSkuKey } from "@/lib/products-import";
+import { writeProductsJson } from "@/lib/products-json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function PUT(request: Request) {
-  if (!mongoEnabled()) {
-    return NextResponse.json(
-      { error: "MongoDB is not configured. Set MONGODB_URI." },
-      { status: 400 }
-    );
-  }
-
   try {
     const list = await request.json().catch(() => null);
     if (!Array.isArray(list)) {
@@ -24,13 +18,8 @@ export async function PUT(request: Request) {
       );
     }
 
-    const db = await getDb();
-    const col = db.collection("products");
-    await col.createIndex({ id: 1 }, { unique: true });
-    await col.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
-
-    const ops: any[] = [];
     const nowIso = new Date().toISOString();
+    const normalized: any[] = [];
 
     for (const raw of list) {
       if (!raw || typeof raw !== "object") continue;
@@ -45,20 +34,31 @@ export async function PUT(request: Request) {
         updatedAt: nowIso,
         createdAt: (raw as any).createdAt || nowIso,
       };
-      ops.push({
+      normalized.push(doc);
+    }
+
+    if (mongoEnabled()) {
+      const db = await getDb();
+      const col = db.collection("products");
+      await col.createIndex({ id: 1 }, { unique: true });
+      await col.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
+
+      const ops: any[] = normalized.map((doc) => ({
         updateOne: {
-          filter: { id },
+          filter: { id: doc.id },
           update: { $set: doc },
           upsert: true,
         },
-      });
+      }));
+
+      if (ops.length > 0) {
+        await col.bulkWrite(ops, { ordered: false });
+      }
+      return NextResponse.json({ ok: true, saved: ops.length });
     }
 
-    if (ops.length > 0) {
-      await col.bulkWrite(ops, { ordered: false });
-    }
-
-    return NextResponse.json({ ok: true, saved: ops.length });
+    await writeProductsJson(normalized);
+    return NextResponse.json({ ok: true, saved: normalized.length, storage: "products.json" });
   } catch (err: any) {
     return NextResponse.json(
       {
@@ -69,4 +69,3 @@ export async function PUT(request: Request) {
     );
   }
 }
-
