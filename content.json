@@ -1,6 +1,22 @@
 {
+  "settings": {
+    "data": null,
+    "updatedAt": "2026-03-05T00:01:33.145Z"
+  },
+  "promotions": {
+    "data": null,
+    "updatedAt": "2026-03-05T00:05:21.405Z"
+  },
   "navigation": {
     "data": null,
-    "updatedAt": "2026-03-02T01:02:11.783Z"
+    "updatedAt": "2026-03-05T00:05:22.803Z"
+  },
+  "reviews": {
+    "data": null,
+    "updatedAt": "2026-03-05T00:05:49.531Z"
+  },
+  "home": {
+    "data": null,
+    "updatedAt": "2026-03-05T00:05:49.656Z"
   }
 }

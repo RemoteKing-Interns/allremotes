@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "id": "1",
+    "name": "",
+    "category": "all",
+    "price": 49.99,
+    "description": "This is a local mock product for testing.",
+    "inStock": true,
+    "brand": "Test Brand",
+    "sku": "",
+    "image": "/public/images/hero.jpg",
+    "imageIndex": 0,
+    "condition": "Brand New",
+    "returns": "No returns accepted",
+    "seller": "AllRemotes (100% positive)",
+    "updatedAt": "2026-03-05T00:08:43.522Z",
+    "createdAt": "2026-03-05T00:08:43.522Z"
+  }
+]
