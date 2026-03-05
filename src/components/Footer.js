@@ -1,5 +1,5 @@
-import React from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
 
 const Footer = () => {
   return (
@@ -9,7 +9,9 @@ const Footer = () => {
           <div className="footer-section">
             <h3>ALLREMOTES</h3>
             <p>Quality is Guaranteed</p>
-            <p className="footer-tagline">Your trusted source for car and garage remotes</p>
+            <p className="footer-tagline">
+              Your trusted source for car and garage remotes
+            </p>
           </div>
           <div className="footer-section">
             <h4>Categories</h4>
@@ -20,10 +22,8 @@ const Footer = () => {
             <Link href="/shop-by-brand">Shop By Brand</Link>
           </div>
           <div className="footer-section">
-            <h4>Account</h4>
-            <Link href="/login">Login</Link>
-            <Link href="/register">Register</Link>
-            <Link href="/cart">Shopping Cart</Link>
+            <h4>Privacy Policy</h4>
+            <Link href="/privacy">Our policy</Link>
           </div>
           <div className="footer-section">
             <h4>Support</h4>
