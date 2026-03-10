@@ -7,7 +7,10 @@ import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { ShoppingCart, ArrowLeft, Heart, Check } from "lucide-react";
-import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
+import {
+  getPriceBreakdown,
+  isDiscountEligible,
+} from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
 
 const ProductDetail = () => {
@@ -20,19 +23,30 @@ const ProductDetail = () => {
   const products = getProducts() || [];
   const product = products.find((p) => p.id === id);
   const relatedProducts = products
-    .filter((item) => item.category === product?.category && item.id !== product?.id)
+    .filter(
+      (item) => item.category === product?.category && item.id !== product?.id,
+    )
     .slice(0, 4);
   const { addToCart } = useCart();
   const hasDiscount = isDiscountEligible(user);
-  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount, { promotions, product });
+  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount, {
+    promotions,
+    product,
+  });
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
-  const [activeTab, setActiveTab] = useState('description');
+  const [activeTab, setActiveTab] = useState("description");
 
-  const userKey = useMemo(() => user?.id || user?.email || 'guest', [user]);
-  const wishlistKey = useMemo(() => `allremotes_wishlist_${userKey}`, [userKey]);
-  const recentlyKey = useMemo(() => `allremotes_recently_viewed_${userKey}`, [userKey]);
+  const userKey = useMemo(() => user?.id || user?.email || "guest", [user]);
+  const wishlistKey = useMemo(
+    () => `allremotes_wishlist_${userKey}`,
+    [userKey],
+  );
+  const recentlyKey = useMemo(
+    () => `allremotes_recently_viewed_${userKey}`,
+    [userKey],
+  );
 
   const readJsonArray = (key) => {
     try {
@@ -59,7 +73,10 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!product?.id) return;
     const existing = readJsonArray(recentlyKey).map((x) => String(x));
-    const next = [String(product.id), ...existing.filter((x) => x !== String(product.id))].slice(0, 12);
+    const next = [
+      String(product.id),
+      ...existing.filter((x) => x !== String(product.id)),
+    ].slice(0, 12);
     writeJsonArray(recentlyKey, next);
   }, [recentlyKey, product?.id]);
 
@@ -88,7 +105,6 @@ const ProductDetail = () => {
   return (
     <div className="product-detail-page">
       <div className="container py-8">
-
         <Link href="/" className="back-link">
           <ArrowLeft size={16} /> Back to Products
         </Link>
@@ -116,7 +132,7 @@ const ProductDetail = () => {
               const img = e.currentTarget.querySelector("img");
               img.style.transform = "scale(2)";
             }}
-            >
+          >
             <img
               src={product.image}
               alt={product.name}
@@ -125,7 +141,6 @@ const ProductDetail = () => {
               }
             />
           </div>
-
 
           {/* RIGHT: INFO */}
           <div className="product-info">
@@ -136,8 +151,12 @@ const ProductDetail = () => {
             <div className="price-stock">
               {pricing.hasDiscount ? (
                 <div className="price-block">
-                  <p className="price-old">AU${pricing.originalPrice.toFixed(2)}</p>
-                  <p className="price-new">AU${pricing.finalPrice.toFixed(2)}</p>
+                  <p className="price-old">
+                    AU${pricing.originalPrice.toFixed(2)}
+                  </p>
+                  <p className="price-new">
+                    AU${pricing.finalPrice.toFixed(2)}
+                  </p>
                 </div>
               ) : (
                 <p className="price">AU${pricing.finalPrice.toFixed(2)}</p>
@@ -149,42 +168,56 @@ const ProductDetail = () => {
               )}
             </div>
 
-          
-
             {/* Quantity */}
             {product.inStock && (
               <div className="quantity-box">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                  -
+                </button>
                 <span>{quantity}</span>
                 <button onClick={() => setQuantity(quantity + 1)}>+</button>
               </div>
             )}
 
             {/* Buttons */}
-            <button
-              className="btn btn-primary full"
-              disabled={!product.inStock}
-              onClick={() => addToCart(product, quantity)}
-            >
-              <ShoppingCart size={18} />
-              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-            </button>
+            <div className="product-actions">
+              <button
+                className="btn btn-primary product-action-btn"
+                disabled={!product.inStock}
+                onClick={() => addToCart(product, quantity)}
+              >
+                <ShoppingCart size={18} />
+                {product.inStock ? "Add to Cart" : "Out of Stock"}
+              </button>
 
-            <button
-              className={`btn btn-outline full ${inWishlist ? 'active' : ''}`}
-              onClick={toggleWishlist}
-            >
-              <Heart size={18} />
-              {inWishlist ? 'In Wishlist' : 'Add to Wishlist'}
-            </button>
+              <button
+                className={`btn btn-outline product-action-btn ${inWishlist ? "active" : ""}`}
+                onClick={toggleWishlist}
+              >
+                <Heart size={18} />
+                {inWishlist ? "In Wishlist" : "Add to Wishlist"}
+              </button>
+            </div>
 
             {/* Specs */}
             <div className="specs">
               <h3>Product Details</h3>
               <ul>
-                {product.brand && <li><b>Brand:</b> {product.brand}</li>}
-                {product.condition && <li><b>Condition:</b> {product.condition}</li>}
-                {product.returns && <li><b>Returns:</b> {product.returns}</li>}
+                {product.brand && (
+                  <li>
+                    <b>Brand:</b> {product.brand}
+                  </li>
+                )}
+                {product.condition && (
+                  <li>
+                    <b>Condition:</b> {product.condition}
+                  </li>
+                )}
+                {product.returns && (
+                  <li>
+                    <b>Returns:</b> {product.returns}
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -194,44 +227,44 @@ const ProductDetail = () => {
         <div className="tabs-section">
           <div className="tabs-header">
             <button
-              className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`}
-              onClick={() => setActiveTab('description')}
+              className={`tab-btn ${activeTab === "description" ? "active" : ""}`}
+              onClick={() => setActiveTab("description")}
             >
               DESCRIPTION
             </button>
             <button
-              className={`tab-btn ${activeTab === 'instructions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('instructions')}
+              className={`tab-btn ${activeTab === "instructions" ? "active" : ""}`}
+              onClick={() => setActiveTab("instructions")}
             >
               INSTRUCTIONS
             </button>
             <button
-              className={`tab-btn ${activeTab === 'warnings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('warnings')}
+              className={`tab-btn ${activeTab === "warnings" ? "active" : ""}`}
+              onClick={() => setActiveTab("warnings")}
             >
               WARNINGS & DISCLAIMERS
             </button>
           </div>
 
           <div className="tabs-content">
-            {activeTab === 'description' && (
+            {activeTab === "description" && (
               <div className="tab-pane">
                 <h3>Description</h3>
                 <p>{product.description}</p>
               </div>
             )}
 
-            {activeTab === 'instructions' && (
+            {activeTab === "instructions" && (
               <div className="tab-pane">
                 <h3>Instructions</h3>
-                <p>{product.instructions || 'No instructions provided.'}</p>
+                <p>{product.instructions || "No instructions provided."}</p>
               </div>
             )}
 
-            {activeTab === 'warnings' && (
+            {activeTab === "warnings" && (
               <div className="tab-pane">
                 <h3>Warnings & Disclaimers</h3>
-                <p>{product.warnings || 'No warnings provided.'}</p>
+                <p>{product.warnings || "No warnings provided."}</p>
               </div>
             )}
           </div>
@@ -242,7 +275,8 @@ const ProductDetail = () => {
             <div className="related-header">
               <h2>Related Products</h2>
               <p className="related-subtitle">
-                More {product.category === 'car' ? 'car' : 'garage'} remotes you might like
+                More {product.category === "car" ? "car" : "garage"} remotes you
+                might like
               </p>
             </div>
             <div className="related-grid">
@@ -250,7 +284,7 @@ const ProductDetail = () => {
                 <ProductCard key={item.id} product={item} />
               ))}
             </div>
-            <br /> <br/>
+            <br /> <br />
           </div>
         )}
       </div>
