@@ -1,7 +1,7 @@
 .product-grid {
   display: grid;
   grid-template-columns: 0.4fr 0.4fr;
-  justify-content: space-between; /* pushes left/right columns to edges */
+  justify-content: space-evenly; /* pushes left/right columns to edges */
   gap: 48px;
 }
 
