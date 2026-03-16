@@ -118,6 +118,7 @@ const serializeHomeForApi = (data: any) => {
   }
 
   return {
+    heroImages: Array.isArray(data.heroImages) ? data.heroImages : [],
     hero: {
       title: hero.title ?? "",
       subtitle: hero.subtitle ?? "",
@@ -900,6 +901,17 @@ function AdminHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [s3ModalOpen, setS3ModalOpen] = useState(false);
+  const [s3Tab, setS3Tab] = useState<"browse" | "upload">("browse");
+  const [s3Images, setS3Images] = useState<any[]>([]);
+  const [s3Loading, setS3Loading] = useState(false);
+  const [s3Error, setS3Error] = useState("");
+  const [s3Selected, setS3Selected] = useState<any | null>(null);
+  const [s3TargetIndex, setS3TargetIndex] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
+  const [heroImageErrors, setHeroImageErrors] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -922,6 +934,108 @@ function AdminHome() {
       cancelled = true;
     };
   }, [getHomeContent]);
+
+  const formatBytes = (bytes: number) => {
+    if (!bytes || bytes <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB"];
+    const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+    const value = bytes / Math.pow(1024, index);
+    return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+  };
+
+  const loadS3Images = async () => {
+    setS3Loading(true);
+    setS3Error("");
+    try {
+      const resp = await fetch("/api/admin/s3", { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (data?.error === "S3 not configured") {
+        setS3Images([]);
+        setS3Error("S3 is not configured. Add AWS credentials to your .env.local file.");
+        return;
+      }
+      if (!resp.ok) throw new Error(data?.error || "Failed to load S3 images");
+      setS3Images(Array.isArray(data?.images) ? data.images : []);
+    } catch (err: any) {
+      setS3Images([]);
+      setS3Error(err?.message || "Failed to load S3 images");
+    } finally {
+      setS3Loading(false);
+    }
+  };
+
+  const openS3Modal = (index: number) => {
+    setS3TargetIndex(index);
+    setS3Selected(null);
+    setS3Tab("browse");
+    setUploadStatus("idle");
+    setUploadProgress(0);
+    setUploadError("");
+    setS3ModalOpen(true);
+    loadS3Images();
+  };
+
+  const closeS3Modal = () => {
+    setS3ModalOpen(false);
+    setS3Selected(null);
+    setS3TargetIndex(null);
+    setUploadStatus("idle");
+    setUploadProgress(0);
+    setUploadError("");
+  };
+
+  const uploadToPresignedUrl = (presignedUrl: string, file: File) => {
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", presignedUrl, true);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Upload failed"));
+      };
+      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.send(file);
+    });
+  };
+
+  const handleUploadFile = async (file: File) => {
+    if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (file.type && !allowedTypes.includes(file.type)) {
+      setUploadStatus("error");
+      setUploadError("Unsupported file type. Use .jpg, .jpeg, .png, or .webp.");
+      return;
+    }
+    setUploadStatus("uploading");
+    setUploadProgress(0);
+    setUploadError("");
+    try {
+      const resp = await fetch("/api/admin/s3/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type || "application/octet-stream" }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (data?.error === "S3 not configured") {
+        throw new Error("S3 is not configured. Add AWS credentials to your .env.local file.");
+      }
+      if (!resp.ok) throw new Error(data?.error || "Failed to start upload");
+      await uploadToPresignedUrl(data.presignedUrl, file);
+      setUploadStatus("done");
+      await loadS3Images();
+      if (data?.publicUrl) {
+        setS3Selected({ key: data.key, url: data.publicUrl, name: file.name, size: file.size });
+      }
+    } catch (err: any) {
+      setUploadStatus("error");
+      setUploadError(err?.message || "Upload failed");
+    }
+  };
 
   const update = (path: string, value: any) => {
     const [section, key] = path.split('.');
@@ -980,6 +1094,7 @@ function AdminHome() {
   };
 
   const updateHeroImage = (index: number, value: string) => {
+    setHeroImageErrors((prev) => ({ ...prev, [index]: false }));
     setContent((prev) => ({
       ...prev,
       heroImages: (prev.heroImages || []).map((img, i) => (i === index ? value : img)),
@@ -994,6 +1109,7 @@ function AdminHome() {
   };
 
   const removeHeroImage = (index: number) => {
+    setHeroImageErrors({});
     setContent((prev) => ({
       ...prev,
       heroImages: (prev.heroImages || []).filter((_, i) => i !== index),
@@ -1016,6 +1132,12 @@ function AdminHome() {
     } catch (err: any) {
       setSaveError(err?.message || "Failed to save home content");
     }
+  };
+
+  const applySelectedImage = () => {
+    if (!s3Selected || s3TargetIndex == null) return;
+    updateHeroImage(s3TargetIndex, s3Selected.url);
+    closeS3Modal();
   };
 
   if (isLoading) {
@@ -1042,15 +1164,58 @@ function AdminHome() {
                 <p style={{ margin: 0, opacity: 0.8 }}>No hero images yet.</p>
               )}
               {(content.heroImages || []).map((img: string, i: number) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <input
-                    value={img || ""}
-                    onChange={(e) => updateHeroImage(i, e.target.value)}
-                    placeholder="/images/hero.jpg"
-                  />
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => removeHeroImage(i)}>
-                    Remove
-                  </button>
+                <div key={i} style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      value={img || ""}
+                      onChange={(e) => updateHeroImage(i, e.target.value)}
+                      placeholder="/images/hero.jpg"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => openS3Modal(i)}
+                    >
+                      Browse S3 Images
+                    </button>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => removeHeroImage(i)}>
+                      Remove
+                    </button>
+                  </div>
+                  {img && !heroImageErrors[i] ? (
+                    <img
+                      src={img}
+                      alt="Hero preview"
+                      style={{
+                        width: "100%",
+                        maxWidth: 360,
+                        height: 180,
+                        objectFit: "cover",
+                        borderRadius: 12,
+                        border: "1px solid rgba(0,0,0,0.08)",
+                      }}
+                      onError={() => setHeroImageErrors((prev) => ({ ...prev, [i]: true }))}
+                      onLoad={() => setHeroImageErrors((prev) => ({ ...prev, [i]: false }))}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        maxWidth: 360,
+                        height: 180,
+                        borderRadius: 12,
+                        border: "1px dashed rgba(0,0,0,0.2)",
+                        background: "#f1f5f9",
+                        color: "#64748b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 13,
+                      }}
+                    >
+                      No image selected
+                    </div>
+                  )}
                 </div>
               ))}
               <button type="button" className="btn btn-secondary btn-sm" onClick={addHeroImage}>
@@ -1192,6 +1357,96 @@ function AdminHome() {
           </div>
         </div>
       </div>
+      {s3ModalOpen && (
+        <div className="s3-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="s3-modal">
+            <div className="s3-modal-header">
+              <h3 style={{ margin: 0 }}>S3 Image Browser</h3>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={closeS3Modal}>
+                Close
+              </button>
+            </div>
+            <div className="s3-modal-tabs">
+              <button
+                type="button"
+                className={`s3-modal-tab ${s3Tab === "browse" ? "active" : ""}`}
+                onClick={() => setS3Tab("browse")}
+              >
+                Browse S3 Images
+              </button>
+              <button
+                type="button"
+                className={`s3-modal-tab ${s3Tab === "upload" ? "active" : ""}`}
+                onClick={() => setS3Tab("upload")}
+              >
+                Upload new image
+              </button>
+            </div>
+            <div className="s3-modal-body">
+              {s3Tab === "browse" ? (
+                s3Loading ? (
+                  <div className="loading"><div className="spinner"></div></div>
+                ) : s3Error ? (
+                  <div className="error-message">{s3Error}</div>
+                ) : s3Images.length === 0 ? (
+                  <p>No images found in the bucket.</p>
+                ) : (
+                  <div className="s3-image-grid">
+                    {s3Images.map((image: any) => (
+                      <button
+                        type="button"
+                        key={image.key}
+                        className={`s3-image-card ${s3Selected?.key === image.key ? "selected" : ""}`}
+                        onClick={() => setS3Selected(image)}
+                      >
+                        <img className="s3-image-thumb" src={image.url} alt={image.name || image.key} />
+                        <div className="s3-image-meta">
+                          <span>{image.name || image.key}</span>
+                          <span>{formatBytes(Number(image.size || 0))}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {s3Error && <div className="error-message">{s3Error}</div>}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadFile(file);
+                    }}
+                  />
+                  {uploadStatus === "uploading" && (
+                    <div className="s3-upload-status">Uploading... {uploadProgress}%</div>
+                  )}
+                  {uploadStatus === "done" && (
+                    <div className="s3-upload-status">Upload complete.</div>
+                  )}
+                  {uploadStatus === "error" && (
+                    <div className="error-message">{uploadError || "Upload failed."}</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="s3-modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={closeS3Modal}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={applySelectedImage}
+                disabled={!s3Selected}
+              >
+                Use this image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

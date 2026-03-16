@@ -106,8 +106,14 @@
         "subtitle": "Quality is Guaranteed",
         "description": "Shop premium garage and car remotes with fast shipping and expert support.",
         "buttons": [
-          { "label": "Shop Garage Remotes", "link": "/products/garage" },
-          { "label": "Shop Car Remotes", "link": "/products/car" }
+          {
+            "label": "Shop Garage Remotes",
+            "link": "/products/garage"
+          },
+          {
+            "label": "Shop Car Remotes",
+            "link": "/products/car"
+          }
         ]
       },
       "features": [
@@ -154,6 +160,6 @@
         "buttonLink": "/products/all"
       }
     },
-    "updatedAt": "2026-03-05T00:05:49.656Z"
+    "updatedAt": "2026-03-16T02:17:39.585Z"
   }
 }

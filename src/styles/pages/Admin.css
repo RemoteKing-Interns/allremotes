@@ -643,3 +643,119 @@
     justify-content: center;
   }
 }
+
+/* S3 image picker modal */
+.s3-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.s3-modal {
+  width: min(960px, 95vw);
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.s3-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.s3-modal-tabs {
+  display: flex;
+  gap: 10px;
+  padding: 0 24px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.s3-modal-tab {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.s3-modal-tab.active {
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
+.s3-modal-body {
+  padding: 20px 24px;
+  overflow: auto;
+  flex: 1;
+}
+
+.s3-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.s3-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.s3-image-card {
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.s3-image-card:hover {
+  transform: translateY(-2px);
+}
+
+.s3-image-card.selected {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+}
+
+.s3-image-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #e2e8f0;
+}
+
+.s3-image-meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.s3-upload-status {
+  font-size: 13px;
+  color: #0f172a;
+}

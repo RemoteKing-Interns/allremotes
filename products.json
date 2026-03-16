@@ -8,13 +8,13 @@
     "inStock": true,
     "brand": "Test Brand",
     "sku": "",
-    "image": "/remotes/006_s-l500.webp",
+    "image": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/remotes/006_s-l500.webp",
     "imageIndex": 5,
     "condition": "Brand New",
     "returns": "No returns accepted",
     "seller": "AllRemotes (100% positive)",
-    "updatedAt": "2026-03-16T02:04:41.245Z",
-    "createdAt": "2026-03-16T02:04:41.245Z"
+    "updatedAt": "2026-03-16T02:58:38.737Z",
+    "createdAt": "2026-03-16T02:58:38.737Z"
   },
   {
     "id": "1773618773655",
@@ -25,13 +25,13 @@
     "inStock": true,
     "brand": "merlin",
     "sku": "",
-    "image": "/remotes/002_s-l500.webp",
+    "image": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/remotes/002_s-l500.webp",
     "imageIndex": 1,
     "condition": "Brand New",
     "returns": "No returns accepted",
     "seller": "AllRemotes (100% positive)",
-    "updatedAt": "2026-03-16T02:04:41.245Z",
-    "createdAt": "2026-03-16T02:04:41.245Z"
+    "updatedAt": "2026-03-16T02:58:38.737Z",
+    "createdAt": "2026-03-16T02:58:38.737Z"
   },
   {
     "id": "1773619192008",
@@ -42,13 +42,13 @@
     "inStock": true,
     "brand": "Mer",
     "sku": "",
-    "image": "/remotes/001_s-l140.webp",
+    "image": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/remotes/001_s-l140.webp",
     "imageIndex": 0,
     "condition": "Brand New",
     "returns": "No returns accepted",
     "seller": "AllRemotes (100% positive)",
-    "updatedAt": "2026-03-16T02:04:41.245Z",
-    "createdAt": "2026-03-16T02:04:41.245Z"
+    "updatedAt": "2026-03-16T02:58:38.737Z",
+    "createdAt": "2026-03-16T02:58:38.737Z"
   },
   {
     "id": "1773619202251",
@@ -59,13 +59,13 @@
     "inStock": true,
     "brand": "merline",
     "sku": "",
-    "image": "/remotes/005_s-l140.webp",
+    "image": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/remotes/005_s-l140.webp",
     "imageIndex": 4,
     "condition": "Brand New",
     "returns": "No returns accepted",
     "seller": "AllRemotes (100% positive)",
-    "updatedAt": "2026-03-16T02:04:41.245Z",
-    "createdAt": "2026-03-16T02:04:41.245Z"
+    "updatedAt": "2026-03-16T02:58:38.737Z",
+    "createdAt": "2026-03-16T02:58:38.737Z"
   },
   {
     "id": "1773619588497",
@@ -76,12 +76,12 @@
     "inStock": true,
     "brand": "nothing",
     "sku": "",
-    "image": "/remotes/007_s-l500.webp",
+    "image": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/remotes/007_s-l500.webp",
     "imageIndex": 0,
     "condition": "Brand New",
     "returns": "No returns accepted",
     "seller": "AllRemotes (100% positive)",
-    "updatedAt": "2026-03-16T02:04:41.245Z",
-    "createdAt": "2026-03-16T02:04:41.245Z"
+    "updatedAt": "2026-03-16T02:58:38.737Z",
+    "createdAt": "2026-03-16T02:58:38.737Z"
   }
 ]
