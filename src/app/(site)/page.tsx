@@ -78,6 +78,33 @@ const Home = () => {
         </div>
       </section>
 
+      <div className="trust-bar">
+        <div className="container">
+          <div className="trust-bar-inner">
+            <div className="trust-item">
+              <span className="trust-item-icon">🛡️</span>
+              <span>12 Month Warranty</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🔄</span>
+              <span>30 Day Returns</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🚚</span>
+              <span>Free Shipping AU</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🔒</span>
+              <span>Secure Payments</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">⭐</span>
+              <span>1,500+ Reviews</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <section className="features">
         <div
           className="features-background"

@@ -386,6 +386,14 @@ const Admin = () => {
               <span>📥</span>
               <span>Upload CSV</span>
             </Link>
+            <Link className="admin-nav-item" href="/admin/save-hero-urls">
+              <span>🔗</span>
+              <span>Save Hero URLs</span>
+            </Link>
+            <Link className="admin-nav-item" href="/admin/clear-cache">
+              <span>🗑️</span>
+              <span>Clear Cache</span>
+            </Link>
           </nav>
           <div style={{ padding: 20, marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
             <Link href="/" style={{ color: "rgba(255,255,255,0.9)", fontSize: 14 }}>
