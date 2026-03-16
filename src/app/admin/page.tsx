@@ -8,6 +8,265 @@ import { useStore } from "../../context/StoreContext";
 
 const ADMIN_EMAIL = 'admin@allremotes.com';
 
+const STORAGE_KEYS = {
+  home: "allremotes_home_content",
+  navigation: "allremotes_navigation",
+  reviews: "allremotes_reviews",
+  promotions: "allremotes_promotions",
+  settings: "allremotes_settings",
+};
+
+const isRecord = (value: any): value is Record<string, any> => {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+};
+
+const slugify = (value: string) => {
+  const base = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return base || "general";
+};
+
+const makeId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+const normalizeNavigationFromApi = (data: any) => {
+  if (!data) return {};
+  if (Array.isArray(data)) {
+    const out: Record<string, any> = {};
+    data.forEach((item, index) => {
+      if (!item || typeof item !== "object") return;
+      const id = String(item.id || "").trim() || `item_${index + 1}`;
+      out[id] = {
+        title: item.label ?? item.title ?? id,
+        path: item.link ?? item.path ?? "",
+        hidden: item.visible === false,
+        columns: Array.isArray(item.columns) ? item.columns : [],
+      };
+    });
+    return out;
+  }
+  if (isRecord(data)) return data;
+  return {};
+};
+
+const serializeNavigationForApi = (nav: any) => {
+  if (!nav) return [];
+  if (Array.isArray(nav)) return nav;
+  if (!isRecord(nav)) return [];
+  return Object.entries(nav).map(([id, section]) => ({
+    id,
+    label: (section as any)?.title ?? id,
+    link: (section as any)?.path ?? "",
+    iconIndex: (section as any)?.iconIndex ?? 0,
+    visible: !(section as any)?.hidden,
+    columns: Array.isArray((section as any)?.columns) ? (section as any).columns : [],
+  }));
+};
+
+const normalizeHomeFromApi = (data: any) => {
+  if (!isRecord(data)) return {};
+  if (data?.hero?.primaryCta || data?.hero?.primaryCtaPath || data?.ctaSection) return data;
+
+  const hero = isRecord(data.hero) ? data.hero : {};
+  const buttons = Array.isArray(hero.buttons) ? hero.buttons : [];
+  const primary = buttons[0] || {};
+  const secondary = buttons[1] || {};
+
+  return {
+    ...data,
+    heroImages: Array.isArray(data.heroImages) ? data.heroImages : ["/images/hero.jpg"],
+    hero: {
+      title: hero.title ?? "",
+      subtitle: hero.subtitle ?? "",
+      description: hero.description ?? "",
+      primaryCta: primary.label ?? "",
+      primaryCtaPath: primary.link ?? "",
+      secondaryCta: secondary.label ?? "",
+      secondaryCtaPath: secondary.link ?? "",
+    },
+    features: Array.isArray(data.features)
+      ? data.features.map((f: any) => ({
+          ...f,
+          path: f?.path ?? f?.link ?? "",
+          linkText: f?.linkText ?? (f?.link ? "Explore ->" : ""),
+        }))
+      : [],
+    whyBuy: Array.isArray(data.whyBuy) ? data.whyBuy : [],
+    ctaSection: data.ctaSection ?? {
+      title: data.cta?.title ?? "",
+      description: data.cta?.description ?? "",
+      buttonText: data.cta?.buttonText ?? "",
+      buttonPath: data.cta?.buttonLink ?? "",
+    },
+  };
+};
+
+const serializeHomeForApi = (data: any) => {
+  if (!isRecord(data)) return data;
+  if (Array.isArray(data?.hero?.buttons)) return data;
+
+  const hero = isRecord(data.hero) ? data.hero : {};
+  const buttons: Array<{ label: string; link: string }> = [];
+
+  if (hero.primaryCta || hero.primaryCtaPath) {
+    buttons.push({ label: hero.primaryCta ?? "", link: hero.primaryCtaPath ?? "" });
+  }
+  if (hero.secondaryCta || hero.secondaryCtaPath) {
+    buttons.push({ label: hero.secondaryCta ?? "", link: hero.secondaryCtaPath ?? "" });
+  }
+
+  return {
+    hero: {
+      title: hero.title ?? "",
+      subtitle: hero.subtitle ?? "",
+      description: hero.description ?? "",
+      buttons,
+    },
+    features: Array.isArray(data.features)
+      ? data.features.map((f: any) => ({
+          icon: f?.icon ?? "",
+          title: f?.title ?? "",
+          description: f?.description ?? "",
+          link: f?.link ?? f?.path ?? "",
+        }))
+      : [],
+    whyBuy: Array.isArray(data.whyBuy)
+      ? data.whyBuy.map((b: any) => ({
+          icon: b?.icon ?? "",
+          title: b?.title ?? "",
+          description: b?.description ?? "",
+        }))
+      : [],
+    cta: {
+      title: data.cta?.title ?? data.ctaSection?.title ?? "",
+      description: data.cta?.description ?? data.ctaSection?.description ?? "",
+      buttonText: data.cta?.buttonText ?? data.ctaSection?.buttonText ?? "",
+      buttonLink: data.cta?.buttonLink ?? data.ctaSection?.buttonPath ?? "",
+    },
+  };
+};
+
+const normalizePromotionsFromApi = (data: any) => {
+  if (!isRecord(data)) return null;
+  if (data.topInfoBar || data.offers?.categories) return data;
+
+  const infoBar = Array.isArray(data.infoBar) ? data.infoBar : [];
+  const offerGroups = Array.isArray(data.offers) ? data.offers : [];
+  const categories = offerGroups.map((group: any, index: number) => {
+    const name = String(group?.name || `Offer Category ${index + 1}`).trim();
+    return { id: group?.id || slugify(name), name };
+  });
+
+  const offers: any[] = [];
+  offerGroups.forEach((group: any, index: number) => {
+    const category = categories[index];
+    const discounts = Array.isArray(group?.discounts) ? group.discounts : [];
+    discounts.forEach((disc: any, dIndex: number) => {
+      const discObj = isRecord(disc) ? disc : {};
+      const percent = Number(discObj.discountPercent ?? discObj.percent ?? disc ?? 0);
+      offers.push({
+        id: discObj.id || `${category?.id || "category"}_${dIndex + 1}`,
+        categoryId: category?.id || "",
+        name: discObj.name || `${category?.name || "Offer"} Discount`,
+        enabled: Boolean(discObj.enabled),
+        appliesTo: discObj.appliesTo || "all",
+        discountPercent: Number.isFinite(percent) ? percent : 0,
+        startDate: discObj.startDate || "",
+        endDate: discObj.endDate || "",
+      });
+    });
+  });
+
+  return {
+    topInfoBar: {
+      enabled: infoBar.length > 0,
+      items: infoBar,
+    },
+    offers: {
+      categories,
+      offers,
+      stackWithMemberDiscount: false,
+    },
+  };
+};
+
+const serializePromotionsForApi = (data: any) => {
+  if (!isRecord(data)) return data;
+  if (Array.isArray(data.infoBar) && Array.isArray(data.offers)) return data;
+
+  const infoBar = Array.isArray(data?.topInfoBar?.items) ? data.topInfoBar.items : [];
+  const categories = Array.isArray(data?.offers?.categories) ? data.offers.categories : [];
+  const offers = Array.isArray(data?.offers?.offers) ? data.offers.offers : [];
+
+  if (categories.length === 0 && offers.length > 0) {
+    categories.push({ id: "general", name: "General" });
+  }
+
+  const groups = categories.map((category: any) => {
+    const categoryId = category?.id || slugify(category?.name || "general");
+    const name = category?.name || "General";
+    return {
+      id: categoryId,
+      name,
+      discounts: offers
+        .filter((offer: any) => (offer?.categoryId || "general") === categoryId)
+        .map((offer: any) => ({
+          id: offer?.id || `${categoryId}_${slugify(offer?.name || "offer")}`,
+          name: offer?.name || "Offer",
+          enabled: Boolean(offer?.enabled),
+          appliesTo: offer?.appliesTo || "all",
+          discountPercent: Number(offer?.discountPercent || 0),
+          startDate: offer?.startDate || "",
+          endDate: offer?.endDate || "",
+        })),
+    };
+  });
+
+  return { infoBar, offers: groups };
+};
+
+const normalizeSettingsFromApi = (data: any) => {
+  if (!isRecord(data)) return {};
+  if (data.siteEmail || !data.contactEmail) return data;
+  return { ...data, siteEmail: data.contactEmail };
+};
+
+const serializeSettingsForApi = (data: any) => {
+  if (!isRecord(data)) return data;
+  if (data.contactEmail || data.showOutOfStock != null) return data;
+  return {
+    siteName: data.siteName ?? "",
+    contactEmail: data.siteEmail ?? "",
+    currency: data.currency ?? "AUD",
+    showOutOfStock: true,
+  };
+};
+
+const normalizeReviewsFromApi = (data: any) => {
+  if (!Array.isArray(data)) return [];
+  return data.map((review: any, index: number) => ({
+    id: review?.id || makeId(`review_${index}`),
+    author: review?.author ?? "",
+    rating: Number(review?.rating ?? 5),
+    text: review?.text ?? "",
+    verified: Boolean(review?.verified),
+    date: review?.date ?? new Date().toISOString().split("T")[0],
+  }));
+};
+
+const serializeReviewsForApi = (reviews: any[]) => {
+  return (reviews || []).map((review: any, index: number) => ({
+    id: review?.id || makeId(`review_${index}`),
+    author: review?.author ?? "",
+    rating: Number(review?.rating ?? 5),
+    text: review?.text ?? "",
+    verified: Boolean(review?.verified),
+    date: review?.date ?? new Date().toISOString().split("T")[0],
+  }));
+};
+
 const Admin = () => {
   const { user, login } = useAuth();
   const router = useRouter();
@@ -135,7 +394,7 @@ const Admin = () => {
           </div>
         </aside>
         <main className="admin-main">
-          {activeTab === 'dashboard' && <AdminDashboard />}
+          {activeTab === 'dashboard' && <AdminDashboard onNavigate={setActiveTab} />}
           {activeTab === 'analytics' && <AdminAnalytics />}
           {activeTab === 'users' && <AdminUsers />}
           {activeTab === 'products' && <AdminProducts />}
@@ -161,7 +420,7 @@ function AdminOrders() {
     setLoading(true);
     setError("");
     try {
-      const resp = await fetch("/api/admin/orders", { cache: "no-store" });
+      const resp = await fetch("/api/orders", { cache: "no-store" });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to load orders");
       setOrders(Array.isArray(data) ? data : []);
@@ -181,14 +440,14 @@ function AdminOrders() {
     setSavingId(id);
     setError("");
     try {
-      const resp = await fetch("/api/admin/orders", {
+      const resp = await fetch(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({ status }),
       });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to update order");
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...(data || {}), status } : o)));
     } catch (err: any) {
       setError(err?.message || "Failed to update order");
     } finally {
@@ -209,9 +468,9 @@ function AdminOrders() {
 
       <div className="admin-card">
         {loading ? (
-          <div style={{ padding: 12 }}>Loading…</div>
+          <div className="loading"><div className="spinner"></div></div>
         ) : orders.length === 0 ? (
-          <div style={{ padding: 12 }}>No orders yet.</div>
+          <p>No orders yet.</p>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -256,20 +515,62 @@ function AdminOrders() {
   );
 }
 
-function AdminDashboard() {
-  const { getProducts, getHomeContent, getNavigation, getReviews } = useStore();
-  const products = getProducts();
+function AdminDashboard({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+  const { getHomeContent, getPromotions } = useStore();
+  const router = useRouter();
   const home = getHomeContent();
-  const nav = getNavigation();
-  const reviews = getReviews();
-  const productCount = products?.length ?? 0;
-  const navKeys = Object.keys(nav || {});
+  const [productCount, setProductCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [promotionCount, setPromotionCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCounts = async () => {
+      try {
+        const [productsRes, ordersRes, reviewsRes] = await Promise.all([
+          fetch("/api/products", { cache: "no-store" }),
+          fetch("/api/orders", { cache: "no-store" }),
+          fetch("/api/content?section=reviews", { cache: "no-store" }),
+        ]);
+
+        const productsData = await productsRes.json().catch(() => null);
+        const ordersData = await ordersRes.json().catch(() => null);
+        const reviewsData = await reviewsRes.json().catch(() => null);
+
+        if (!cancelled) {
+          setProductCount(Array.isArray(productsData) ? productsData.length : 0);
+          setOrderCount(Array.isArray(ordersData) ? ordersData.length : 0);
+          setReviewCount(Array.isArray(reviewsData?.data) ? reviewsData.data.length : 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setProductCount(0);
+          setOrderCount(0);
+          setReviewCount(0);
+        }
+      }
+    };
+
+    loadCounts();
+
+    const promotions = getPromotions?.();
+    const activeOffers = Array.isArray(promotions?.offers?.offers)
+      ? promotions.offers.offers.filter((o: any) => o?.enabled).length
+      : 0;
+    setPromotionCount(activeOffers);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getPromotions]);
   
   const stats = [
     { label: 'Total Products', value: productCount, icon: '📦', color: '#667eea' },
-    { label: 'Navigation Items', value: navKeys.length, icon: '🧭', color: '#764ba2' },
-    { label: 'Reviews', value: reviews?.length ?? 0, icon: '⭐', color: '#f59e0b' },
-    { label: 'Active Promotions', value: 3, icon: '🏷️', color: '#10b981' },
+    { label: 'Orders', value: orderCount, icon: '🧾', color: '#22c55e' },
+    { label: 'Reviews', value: reviewCount, icon: '⭐', color: '#f59e0b' },
+    { label: 'Active Promotions', value: promotionCount, icon: '🏷️', color: '#10b981' },
   ];
 
   const recentActivity = [
@@ -322,16 +623,32 @@ function AdminDashboard() {
         <div className="admin-card">
           <h3>Quick Actions</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button className="btn btn-primary" style={{ justifyContent: 'flex-start' }}>
+            <button
+              className="btn btn-primary"
+              style={{ justifyContent: 'flex-start' }}
+              onClick={() => onNavigate?.("products")}
+            >
               <span>➕</span> Add New Product
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ justifyContent: 'flex-start' }}
+              onClick={() => onNavigate?.("analytics")}
+            >
               <span>📊</span> View Analytics
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ justifyContent: 'flex-start' }}
+              onClick={() => onNavigate?.("settings")}
+            >
               <span>⚙️</span> Site Settings
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ justifyContent: 'flex-start' }}
+              onClick={() => router.push("/admin/upload-products")}
+            >
               <span>📥</span> Import Products
             </button>
           </div>
@@ -362,9 +679,32 @@ function AdminProducts() {
   const [products, setProductsState] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    setProductsState(getProducts());
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setLoadError("");
+      try {
+        const resp = await fetch("/api/products", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load products");
+        if (!cancelled) setProductsState(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        if (!cancelled) {
+          setProductsState(getProducts());
+          setLoadError(err?.message || "Failed to load products");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getProducts]);
 
   const save = () => {
@@ -421,40 +761,47 @@ function AdminProducts() {
         </div>
       </div>
       {saved && <div className="admin-success">Changes saved. The site will show the updated products.</div>}
+      {loadError && <div className="error-message" style={{ marginBottom: 16 }}>{loadError}</div>}
       <div className="admin-card">
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <img src={p.image} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
-                  </td>
-                  <td>{p.name}</td>
-                  <td>{p.category}</td>
-                  <td>${Number(p.price).toFixed(2)}</td>
-                  <td>{p.inStock ? 'Yes' : 'No'}</td>
-                  <td>
-                    <div className="actions">
-                      <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingId(p.id)}>Edit</button>
-                      <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(p.id)}>Delete</button>
-                    </div>
-                  </td>
+        {isLoading ? (
+          <div className="loading"><div className="spinner"></div></div>
+        ) : products.length === 0 ? (
+          <p>No products yet.</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {products.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <img src={p.image} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+                    </td>
+                    <td>{p.name}</td>
+                    <td>{p.category}</td>
+                    <td>${Number(p.price).toFixed(2)}</td>
+                    <td>{p.inStock ? 'Yes' : 'No'}</td>
+                    <td>
+                      <div className="actions">
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingId(p.id)}>Edit</button>
+                        <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(p.id)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       {productForEdit && (
         <div className="admin-card">
@@ -536,12 +883,32 @@ function AdminProducts() {
 }
 
 function AdminHome() {
-  const { getHomeContent, setHomeContent } = useStore();
+  const { getHomeContent } = useStore();
   const [content, setContent] = useState<any>({});
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    setContent(getHomeContent());
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const resp = await fetch("/api/content?section=home", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load home content");
+        const normalized = normalizeHomeFromApi(data?.data);
+        if (!cancelled) setContent(normalized || {});
+      } catch {
+        if (!cancelled) setContent(getHomeContent());
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getHomeContent]);
 
   const update = (path: string, value: any) => {
@@ -621,13 +988,29 @@ function AdminHome() {
     }));
   };
 
-  const save = () => {
-    setHomeContent(content);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const save = async () => {
+    setSaveSuccess("");
+    setSaveError("");
+    try {
+      const resp = await fetch("/api/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "home", data: serializeHomeForApi(content) }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to save home content");
+      localStorage.setItem(STORAGE_KEYS.home, JSON.stringify(content));
+      setSaveSuccess("Home content saved.");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save home content");
+    }
   };
 
-  if (!content.hero) return null;
+  if (isLoading) {
+    return <div className="loading"><div className="spinner"></div></div>;
+  }
+
+  if (!content.hero) return <p>No home content yet.</p>;
 
   return (
     <>
@@ -635,13 +1018,17 @@ function AdminHome() {
         <h1>Home content</h1>
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
-      {saved && <div className="admin-success">Home content saved.</div>}
+      {saveSuccess && <div className="admin-success">{saveSuccess}</div>}
+      {saveError && <div className="error-message">{saveError}</div>}
       <div className="admin-card">
         <h3>Hero section</h3>
         <div className="admin-form">
           <div className="form-group full-width">
             <label>Hero banner images (URLs)</label>
             <div style={{ display: "grid", gap: 10 }}>
+              {(content.heroImages || []).length === 0 && (
+                <p style={{ margin: 0, opacity: 0.8 }}>No hero images yet.</p>
+              )}
               {(content.heroImages || []).map((img: string, i: number) => (
                 <div key={i} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <input
@@ -701,6 +1088,9 @@ function AdminHome() {
           <h3 style={{ margin: 0 }}>Feature cards</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addFeature}>Add feature</button>
         </div>
+        {(content.features || []).length === 0 && (
+          <p style={{ marginTop: 12, opacity: 0.8 }}>No features yet.</p>
+        )}
         {(content.features || []).map((f, i) => (
           <div key={i} className="admin-form" style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -740,6 +1130,9 @@ function AdminHome() {
           <h3 style={{ margin: 0 }}>Why buy section</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addWhyBuy}>Add item</button>
         </div>
+        {(content.whyBuy || []).length === 0 && (
+          <p style={{ marginTop: 12, opacity: 0.8 }}>No items yet.</p>
+        )}
         {(content.whyBuy || []).map((b, i) => (
           <div key={i} className="admin-form" style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -792,20 +1185,53 @@ function AdminHome() {
 }
 
 function AdminNavigation() {
-  const { getNavigationForAdmin, setNavigation, remoteImages } = useStore();
+  const { getNavigationForAdmin, remoteImages } = useStore();
   const [nav, setNav] = useState(null);
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    const data = getNavigationForAdmin();
-    setNav(JSON.parse(JSON.stringify(data || {})));
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const resp = await fetch("/api/content?section=navigation", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load navigation");
+        const normalized = normalizeNavigationFromApi(data?.data);
+        if (!cancelled) setNav(JSON.parse(JSON.stringify(normalized || {})));
+      } catch {
+        if (!cancelled) {
+          const fallback = getNavigationForAdmin();
+          setNav(JSON.parse(JSON.stringify(fallback || {})));
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getNavigationForAdmin]);
 
-  const save = () => {
-    if (nav) {
-      setNavigation(nav);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+  const save = async () => {
+    if (!nav) return;
+    setSaveSuccess("");
+    setSaveError("");
+    try {
+      const resp = await fetch("/api/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "navigation", data: serializeNavigationForApi(nav) }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to save navigation");
+      localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(nav));
+      setSaveSuccess("Navigation saved.");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save navigation");
     }
   };
 
@@ -829,7 +1255,8 @@ function AdminNavigation() {
     });
   };
 
-  if (!nav) return <p>Loading…</p>;
+  if (isLoading) return <div className="loading"><div className="spinner"></div></div>;
+  if (!nav) return <p>No navigation data yet.</p>;
 
   const sectionKeys = Object.keys(nav);
 
@@ -839,80 +1266,104 @@ function AdminNavigation() {
         <h1>Navigation</h1>
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
-      {saved && <div className="admin-success">Navigation saved.</div>}
+      {saveSuccess && <div className="admin-success">{saveSuccess}</div>}
+      {saveError && <div className="error-message">{saveError}</div>}
       <p style={{ marginBottom: 20 }}>Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
-      {sectionKeys.map((sectionKey) => (
-        <div key={sectionKey} className="admin-card">
-          <div className="nav-section-editor">
-            <input
-              value={nav[sectionKey]?.title || ''}
-              onChange={(e) => updateSection(sectionKey, 'title', e.target.value)}
-              placeholder="Section title"
-            />
-            <input
-              value={nav[sectionKey]?.path || ''}
-              onChange={(e) => updateSection(sectionKey, 'path', e.target.value)}
-              placeholder="Section path"
-            />
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+      {sectionKeys.length === 0 ? (
+        <p>No navigation items yet.</p>
+      ) : (
+        sectionKeys.map((sectionKey) => (
+          <div key={sectionKey} className="admin-card">
+            <div className="nav-section-editor">
               <input
-                type="checkbox"
-                checked={!nav[sectionKey]?.hidden}
-                onChange={(e) => updateSection(sectionKey, 'hidden', !e.target.checked)}
+                value={nav[sectionKey]?.title || ''}
+                onChange={(e) => updateSection(sectionKey, 'title', e.target.value)}
+                placeholder="Section title"
               />
-              Show
-            </label>
-          </div>
-
-          {(nav[sectionKey]?.columns || []).map((col, colIndex) => (
-            <div key={colIndex} className="nav-editor-section">
-              <h4>{col.title}</h4>
-              {(col.items || []).map((item, itemIndex) => (
-                <div key={itemIndex} className="nav-editor-item">
-                  <input
-                    value={item.name || ''}
-                    onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'name', e.target.value)}
-                    placeholder="Label"
-                  />
-                  <input
-                    value={item.path || ''}
-                    onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'path', e.target.value)}
-                    placeholder="Path"
-                  />
-                  <select
-                    value={item.iconIndex ?? 0}
-                    onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'iconIndex', Number(e.target.value))}
-                    aria-label="Icon index"
-                  >
-                    {Array.from({ length: (remoteImages || []).length }, (_, i) => (
-                      <option key={i} value={i}>{i}</option>
-                    ))}
-                  </select>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
-                    <input
-                      type="checkbox"
-                      checked={!item.hidden}
-                      onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'hidden', !e.target.checked)}
-                    />
-                    Show
-                  </label>
-                </div>
-              ))}
+              <input
+                value={nav[sectionKey]?.path || ''}
+                onChange={(e) => updateSection(sectionKey, 'path', e.target.value)}
+                placeholder="Section path"
+              />
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={!nav[sectionKey]?.hidden}
+                  onChange={(e) => updateSection(sectionKey, 'hidden', !e.target.checked)}
+                />
+                Show
+              </label>
             </div>
-          ))}
-        </div>
-      ))}
+
+            {(nav[sectionKey]?.columns || []).map((col, colIndex) => (
+              <div key={colIndex} className="nav-editor-section">
+                <h4>{col.title}</h4>
+                {(col.items || []).map((item, itemIndex) => (
+                  <div key={itemIndex} className="nav-editor-item">
+                    <input
+                      value={item.name || ''}
+                      onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'name', e.target.value)}
+                      placeholder="Label"
+                    />
+                    <input
+                      value={item.path || ''}
+                      onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'path', e.target.value)}
+                      placeholder="Path"
+                    />
+                    <select
+                      value={item.iconIndex ?? 0}
+                      onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'iconIndex', Number(e.target.value))}
+                      aria-label="Icon index"
+                    >
+                      {Array.from({ length: (remoteImages || []).length }, (_, i) => (
+                        <option key={i} value={i}>{i}</option>
+                      ))}
+                    </select>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+                      <input
+                        type="checkbox"
+                        checked={!item.hidden}
+                        onChange={(e) => updateItem(sectionKey, colIndex, itemIndex, 'hidden', !e.target.checked)}
+                      />
+                      Show
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))
+      )}
     </>
   );
 }
 
 function AdminReviews() {
-  const { getReviews, setReviews } = useStore();
+  const { getReviews } = useStore();
   const [reviews, setReviewsState] = useState([]);
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    setReviewsState(getReviews() || []);
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const resp = await fetch("/api/content?section=reviews", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load reviews");
+        if (!cancelled) setReviewsState(normalizeReviewsFromApi(data?.data));
+      } catch {
+        if (!cancelled) setReviewsState(normalizeReviewsFromApi(getReviews() || []));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getReviews]);
 
   const update = (index, field, value) => {
@@ -922,20 +1373,52 @@ function AdminReviews() {
   const addReview = () => {
     setReviewsState((prev) => [
       ...(prev || []),
-      { rating: 5, text: "", author: "", verified: true },
+      {
+        id: makeId("review"),
+        rating: 5,
+        text: "",
+        author: "",
+        verified: true,
+        date: new Date().toISOString().split("T")[0],
+      },
     ]);
   };
 
-  const removeReview = (index) => {
+  const removeReview = async (index) => {
     if (window.confirm("Delete this review?")) {
-      setReviewsState((prev) => (prev || []).filter((_, i) => i !== index));
+      const review = reviews[index];
+      const id = review?.id;
+      try {
+        if (id) {
+          const resp = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
+          const data = await resp.json().catch(() => null);
+          if (!resp.ok) throw new Error(data?.error || "Failed to delete review");
+        }
+        const next = (reviews || []).filter((_: any, i: number) => i !== index);
+        setReviewsState(next);
+        localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(next));
+      } catch (err: any) {
+        setSaveError(err?.message || "Failed to delete review");
+      }
     }
   };
 
-  const save = () => {
-    setReviews(reviews);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const save = async () => {
+    setSaveSuccess("");
+    setSaveError("");
+    try {
+      const resp = await fetch("/api/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "reviews", data: serializeReviewsForApi(reviews) }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to save reviews");
+      localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(reviews));
+      setSaveSuccess("Reviews saved.");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save reviews");
+    }
   };
 
   return (
@@ -947,54 +1430,93 @@ function AdminReviews() {
           <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
         </div>
       </div>
-      {saved && <div className="admin-success">Reviews saved.</div>}
+      {saveSuccess && <div className="admin-success">{saveSuccess}</div>}
+      {saveError && <div className="error-message">{saveError}</div>}
       <div className="admin-card">
         <h3>Customer reviews (homepage)</h3>
-        {reviews.map((r, i) => (
-          <div key={i} className="review-editor-item">
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              style={{ justifySelf: "end" }}
-              onClick={() => removeReview(i)}
-            >
-              Delete
-            </button>
-            <select
-              value={r.rating || 5}
-              onChange={(e) => update(i, 'rating', Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>{n} stars</option>
-              ))}
-            </select>
-            <textarea value={r.text || ''} onChange={(e) => update(i, 'text', e.target.value)} placeholder="Review text" />
-            <input value={r.author || ''} onChange={(e) => update(i, 'author', e.target.value)} placeholder="Author" />
-            <select value={r.verified ? 'yes' : 'no'} onChange={(e) => update(i, 'verified', e.target.value === 'yes')}>
-              <option value="yes">Verified</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-        ))}
+        {isLoading ? (
+          <div className="loading"><div className="spinner"></div></div>
+        ) : reviews.length === 0 ? (
+          <p>No reviews yet.</p>
+        ) : (
+          reviews.map((r, i) => (
+            <div key={r.id || i} className="review-editor-item">
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                style={{ justifySelf: "end" }}
+                onClick={() => removeReview(i)}
+              >
+                Delete
+              </button>
+              <select
+                value={r.rating || 5}
+                onChange={(e) => update(i, 'rating', Number(e.target.value))}
+              >
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>{n} stars</option>
+                ))}
+              </select>
+              <textarea value={r.text || ''} onChange={(e) => update(i, 'text', e.target.value)} placeholder="Review text" />
+              <input value={r.author || ''} onChange={(e) => update(i, 'author', e.target.value)} placeholder="Author" />
+              <select value={r.verified ? 'yes' : 'no'} onChange={(e) => update(i, 'verified', e.target.value === 'yes')}>
+                <option value="yes">Verified</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+          ))
+        )}
       </div>
     </>
   );
 }
 
 function AdminPromotions() {
-  const { getPromotions, setPromotions } = useStore();
+  const { getPromotions } = useStore();
   const [promotions, setPromotionsState] = useState<any>(null);
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    setPromotionsState(getPromotions());
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const resp = await fetch("/api/content?section=promotions", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load promotions");
+        const normalized = normalizePromotionsFromApi(data?.data);
+        if (!cancelled) setPromotionsState(normalized || getPromotions());
+      } catch {
+        if (!cancelled) setPromotionsState(getPromotions());
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getPromotions]);
 
-  const save = () => {
+  const save = async () => {
     if (!promotions) return;
-    setPromotions(promotions);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaveSuccess("");
+    setSaveError("");
+    try {
+      const resp = await fetch("/api/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "promotions", data: serializePromotionsForApi(promotions) }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to save promotions");
+      localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(promotions));
+      setSaveSuccess("Promotions saved.");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save promotions");
+    }
   };
 
   const setTopInfoBar = (patch: any) => {
@@ -1080,7 +1602,8 @@ function AdminPromotions() {
     setOffers({ offers: offers.filter((o: any) => o.id !== id) });
   };
 
-  if (!promotions) return <p>Loading…</p>;
+  if (isLoading) return <div className="loading"><div className="spinner"></div></div>;
+  if (!promotions) return <p>No promotions yet.</p>;
 
   return (
     <>
@@ -1090,7 +1613,8 @@ function AdminPromotions() {
           Save changes
         </button>
       </div>
-      {saved && <div className="admin-success">Promotions saved.</div>}
+      {saveSuccess && <div className="admin-success">{saveSuccess}</div>}
+      {saveError && <div className="error-message">{saveError}</div>}
 
       <div className="admin-card">
         <h3>Top info bar</h3>
@@ -1574,21 +2098,56 @@ function AdminUsers() {
 }
 
 function AdminSettings() {
-  const { getSettings, setSettings: persistSettings } = useStore();
+  const { getSettings } = useStore();
   const [settings, setSettings] = useState<any>({});
 
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState("");
 
   useEffect(() => {
-    setSettings(getSettings());
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const resp = await fetch("/api/content?section=settings", { cache: "no-store" });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) throw new Error(data?.error || "Failed to load settings");
+        const normalized = normalizeSettingsFromApi(data?.data);
+        if (!cancelled) {
+          const fallback = getSettings();
+          setSettings({ ...(fallback || {}), ...(normalized || {}) });
+        }
+      } catch {
+        if (!cancelled) setSettings(getSettings());
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [getSettings]);
 
-  const saveSettings = () => {
-    persistSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const saveSettings = async () => {
+    setSaveSuccess("");
+    setSaveError("");
+    try {
+      const resp = await fetch("/api/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "settings", data: serializeSettingsForApi(settings) }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to save settings");
+      localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+      setSaveSuccess("Settings saved successfully!");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save settings");
+    }
   };
 
   const updateSetting = (key, value) => {
@@ -1641,6 +2200,10 @@ function AdminSettings() {
     }
   };
 
+  if (isLoading) {
+    return <div className="loading"><div className="spinner"></div></div>;
+  }
+
   return (
     <>
       <div className="admin-header-row">
@@ -1655,7 +2218,8 @@ function AdminSettings() {
         </div>
       </div>
 
-      {saved && <div className="admin-success">Settings saved successfully!</div>}
+      {saveSuccess && <div className="admin-success">{saveSuccess}</div>}
+      {saveError && <div className="error-message" style={{ marginBottom: 16 }}>{saveError}</div>}
       {resetError && <div className="error-message" style={{ marginBottom: 16 }}>{resetError}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
