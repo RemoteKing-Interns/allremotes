@@ -1,11 +1,20 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { appendOrderJson, readOrdersJson, type OrderDoc } from "@/lib/orders-json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const ORDERS_JSON_PATH = path.resolve(process.cwd(), "orders.json");
+
+type OrderDoc = Record<string, any> & {
+  id: string;
+  createdAt: string;
+  updatedAt?: string;
+};
 
 function makeOrderId() {
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -13,34 +22,31 @@ function makeOrderId() {
   return `ORD-${stamp}-${rand}`;
 }
 
-function safeEmail(value: unknown) {
-  const email = String(value || "").trim().toLowerCase();
-  return email.includes("@") ? email : "";
+function readOrdersFile(): OrderDoc[] {
+  try {
+    const raw = fs.readFileSync(ORDERS_JSON_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as OrderDoc[]) : [];
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return [];
+    throw err;
+  }
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const email = safeEmail(searchParams.get("email"));
-    if (!email) {
-      return NextResponse.json({ error: "Missing email" }, { status: 400 });
-    }
+function writeOrdersFile(orders: OrderDoc[]) {
+  fs.writeFileSync(ORDERS_JSON_PATH, JSON.stringify(orders, null, 2) + "\n", "utf8");
+}
 
+export async function GET() {
+  try {
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
-      await col.createIndex({ id: 1 }, { unique: true });
-      await col.createIndex({ "customer.email": 1 });
-      const orders = await col
-        .find({ "customer.email": email })
-        .project({ _id: 0 })
-        .sort({ createdAt: -1 })
-        .toArray();
+      const orders = await col.find({}).project({ _id: 0 }).toArray();
       return NextResponse.json(orders, { headers: { "Cache-Control": "no-store" } });
     }
 
-    const all = await readOrdersJson();
-    const orders = all.filter((o) => String(o?.customer?.email || "").toLowerCase() === email);
+    const orders = readOrdersFile();
     return NextResponse.json(orders, { headers: { "Cache-Control": "no-store" } });
   } catch (err: any) {
     return NextResponse.json(
@@ -57,65 +63,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
-    const email = safeEmail((body as any)?.customer?.email);
-    const fullName = String((body as any)?.customer?.fullName || "").trim();
-    if (!email || !fullName) {
-      return NextResponse.json({ error: "Missing customer name/email" }, { status: 400 });
-    }
-
-    const items = Array.isArray((body as any).items) ? (body as any).items : [];
-    if (items.length === 0) {
-      return NextResponse.json({ error: "Order must include items" }, { status: 400 });
-    }
-
     const now = new Date().toISOString();
     const order: OrderDoc = {
+      ...(body as Record<string, any>),
       id: makeOrderId(),
-      status: "processing",
       createdAt: now,
       updatedAt: now,
-      customer: { fullName, email },
-      shipping: {
-        address: String((body as any)?.shipping?.address || ""),
-        city: String((body as any)?.shipping?.city || ""),
-        state: String((body as any)?.shipping?.state || ""),
-        zipCode: String((body as any)?.shipping?.zipCode || ""),
-        country: String((body as any)?.shipping?.country || "") || undefined,
-      },
-      pricing: {
-        currency: String((body as any)?.pricing?.currency || "AUD"),
-        subtotal: Number((body as any)?.pricing?.subtotal || 0),
-        discountTotal: Number((body as any)?.pricing?.discountTotal || 0),
-        total: Number((body as any)?.pricing?.total || 0),
-        hasMemberDiscount: Boolean((body as any)?.pricing?.hasMemberDiscount),
-        memberDiscountRate: Number((body as any)?.pricing?.memberDiscountRate || 0),
-      },
-      items: items.map((it: any) => ({
-        id: String(it?.id || ""),
-        name: String(it?.name || ""),
-        category: String(it?.category || ""),
-        quantity: Math.max(1, Number(it?.quantity || 1)),
-        unitPrice: Number(it?.unitPrice || 0),
-        lineTotal: Number(it?.lineTotal || 0),
-      })),
     };
 
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
-      await col.createIndex({ id: 1 }, { unique: true });
-      await col.createIndex({ "customer.email": 1 });
       await col.insertOne({ ...(order as any) });
-    } else {
-      await appendOrderJson(order);
+      return NextResponse.json(order);
     }
 
-    return NextResponse.json({ ok: true, id: order.id, createdAt: order.createdAt });
+    const orders = readOrdersFile();
+    orders.push(order);
+    writeOrdersFile(orders);
+    return NextResponse.json(order);
   } catch (err: any) {
     return NextResponse.json(
-      { error: "Failed to place order", details: err?.message || String(err) },
+      { error: "Failed to create order", details: err?.message || String(err) },
       { status: 500 }
     );
   }
 }
-
