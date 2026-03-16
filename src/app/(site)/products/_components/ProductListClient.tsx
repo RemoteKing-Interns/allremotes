@@ -273,12 +273,14 @@ export default function ProductListClient({
   const handleAddToCart = (e: React.MouseEvent, product: any) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product);
-    setAddedItem(product);
+    if (addToCart && product) {
+      addToCart(product);
+      setAddedItem(product);
+    }
   };
 
   const handleModalQuantityChange = (nextQuantity: any) => {
-    if (!addedItem) return;
+    if (!addedItem || !updateQuantity) return;
     const parsed = Number(nextQuantity);
     if (!Number.isFinite(parsed)) return;
     updateQuantity(addedItem.id, Math.max(1, Math.floor(parsed)));
@@ -411,7 +413,7 @@ export default function ProductListClient({
                           type="button"
                           className="mobile-add-btn"
                           onClick={(e) => handleAddToCart(e, product)}
-                          disabled={!product.inStock}
+                          disabled={!product?.inStock}
                           aria-label="Add to cart"
                         >
                           +
@@ -456,7 +458,7 @@ export default function ProductListClient({
                           type="button"
                           className="add-to-cart"
                           onClick={(e) => handleAddToCart(e, product)}
-                          disabled={!product.inStock}
+                          disabled={!product?.inStock}
                         >
                           {product.inStock ? "Add to Cart" : "Out of Stock"}
                         </button>
