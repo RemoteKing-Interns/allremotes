@@ -23,6 +23,12 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   const dropdownRef = useRef(null);
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
@@ -193,7 +199,7 @@ const Header = () => {
                   className="search-input"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  onFocus={() => searchQuery && setShowSearchResults(true)}
+                  onFocus={() => isClient && searchQuery && setShowSearchResults(true)}
                 />
                 <button type="submit" className="search-submit-btn">
                   <svg
@@ -211,7 +217,7 @@ const Header = () => {
                 </button>
               </form>
 
-              {showSearchResults && searchResults.length > 0 && (
+              {isClient && showSearchResults && searchResults.length > 0 && (
                 <div className="search-results">
                   <div className="search-results-header">
                     <span>Search Results ({searchResults.length})</span>
@@ -279,7 +285,7 @@ const Header = () => {
                 </div>
               )}
 
-              {showSearchResults &&
+              {isClient && showSearchResults &&
                 searchQuery.trim().length > 0 &&
                 searchResults.length === 0 && (
                   <div className="search-results">
@@ -331,7 +337,7 @@ const Header = () => {
                       </svg>
                     </Link>
 
-                    {showAccountMenu && (
+                    {isClient && showAccountMenu && (
                       <div className="account-menu-dropdown" role="menu">
                         <div className="account-menu-header">
                           <div className="account-menu-name">{user.name}</div>
@@ -442,7 +448,7 @@ const Header = () => {
       </div>
 
       {/* Mobile Drawer Menu */}
-      {mobileDrawerOpen && (
+      {isClient && mobileDrawerOpen && (
         <>
           {/* Overlay */}
           <div
@@ -606,7 +612,7 @@ const Header = () => {
                         )}
                       </Link>
 
-                      {isActive && visibleColumns.length > 0 && (
+                      {isClient && isActive && visibleColumns.length > 0 && (
                         <div className="mega-menu-wrapper">
                           <div className="mega-menu">
                             <div className="mega-menu-content">

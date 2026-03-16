@@ -329,8 +329,133 @@
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
+}
+
+/* MOBILE ONLY - 2 column grid */
+@media (max-width: 768px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 0 8px !important;
+  }
+
+  .product-card--shop {
+    border-radius: 8px !important;
+    border: 1px solid #ddd;
+  }
+
+  .product-card--shop:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .product-card--shop .image-box {
+    height: 140px !important;
+    padding: 8px !important;
+  }
+
+  .card-body {
+    padding: 8px !important;
+  }
+
+  .brand {
+    color: #007185 !important;
+    font-size: 10px !important;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .brand-details {
+    color: #565959 !important;
+    font-size: 10px !important;
+    margin-bottom: 2px;
+  }
+
+  .card-body h3 {
+    color: #0F1111 !important;
+    font-size: 10px !important;
+    line-height: 1.3;
+    margin: 2px 0 4px;
+    font-weight: 400;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .price-row {
+    justify-content: space-between !important;
+    margin-bottom: 6px;
+  }
+
+  .price {
+    color: #B12704 !important;
+    font-weight: 700;
+    font-size: 10px !important;
+  }
+
+  .stock.in {
+    color: #007600 !important;
+    font-size: 10px !important;
+  }
+
+  .stock.out {
+    color: #B12704 !important;
+    font-size: 10px !important;
+  }
+
+  .add-to-cart {
+    display: none !important;
+  }
+
+  .mobile-add-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: #dc2626;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3);
+  }
+
+  .mobile-add-btn:hover {
+    background: #b91c1c;
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(220, 38, 38, 0.4);
+  }
+
+  .mobile-add-btn:disabled {
+    background: #9ca3af;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Hide mobile elements on desktop */
+@media (min-width: 769px) {
+  .mobile-add-btn {
+    display: none !important;
+  }
+  
+  .brand-details {
+    display: none !important;
+  }
 }
 
 .product-card--shop {

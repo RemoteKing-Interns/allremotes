@@ -7,6 +7,7 @@ import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
+import "../../../../styles/pages/ProductList.css";
 
 const PAGE_SIZE = 15;
 
@@ -406,10 +407,22 @@ export default function ProductListClient({
                           alt={product.name}
                           onError={(e: any) => (e.currentTarget.src = "/images/logo.png")}
                         />
+                        <button
+                          type="button"
+                          className="mobile-add-btn"
+                          onClick={(e) => handleAddToCart(e, product)}
+                          disabled={!product.inStock}
+                          aria-label="Add to cart"
+                        >
+                          +
+                        </button>
                       </div>
 
                       <div className="card-body">
                         <p className="brand">{product.brand}</p>
+                        {product.code && (
+                          <p className="brand-details">Code: {product.code}</p>
+                        )}
                         <h3>{product.name}</h3>
 
                         <div className="price-row">
