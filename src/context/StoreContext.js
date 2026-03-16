@@ -4,6 +4,32 @@ import React, { createContext, useState, useContext, useCallback, useEffect, use
 import { navigationMenu as defaultNavFromFile } from '../data/navigation';
 import { remoteImages } from '../data/navigation';
 
+// Helper function to get S3 URL for local path
+// Hardcoded S3 bucket URL since env vars aren't available in client components
+const getS3UrlForLocalPath = (localPath) => {
+  const s3BucketUrl = 'https://allremotes.s3.ap-southeast-2.amazonaws.com';
+  
+  // Convert local path to S3 path
+  if (localPath.startsWith('/remotes/')) {
+    const filename = localPath.split('/').pop() || '';
+    return `${s3BucketUrl}/images/remotes/${filename}`;
+  }
+  
+  if (localPath.startsWith('/images/')) {
+    const filename = localPath.split('/').pop() || '';
+    return `${s3BucketUrl}/images/${filename}`;
+  }
+  
+  // If it's already an S3 URL, return as-is
+  if (localPath.startsWith('http')) {
+    return localPath;
+  }
+  
+  // Default case - treat as image in images folder
+  const filename = localPath.split('/').pop() || '';
+  return `${s3BucketUrl}/images/${filename}`;
+};
+
 const STORAGE_KEYS = {
   products: 'allremotes_products',
   homeContent: 'allremotes_home_content',
@@ -14,7 +40,7 @@ const STORAGE_KEYS = {
 };
 
 const defaultHomeContent = {
-  heroImages: ["/images/hero.jpg", "/images/heroimg.jpg"],
+  heroImages: [getS3UrlForLocalPath("/images/hero.jpg"), getS3UrlForLocalPath("/images/heroimg.jpg")],
   hero: {
     title: 'Garage Door & Gate Remotes',
     subtitle: 'Quality is Guaranteed',
@@ -91,8 +117,8 @@ const defaultSettings = {
   timezone: 'Australia/Melbourne',
 };
 
-// Product images: use first 12 from remoteImages for product catalog
-const productImagePool = remoteImages.slice(0, 12);
+// Product images: use first 12 from remoteImages for product catalog, converted to S3 URLs
+const productImagePool = remoteImages.slice(0, 12).map(localPath => getS3UrlForLocalPath(localPath));
 
 function loadProducts() {
   try {
@@ -108,14 +134,30 @@ function loadProducts() {
 
 function resolveProducts(productsData) {
   if (!productsData || !productsData.length) return [];
-  return productsData.map((p) => ({
-    ...p,
-    image: (typeof p.image === 'string' && p.image.trim())
-      ? p.image
-      : (typeof p.imageIndex === 'number' && productImagePool[p.imageIndex])
-        ? productImagePool[p.imageIndex]
-        : productImagePool[0],
-  }));
+  return productsData.map((p) => {
+    let imageUrl = '';
+    
+    // If product has an image string
+    if (typeof p.image === 'string' && p.image.trim()) {
+      // If it's already an S3 URL, use it
+      if (p.image.startsWith('http')) {
+        imageUrl = p.image;
+      } else {
+        // Convert local path to S3 URL
+        imageUrl = getS3UrlForLocalPath(p.image);
+      }
+    } 
+    // Otherwise use imageIndex from pool
+    else if (typeof p.imageIndex === 'number' && productImagePool[p.imageIndex]) {
+      imageUrl = productImagePool[p.imageIndex];
+    } 
+    // Fallback to first image in pool
+    else {
+      imageUrl = productImagePool[0];
+    }
+    
+    return { ...p, image: imageUrl };
+  });
 }
 
 function coerceServerProductsToLocal(productsFromServer) {
@@ -258,6 +300,20 @@ export const StoreProvider = ({ children }) => {
     postJson('/api/content/home', content);
   }, [postJson]);
 
+  const refreshHomeFromServer = useCallback(async () => {
+    const res = await getJson('/api/content/home');
+    if (!res || !res.data) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(res.data));
+      setHomeVersion((v) => v + 1);
+    }
+  }, [getJson]);
+
+  // Hydrate home content from server on first load (non-blocking).
+  useEffect(() => {
+    refreshHomeFromServer().catch(() => {});
+  }, [refreshHomeFromServer]);
+
   const resolveNavIcons = useCallback((nav) => {
     if (!nav || typeof nav !== 'object') return nav;
     const out = {};
@@ -317,7 +373,12 @@ export const StoreProvider = ({ children }) => {
 
   const getNavigation = useCallback(() => {
     try {
-      if (typeof window === 'undefined') return defaultNavFromFile;
+      if (typeof window === 'undefined') {
+        // Server-side: try to use cached data first, then default
+        const cached = global.__NAVIGATION_CACHE__;
+        if (cached) return resolveNavIcons(cached);
+        return defaultNavFromFile;
+      }
       const raw = localStorage.getItem(STORAGE_KEYS.navigation);
       if (!raw) return defaultNavFromFile;
       const parsed = JSON.parse(raw);
@@ -335,6 +396,23 @@ export const StoreProvider = ({ children }) => {
     setNavVersion((v) => v + 1);
     postJson('/api/content/navigation', serialized);
   }, [serializeNavIcons, postJson]);
+
+  const refreshNavigationFromServer = useCallback(async () => {
+    const res = await getJson('/api/content/navigation');
+    if (!res || !res.data) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(res.data));
+      setNavVersion((v) => v + 1);
+    } else {
+      // Server-side: cache for SSR hydration
+      global.__NAVIGATION_CACHE__ = res.data;
+    }
+  }, [getJson]);
+
+  // Hydrate navigation from server on first load (non-blocking).
+  useEffect(() => {
+    refreshNavigationFromServer().catch(() => {});
+  }, [refreshNavigationFromServer]);
 
   const getNavigationForAdmin = useCallback(() => {
     try {

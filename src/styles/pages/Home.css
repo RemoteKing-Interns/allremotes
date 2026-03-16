@@ -228,6 +228,43 @@
   box-shadow: 0 8px 25px rgba(160, 49, 45, 0.5);
 }
 
+/* ---- TRUST BAR ---- */
+.trust-bar {
+  background: var(--white);
+  border-bottom: 1px solid rgba(46,107,111,0.1);
+  padding: 14px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.trust-bar-inner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-teal);
+  padding: 6px 18px;
+  white-space: nowrap;
+  border-right: 1px solid rgba(46,107,111,0.15);
+}
+
+.trust-item:last-child {
+  border-right: none;
+}
+
+.trust-item-icon {
+  font-size: 16px;
+}
+
 .features {
   padding: 80px 0;
   background-color: var(--gray-light);
@@ -633,6 +670,34 @@
     font-size: 16px;
   }
 
+  /* Trust bar mobile scrolling */
+  .trust-bar-inner {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 0 16px;
+    gap: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+  }
+
+  .trust-bar-inner::-webkit-scrollbar { 
+    display: none; 
+  }
+
+  /* Add gradient fade to indicate scrollable content */
+  .trust-bar-inner::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(to right, transparent, var(--white));
+    pointer-events: none;
+  }
+
   .cta-section {
     min-height: 350px;
     padding: 60px 0;
@@ -677,5 +742,163 @@
   .why-buy-card,
   .review-card {
     padding: 25px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 40px 0;
+    min-height: 320px;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+  }
+
+  .hero-description {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    width: 100%;
+    max-width: 280px;
+    padding: 12px 24px;
+    font-size: 15px;
+  }
+
+  .features {
+    padding: 44px 0;
+  }
+
+  .feature-card {
+    padding: 24px 18px;
+  }
+
+  .feature-icon {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 16px;
+  }
+
+  .feature-icon img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .feature-card h3 {
+    font-size: 20px;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+  }
+
+  .featured-products {
+    padding: 44px 0;
+  }
+
+  .section-title {
+    font-size: 26px;
+    margin-bottom: 10px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .why-buy-section {
+    padding: 44px 0;
+  }
+
+  .why-buy-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 32px;
+  }
+
+  .why-buy-card {
+    padding: 24px 18px;
+  }
+
+  .why-buy-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .why-buy-card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  .why-buy-card p {
+    font-size: 14px;
+  }
+
+  .reviews-section {
+    padding: 44px 0;
+  }
+
+  .reviews-grid {
+    margin-top: 32px;
+    gap: 18px;
+  }
+
+  .review-card {
+    padding: 20px 16px;
+  }
+
+  .review-rating {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .review-text {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .review-author strong {
+    font-size: 14px;
+  }
+
+  .cta-section {
+    padding: 50px 0;
+    min-height: 300px;
+  }
+
+  .cta-content h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .cta-content p {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  .btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
   }
 }
