@@ -106,15 +106,11 @@ const Home = () => {
       </div>
 
       <section className="features">
-        <div
-          className="features-background"
-          style={{ backgroundImage: "url(/images/heroimg.jpg)" }}
-        >
-          <div className="features-overlay"></div>
-        </div>
         <div className="container">
+          <h2 className="section-title">Our Product Categories</h2>
+          <p className="section-subtitle">Discover the perfect remote for your needs</p>
           <div className="features-grid">
-            {features.map((f, i) => (
+            {features.filter(f => f.title !== 'Quality Guaranteed').map((f, i) => (
               <div key={i} className="feature-card">
                 <div className="feature-icon">
   {(f.image || featureImagesByTitle[f.title]) ? (

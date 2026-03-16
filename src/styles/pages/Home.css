@@ -1,3 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-family: 'Nunito', sans-serif;
+}
+
+* {
+  font-family: var(--font-family);
+}
+
 .home {
   flex: 1;
   overflow: hidden;
@@ -310,28 +320,26 @@
 
 .feature-card {
   background-color: var(--white);
-  padding: 40px 30px;
-  border-radius: 12px;
+  padding: 48px 40px;
+  border-radius: 4px;
   text-align: center;
-  box-shadow: 0 4px 6px var(--shadow);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
 }
 
 .feature-card::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: var(--gradient-mixed);
+  height: 2px;
+  background: linear-gradient(90deg, #2e6b6f 0%, #a0312d 100%);
   transform: scaleX(0);
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .feature-card:hover::before {
@@ -339,73 +347,80 @@
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow:
-    0 8px 20px rgba(46, 107, 111, 0.15),
-    0 8px 20px rgba(160, 49, 45, 0.15);
-  border-color: var(--primary-teal);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .feature-icon {
-  font-size: 48px;
-  margin: 0 auto 20px;
-  width: 96px;
-  height: 96px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
-  background: rgba(245, 245, 245, 0.9);
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(46, 107, 111, 0.08) 0%, rgba(160, 49, 45, 0.08) 100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.05);
 }
 
 .feature-icon img {
-  width: 80px;
-  height: 80px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 
 .feature-card h3 {
-  font-size: 24px;
-  background: var(--gradient-mixed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 15px;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 24px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .feature-card p {
-  color: var(--gray-dark);
+  color: #666;
   line-height: 1.6;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
+  font-weight: 400;
+  font-size: 1.2rem;
 }
 
 .feature-link {
-  color: var(--primary-red);
+  color: #2e6b6f;
   font-weight: 600;
-  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.1rem;
+  letter-spacing: 0.3px;
   position: relative;
-  display: inline-block;
 }
 
 .feature-link::after {
-  content: "";
+  content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -1px;
   left: 0;
   width: 0;
-  height: 2px;
-  background: var(--gradient-secondary);
-  transition: width 0.3s ease;
-}
-
-.feature-link:hover {
-  color: var(--red-light);
-  transform: translateX(4px);
+  height: 1px;
+  background: #2e6b6f;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .feature-link:hover::after {
   width: 100%;
+}
+
+.feature-link:hover {
+  color: #a0312d;
+  transform: translateX(4px);
 }
 
 .cta-section {
@@ -624,7 +639,7 @@
   font-size: 24px;
   color: #ffc107;
   margin-bottom: 15px;
-  letter-spacing: 2px;
+  font-style: italic;
 }
 
 .review-text {
