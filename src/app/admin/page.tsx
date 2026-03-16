@@ -131,6 +131,10 @@ const Admin = () => {
               <span>🔗</span>
               <span>Save Hero URLs</span>
             </Link>
+            <Link className="admin-nav-item" href="/admin/top-info-bar">
+              <span>📢</span>
+              <span>Top Info Bar</span>
+            </Link>
             <Link className="admin-nav-item" href="/admin/clear-cache">
               <span>🗑️</span>
               <span>Clear Cache</span>

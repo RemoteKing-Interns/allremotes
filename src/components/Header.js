@@ -172,13 +172,12 @@ const Header = () => {
         <div className="top-info-bar">
           <div className="container">
             <div className="info-items">
-              {(promotions.topInfoBar.items || [])
-                .concat(promotions.topInfoBar.items || [])
-                .map((text, idx) => (
-                  <span key={`${idx}-${text}`} className="info-item">
-                    {text}
-                  </span>
-                ))}
+              {(promotions.topInfoBar.items || []).map((text, idx, arr) => (
+                <React.Fragment key={`${idx}-${text}`}>
+                  <span className="info-item">{text}</span>
+                  {idx < arr.length - 1 && <span className="separator">|</span>}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         </div>

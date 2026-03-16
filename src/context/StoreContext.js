@@ -462,6 +462,15 @@ export const StoreProvider = ({ children }) => {
     postJson('/api/content/promotions', promotions);
   }, [postJson]);
 
+  const refreshPromotionsFromServer = useCallback(async () => {
+    const res = await getJson('/api/content/promotions');
+    if (!res || !res.data) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(res.data));
+      setPromotionsVersion((v) => v + 1);
+    }
+  }, [getJson]);
+
   const getSettings = useCallback(() => {
     try {
       if (typeof window === 'undefined') return defaultSettings;
@@ -525,6 +534,7 @@ export const StoreProvider = ({ children }) => {
     setReviews,
     getPromotions,
     setPromotions,
+    refreshPromotionsFromServer,
     getSettings,
     setSettings,
     productImagePool,
