@@ -1,22 +1,159 @@
 {
   "settings": {
-    "data": null,
+    "data": {
+      "siteName": "ALLREMOTES",
+      "contactEmail": "support@allremotes.com",
+      "currency": "AUD",
+      "showOutOfStock": true
+    },
     "updatedAt": "2026-03-05T00:01:33.145Z"
   },
   "promotions": {
-    "data": null,
+    "data": {
+      "infoBar": [
+        "12 MONTH WARRANTY",
+        "30 DAY RETURNS",
+        "SAFE & SECURE",
+        "FAST SHIPPING"
+      ],
+      "offers": [
+        {
+          "name": "Launch Offers",
+          "discounts": []
+        }
+      ]
+    },
     "updatedAt": "2026-03-05T00:05:21.405Z"
   },
   "navigation": {
-    "data": null,
+    "data": [
+      {
+        "id": "garage",
+        "label": "Garage Remotes",
+        "link": "/products/garage",
+        "iconIndex": 0,
+        "visible": true,
+        "columns": []
+      },
+      {
+        "id": "car",
+        "label": "Car Remotes",
+        "link": "/products/car",
+        "iconIndex": 1,
+        "visible": true,
+        "columns": []
+      },
+      {
+        "id": "all",
+        "label": "All Products",
+        "link": "/products/all",
+        "iconIndex": 2,
+        "visible": true,
+        "columns": []
+      },
+      {
+        "id": "accessories",
+        "label": "Accessories",
+        "link": "/garage-gate/accessories",
+        "iconIndex": 3,
+        "visible": true,
+        "columns": []
+      },
+      {
+        "id": "support",
+        "label": "Support",
+        "link": "/contact",
+        "iconIndex": 4,
+        "visible": true,
+        "columns": []
+      }
+    ],
     "updatedAt": "2026-03-05T00:05:22.803Z"
   },
   "reviews": {
-    "data": null,
+    "data": [
+      {
+        "id": "review-1",
+        "author": "Jordan P.",
+        "rating": 5,
+        "text": "Quick delivery and the remote paired instantly. Great service!",
+        "verified": true,
+        "date": "2026-03-01"
+      },
+      {
+        "id": "review-2",
+        "author": "Avery L.",
+        "rating": 4,
+        "text": "Good quality remote and helpful support team.",
+        "verified": true,
+        "date": "2026-03-03"
+      },
+      {
+        "id": "review-3",
+        "author": "Chris M.",
+        "rating": 5,
+        "text": "Exactly what I needed and easy to program.",
+        "verified": false,
+        "date": "2026-03-04"
+      }
+    ],
     "updatedAt": "2026-03-05T00:05:49.531Z"
   },
   "home": {
-    "data": null,
+    "data": {
+      "hero": {
+        "title": "Garage Door & Gate Remotes",
+        "subtitle": "Quality is Guaranteed",
+        "description": "Shop premium garage and car remotes with fast shipping and expert support.",
+        "buttons": [
+          { "label": "Shop Garage Remotes", "link": "/products/garage" },
+          { "label": "Shop Car Remotes", "link": "/products/car" }
+        ]
+      },
+      "features": [
+        {
+          "icon": "🚗",
+          "title": "Car Remotes",
+          "description": "Universal and brand-specific car remotes.",
+          "link": "/products/car"
+        },
+        {
+          "icon": "🚪",
+          "title": "Garage Remotes",
+          "description": "Reliable garage door and gate remotes.",
+          "link": "/products/garage"
+        },
+        {
+          "icon": "⭐",
+          "title": "Trusted Support",
+          "description": "Friendly help whenever you need it.",
+          "link": "/contact"
+        }
+      ],
+      "whyBuy": [
+        {
+          "icon": "✓",
+          "title": "Quality Guaranteed",
+          "description": "Genuine products backed by warranty."
+        },
+        {
+          "icon": "🚚",
+          "title": "Fast Shipping",
+          "description": "Quick dispatch across Australia."
+        },
+        {
+          "icon": "💬",
+          "title": "Expert Support",
+          "description": "Knowledgeable team ready to help."
+        }
+      ],
+      "cta": {
+        "title": "Find Your Perfect Remote",
+        "description": "Browse our full range of remotes and accessories.",
+        "buttonText": "View All Products",
+        "buttonLink": "/products/all"
+      }
+    },
     "updatedAt": "2026-03-05T00:05:49.656Z"
   }
 }
