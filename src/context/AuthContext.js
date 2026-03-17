@@ -76,35 +76,63 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
-  const loginWithOAuth = (provider, userData) => {
+  const loginWithOAuth = async (provider, userData) => {
     // Handle OAuth login (Google or Apple)
     // userData should contain: { id, name, email, provider, picture }
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // Check if user exists with this OAuth provider
-    let existingUser = users.find(u => u.email === userData.email && u.provider === provider);
-    
-    if (!existingUser) {
-      // Create new OAuth user
-      const newUser = {
-        id: userData.id || `${provider}_${Date.now()}`,
-        name: userData.name,
-        email: userData.email,
-        provider: provider,
-        picture: userData.picture || null,
-        createdAt: new Date().toISOString()
-      };
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-      existingUser = newUser;
-    }
+    try {
+      // Save user to database via API
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: userData.id || `${provider}_${Date.now()}`,
+          name: userData.name,
+          email: userData.email,
+          provider: provider,
+          picture: userData.picture || null,
+        }),
+      });
 
-    const userToStore = { ...existingUser };
-    delete userToStore.password;
-    setUser(userToStore);
-    localStorage.setItem('user', JSON.stringify(userToStore));
-    
-    return { success: true };
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error('Failed to save user to database:', result.error);
+        // Continue with localStorage fallback
+      }
+
+      // Also save to localStorage for offline access
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      let existingUser = users.find(u => u.email === userData.email && u.provider === provider);
+      
+      if (!existingUser) {
+        const newUser = {
+          id: userData.id || `${provider}_${Date.now()}`,
+          name: userData.name,
+          email: userData.email,
+          provider: provider,
+          picture: userData.picture || null,
+          createdAt: new Date().toISOString()
+        };
+        users.push(newUser);
+        localStorage.setItem('users', JSON.stringify(users));
+        existingUser = newUser;
+      }
+
+      const userToStore = result.success ? { ...result.user } : { ...existingUser };
+      delete userToStore.password;
+      delete userToStore._id; // Remove MongoDB _id from client state
+      
+      setUser(userToStore);
+      localStorage.setItem('user', JSON.stringify(userToStore));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error in loginWithOAuth:', error);
+      return { success: false, error: error.message };
+    }
   };
 
   const logout = () => {

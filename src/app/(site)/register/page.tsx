@@ -21,6 +21,31 @@ const Register = () => {
 
   useEffect(() => {
     setShowAppleLogin(isAppleDevice());
+    
+    // Load Apple Sign In SDK
+    if (isAppleDevice()) {
+      const script = document.createElement('script');
+      script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+      script.async = true;
+      document.body.appendChild(script);
+      
+      script.onload = () => {
+        if ((window as any).AppleID) {
+          (window as any).AppleID.auth.init({
+            clientId: process.env.NEXT_PUBLIC_APPLE_SERVICE_ID || '',
+            scope: 'name email',
+            redirectURI: window.location.origin,
+            usePopup: true
+          });
+        }
+      };
+      
+      return () => {
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -66,7 +91,7 @@ const Register = () => {
         picture: decoded.picture || null
       };
       
-      const result = loginWithOAuth('google', googleUser);
+      const result = await loginWithOAuth('google', googleUser);
       
       if (result.success) {
         router.push("/");
@@ -85,16 +110,42 @@ const Register = () => {
     setLoading(true);
     
     try {
-      // In production, this would use Apple Sign In SDK
-      const mockAppleUser = {
-        id: 'apple_' + Date.now(),
-        name: 'Apple User',
-        email: 'user@icloud.com',
+      // Check if Apple Sign In is available
+      if (typeof window === 'undefined' || !(window as any).AppleID) {
+        setError('Apple Sign In is not available');
+        setLoading(false);
+        return;
+      }
+
+      // Trigger Apple Sign In
+      const data = await (window as any).AppleID.auth.signIn();
+      
+      // Send authorization code to backend for verification
+      const response = await fetch('/api/auth/apple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: data.authorization.code,
+          user: data.user
+        })
+      });
+
+      const appleResult = await response.json();
+
+      if (!appleResult.success) {
+        setError('Failed to verify Apple Sign In');
+        setLoading(false);
+        return;
+      }
+
+      // Register with OAuth
+      const result = await loginWithOAuth('apple', {
+        id: appleResult.user.id,
+        name: appleResult.user.name,
+        email: appleResult.user.email,
         provider: 'apple',
         picture: null
-      };
-      
-      const result = loginWithOAuth('apple', mockAppleUser);
+      });
       
       if (result.success) {
         router.push("/");
@@ -102,6 +153,7 @@ const Register = () => {
         setError('Failed to register with Apple');
       }
     } catch (err) {
+      console.error('Apple registration error:', err);
       setError('Failed to register with Apple');
     }
     
