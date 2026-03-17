@@ -76,6 +76,37 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
+  const loginWithOAuth = (provider, userData) => {
+    // Handle OAuth login (Google or Apple)
+    // userData should contain: { id, name, email, provider, picture }
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Check if user exists with this OAuth provider
+    let existingUser = users.find(u => u.email === userData.email && u.provider === provider);
+    
+    if (!existingUser) {
+      // Create new OAuth user
+      const newUser = {
+        id: userData.id || `${provider}_${Date.now()}`,
+        name: userData.name,
+        email: userData.email,
+        provider: provider,
+        picture: userData.picture || null,
+        createdAt: new Date().toISOString()
+      };
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      existingUser = newUser;
+    }
+
+    const userToStore = { ...existingUser };
+    delete userToStore.password;
+    setUser(userToStore);
+    localStorage.setItem('user', JSON.stringify(userToStore));
+    
+    return { success: true };
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -119,7 +150,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser, changePassword, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithOAuth, register, logout, updateUser, changePassword, loading }}>
       {children}
     </AuthContext.Provider>
   );

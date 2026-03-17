@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useStore } from "../../context/StoreContext";
 import ProductCard from "../../components/ProductCard";
@@ -11,6 +11,7 @@ const Home = () => {
   const home = getHomeContent();
   const reviews = getReviews() || [];
   const [currentSlide, setCurrentSlide] = useState(0);
+  const trustBarRef = useRef(null);
   const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
     ? home.heroImages
     : ["/images/hero.jpg", "/images/heroimg.jpg"];
@@ -80,7 +81,7 @@ const Home = () => {
 
       <div className="trust-bar">
         <div className="container">
-          <div className="trust-bar-inner">
+          <div className="trust-bar-inner" ref={trustBarRef}>
             <div className="trust-item">
               <span className="trust-item-icon">🛡️</span>
               <span>12 Month Warranty</span>
@@ -100,6 +101,59 @@ const Home = () => {
             <div className="trust-item">
               <span className="trust-item-icon">⭐</span>
               <span>1,500+ Reviews</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">✓</span>
+              <span>Australian Owned</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">💯</span>
+              <span>100% Genuine</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">📦</span>
+              <span>Fast Dispatch</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🛒</span>
+              <span>No Minimum Order</span>
+            </div>
+            {/* Duplicate items for seamless loop */}
+            <div className="trust-item">
+              <span className="trust-item-icon">🛡️</span>
+              <span>12 Month Warranty</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🔄</span>
+              <span>30 Day Returns</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🚚</span>
+              <span>Free Shipping AU</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🔒</span>
+              <span>Secure Payments</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">⭐</span>
+              <span>1,500+ Reviews</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">✓</span>
+              <span>Australian Owned</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">💯</span>
+              <span>100% Genuine</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">📦</span>
+              <span>Fast Dispatch</span>
+            </div>
+            <div className="trust-item">
+              <span className="trust-item-icon">🛒</span>
+              <span>No Minimum Order</span>
             </div>
           </div>
         </div>

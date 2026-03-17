@@ -147,42 +147,175 @@
 }
 
 @media (max-width: 968px) {
+  .account-page {
+    padding: 20px 0 60px;
+  }
+
+  .account-header {
+    margin-bottom: 25px;
+  }
+
+  .account-header h1 {
+    font-size: 36px;
+  }
+
+  .account-header p {
+    font-size: 16px;
+  }
+
   .account-content {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .account-sidebar {
     position: static;
+    padding: 20px 15px;
+  }
+
+  .account-profile-summary {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 12px;
+  }
+
+  .avatar-placeholder {
+    font-size: 32px;
+  }
+
+  .account-profile-summary h3 {
+    font-size: 18px;
+  }
+
+  .account-profile-summary p {
+    font-size: 13px;
   }
 
   .account-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
   }
 
   .account-nav-item {
-    flex: 1;
-    min-width: 150px;
+    flex-direction: column;
+    padding: 12px 8px;
+    gap: 6px;
+    min-height: 70px;
     justify-content: center;
+    align-items: center;
+  }
+
+  .account-nav-item:hover {
+    transform: translateY(-2px);
+  }
+
+  .nav-icon {
+    font-size: 22px;
   }
 
   .nav-label {
-    display: none;
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.2;
   }
 
   .account-main {
-    padding: 30px 20px;
+    padding: 25px 20px;
   }
 }
 
 @media (max-width: 768px) {
+  .account-page {
+    padding: 15px 0 50px;
+  }
+
   .account-header h1 {
-    font-size: 32px;
+    font-size: 28px;
+  }
+
+  .account-header p {
+    font-size: 14px;
+  }
+
+  .account-content {
+    gap: 15px;
+  }
+
+  .account-sidebar {
+    padding: 15px;
+  }
+
+  .profile-avatar {
+    width: 70px;
+    height: 70px;
+  }
+
+  .avatar-placeholder {
+    font-size: 28px;
+  }
+
+  .account-profile-summary h3 {
+    font-size: 16px;
+  }
+
+  .account-nav {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
 
   .account-nav-item {
-    min-width: 80px;
-    padding: 12px;
+    padding: 10px 6px;
+    min-height: 65px;
+    border-radius: 8px;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+  }
+
+  .account-main {
+    padding: 20px 15px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-header h1 {
+    font-size: 24px;
+  }
+
+  .account-header p {
+    font-size: 13px;
+  }
+
+  .account-nav {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .account-nav-item {
+    padding: 10px 4px;
+    min-height: 60px;
+  }
+
+  .nav-icon {
+    font-size: 18px;
+  }
+
+  .nav-label {
+    font-size: 9px;
+  }
+
+  .account-main {
+    padding: 15px;
   }
 }

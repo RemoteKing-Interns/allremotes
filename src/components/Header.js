@@ -304,20 +304,16 @@ const Header = () => {
                   <div
                     ref={accountMenuRef}
                     className="account-menu-container"
-                    onMouseEnter={() => setShowAccountMenu(true)}
-                    onMouseLeave={() => setShowAccountMenu(false)}
-                    onFocus={() => setShowAccountMenu(true)}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget)) {
-                        setShowAccountMenu(false);
-                      }
-                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setShowAccountMenu(false);
                     }}
                   >
-                    <Link
-                      href="/account"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowAccountMenu(!showAccountMenu);
+                      }}
                       className="user-icon"
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
@@ -334,7 +330,7 @@ const Header = () => {
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                       </svg>
-                    </Link>
+                    </button>
 
                     {isClient && showAccountMenu && (
                       <div className="account-menu-dropdown" role="menu">
@@ -568,7 +564,7 @@ const Header = () => {
         <div className="container">
           <div className="nav-inner">
             <div className="nav-links">
-              {Object.keys(navigationMenu)
+              {isClient && Object.keys(navigationMenu)
                 .filter((key) => !navigationMenu[key]?.hidden)
                 .map((key) => {
                   const menuItem = navigationMenu[key];
