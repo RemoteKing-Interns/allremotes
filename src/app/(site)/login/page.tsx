@@ -25,13 +25,20 @@ const Login = () => {
     document.body.appendChild(script);
     
     script.onload = () => {
-      if ((window as any).AppleID) {
-        (window as any).AppleID.auth.init({
-          clientId: process.env.NEXT_PUBLIC_APPLE_SERVICE_ID || '',
-          scope: 'name email',
-          redirectURI: window.location.origin,
-          usePopup: true
-        });
+      const clientId = process.env.NEXT_PUBLIC_APPLE_SERVICE_ID;
+      if ((window as any).AppleID && clientId) {
+        try {
+          (window as any).AppleID.auth.init({
+            clientId: clientId,
+            scope: 'name email',
+            redirectURI: window.location.origin,
+            usePopup: true
+          });
+        } catch (error) {
+          console.error('Failed to initialize Apple Sign In:', error);
+        }
+      } else {
+        console.warn('Apple Sign In not configured - missing NEXT_PUBLIC_APPLE_SERVICE_ID');
       }
     };
     
@@ -89,19 +96,24 @@ const Login = () => {
   };
 
   const handleAppleLogin = async () => {
+    console.log('Apple button clicked');
     setError('');
     setLoading(true);
     
     try {
       // Check if Apple Sign In is available
+      console.log('Checking AppleID SDK:', (window as any).AppleID);
       if (typeof window === 'undefined' || !(window as any).AppleID) {
-        setError('Apple Sign In is not available');
+        console.error('Apple Sign In SDK not loaded');
+        setError('Apple Sign In is not available. Please refresh the page.');
         setLoading(false);
         return;
       }
 
+      console.log('Triggering Apple Sign In...');
       // Trigger Apple Sign In
       const data = await (window as any).AppleID.auth.signIn();
+      console.log('Apple Sign In response:', data);
       
       // Send authorization code to backend for verification
       const response = await fetch('/api/auth/apple', {

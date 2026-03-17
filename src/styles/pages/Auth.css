@@ -120,6 +120,9 @@
 
 .google-oauth-wrapper {
   width: 100%;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 
 .google-oauth-wrapper > div {
@@ -135,6 +138,7 @@
 .google-oauth-wrapper iframe {
   min-height: 48px !important;
   height: auto !important;
+  pointer-events: none;
 }
 
 .btn-oauth {
@@ -180,16 +184,27 @@
 .btn-apple {
   color: #000;
   background-color: #fff;
-  border-color: var(--gray-medium);
+  border: 2px solid #000;
+  min-height: 48px;
+  font-weight: 500;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .btn-apple:hover:not(:disabled) {
-  background-color: var(--gray-light);
+  background-color: #000;
+  color: #fff;
   border-color: #000;
+}
+
+.btn-apple:hover:not(:disabled) svg {
+  fill: #fff;
 }
 
 .btn-apple svg {
   fill: #000;
+  transition: fill 0.3s ease;
 }
 
 @media (max-width: 768px) {

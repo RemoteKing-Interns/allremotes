@@ -27,13 +27,20 @@ const Register = () => {
     document.body.appendChild(script);
     
     script.onload = () => {
-      if ((window as any).AppleID) {
-        (window as any).AppleID.auth.init({
-          clientId: process.env.NEXT_PUBLIC_APPLE_SERVICE_ID || '',
-          scope: 'name email',
-          redirectURI: window.location.origin,
-          usePopup: true
-        });
+      const clientId = process.env.NEXT_PUBLIC_APPLE_SERVICE_ID;
+      if ((window as any).AppleID && clientId) {
+        try {
+          (window as any).AppleID.auth.init({
+            clientId: clientId,
+            scope: 'name email',
+            redirectURI: window.location.origin,
+            usePopup: true
+          });
+        } catch (error) {
+          console.error('Failed to initialize Apple Sign In:', error);
+        }
+      } else {
+        console.warn('Apple Sign In not configured - missing NEXT_PUBLIC_APPLE_SERVICE_ID');
       }
     };
     
