@@ -20,20 +20,16 @@ const Checkout = () => {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isGuest = searchParams.get('guest') === '1';
+  const isGuest = searchParams.get("guest") === "1";
   const geoapifyApiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
-  const geoapifyCountryFilter = 'au';
+  const geoapifyCountryFilter = "au";
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: ''
+    fullName: "",
+    email: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
   });
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -57,7 +53,10 @@ const Checkout = () => {
     };
   }, []);
 
-  const normalizedAddressQuery = useMemo(() => formData.address.trim(), [formData.address]);
+  const normalizedAddressQuery = useMemo(
+    () => formData.address.trim(),
+    [formData.address],
+  );
 
   useEffect(() => {
     if (!geoapifyApiKey) return;
@@ -71,19 +70,22 @@ const Checkout = () => {
     const timeoutId = setTimeout(async () => {
       try {
         setIsAddressLoading(true);
-        const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
-        url.searchParams.set('text', normalizedAddressQuery);
-        url.searchParams.set('limit', '5');
-        url.searchParams.set('format', 'json');
-        url.searchParams.set('apiKey', geoapifyApiKey);
+        const url = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
+        url.searchParams.set("text", normalizedAddressQuery);
+        url.searchParams.set("limit", "5");
+        url.searchParams.set("format", "json");
+        url.searchParams.set("apiKey", geoapifyApiKey);
         if (geoapifyCountryFilter) {
-          url.searchParams.set('filter', `countrycode:${geoapifyCountryFilter}`);
+          url.searchParams.set(
+            "filter",
+            `countrycode:${geoapifyCountryFilter}`,
+          );
         }
 
         const response = await fetch(url.toString(), {
-          method: 'GET',
-          redirect: 'follow',
-          signal: controller.signal
+          method: "GET",
+          redirect: "follow",
+          signal: controller.signal,
         });
         if (!response.ok) {
           setAddressSuggestions([]);
@@ -94,19 +96,19 @@ const Checkout = () => {
         const suggestions = results
           .map((r, idx) => ({
             id: String(r.place_id ?? r.rank?.popularity ?? r.formatted ?? idx),
-            formatted: r.formatted ?? '',
-            addressLine1: r.address_line1 ?? '',
-            addressLine2: r.address_line2 ?? '',
-            city: r.city ?? r.town ?? r.village ?? r.suburb ?? '',
-            state: r.state ?? '',
-            postcode: r.postcode ?? '',
-            country: r.country ?? ''
+            formatted: r.formatted ?? "",
+            addressLine1: r.address_line1 ?? "",
+            addressLine2: r.address_line2 ?? "",
+            city: r.city ?? r.town ?? r.village ?? r.suburb ?? "",
+            state: r.state ?? "",
+            postcode: r.postcode ?? "",
+            country: r.country ?? "",
           }))
           .filter((s) => s.formatted || s.addressLine1);
 
         setAddressSuggestions(suggestions);
       } catch (err) {
-        if (err?.name !== 'AbortError') {
+        if (err?.name !== "AbortError") {
           setAddressSuggestions([]);
         }
       } finally {
@@ -131,13 +133,13 @@ const Checkout = () => {
   if (shouldRedirectToLogin || shouldRedirectToCart) return null;
 
   const handleChange = (e) => {
-    if (e.target.name === 'address') {
+    if (e.target.name === "address") {
       setActiveSuggestionIndex(-1);
       setShowAddressSuggestions(true);
     }
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -147,7 +149,7 @@ const Checkout = () => {
       address: suggestion.addressLine1 || suggestion.formatted || prev.address,
       city: suggestion.city || prev.city,
       state: suggestion.state || prev.state,
-      zipCode: suggestion.postcode || prev.zipCode
+      zipCode: suggestion.postcode || prev.zipCode,
     }));
     setShowAddressSuggestions(false);
     setActiveSuggestionIndex(-1);
@@ -157,22 +159,24 @@ const Checkout = () => {
     if (!showAddressSuggestions) return;
     if (addressSuggestions.length === 0) return;
 
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveSuggestionIndex((i) => Math.min(i + 1, addressSuggestions.length - 1));
+      setActiveSuggestionIndex((i) =>
+        Math.min(i + 1, addressSuggestions.length - 1),
+      );
       return;
     }
-    if (e.key === 'ArrowUp') {
+    if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveSuggestionIndex((i) => Math.max(i - 1, 0));
       return;
     }
-    if (e.key === 'Enter' && activeSuggestionIndex >= 0) {
+    if (e.key === "Enter" && activeSuggestionIndex >= 0) {
       e.preventDefault();
       applyAddressSuggestion(addressSuggestions[activeSuggestionIndex]);
       return;
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       setShowAddressSuggestions(false);
       setActiveSuggestionIndex(-1);
     }
@@ -246,9 +250,13 @@ const Checkout = () => {
           <div className="order-success">
             <div className="success-icon">✓</div>
             <h1>Order Placed Successfully!</h1>
-            <p>Thank you for your purchase{user ? `, ${user.name}` : ''}!</p>
+            <p>Thank you for your purchase{user ? `, ${user.name}` : ""}!</p>
             <p>Your order has been confirmed and will be shipped soon.</p>
-            {placedOrderId && <p style={{ marginTop: 10, opacity: 0.9 }}>Order ID: <strong>{placedOrderId}</strong></p>}
+            {placedOrderId && (
+              <p style={{ marginTop: 10, opacity: 0.9 }}>
+                Order ID: <strong>{placedOrderId}</strong>
+              </p>
+            )}
             <button
               onClick={() => router.push("/")}
               className="btn btn-primary btn-large"
@@ -265,7 +273,11 @@ const Checkout = () => {
     <div className="checkout-page">
       <div className="container">
         <h1>Checkout</h1>
-        {placeError && <div className="error-message" style={{ marginBottom: 16 }}>{placeError}</div>}
+        {placeError && (
+          <div className="error-message" style={{ marginBottom: 16 }}>
+            {placeError}
+          </div>
+        )}
         <div className="checkout-content">
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="form-section">
@@ -303,7 +315,8 @@ const Checkout = () => {
                     onKeyDown={handleAddressKeyDown}
                     onFocus={() => setShowAddressSuggestions(true)}
                     onBlur={() => {
-                      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+                      if (blurTimeoutRef.current)
+                        clearTimeout(blurTimeoutRef.current);
                       blurTimeoutRef.current = setTimeout(() => {
                         setShowAddressSuggestions(false);
                         setActiveSuggestionIndex(-1);
@@ -314,39 +327,51 @@ const Checkout = () => {
                     autoComplete="street-address"
                     role="combobox"
                     aria-autocomplete="list"
-                    aria-expanded={showAddressSuggestions && (isAddressLoading || addressSuggestions.length > 0)}
+                    aria-expanded={
+                      showAddressSuggestions &&
+                      (isAddressLoading || addressSuggestions.length > 0)
+                    }
                     aria-controls="address-suggestions"
                     aria-activedescendant={
-                      activeSuggestionIndex >= 0 ? `address-suggestion-${activeSuggestionIndex}` : undefined
+                      activeSuggestionIndex >= 0
+                        ? `address-suggestion-${activeSuggestionIndex}`
+                        : undefined
                     }
                   />
-                  {geoapifyApiKey && showAddressSuggestions && (isAddressLoading || addressSuggestions.length > 0) && (
-                    <div id="address-suggestions" className="address-suggestions" role="listbox">
-                      {isAddressLoading && (
-                        <div className="address-suggestion address-suggestion--meta">
-                          Searching…
-                        </div>
-                      )}
-                      {!isAddressLoading &&
-                        addressSuggestions.map((s, idx) => (
-                          <button
-                            key={s.id}
-                            id={`address-suggestion-${idx}`}
-                            type="button"
-                            className={`address-suggestion${idx === activeSuggestionIndex ? ' address-suggestion--active' : ''}`}
-                            role="option"
-                            aria-selected={idx === activeSuggestionIndex}
-                            onMouseDown={(ev) => ev.preventDefault()}
-                            onClick={() => applyAddressSuggestion(s)}
-                          >
-                            {s.formatted || s.addressLine1}
-                          </button>
-                        ))}
-                    </div>
-                  )}
+                  {geoapifyApiKey &&
+                    showAddressSuggestions &&
+                    (isAddressLoading || addressSuggestions.length > 0) && (
+                      <div
+                        id="address-suggestions"
+                        className="address-suggestions"
+                        role="listbox"
+                      >
+                        {isAddressLoading && (
+                          <div className="address-suggestion address-suggestion--meta">
+                            Searching…
+                          </div>
+                        )}
+                        {!isAddressLoading &&
+                          addressSuggestions.map((s, idx) => (
+                            <button
+                              key={s.id}
+                              id={`address-suggestion-${idx}`}
+                              type="button"
+                              className={`address-suggestion${idx === activeSuggestionIndex ? " address-suggestion--active" : ""}`}
+                              role="option"
+                              aria-selected={idx === activeSuggestionIndex}
+                              onMouseDown={(ev) => ev.preventDefault()}
+                              onClick={() => applyAddressSuggestion(s)}
+                            >
+                              {s.formatted || s.addressLine1}
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   {!geoapifyApiKey && (
                     <div className="address-helper">
-                      Address autocomplete is disabled (missing `NEXT_PUBLIC_GEOAPIFY_API_KEY`).
+                      Address autocomplete is disabled (missing
+                      `NEXT_PUBLIC_GEOAPIFY_API_KEY`).
                     </div>
                   )}
                 </div>
@@ -388,74 +413,25 @@ const Checkout = () => {
               </div>
             </div>
 
-            <div className="form-section">
-              <h2>Payment Information</h2>
-              <div className="form-group">
-                <label>Card Number</label>
-                <input
-                  type="text"
-                  name="cardNumber"
-                  value={formData.cardNumber}
-                  onChange={handleChange}
-                  required
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                />
-              </div>
-              <div className="form-group">
-                <label>Cardholder Name</label>
-                <input
-                  type="text"
-                  name="cardName"
-                  value={formData.cardName}
-                  onChange={handleChange}
-                  required
-                  placeholder="Name on card"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="text"
-                    name="expiryDate"
-                    value={formData.expiryDate}
-                    onChange={handleChange}
-                    required
-                    placeholder="MM/YY"
-                    maxLength={5}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>CVV</label>
-                  <input
-                    type="text"
-                    name="cvv"
-                    value={formData.cvv}
-                    onChange={handleChange}
-                    required
-                    placeholder="123"
-                    maxLength={3}
-                  />
-                </div>
-              </div>
-            </div>
-
             <button
               type="submit"
               className="btn btn-primary btn-large"
               disabled={loading}
             >
-              {loading ? 'Processing...' : `Place Order - AU$${discountedTotal.toFixed(2)}`}
+              {loading
+                ? "Processing..."
+                : `Place Order - AU$${discountedTotal.toFixed(2)}`}
             </button>
           </form>
 
           <div className="order-summary">
             <h2>Order Summary</h2>
             <div className="summary-items">
-              {cart.map(item => (
+              {cart.map((item) => (
                 <div key={item.id} className="summary-item">
-                  <span>{item.name} x{item.quantity}</span>
+                  <span>
+                    {item.name} x{item.quantity}
+                  </span>
                   {(() => {
                     const pricing = getItemPriceBreakdown(item);
                     const originalLine = pricing.originalPrice * item.quantity;
@@ -463,9 +439,13 @@ const Checkout = () => {
                     return (
                       <span className="summary-item-price">
                         {pricing.hasDiscount && (
-                          <span className="summary-item-price-old">AU${originalLine.toFixed(2)}</span>
+                          <span className="summary-item-price-old">
+                            AU${originalLine.toFixed(2)}
+                          </span>
                         )}
-                        <span className="summary-item-price-new">AU${lineTotal.toFixed(2)}</span>
+                        <span className="summary-item-price-new">
+                          AU${lineTotal.toFixed(2)}
+                        </span>
                       </span>
                     );
                   })()}
