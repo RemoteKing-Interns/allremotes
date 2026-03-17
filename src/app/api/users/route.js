@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '../../../lib/mongodb';
+import { getDb } from '../../../lib/mongo';
 
 export async function POST(request) {
   try {
     const userData = await request.json();
     
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const usersCollection = db.collection('users');
 
     // Check if user already exists
@@ -61,8 +60,7 @@ export async function GET(request) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const usersCollection = db.collection('users');
 
     const query = { email };
