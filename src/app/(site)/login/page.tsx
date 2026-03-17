@@ -13,37 +13,33 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showAppleLogin, setShowAppleLogin] = useState(false);
+  const [showAppleLogin, setShowAppleLogin] = useState(true);
   const { login, loginWithOAuth } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    setShowAppleLogin(isAppleDevice());
+    // Load Apple Sign In SDK on all devices
+    const script = document.createElement('script');
+    script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+    script.async = true;
+    document.body.appendChild(script);
     
-    // Load Apple Sign In SDK
-    if (isAppleDevice()) {
-      const script = document.createElement('script');
-      script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-      script.async = true;
-      document.body.appendChild(script);
-      
-      script.onload = () => {
-        if ((window as any).AppleID) {
-          (window as any).AppleID.auth.init({
-            clientId: process.env.NEXT_PUBLIC_APPLE_SERVICE_ID || '',
-            scope: 'name email',
-            redirectURI: window.location.origin,
-            usePopup: true
-          });
-        }
-      };
-      
-      return () => {
-        if (document.body.contains(script)) {
-          document.body.removeChild(script);
-        }
-      };
-    }
+    script.onload = () => {
+      if ((window as any).AppleID) {
+        (window as any).AppleID.auth.init({
+          clientId: process.env.NEXT_PUBLIC_APPLE_SERVICE_ID || '',
+          scope: 'name email',
+          redirectURI: window.location.origin,
+          usePopup: true
+        });
+      }
+    };
+    
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, []);
 
   const handleSubmit = async (e) => {

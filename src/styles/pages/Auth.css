@@ -172,17 +172,17 @@
 
 .btn-apple {
   color: #000;
-  background-color: #000;
-  border-color: #000;
+  background-color: #fff;
+  border-color: var(--gray-medium);
 }
 
 .btn-apple:hover:not(:disabled) {
-  background-color: #333;
-  border-color: #333;
+  background-color: var(--gray-light);
+  border-color: #000;
 }
 
 .btn-apple svg {
-  fill: #fff;
+  fill: #000;
 }
 
 @media (max-width: 768px) {
