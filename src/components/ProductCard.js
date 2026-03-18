@@ -198,4 +198,3 @@ const ProductCard = ({ product, onAddToCart = null }) => {
 };
 
 export default ProductCard;
-
