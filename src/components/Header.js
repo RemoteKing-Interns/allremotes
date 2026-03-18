@@ -209,41 +209,45 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="header">
+    <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md">
       {promotions?.topInfoBar?.enabled && (promotions?.topInfoBar?.items || []).length > 0 && (
-        <div className="top-info-bar">
+        <div className="border-b border-neutral-200 bg-neutral-100/70">
           <div className="container">
-            <div className="info-items">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-2 text-xs font-semibold text-neutral-700 sm:justify-between">
               {(promotions.topInfoBar.items || []).map((text, idx) => (
-                  <span key={`${idx}-${text}`} className="info-item">
-                    {text}
-                  </span>
-                ))}
+                <span key={`${idx}-${text}`} className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent/70" />
+                  {text}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      <div className="main-header">
+      <div>
         <div className="container">
-          <div className="header-content">
-            <Link href="/" className="logo-container">
-              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="logo" />
+          <div className="flex items-center gap-3 py-4 md:gap-5">
+            <Link href="/" className="shrink-0" aria-label="ALLREMOTES home">
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto sm:h-11" />
             </Link>
 
-            <div className="search-container" ref={searchRef}>
-              <form onSubmit={handleSearchSubmit} className="search-form">
+            <div className="relative hidden flex-1 md:block" ref={searchRef}>
+              <form onSubmit={handleSearchSubmit} className="relative">
                 <input
                   type="text"
                   placeholder="Search remote, brand, or model"
-                  className="search-input"
+                  className="h-12 w-full rounded-2xl border border-neutral-200 bg-white/90 pl-4 pr-12 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/40"
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery && setShowSearchResults(true)}
                 />
-                <button type="submit" className="search-submit-btn">
+                <button
+                  type="submit"
+                  className="absolute right-1 top-1 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-dark transition hover:bg-accent/15"
+                  aria-label="Search"
+                >
                   <svg
-                    className="search-icon"
                     width="20"
                     height="20"
                     viewBox="0 0 24 24"
@@ -258,28 +262,29 @@ const Header = () => {
               </form>
 
               {showSearchResults && searchResults.length > 0 && (
-                <div className="search-results">
-                  <div className="search-results-header">
+                <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-[1300] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong">
+                  <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
                     <span>Search Results ({searchResults.length})</span>
+                    <span className="text-neutral-400">Top matches</span>
                   </div>
-                  <div className="search-results-list">
+                  <div className="max-h-[22rem] overflow-auto">
                     {searchResults.map((product) => (
                       <Link
                         key={product.id}
                         href={`/product/${product.id}`}
-                        className="search-result-item"
+                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
                         onClick={handleProductClick}
                       >
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="search-result-image"
+                          className="h-12 w-12 rounded-xl border border-neutral-200 bg-white object-contain p-1"
                           onError={(e) => {
                             e.currentTarget.src = "/images/mainlogo.png";
                           }}
                         />
-                        <div className="search-result-info">
-                          <div className="search-result-name">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-neutral-900">
                             {product.name}
                           </div>
                           {(() => {
@@ -289,19 +294,19 @@ const Header = () => {
                               { promotions, product },
                             );
                             return (
-                              <div className="search-result-price">
+                              <div className="mt-1 flex items-baseline gap-2">
                                 {pricing.hasDiscount && (
-                                  <span className="search-result-price-old">
+                                  <span className="text-xs text-neutral-400 line-through">
                                     AU${pricing.originalPrice.toFixed(2)}
                                   </span>
                                 )}
-                                <span className="search-result-price-new">
+                                <span className="text-sm font-extrabold text-neutral-900">
                                   AU${pricing.finalPrice.toFixed(2)}
                                 </span>
                               </div>
                             );
                           })()}
-                          <div className="search-result-category">
+                          <div className="mt-1 text-xs font-semibold text-neutral-500">
                             {product.category === "car"
                               ? "Automotive Remote"
                               : "Garage & Gate Remote"}
@@ -311,11 +316,11 @@ const Header = () => {
                     ))}
                   </div>
                   {searchResults.length >= 8 && (
-                    <div className="search-results-footer">
+                    <div className="border-t border-neutral-200 p-3">
                       <button
                         type="button"
                         onClick={handleSearchSubmit}
-                        className="search-view-all"
+                        className="w-full rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
                       >
                         View All Results
                       </button>
@@ -327,23 +332,25 @@ const Header = () => {
               {showSearchResults &&
                 searchQuery.trim().length > 0 &&
                 searchResults.length === 0 && (
-                  <div className="search-results">
-                    <div className="search-no-results">
-                      <p>No products found for "{searchQuery}"</p>
-                      <p className="search-suggestion">
-                        Try searching for "car", "garage", or "remote"
-                      </p>
-                    </div>
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-[1300] rounded-2xl border border-neutral-200 bg-white p-4 shadow-strong">
+                    <p className="text-sm font-semibold text-neutral-900">
+                      No products found for &quot;{searchQuery}&quot;
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Try searching for <span className="font-semibold">car</span>,{" "}
+                      <span className="font-semibold">garage</span>, or{" "}
+                      <span className="font-semibold">remote</span>.
+                    </p>
                   </div>
                 )}
             </div>
 
-            <div className="header-actions">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
               {user ? (
                 <>
                   <div
                     ref={accountMenuRef}
-                    className="account-menu-container"
+                    className="relative"
                     onMouseEnter={openAccountMenu}
                     onMouseLeave={scheduleAccountMenuClose}
                     onFocus={openAccountMenu}
@@ -359,7 +366,7 @@ const Header = () => {
                   >
                     <Link
                       href="/account"
-                      className="user-icon"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100"
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
                       aria-label="Account menu"
@@ -380,15 +387,15 @@ const Header = () => {
 
                     {showAccountMenu && (
                       <div
-                        className="account-menu-dropdown"
+                        className="absolute right-0 top-[calc(100%+0.6rem)] z-[1400] w-[18rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
                         role="menu"
                         onMouseEnter={cancelAccountMenuClose}
                         onMouseLeave={scheduleAccountMenuClose}
                       >
-                        <div className="account-menu-header">
-                          <div className="account-menu-name">{user.name}</div>
+                        <div className="border-b border-neutral-200 px-4 py-3">
+                          <div className="text-sm font-semibold text-neutral-900">{user.name}</div>
                           {user.email && (
-                            <div className="account-menu-email">
+                            <div className="mt-0.5 truncate text-xs font-semibold text-neutral-500">
                               {user.email}
                             </div>
                           )}
@@ -396,7 +403,7 @@ const Header = () => {
 
                         <Link
                           href="/account?tab=basics"
-                          className="account-menu-item"
+                          className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
                         >
@@ -404,7 +411,7 @@ const Header = () => {
                         </Link>
                         <Link
                           href="/account?tab=orders"
-                          className="account-menu-item"
+                          className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
                         >
@@ -412,7 +419,7 @@ const Header = () => {
                         </Link>
                         <Link
                           href="/account?tab=notifications"
-                          className="account-menu-item"
+                          className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
                         >
@@ -420,14 +427,14 @@ const Header = () => {
                         </Link>
                         <Link
                           href="/account?tab=help"
-                          className="account-menu-item"
+                          className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
                           role="menuitem"
                           onClick={() => setShowAccountMenu(false)}
                         >
                           Help & Support
                         </Link>
 
-                        <div className="account-menu-divider" />
+                        <div className="h-px bg-neutral-200" />
 
                         <button
                           type="button"
@@ -435,7 +442,7 @@ const Header = () => {
                             setShowAccountMenu(false);
                             handleLogout();
                           }}
-                          className="account-menu-item account-menu-logout"
+                          className="block w-full px-4 py-3 text-left text-sm font-semibold text-primary-dark hover:bg-primary/5"
                           role="menuitem"
                         >
                           Logout
@@ -454,8 +461,7 @@ const Header = () => {
                   </Button>
                 </>
               )}
-              <Link href="/cart" className="cart-icon-new">
-                <div className="cart-icon-wrapper">
+              <Link href="/cart" className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100" aria-label="Cart">
                   <svg
                     width="26"
                     height="26"
@@ -470,23 +476,27 @@ const Header = () => {
                     <circle cx="18" cy="20" r="1.3" />
                   </svg>
                   {cartCount > 0 && (
-                    <span className="cart-badge-new">{cartCount}</span>
+                    <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-extrabold text-white shadow-sm">
+                      {cartCount}
+                    </span>
                   )}
-                </div>
               </Link>
 
               {/* Hamburger Button - Mobile Only */}
               <button
                 ref={hamburgerRef}
-                className="hamburger-btn"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 md:hidden"
                 onClick={openDrawer}
                 aria-expanded={mobileDrawerOpen}
                 aria-controls="mobile-drawer"
                 aria-label="Toggle navigation menu"
               >
-                <span className="hamburger-line"></span>
-                <span className="hamburger-line"></span>
-                <span className="hamburger-line"></span>
+                <span className="sr-only">Open menu</span>
+                <div className="grid gap-1.5">
+                  <span className="h-0.5 w-5 rounded-full bg-neutral-800" />
+                  <span className="h-0.5 w-5 rounded-full bg-neutral-800" />
+                  <span className="h-0.5 w-5 rounded-full bg-neutral-800" />
+                </div>
               </button>
             </div>
           </div>
@@ -504,23 +514,25 @@ const Header = () => {
           }
         }}
       >
-        <SheetContent id="mobile-drawer" className="mobile-drawer">
-          <SheetHeader className="drawer-content-header">
-            <SheetTitle className="drawer-title">Menu</SheetTitle>
+        <SheetContent id="mobile-drawer" className="md:hidden">
+          <SheetHeader>
+            <SheetTitle>Menu</SheetTitle>
             <SheetDescription>
               Browse categories, shop products, and access your account.
             </SheetDescription>
           </SheetHeader>
 
-          <div className="drawer-content">
-            <nav className="drawer-nav">
+          <div className="mt-4 grid gap-6">
+            <nav className="grid gap-1">
               {navItems.map((menuItem) => {
                 const isActive = isRouteActive(menuItem.path);
                 return (
                   <Link
                     key={menuItem.key}
                     href={menuItem.path}
-                    className={`drawer-nav-link ${isActive ? "active current" : ""}`}
+                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      isActive ? "bg-accent/10 text-accent-dark" : "text-neutral-800 hover:bg-neutral-100"
+                    }`}
                     aria-current={isActive ? "page" : undefined}
                     onClick={handleNavLinkClick}
                   >
@@ -530,7 +542,9 @@ const Header = () => {
               })}
               <Link
                 href="/products/all"
-                className={`drawer-nav-link drawer-nav-cta ${isRouteActive("/products/all") ? "active current" : ""}`}
+                className={`rounded-2xl px-4 py-3 text-sm font-extrabold transition ${
+                  isRouteActive("/products/all") ? "bg-primary text-white" : "bg-primary text-white hover:bg-primary-dark"
+                }`}
                 aria-current={isRouteActive("/products/all") ? "page" : undefined}
                 onClick={handleNavLinkClick}
               >
@@ -538,12 +552,14 @@ const Header = () => {
               </Link>
             </nav>
 
-            <div className="drawer-auth-section">
+            <div className="grid gap-2">
               {user ? (
                 <>
                   <Link
                     href="/account"
-                    className={`drawer-auth-link ${pathname === "/account" ? "active" : ""}`}
+                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      pathname === "/account" ? "bg-accent/10 text-accent-dark" : "text-neutral-800 hover:bg-neutral-100"
+                    }`}
                     onClick={handleNavLinkClick}
                   >
                     My Account
@@ -553,7 +569,7 @@ const Header = () => {
                       handleLogout();
                       closeDrawer();
                     }}
-                    className="drawer-auth-btn drawer-logout"
+                    className="rounded-2xl bg-primary/10 px-4 py-3 text-left text-sm font-semibold text-primary-dark hover:bg-primary/15"
                   >
                     Logout
                   </button>
@@ -562,14 +578,18 @@ const Header = () => {
                 <>
                   <Link
                     href="/login"
-                    className={`drawer-auth-btn drawer-auth-outline ${pathname === "/login" ? "active" : ""}`}
+                    className={`rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold transition ${
+                      pathname === "/login" ? "border-accent/30 bg-accent/5 text-accent-dark" : "text-neutral-800 hover:bg-neutral-100"
+                    }`}
                     onClick={handleNavLinkClick}
                   >
                     Login
                   </Link>
                   <Link
                     href="/register"
-                    className={`drawer-auth-btn drawer-auth-primary ${pathname === "/register" ? "active" : ""}`}
+                    className={`rounded-2xl bg-accent px-4 py-3 text-sm font-extrabold text-white transition ${
+                      pathname === "/register" ? "bg-accent-dark" : "hover:bg-accent-dark"
+                    }`}
                     onClick={handleNavLinkClick}
                   >
                     Register
@@ -581,10 +601,10 @@ const Header = () => {
         </SheetContent>
       </Sheet>
 
-      <nav className="main-nav" ref={dropdownRef}>
+      <nav className="hidden border-t border-neutral-200 bg-white/70 md:block" ref={dropdownRef}>
         <div className="container">
-          <div className="nav-inner">
-            <div className="nav-links">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-1">
               {navItems.map((menuItem, index) => {
                   const visibleColumns = getVisibleColumns(menuItem);
                   const isDropdownOpen = activeDropdown === menuItem.key;
@@ -594,7 +614,7 @@ const Header = () => {
                   return (
                     <div
                       key={menuItem.key}
-                      className={`nav-item-wrapper ${shouldAlignRight ? "nav-item-wrapper--right" : ""}`}
+                      className={`relative ${shouldAlignRight ? "ml-auto" : ""}`}
                       onMouseEnter={() => openDropdown(menuItem.key)}
                       onMouseLeave={scheduleDropdownClose}
                       onFocus={() => openDropdown(menuItem.key)}
@@ -613,7 +633,11 @@ const Header = () => {
                     >
                       <Link
                         href={menuItem.path}
-                        className={`nav-link ${isDropdownOpen ? "active" : ""} ${isCurrentRoute ? "current" : ""}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          isCurrentRoute || isDropdownOpen
+                            ? "bg-accent/10 text-accent-dark"
+                            : "text-neutral-800 hover:bg-neutral-100"
+                        }`}
                         aria-current={isCurrentRoute ? "page" : undefined}
                         aria-haspopup={visibleColumns.length > 0 ? "menu" : undefined}
                         aria-expanded={visibleColumns.length > 0 ? isDropdownOpen : undefined}
@@ -627,7 +651,7 @@ const Header = () => {
                         {menuItem.title}
                         {visibleColumns.length > 0 && (
                           <svg
-                            className={`chevron ${isDropdownOpen ? "up" : "down"}`}
+                            className={`transition ${isDropdownOpen ? "rotate-180" : "rotate-0"}`}
                             width="12"
                             height="12"
                             viewBox="0 0 12 12"
@@ -635,53 +659,56 @@ const Header = () => {
                             stroke="currentColor"
                             strokeWidth="2"
                           >
-                            {isDropdownOpen ? (
-                              <path d="M2 8l4-4 4 4" />
-                            ) : (
-                              <path d="M2 4l4 4 4-4" />
-                            )}
+                            <path d="M2 4l4 4 4-4" />
                           </svg>
                         )}
                       </Link>
 
                       {isDropdownOpen && visibleColumns.length > 0 && (
                         <div
-                          className="mega-menu-wrapper"
+                          className={`absolute top-[calc(100%+0.6rem)] z-[1400] ${
+                            shouldAlignRight ? "right-0" : "left-0"
+                          }`}
                           onMouseEnter={cancelDropdownClose}
                           onMouseLeave={scheduleDropdownClose}
                         >
-                          <div className="mega-menu">
-                            <div className="mega-menu-content">
+                          <div className="w-[44rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong">
+                            <div className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
                               {visibleColumns.map((column, colIndex) => (
                                 <div
                                   key={colIndex}
-                                  className="mega-menu-column"
+                                  className="min-w-0"
                                 >
-                                  <h3 className="column-title">
+                                  <h3 className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
                                     {column.title}
                                   </h3>
-                                  <ul className="column-items">
+                                  <ul className="mt-4 grid gap-2">
                                     {column.items.map((item, itemIndex) => (
                                       <li key={itemIndex}>
                                         <Link
                                           href={item.path}
-                                          className={`menu-item-link ${item.isShopAll ? "shop-all" : ""}`}
+                                          className={`group flex items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-neutral-100 ${
+                                            item.isShopAll ? "bg-primary/5 hover:bg-primary/10" : ""
+                                          }`}
                                           onClick={() =>
                                             setActiveDropdown(null)
                                           }
                                         >
-                                          <span className="menu-item-icon">
+                                          <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-xs">
                                             <img
                                               src={item.icon}
                                               alt={item.name}
+                                              className="h-6 w-6 object-contain"
                                             />
                                           </span>
-                                          <span className="menu-item-text">
+                                          <span className={`min-w-0 truncate text-sm font-semibold ${
+                                            item.isShopAll ? "text-primary-dark" : "text-neutral-900"
+                                          }`}>
                                             {item.name}
                                           </span>
                                           {item.isShopAll && (
                                             <svg
-                                              className="arrow-icon"
+                                              className="ml-auto text-primary-dark"
                                               width="16"
                                               height="16"
                                               viewBox="0 0 16 16"
@@ -705,10 +732,13 @@ const Header = () => {
                     </div>
                   );
                 })}
-              <Link href="/products/all" className="nav-cta">
-                View Products
-              </Link>
             </div>
+            <Link
+              href="/products/all"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+            >
+              View Products
+            </Link>
           </div>
         </div>
       </nav>

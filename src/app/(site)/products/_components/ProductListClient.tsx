@@ -270,22 +270,28 @@ export default function ProductListClient({
   };
 
   return (
-    <div className="shop-page">
-      <div className="shop-hero">
-        <div className="container">
-          <h1>Shop All Products</h1>
-          <p>Browse our complete range of remotes and accessories</p>
+    <div className="animate-fadeIn">
+      <div className="container py-8 sm:py-10">
+        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-7 shadow-panel backdrop-blur sm:p-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            Shop All Products
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+            Browse our complete range of remotes and accessories.
+          </p>
 
-          <div className="hero-badges">
-            <span>Quality Tested</span>
-            <span>Fast Shipping</span>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-full bg-accent/10 px-4 py-2 text-xs font-extrabold text-accent-dark">
+              Quality Tested
+            </span>
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-extrabold text-primary-dark">
+              Fast Shipping
+            </span>
           </div>
         </div>
-      </div>
 
-	      <div className="shop-content">
-	        <div className="container shop-grid">
-	          <aside className="filters filters-desktop">
+        <div className="mt-8 grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
+          <aside className="hidden rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur lg:block">
 	            <FiltersPanel
 	              brands={brands}
 	              searchQuery={searchQuery}
@@ -308,17 +314,17 @@ export default function ProductListClient({
 	                setStockStatus("all");
 	              }}
 	            />
-	          </aside>
+          </aside>
 
             <Sheet open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
-              <SheetContent className="filter-drawer">
-                <SheetHeader className="filter-drawer-header">
+              <SheetContent className="lg:hidden">
+                <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                   <SheetDescription>
                     Narrow the catalog by brand, category, and stock status.
                   </SheetDescription>
                 </SheetHeader>
-                <div className="filter-drawer-content">
+                <div className="mt-4 grid gap-4">
                   <FiltersPanel
                     brands={brands}
                     searchQuery={searchQuery}
@@ -348,8 +354,8 @@ export default function ProductListClient({
             </Sheet>
 
           <main>
-            <div className="products-header">
-              <p className="product-count">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-neutral-600">
                 Showing{" "}
                 {filteredProducts.length === 0 ? 0 : (clampedPage - 1) * PAGE_SIZE + 1}{" "}
                 – {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)} of{" "}
@@ -359,7 +365,7 @@ export default function ProductListClient({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="filter-toggle-btn"
+                className="lg:hidden"
                 onClick={() => setIsFilterDrawerOpen(true)}
                 aria-label="Open filters"
               >
@@ -368,43 +374,40 @@ export default function ProductListClient({
             </div>
 
             {filteredProducts.length === 0 ? (
-              <div className="no-products">No products found.</div>
+              <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
+                No products found.
+              </div>
             ) : (
               <>
-                <div className="products-grid">
+                <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {pageProducts.map((product) => (
-                    <div
+                    <ProductCard
                       key={product.id}
-                      className="product-card-animated"
-                    >
-                      <ProductCard
-                        product={product}
-                        onAddToCart={(nextProduct) => {
-                          addToCart(nextProduct);
-                          setAddedItem(nextProduct);
-                        }}
-                      />
-                    </div>
+                      product={product}
+                      onAddToCart={(nextProduct) => {
+                        addToCart(nextProduct);
+                        setAddedItem(nextProduct);
+                      }}
+                    />
                   ))}
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="pager" aria-label="Pagination">
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="pager-btn"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={clampedPage <= 1}
                     >
                       Prev
                     </Button>
 
-                    <div className="pager-pages">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       {visiblePages.map((p, idx) =>
                         p === "…" ? (
-                          <span key={`dots-${idx}`} className="pager-dots">
+                          <span key={`dots-${idx}`} className="px-2 text-sm font-semibold text-neutral-400">
                             …
                           </span>
                         ) : (
@@ -413,7 +416,6 @@ export default function ProductListClient({
                             type="button"
                             variant={p === clampedPage ? "default" : "outline"}
                             size="sm"
-                            className={`pager-page ${p === clampedPage ? "active" : ""}`}
                             onClick={() => setCurrentPage(Number(p))}
                           >
                             {p}
@@ -426,7 +428,6 @@ export default function ProductListClient({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="pager-btn"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={clampedPage >= totalPages}
                     >
@@ -441,95 +442,64 @@ export default function ProductListClient({
       </div>
 
       {isModalOpen && (
-        <div className="cart-modal-backdrop" onClick={() => setAddedItem(null)}>
+        <div className="fixed inset-0 z-[1600] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setAddedItem(null)}>
           <div
-            className="cart-modal"
+            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
             role="dialog"
             aria-modal="true"
             aria-label="Added to cart"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              className="cart-modal-close"
-              onClick={() => setAddedItem(null)}
-              aria-label="Close"
-            >
-              x
-            </button>
-            <div className="cart-modal-body">
+            <div className="flex items-center justify-between border-b border-neutral-200 p-4">
+              <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">
+                Added to cart
+              </div>
+              <button type="button" className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200" onClick={() => setAddedItem(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start sm:p-6">
               <img
                 src={addedItem?.image}
                 alt={addedItem?.name || "Product"}
+                className="h-32 w-32 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3"
                 onError={(e: any) => {
                   e.currentTarget.src = "/images/mainlogo.png";
                 }}
               />
-              <div className="cart-modal-info">
-                <p className="cart-modal-brand">{addedItem?.brand || "Remote Pro"}</p>
-                <h3>{addedItem?.name}</h3>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">{addedItem?.brand || "Remote Pro"}</p>
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-neutral-900">{addedItem?.name}</h3>
                 {addedItem?.description && (
-                  <p className="cart-modal-description">{addedItem.description}</p>
+                  <p className="mt-2 text-sm leading-7 text-neutral-600 line-clamp-3">{addedItem.description}</p>
                 )}
-                <div className="cart-modal-meta">
-                  <div>
-                    <span>Category</span>
-                    <strong>
-                      {addedItem?.category === "car" ? "Car Remote" : "Garage Remote"}
-                    </strong>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Price</div>
+                    <div className="mt-2">
+                      {modalPrice.hasDiscount ? (
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-neutral-400 line-through">AU${modalPrice.originalPrice.toFixed(2)}</span>
+                          <strong className="text-lg font-extrabold text-neutral-900">AU${modalPrice.finalPrice.toFixed(2)}</strong>
+                        </div>
+                      ) : (
+                        <strong className="text-lg font-extrabold text-neutral-900">AU${modalPrice.finalPrice.toFixed(2)}</strong>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <span>Condition</span>
-                    <strong>{addedItem?.condition || "Brand New"}</strong>
-                  </div>
-                </div>
-                <div className="cart-modal-pricing">
-                  <div>
-                    <span>Price</span>
-                    {modalPrice.hasDiscount ? (
-                      <div className="modal-price-stack">
-                        <span className="modal-price-original">
-                          AU${modalPrice.originalPrice.toFixed(2)}
-                        </span>
-                        <strong className="modal-price-discounted">
-                          AU${modalPrice.finalPrice.toFixed(2)}
-                        </strong>
-                      </div>
-                    ) : (
-                      <strong>AU${modalPrice.finalPrice.toFixed(2)}</strong>
-                    )}
-                  </div>
-                  <div className="cart-modal-pricing-qty">
-                    <span>Quantity</span>
-                    <div className="cart-modal-qty-controls">
-                      <button
-                        type="button"
-                        className="cart-modal-qty-btn"
-                        onClick={() => handleModalQuantityChange(modalQuantity - 1)}
-                        disabled={modalQuantity <= 1}
-                        aria-label="Decrease quantity"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={modalQuantity}
-                        onChange={(e) => handleModalQuantityChange(e.target.value)}
-                        aria-label="Quantity"
-                      />
-                      <button
-                        type="button"
-                        className="cart-modal-qty-btn"
-                        onClick={() => handleModalQuantityChange(modalQuantity + 1)}
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
+
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
+                    <div className="mt-2 inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                      <button type="button" className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50" onClick={() => handleModalQuantityChange(modalQuantity - 1)} disabled={modalQuantity <= 1}>-</button>
+                      <input type="number" min="1" value={modalQuantity} onChange={(e) => handleModalQuantityChange(e.target.value)} aria-label="Quantity" className="h-10 w-14 border-x border-neutral-200 text-center text-sm font-extrabold text-neutral-900 outline-none" />
+                      <button type="button" className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100" onClick={() => handleModalQuantityChange(modalQuantity + 1)} aria-label="Increase quantity">+</button>
                     </div>
                   </div>
                 </div>
-                <div className="cart-modal-actions">
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"

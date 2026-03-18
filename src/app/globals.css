@@ -1,20 +1,82 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
+@config "../../tailwind.config.js";
 
-@import "../index.css";
-@import "../App.css";
+@layer base {
+  :root {
+    color-scheme: light;
+  }
 
-@import "../components/Header.css";
-@import "../components/CarFinder.css";
+  html {
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
 
-@import "../styles/pages/Home.css";
-@import "../styles/pages/ProductList.css";
-@import "../styles/pages/ProductDetail.css";
-@import "../styles/pages/CategoryPage.css";
-@import "../styles/pages/Auth.css";
-@import "../styles/pages/Cart.css";
-@import "../styles/pages/Checkout.css";
-@import "../styles/pages/Account.css";
-@import "../styles/pages/Admin.css";
+  body {
+    @apply bg-neutral-50 text-neutral-800 antialiased;
+  }
 
-@import "../components/account/AccountSection.css";
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid rgba(26, 122, 110, 0.28);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .container {
+    width: min(1328px, calc(100% - clamp(1rem, 3.6vw, 3rem) * 2));
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3.6vw, 3rem);
+  }
+
+  .container-wide {
+    width: min(1392px, calc(100% - clamp(1rem, 3.6vw, 3rem) * 2));
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3.6vw, 3rem);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3 text-sm font-semibold tracking-tight transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white shadow-soft hover:bg-primary-dark;
+  }
+
+  .btn-secondary {
+    @apply bg-accent text-white shadow-soft hover:bg-accent-dark;
+  }
+
+  .btn-outline {
+    @apply border border-neutral-200 bg-white text-neutral-800 hover:border-accent/30 hover:bg-accent/5 hover:text-accent-dark;
+  }
+
+  .btn-large {
+    @apply px-8 py-4 text-base;
+  }
+
+  .btn-small,
+  .btn-sm {
+    @apply px-4 py-2 text-xs;
+  }
+
+  .error-message {
+    @apply rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm font-semibold text-primary-dark;
+  }
+
+  .success-message,
+  .admin-success {
+    @apply rounded-2xl border border-accent/15 bg-accent/5 p-4 text-sm font-semibold text-accent-dark;
+  }
+
+  /* Basic page shells used across legacy routes */
+  .shop-page,
+  .checkout-page,
+  .home {
+    @apply animate-fadeIn;
+  }
+}

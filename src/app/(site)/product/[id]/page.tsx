@@ -103,16 +103,20 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="product-detail-page">
-      <div className="container py-8">
-        <Link href="/" className="back-link">
-          <ArrowLeft size={16} /> Back to Products
+    <div className="animate-fadeIn">
+      <div className="container py-8 sm:py-10">
+        <Link
+          href="/products/all"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/80 px-4 py-2 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-100"
+        >
+          <ArrowLeft size={16} />
+          Back to Products
         </Link>
 
-        <div className="product-grid">
+        <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* LEFT: IMAGE */}
           <div
-            className="product-image-box"
+            className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 shadow-panel"
             onMouseMove={(e) => {
               const box = e.currentTarget;
               const img = box.querySelector("img");
@@ -133,9 +137,11 @@ const ProductDetail = () => {
               img.style.transform = "scale(2)";
             }}
           >
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.10),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.08),transparent_45%)]" />
             <img
               src={product.image}
               alt={product.name}
+              className="relative h-full w-full max-h-[28rem] object-contain p-6 transition-transform duration-300 will-change-transform sm:max-h-[34rem]"
               onError={(e) =>
                 (e.currentTarget.src = "/images/mainlogo.png")
               }
@@ -143,48 +149,66 @@ const ProductDetail = () => {
           </div>
 
           {/* RIGHT: INFO */}
-          <div className="product-info">
-            <p className="brand">{product.brand}</p>
+          <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur sm:p-8">
+            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+              {product.brand || "ALLREMOTES"}
+            </p>
 
-            <h1>{product.name}</h1>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+              {product.name}
+            </h1>
 
-            <div className="price-stock">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               {pricing.hasDiscount ? (
-                <div className="price-block">
-                  <p className="price-old">
+                <div className="flex items-baseline gap-3">
+                  <p className="text-sm font-semibold text-neutral-400 line-through">
                     AU${pricing.originalPrice.toFixed(2)}
                   </p>
-                  <p className="price-new">
+                  <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
                     AU${pricing.finalPrice.toFixed(2)}
                   </p>
                 </div>
               ) : (
-                <p className="price">AU${pricing.finalPrice.toFixed(2)}</p>
+                <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
+                  AU${pricing.finalPrice.toFixed(2)}
+                </p>
               )}
-              {product.inStock && (
-                <span className="stock">
-                  <Check size={16} /> In Stock
-                </span>
-              )}
+
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-extrabold ${
+                  product.inStock
+                    ? "bg-accent/10 text-accent-dark"
+                    : "bg-neutral-200 text-neutral-600"
+                }`}
+              >
+                {product.inStock ? <Check size={16} /> : null}
+                {product.inStock ? "In Stock" : "Out of Stock"}
+              </span>
             </div>
 
             {/* Quantity */}
             {product.inStock && (
-              <div className="quantity-section">
-                <span className="quantity-label">Quantity</span>
-                <div className="quantity-box" aria-label="Product quantity selector">
+              <div className="mt-6">
+                <span className="text-sm font-semibold text-neutral-800">Quantity</span>
+                <div
+                  className="mt-2 inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
+                  aria-label="Product quantity selector"
+                >
                   <button
                     type="button"
-                    className="quantity-btn"
+                    className="inline-flex h-11 w-12 items-center justify-center text-lg font-semibold text-neutral-800 transition hover:bg-neutral-100 disabled:opacity-50"
                     aria-label="Decrease quantity"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
                   >
                     -
                   </button>
-                  <span className="quantity-value">{quantity}</span>
+                  <span className="inline-flex h-11 w-14 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
+                    {quantity}
+                  </span>
                   <button
                     type="button"
-                    className="quantity-btn"
+                    className="inline-flex h-11 w-12 items-center justify-center text-lg font-semibold text-neutral-800 transition hover:bg-neutral-100"
                     aria-label="Increase quantity"
                     onClick={() => setQuantity(quantity + 1)}
                   >
@@ -195,9 +219,9 @@ const ProductDetail = () => {
             )}
 
             {/* Buttons */}
-            <div className="product-actions">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button
-                className="btn btn-primary product-action-btn"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark disabled:opacity-60"
                 disabled={!product.inStock}
                 onClick={() => addToCart(product, quantity)}
               >
@@ -206,7 +230,11 @@ const ProductDetail = () => {
               </button>
 
               <button
-                className={`btn btn-outline product-action-btn ${inWishlist ? "active" : ""}`}
+                className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-extrabold shadow-xs transition ${
+                  inWishlist
+                    ? "border-primary/25 bg-primary/5 text-primary-dark hover:bg-primary/10"
+                    : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
                 onClick={toggleWishlist}
               >
                 <Heart size={18} />
@@ -215,22 +243,27 @@ const ProductDetail = () => {
             </div>
 
             {/* Specs */}
-            <div className="specs">
-              <h3>Product Details</h3>
-              <ul>
+            <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-5">
+              <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-700">
+                Product Details
+              </h3>
+              <ul className="mt-4 grid gap-2 text-sm text-neutral-700">
                 {product.brand && (
                   <li>
-                    <b>Brand:</b> {product.brand}
+                    <span className="font-semibold text-neutral-900">Brand:</span>{" "}
+                    {product.brand}
                   </li>
                 )}
                 {product.condition && (
                   <li>
-                    <b>Condition:</b> {product.condition}
+                    <span className="font-semibold text-neutral-900">Condition:</span>{" "}
+                    {product.condition}
                   </li>
                 )}
                 {product.returns && (
                   <li>
-                    <b>Returns:</b> {product.returns}
+                    <span className="font-semibold text-neutral-900">Returns:</span>{" "}
+                    {product.returns}
                   </li>
                 )}
               </ul>
@@ -239,67 +272,86 @@ const ProductDetail = () => {
         </div>
 
         {/* TAB NAVIGATION */}
-        <div className="tabs-section">
-          <div className="tabs-header">
+        <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur">
+          <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
             <button
-              className={`tab-btn ${activeTab === "description" ? "active" : ""}`}
+              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                activeTab === "description"
+                  ? "bg-accent/10 text-accent-dark"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
               onClick={() => setActiveTab("description")}
             >
               DESCRIPTION
             </button>
             <button
-              className={`tab-btn ${activeTab === "instructions" ? "active" : ""}`}
+              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                activeTab === "instructions"
+                  ? "bg-accent/10 text-accent-dark"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
               onClick={() => setActiveTab("instructions")}
             >
               INSTRUCTIONS
             </button>
             <button
-              className={`tab-btn ${activeTab === "warnings" ? "active" : ""}`}
+              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                activeTab === "warnings"
+                  ? "bg-accent/10 text-accent-dark"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
               onClick={() => setActiveTab("warnings")}
             >
               WARNINGS & DISCLAIMERS
             </button>
           </div>
 
-          <div className="tabs-content">
+          <div className="p-6 sm:p-8">
             {activeTab === "description" && (
-              <div className="tab-pane">
-                <h3>Description</h3>
-                <p>{product.description}</p>
+              <div>
+                <h3 className="text-lg font-semibold text-neutral-900">Description</h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-700">
+                  {product.description}
+                </p>
               </div>
             )}
 
             {activeTab === "instructions" && (
-              <div className="tab-pane">
-                <h3>Instructions</h3>
-                <p>{product.instructions || "No instructions provided."}</p>
+              <div>
+                <h3 className="text-lg font-semibold text-neutral-900">Instructions</h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-700">
+                  {product.instructions || "No instructions provided."}
+                </p>
               </div>
             )}
 
             {activeTab === "warnings" && (
-              <div className="tab-pane">
-                <h3>Warnings & Disclaimers</h3>
-                <p>{product.warnings || "No warnings provided."}</p>
+              <div>
+                <h3 className="text-lg font-semibold text-neutral-900">Warnings & Disclaimers</h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-700">
+                  {product.warnings || "No warnings provided."}
+                </p>
               </div>
             )}
           </div>
         </div>
 
         {relatedProducts.length > 0 && (
-          <div className="related-section">
-            <div className="related-header">
-              <h2>Related Products</h2>
-              <p className="related-subtitle">
+          <div className="mt-10">
+            <div className="max-w-2xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                Related Products
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">
                 More {product.category === "car" ? "car" : "garage"} remotes you
                 might like
               </p>
             </div>
-            <div className="related-grid">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}
             </div>
-            <br /> <br />
           </div>
         )}
       </div>

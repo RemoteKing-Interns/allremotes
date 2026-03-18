@@ -172,123 +172,160 @@ const Home = () => {
   const currentHeroSlide = heroSlides[currentSlide] || fallbackHeroSlides[0];
 
   return (
-    <div className="home">
-      <section className="hero">
-        <div className="hero-slider">
+    <div className="animate-fadeIn">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
           {heroSlides.map((slide, index) => (
             <div
               key={index}
-              className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
+              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              }`}
               style={{ backgroundImage: `url(${slide.image})` }}
             />
           ))}
         </div>
-        <div className="hero-overlay"></div>
-        <div className="container">
-          <div className="hero-shell">
-            <div className="hero-primary">
-              <div className="hero-content">
-                <div className="hero-copy">
-                  <div className="hero-badge-row">
-                    <p className="hero-subtitle">{currentHeroSlide.subtitle}</p>
-                    <span className="hero-inline-chip">
-                      {currentHeroSlide.sideKicker}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,16,0.62),rgba(5,8,16,0.35),rgba(251,248,245,0.92))]" />
+
+        <div className="container relative py-10 sm:py-14 lg:py-16">
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.95fr)] lg:gap-10">
+            <div className="rounded-2xl border border-white/15 bg-white/10 p-6 shadow-glass backdrop-blur-md sm:p-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/90">
+                  {currentHeroSlide.subtitle}
+                </p>
+                <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+                  {currentHeroSlide.sideKicker}
+                </span>
+              </div>
+
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                {currentHeroSlide.title}
+              </h1>
+              <p className="mt-4 max-w-prose text-sm leading-7 text-white/80 sm:text-base">
+                {currentHeroSlide.description}
+              </p>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href={currentHeroSlide.primaryCtaPath}
+                  className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+                >
+                  {currentHeroSlide.primaryCta}
+                </Link>
+                <Link
+                  href={currentHeroSlide.secondaryCtaPath}
+                  className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-extrabold text-white shadow-soft backdrop-blur hover:bg-white/15"
+                >
+                  {currentHeroSlide.secondaryCta}
+                </Link>
+              </div>
+
+              <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                {heroMetrics.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur"
+                  >
+                    <strong className="block text-lg font-extrabold tracking-tight text-white">
+                      {item.value}
+                    </strong>
+                    <span className="mt-1 block text-xs font-semibold text-white/75">
+                      {item.label}
                     </span>
                   </div>
-                  <h1>{currentHeroSlide.title}</h1>
-                  <p className="hero-description">{currentHeroSlide.description}</p>
-                </div>
-                <div className="hero-actions">
-                  <div className="hero-buttons">
-                    <Link
-                      href={currentHeroSlide.primaryCtaPath}
-                      className="btn btn-hero-primary"
-                    >
-                      {currentHeroSlide.primaryCta}
-                    </Link>
-                    <Link
-                      href={currentHeroSlide.secondaryCtaPath}
-                      className="btn btn-hero-secondary"
-                    >
-                      {currentHeroSlide.secondaryCta}
-                    </Link>
-                  </div>
-                  <div className="hero-metrics">
-                    {heroMetrics.map((item) => (
-                      <div key={item.label} className="hero-metric-card">
-                        <strong>{item.value}</strong>
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex items-center gap-2">
+                {heroImages.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`h-2.5 w-2.5 rounded-full border transition ${
+                      index === currentSlide
+                        ? "border-white bg-white"
+                        : "border-white/40 bg-transparent hover:border-white/70"
+                    }`}
+                    onClick={() => setCurrentSlide(index)}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
 
-            <aside className="hero-secondary">
-              <div className="hero-secondary-card">
-                <span className="hero-side-label">{currentHeroSlide.sideKicker}</span>
-                <strong>{currentHeroSlide.sideTitle}</strong>
-                <p>{currentHeroSlide.sideDescription}</p>
-                <div className="hero-highlight-list">
-                  {(currentHeroSlide.highlights || []).map((item) => (
-                    <div key={item.title} className="hero-highlight-item">
-                      <span className="hero-highlight-dot" />
-                      <div className="hero-highlight-copy">
-                        <strong>{item.title}</strong>
-                        <p>{item.description}</p>
-                      </div>
+            <aside className="rounded-2xl border border-white/15 bg-white/10 p-6 shadow-glass backdrop-blur-md sm:p-8">
+              <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/80">
+                {currentHeroSlide.sideKicker}
+              </span>
+              <strong className="mt-3 block text-xl font-semibold tracking-tight text-white">
+                {currentHeroSlide.sideTitle}
+              </strong>
+              <p className="mt-3 text-sm leading-7 text-white/80">
+                {currentHeroSlide.sideDescription}
+              </p>
+
+              <div className="mt-6 grid gap-4">
+                {(currentHeroSlide.highlights || []).map((item) => (
+                  <div key={item.title} className="flex gap-3">
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                    <div className="min-w-0">
+                      <strong className="block text-sm font-semibold text-white">
+                        {item.title}
+                      </strong>
+                      <p className="mt-1 text-sm leading-6 text-white/75">
+                        {item.description}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </aside>
-          </div>
-          <div className="hero-bottom-bar">
-            <div className="hero-indicators hero-indicators-bottom">
-              {heroImages.map((_, index) => (
-                <button
-                  key={index}
-                  className={`indicator ${index === currentSlide ? 'active' : ''}`}
-                  onClick={() => setCurrentSlide(index)}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
-      <section className="features">
-        <div className="features-background features-background--default">
-          <div className="features-overlay"></div>
-        </div>
-        <div className="container">
-          <div className="section-intro section-intro--left">
-            <span className="section-kicker">Browse By Category</span>
-            <h2 className="section-title">Start with the remote type you need</h2>
-            <p className="section-subtitle">
+      <section className="container py-10 sm:py-14">
+        <div className="grid gap-10">
+          <div className="max-w-2xl">
+            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+              Browse By Category
+            </span>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+              Start with the remote type you need
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
               Move through automotive, garage, gate, home, and locksmith ranges
               with clearer entry points and business-ready product organization.
             </p>
           </div>
-          <div className="features-grid">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f, i) => (
-              <div key={i} className="feature-card">
-                <div className="feature-icon">
+              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
                   {(f.image || featureImagesByTitle[f.title]) ? (
                     <img
                       src={f.image || featureImagesByTitle[f.title]}
                       alt={f.title || "Feature"}
+                      className="h-10 w-10 object-contain"
                     />
                   ) : (
-                    f.icon || "AR"
+                      <span className="text-sm font-extrabold text-accent-dark">
+                        {String(f.icon || "AR").slice(0, 2)}
+                      </span>
                   )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-neutral-900">
+                      {f.title || ""}
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-neutral-600">
+                      {f.description || ""}
+                    </p>
+                  </div>
                 </div>
-                <h3>{f.title || ''}</h3>
-                <p>{f.description || ''}</p>
                 {f.path && f.linkText && (
-                  <Link href={f.path} className="feature-link">
+                  <Link href={f.path} className="mt-5 inline-flex text-sm font-semibold text-accent-dark hover:text-accent">
                     {f.linkText}
                   </Link>
                 )}
@@ -298,98 +335,113 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="featured-products">
-        <div className="container">
-          <div className="section-intro featured-products-header">
-            <span className="section-kicker">Best Sellers</span>
-            <h2 className="section-title">Featured Products</h2>
-            <p className="section-subtitle">
+      <section className="container py-10 sm:py-14">
+        <div className="max-w-2xl">
+          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
+            Best Sellers
+          </span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            Featured Products
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
               Browse our most popular remote controls across car, garage, and
               access-control categories.
-            </p>
-          </div>
+          </p>
+        </div>
           {products.length === 0 ? (
-            <div className="section-empty">
+            <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
               No products available right now.
             </div>
           ) : (
-            <div className="products-grid">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {products.slice(0, 6).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
-          <div className="view-all-link">
-            <Link href="/products/all" className="btn btn-primary">
+          <div className="mt-8">
+            <Link href="/products/all" className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark">
               View All Products
             </Link>
           </div>
-        </div>
       </section>
 
-      <section className="why-buy-section">
-        <div className="container">
-          <div className="section-intro section-intro--left">
-            <span className="section-kicker">Why ALLREMOTES</span>
-            <h2 className="section-title">Built for repeat orders and dependable support</h2>
-            <p className="section-subtitle">
+      <section className="container py-10 sm:py-14">
+        <div className="max-w-2xl">
+          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+            Why ALLREMOTES
+          </span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            Built for repeat orders and dependable support
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
               The store is designed for straightforward product discovery,
               cleaner reorder flows, and support that understands remote keys.
-            </p>
-          </div>
-          <div className="why-buy-grid">
+          </p>
+        </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {whyBuyCards.map((b, i) => (
-              <div key={i} className="why-buy-card">
-                <div className="why-buy-icon">{b.icon || 'AR'}</div>
-                <h3>{b.title || ''}</h3>
-                <p>{b.description || ''}</p>
+              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-sm font-extrabold text-accent-dark">
+                  {String(b.icon || "AR").slice(0, 2)}
+                </div>
+                <h3 className="text-base font-semibold text-neutral-900">{b.title || ""}</h3>
+                <p className="mt-2 text-sm leading-7 text-neutral-600">{b.description || ""}</p>
               </div>
             ))}
           </div>
-        </div>
       </section>
 
-      <section className="reviews-section">
-        <div className="container">
-          <div className="section-intro section-intro--left">
-            <span className="section-kicker">Customer Feedback</span>
-            <h2 className="section-title">Trusted by homeowners, workshops, and trade buyers</h2>
-            <p className="section-subtitle">
+      <section className="container py-10 sm:py-14">
+        <div className="max-w-2xl">
+          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
+            Customer Feedback
+          </span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            Trusted by homeowners, workshops, and trade buyers
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
               Real reviews from customers ordering replacement remotes, smart
               keys, and access-control products.
-            </p>
-          </div>
-          <div className="reviews-grid">
+          </p>
+        </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {reviews.map((r, i) => (
-              <div key={i} className="review-card">
-                <div className="review-rating">
-                  <span>{'★'.repeat(r.rating || 5)}{'☆'.repeat(5 - (r.rating || 5))}</span>
+              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
+                <div className="text-sm font-extrabold text-gold">
+                  <span className="text-primary">{'★'.repeat(r.rating || 5)}</span>
+                  <span className="text-neutral-300">{'☆'.repeat(5 - (r.rating || 5))}</span>
                 </div>
-                <p className="review-text">"{r.text || ''}"</p>
-                <div className="review-author">
-                  <strong>{r.author || ''}</strong>
-                  {r.verified && <span>Verified Purchase</span>}
+                <p className="mt-4 text-sm leading-7 text-neutral-700">&quot;{r.text || ""}&quot;</p>
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <strong className="text-sm font-semibold text-neutral-900">{r.author || ""}</strong>
+                  {r.verified && (
+                    <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-dark">
+                      Verified Purchase
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
       </section>
 
-      <section className="cta-section cta-section--default">
-        <div className="cta-overlay"></div>
-        <div className="container">
-          <div className="cta-content">
-            <h2>{cta.title || 'Ready to Find Your Perfect Remote?'}</h2>
-            <p>{cta.description || 'Browse our collection and find the perfect remote for your needs'}</p>
+      <section className="container py-10 sm:py-14">
+        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-8 shadow-panel backdrop-blur sm:p-12">
+          <div className="max-w-2xl">
+            <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+              {cta.title || "Ready to Find Your Perfect Remote?"}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-neutral-600 sm:text-base">
+              {cta.description || "Browse our collection and find the perfect remote for your needs"}
+            </p>
             <Link
               href={cta.buttonPath || "/products/all"}
-              className="btn btn-hero-primary btn-large"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark"
             >
-              {cta.buttonText || 'View All Products'}
+              {cta.buttonText || "View All Products"}
             </Link>
           </div>
-          
         </div>
       </section>
     </div>

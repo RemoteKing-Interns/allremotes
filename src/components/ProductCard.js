@@ -91,16 +91,23 @@ const ProductCard = ({ product, onAddToCart = null }) => {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className="group rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md overflow-hidden transition-all duration-300"
+      className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-strong"
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
     >
+      {/* Make whole card clickable (buttons stopPropagation) */}
+      <Link
+        href={`/product/${product.id}`}
+        aria-label={`View details for ${productName}`}
+        className="absolute inset-0 z-10"
+      />
+
       {/* Image Container */}
-      <div className="relative aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square bg-neutral-100/80 flex items-center justify-center overflow-hidden">
         {/* Fallback Letter */}
         {imageError && (
-          <div className="text-7xl font-extrabold text-gray-300">
+          <div className="text-7xl font-extrabold text-neutral-300">
             {fallbackInitial}
           </div>
         )}
@@ -112,7 +119,7 @@ const ProductCard = ({ product, onAddToCart = null }) => {
             alt={productName}
             loading="lazy"
             decoding="async"
-            className={`w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110 ${
+            className={`w-full h-full object-contain p-5 transition-transform duration-300 group-hover:scale-110 ${
               !product.inStock ? "opacity-50" : ""
             }`}
             onError={() => setImageError(true)}
@@ -120,19 +127,19 @@ const ProductCard = ({ product, onAddToCart = null }) => {
         )}
 
         {/* Badges - Top Left */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-20">
+        <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5">
           {product.inStock ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 text-xs font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-extrabold text-accent-dark">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               In Stock
             </span>
           ) : (
-            <span className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-gray-200 text-gray-600 text-xs font-semibold">
+            <span className="inline-flex items-center rounded-full bg-neutral-200 px-3 py-1.5 text-xs font-extrabold text-neutral-600">
               Out of Stock
             </span>
           )}
           {discountPercent > 0 && (
-            <span className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold">
+            <span className="inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-extrabold text-white shadow-xs">
               {discountPercent}% OFF
             </span>
           )}
@@ -142,10 +149,10 @@ const ProductCard = ({ product, onAddToCart = null }) => {
         <button
           type="button"
           onClick={toggleWishlist}
-          className={`absolute top-3 right-3 z-30 h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-200 shadow-sm ${
+          className={`absolute top-3 right-3 z-30 flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 ${
             isWishlisted
-              ? "bg-white text-red-500"
-              : "bg-white/90 backdrop-blur text-gray-700 opacity-0 group-hover:opacity-100"
+              ? "bg-white text-primary"
+              : "bg-white/90 backdrop-blur text-neutral-700 opacity-0 group-hover:opacity-100"
           }`}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={isWishlisted}
@@ -159,11 +166,11 @@ const ProductCard = ({ product, onAddToCart = null }) => {
 
         {/* Quick Add Button - Bottom */}
         {product.inStock && (
-          <div className="absolute bottom-3 left-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute bottom-3 left-3 right-3 z-20 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <button
               type="button"
               onClick={handleAddToCart}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 active:scale-95 transition-all"
+              className="relative z-20 w-full rounded-2xl bg-primary py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
             >
               <ShoppingCart size={16} strokeWidth={1.5} />
               Quick Add
@@ -173,22 +180,20 @@ const ProductCard = ({ product, onAddToCart = null }) => {
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
-        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+      <div className="relative z-20 p-5">
+        <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
           {brandLabel}
         </p>
-        <Link href={`/product/${product.id}`} className="block">
-          <h3 className="font-semibold text-sm text-gray-900 leading-snug hover:text-red-500 transition-colors line-clamp-2 mb-3">
-            {productName}
-          </h3>
-        </Link>
+        <h3 className="mb-3 line-clamp-2 text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
+          {productName}
+        </h3>
         <div className="flex items-baseline gap-2">
-          <span className="text-lg font-extrabold text-gray-900 font-mono">
-            ${pricing.finalPrice.toFixed(2)}
+          <span className="text-xl font-extrabold tracking-tight text-neutral-900">
+            AU${pricing.finalPrice.toFixed(2)}
           </span>
           {pricing.hasDiscount && (
-            <span className="text-sm text-gray-400 line-through font-mono">
-              ${pricing.originalPrice.toFixed(2)}
+            <span className="text-sm font-semibold text-neutral-400 line-through">
+              AU${pricing.originalPrice.toFixed(2)}
             </span>
           )}
         </div>

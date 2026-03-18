@@ -36,12 +36,12 @@ export default function AdminUploadProducts() {
 
   if (!user) {
     return (
-      <div className="admin-page">
-        <div className="admin-center-shell">
-          <div className="admin-access-state">
-            <h1>Admin</h1>
-            <p>Please sign in first.</p>
-            <Link href="/admin" className="btn btn-primary">
+      <div className="animate-fadeIn">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Admin</h1>
+            <p className="mt-3 text-sm leading-7 text-neutral-600">Please sign in first.</p>
+            <Link href="/admin" className="mt-6 inline-flex rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark">
               Go to admin login
             </Link>
           </div>
@@ -52,12 +52,12 @@ export default function AdminUploadProducts() {
 
   if (!isAdmin) {
     return (
-      <div className="admin-page">
-        <div className="admin-center-shell">
-          <div className="admin-access-state">
-            <h1>Access denied</h1>
-            <p>You need admin rights to view this page.</p>
-            <Link href="/" className="btn btn-primary">
+      <div className="animate-fadeIn">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Access denied</h1>
+            <p className="mt-3 text-sm leading-7 text-neutral-600">You need admin rights to view this page.</p>
+            <Link href="/" className="mt-6 inline-flex rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark">
               Go home
             </Link>
           </div>
@@ -130,124 +130,126 @@ export default function AdminUploadProducts() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-layout">
-        <aside className="admin-sidebar">
-          <div className="admin-brand">
-            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-brand-logo" />
-            <div className="admin-brand-copy">
-              <strong>Operations Console</strong>
-              <span>Website, catalog, and content management</span>
-            </div>
-          </div>
-          <nav className="admin-nav">
-            <button
-              type="button"
-              className="admin-nav-item"
-              onClick={() => router.push("/admin")}
-            >
-              <span className="admin-nav-icon">BK</span>
-              <span>Back</span>
-            </button>
-            <div className="admin-nav-item active">
-              <span className="admin-nav-icon">UP</span>
-              <span>Upload CSV</span>
-            </div>
-          </nav>
-          <div className="admin-sidebar-footer">
-            <Link href="/" className="admin-sidebar-link">
-              ← View site
-            </Link>
-          </div>
-        </aside>
-
-        <main className="admin-main">
-          <div className="admin-header-row">
-            <h1>Upload Products (CSV)</h1>
-            <a className="btn btn-secondary" href={templateHref}>Download template CSV</a>
-          </div>
-
-          <div className="admin-card">
-            <h3>Upload</h3>
-            <p className="admin-muted-copy">
-              This imports into the server datastore (MongoDB if configured, otherwise <code>products.json</code>) and upserts by <strong>Product Code</strong>.
-            </p>
-
-            {error && <div className="error-message admin-feedback">{error}</div>}
-            {debugDetails && (
-              <div className="admin-debug">
-                <div className="admin-debug-title">Details</div>
-                <pre>{debugDetails}</pre>
+    <div className="animate-fadeIn">
+      <div className="container py-6 sm:py-8">
+        <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+          <aside className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur lg:sticky lg:top-24">
+            <div className="flex items-center gap-3">
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-9 w-auto" />
+              <div className="min-w-0">
+                <strong className="block text-sm font-semibold text-neutral-900">Operations Console</strong>
+                <span className="block text-xs font-semibold text-neutral-500">Catalog and content</span>
               </div>
-            )}
-
-            <div className="admin-form">
-              <div className="form-group">
-                <label>CSV file</label>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-              </div>
-              <button type="button" className="btn btn-primary" onClick={upload} disabled={busy}>
-                {busy ? 'Uploading…' : 'Upload'}
+            </div>
+            <nav className="mt-5 grid gap-1">
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100"
+                onClick={() => router.push("/admin")}
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">BK</span>
+                <span>Back</span>
               </button>
-            </div>
-          </div>
-
-          {result && (
-            <div className="admin-card">
-              <h3>Results</h3>
-              <div className="admin-results-grid">
-                <div className="admin-card admin-result-card">
-                  <strong className="admin-result-number">{result.totalRows ?? 0}</strong>
-                  <div>Rows processed</div>
-                </div>
-                <div className="admin-card admin-result-card">
-                  <strong className="admin-result-number">{result.created ?? 0}</strong>
-                  <div>Created</div>
-                </div>
-                <div className="admin-card admin-result-card">
-                  <strong className="admin-result-number">{result.updated ?? 0}</strong>
-                  <div>Updated</div>
-                </div>
-                <div className="admin-card admin-result-card">
-                  <strong className="admin-result-number admin-result-number--error">{result.failed ?? 0}</strong>
-                  <div>Failed</div>
-                </div>
+              <div className="flex items-center gap-3 rounded-2xl bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent-dark">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">UP</span>
+                <span>Upload CSV</span>
               </div>
+            </nav>
+            <div className="mt-5 border-t border-neutral-200 pt-4">
+              <Link href="/" className="text-sm font-semibold text-accent-dark hover:text-accent">
+                ← View site
+              </Link>
+            </div>
+          </aside>
 
-              {Array.isArray(result.failures) && result.failures.length > 0 && (
-                <div className="admin-form-space-top">
-                  <h4>Failed rows</h4>
-                  <div className="admin-table-wrap">
-                    <table className="admin-table">
-                      <thead>
-                        <tr>
-                          <th>Row</th>
-                          <th>Product Code</th>
-                          <th>Description</th>
-                          <th>Errors</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.failures.map((f) => (
-                          <tr key={`${f.rowNumber}-${f.key || ''}`}>
-                            <td>{f.rowNumber}</td>
-                            <td>{f.sku ?? f.brand}</td>
-                            <td>{f.name}</td>
-                            <td>{(f.errors || []).join('; ')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+          <main className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Upload Products (CSV)</h1>
+              <a className="inline-flex rounded-full bg-accent px-5 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-accent-dark" href={templateHref}>
+                Download template CSV
+              </a>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur sm:p-8">
+              <h3 className="text-lg font-semibold text-neutral-900">Upload</h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">
+                This imports into the server datastore (MongoDB if configured, otherwise <code>products.json</code>) and upserts by <strong>Product Code</strong>.
+              </p>
+
+              {error && <div className="error-message mt-5">{error}</div>}
+              {debugDetails && (
+                <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                  <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-600">Details</div>
+                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-neutral-700">{debugDetails}</pre>
                 </div>
               )}
+
+              <div className="mt-6 grid gap-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-neutral-800">CSV file</label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm shadow-sm file:mr-4 file:rounded-full file:border-0 file:bg-neutral-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-neutral-800 hover:file:bg-neutral-200"
+                  />
+                </div>
+                <button type="button" className="w-full rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark disabled:opacity-60" onClick={upload} disabled={busy}>
+                  {busy ? 'Uploading…' : 'Upload'}
+                </button>
+              </div>
             </div>
-          )}
-        </main>
+
+            {result && (
+              <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur sm:p-8">
+                <h3 className="text-lg font-semibold text-neutral-900">Results</h3>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { label: "Rows processed", value: result.totalRows ?? 0, tone: "neutral" },
+                    { label: "Created", value: result.created ?? 0, tone: "accent" },
+                    { label: "Updated", value: result.updated ?? 0, tone: "accent" },
+                    { label: "Failed", value: result.failed ?? 0, tone: "primary" },
+                  ].map((x) => (
+                    <div key={x.label} className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-5">
+                      <strong className={`block text-3xl font-extrabold tracking-tight ${x.tone === "primary" ? "text-primary-dark" : x.tone === "accent" ? "text-accent-dark" : "text-neutral-900"}`}>
+                        {x.value}
+                      </strong>
+                      <div className="mt-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">{x.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {Array.isArray(result.failures) && result.failures.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">Failed rows</h4>
+                    <div className="mt-3 overflow-auto rounded-2xl border border-neutral-200">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-neutral-100 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-600">
+                          <tr>
+                            <th className="px-4 py-3">Row</th>
+                            <th className="px-4 py-3">Product Code</th>
+                            <th className="px-4 py-3">Description</th>
+                            <th className="px-4 py-3">Errors</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-200 bg-white">
+                          {result.failures.map((f) => (
+                            <tr key={`${f.rowNumber}-${f.key || ''}`}>
+                              <td className="px-4 py-3 font-semibold text-neutral-900">{f.rowNumber}</td>
+                              <td className="px-4 py-3 text-neutral-700">{f.sku ?? f.brand}</td>
+                              <td className="px-4 py-3 text-neutral-700">{f.name}</td>
+                              <td className="px-4 py-3 text-primary-dark">{(f.errors || []).join('; ')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

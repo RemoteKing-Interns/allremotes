@@ -35,45 +35,85 @@ const Admin = () => {
 
   if (!user) {
     return (
-      <div className="admin-page">
-        <div className="admin-login-wrap">
-          <div className="admin-login-box">
-            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-login-logo" />
-            <h1>Admin</h1>
-            <span className="admin-badge">Staff only</span>
-            <p className="auth-subtitle admin-login-subtitle">
-              Sign in with your admin account to manage the website.
-            </p>
-            {loginError && <div className="error-message">{loginError}</div>}
-            <form onSubmit={handleAdminLogin} className="auth-form">
-              <div className="form-group">
-                <label htmlFor="admin-email">Email</label>
-                <input
-                  id="admin-email"
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="admin@allremotes.com"
-                  required
-                />
+      <div className="animate-fadeIn">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto grid w-full max-w-5xl items-stretch gap-8 lg:grid-cols-2">
+            <div className="rounded-2xl border border-neutral-200 bg-white/90 p-6 shadow-panel backdrop-blur sm:p-8">
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto" />
+              <div className="mt-6">
+                <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
+                  Staff only
+                </span>
+                <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">
+                  Admin
+                </h1>
+                <p className="mt-3 text-sm leading-7 text-neutral-600">
+                  Sign in with your admin account to manage the website.
+                </p>
               </div>
-              <div className="form-group">
-                <label htmlFor="admin-password">Password</label>
-                <input
-                  id="admin-password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  required
-                />
+
+              {loginError && <div className="error-message mt-6">{loginError}</div>}
+
+              <form onSubmit={handleAdminLogin} className="mt-6 grid gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="admin-email" className="text-sm font-semibold text-neutral-800">
+                    Email
+                  </label>
+                  <input
+                    id="admin-email"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="admin@allremotes.com"
+                    required
+                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/40"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="admin-password" className="text-sm font-semibold text-neutral-800">
+                    Password
+                  </label>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    required
+                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/40"
+                  />
+                </div>
+                <button type="submit" className="mt-2 w-full rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark">
+                  Sign in
+                </button>
+              </form>
+
+              <p className="mt-6 text-sm text-neutral-600">
+                <Link href="/" className="font-semibold text-accent-dark hover:text-accent">
+                  ← Back to site
+                </Link>
+              </p>
+            </div>
+
+            <aside className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.14),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(251,248,245,0.85))] p-6 shadow-panel backdrop-blur sm:p-8">
+              <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+                Operations Console
+              </span>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+                Manage catalog, orders, navigation, and site content.
+              </h2>
+              <div className="mt-6 grid gap-4">
+                {[
+                  { t: "Products", d: "Create, edit, and delete product entries." },
+                  { t: "Orders", d: "Review and update order status." },
+                  { t: "Content", d: "Manage hero, features, promotions, and reviews." },
+                ].map((x) => (
+                  <div key={x.t} className="rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-xs">
+                    <strong className="block text-sm font-semibold text-neutral-900">{x.t}</strong>
+                    <span className="mt-1 block text-sm leading-6 text-neutral-600">{x.d}</span>
+                  </div>
+                ))}
               </div>
-              <button type="submit" className="btn btn-primary btn-large admin-submit">
-                Sign in
-              </button>
-            </form>
-            <p className="auth-footer admin-login-footer">
-              <Link href="/">← Back to site</Link>
-            </p>
+            </aside>
           </div>
         </div>
       </div>
@@ -82,15 +122,15 @@ const Admin = () => {
 
   if (!isAdmin) {
     return (
-      <div className="admin-page">
-        <div className="admin-center-shell">
-          <div className="admin-access-state">
-          <h1>Access denied</h1>
-          <p>You need admin rights to view this page.</p>
-          <Link href="/" className="btn btn-primary">
-            Go home
-          </Link>
-        </div>
+      <div className="animate-fadeIn">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Access denied</h1>
+            <p className="mt-3 text-sm leading-7 text-neutral-600">You need admin rights to view this page.</p>
+            <Link href="/" className="mt-6 inline-flex rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark">
+              Go home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -110,51 +150,60 @@ const Admin = () => {
   ];
 
   return (
-    <div className="admin-page">
-      <div className="admin-layout">
-        <aside className="admin-sidebar">
-          <div className="admin-brand">
-            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-brand-logo" />
-            <div className="admin-brand-copy">
-              <strong>Operations Console</strong>
-              <span>Website, catalog, and content management</span>
+    <div className="animate-fadeIn">
+      <div className="container py-6 sm:py-8">
+        <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+          <aside className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur lg:sticky lg:top-24">
+            <div className="flex items-center gap-3">
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-9 w-auto" />
+              <div className="min-w-0">
+                <strong className="block text-sm font-semibold text-neutral-900">Operations Console</strong>
+                <span className="block text-xs font-semibold text-neutral-500">Catalog and content</span>
+              </div>
             </div>
-          </div>
-          <nav className="admin-nav">
-            {tabs.map((tab) => (
+
+            <nav className="mt-5 grid gap-1">
+              {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                className={`admin-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                  activeTab === tab.id ? "bg-accent/10 text-accent-dark" : "text-neutral-800 hover:bg-neutral-100"
+                }`}
                 onClick={() => setActiveTab(tab.id)}
               >
-                <span className="admin-nav-icon">{tab.icon}</span>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">
+                  {tab.icon}
+                </span>
                 <span>{tab.label}</span>
               </button>
-            ))}
-            <Link className="admin-nav-item" href="/admin/upload-products">
-              <span className="admin-nav-icon">UP</span>
-              <span>Upload CSV</span>
-            </Link>
-          </nav>
-          <div className="admin-sidebar-footer">
-            <Link href="/" className="admin-sidebar-link">
-              ← View site
-            </Link>
-          </div>
-        </aside>
-        <main className="admin-main">
-          {activeTab === 'dashboard' && <AdminDashboard />}
-          {activeTab === 'analytics' && <AdminAnalytics />}
-          {activeTab === 'users' && <AdminUsers />}
-          {activeTab === 'products' && <AdminProducts />}
-          {activeTab === 'orders' && <AdminOrders />}
-          {activeTab === 'home' && <AdminHome />}
-          {activeTab === 'promotions' && <AdminPromotions />}
-          {activeTab === 'navigation' && <AdminNavigation />}
-          {activeTab === 'reviews' && <AdminReviews />}
-          {activeTab === 'settings' && <AdminSettings />}
-        </main>
+              ))}
+              <Link className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100" href="/admin/upload-products">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">UP</span>
+                <span>Upload CSV</span>
+              </Link>
+            </nav>
+
+            <div className="mt-5 border-t border-neutral-200 pt-4">
+              <Link href="/" className="text-sm font-semibold text-accent-dark hover:text-accent">
+                ← View site
+              </Link>
+            </div>
+          </aside>
+
+          <main className="min-w-0">
+            {activeTab === 'dashboard' && <AdminDashboard />}
+            {activeTab === 'analytics' && <AdminAnalytics />}
+            {activeTab === 'users' && <AdminUsers />}
+            {activeTab === 'products' && <AdminProducts />}
+            {activeTab === 'orders' && <AdminOrders />}
+            {activeTab === 'home' && <AdminHome />}
+            {activeTab === 'promotions' && <AdminPromotions />}
+            {activeTab === 'navigation' && <AdminNavigation />}
+            {activeTab === 'reviews' && <AdminReviews />}
+            {activeTab === 'settings' && <AdminSettings />}
+          </main>
+        </div>
       </div>
     </div>
   );

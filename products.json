@@ -9,13 +9,13 @@
     "brand": "Toyota",
     "sku": "DEMO-TY-COR-001",
     "image": "/remotes/001_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Match the key profile, cut the blade if required, and program the remote to the vehicle using standard workshop procedures.",
-    "warnings": "Demo product data only. Not linked to real stock levels or compatibility validation.",
-    "createdAt": "2026-03-16T10:00:00.000Z",
-    "updatedAt": "2026-03-16T10:00:00.000Z"
+    "skuKey": "demo-ty-cor-001",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-ford-ranger-flip-key",
@@ -27,13 +27,13 @@
     "brand": "Ford",
     "sku": "DEMO-FD-RAN-002",
     "image": "/remotes/002_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Transfer the internals if needed, then pair the key to the vehicle using the correct procedure for the Ford Ranger platform.",
-    "warnings": "For UI testing only. Pricing and stock are not real.",
-    "createdAt": "2026-03-16T10:01:00.000Z",
-    "updatedAt": "2026-03-16T10:01:00.000Z"
+    "skuKey": "demo-fd-ran-002",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-mazda-cx5-proximity-remote",
@@ -45,13 +45,13 @@
     "brand": "Mazda",
     "sku": "DEMO-MZ-CX5-003",
     "image": "/remotes/003_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Verify FCC and blade profile before cutting or programming. Follow Mazda proximity key programming steps.",
-    "warnings": "Demo data only. Vehicle years are illustrative for local UI testing.",
-    "createdAt": "2026-03-16T10:02:00.000Z",
-    "updatedAt": "2026-03-16T10:02:00.000Z"
+    "skuKey": "demo-mz-cx5-003",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-hyundai-i30-flip-key",
@@ -63,13 +63,13 @@
     "brand": "Hyundai",
     "sku": "DEMO-HY-I30-004",
     "image": "/remotes/004_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Cut the blade to match the original, transfer electronics where applicable, and complete vehicle pairing.",
-    "warnings": "Not a real catalog entry. Use for local design validation only.",
-    "createdAt": "2026-03-16T10:03:00.000Z",
-    "updatedAt": "2026-03-16T10:03:00.000Z"
+    "skuKey": "demo-hy-i30-004",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-nissan-xtrail-remote-head-key",
@@ -81,13 +81,13 @@
     "brand": "Nissan",
     "sku": "DEMO-NS-XTR-005",
     "image": "/remotes/005_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Confirm remote frequency and key profile, then program to the Nissan X-Trail using the correct sequence.",
-    "warnings": "Demo product only. Not intended for production sales use.",
-    "createdAt": "2026-03-16T10:04:00.000Z",
-    "updatedAt": "2026-03-16T10:04:00.000Z"
+    "skuKey": "demo-ns-xtr-005",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-subaru-forester-smart-key",
@@ -99,13 +99,13 @@
     "brand": "Subaru",
     "sku": "DEMO-SB-FOR-006",
     "image": "/remotes/006_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Check proximity key type and emergency blade before attempting registration to the Subaru system.",
-    "warnings": "Local mock data only.",
-    "createdAt": "2026-03-16T10:05:00.000Z",
-    "updatedAt": "2026-03-16T10:05:00.000Z"
+    "skuKey": "demo-sb-for-006",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-toyota-hilux-remote-head-key",
@@ -117,13 +117,13 @@
     "brand": "Toyota",
     "sku": "DEMO-TY-HIL-007",
     "image": "/remotes/007_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Match the blade profile and follow Toyota key registration steps for the Hilux platform.",
-    "warnings": "This is fake product data for local UI testing.",
-    "createdAt": "2026-03-16T10:06:00.000Z",
-    "updatedAt": "2026-03-16T10:06:00.000Z"
+    "skuKey": "demo-ty-hil-007",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-bmw-3series-smart-remote",
@@ -135,13 +135,13 @@
     "brand": "BMW",
     "sku": "DEMO-BM-F30-008",
     "image": "/remotes/008_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Check remote style, blade insert, and CAS/FEM requirements before programming.",
-    "warnings": "Mock item for interface testing only.",
-    "createdAt": "2026-03-16T10:07:00.000Z",
-    "updatedAt": "2026-03-16T10:07:00.000Z"
+    "skuKey": "demo-bm-f30-008",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-mercedes-cclass-key-shell",
@@ -153,13 +153,13 @@
     "brand": "Mercedes-Benz",
     "sku": "DEMO-MB-CLS-009",
     "image": "/remotes/009_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Shell-only product. Move the internal board and blade from the existing key into the new housing.",
-    "warnings": "Out of stock demo item used to preview stock badges.",
-    "createdAt": "2026-03-16T10:08:00.000Z",
-    "updatedAt": "2026-03-16T10:08:00.000Z"
+    "skuKey": "demo-mb-cls-009",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-holden-commodore-ve-remote",
@@ -171,13 +171,13 @@
     "brand": "Holden",
     "sku": "DEMO-HO-VE-010",
     "image": "/remotes/010_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Use the original key as a reference for blade and internal board transfer.",
-    "warnings": "Local demo data only.",
-    "createdAt": "2026-03-16T10:09:00.000Z",
-    "updatedAt": "2026-03-16T10:09:00.000Z"
+    "skuKey": "demo-ho-ve-010",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-kia-cerato-flip-key",
@@ -189,13 +189,13 @@
     "brand": "Kia",
     "sku": "DEMO-KI-CER-011",
     "image": "/remotes/011_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Ensure the key profile and frequency match the original before programming.",
-    "warnings": "Demo catalog content only.",
-    "createdAt": "2026-03-16T10:10:00.000Z",
-    "updatedAt": "2026-03-16T10:10:00.000Z"
+    "skuKey": "demo-ki-cer-011",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-volkswagen-golf-mk7-smart-key",
@@ -207,13 +207,13 @@
     "brand": "Volkswagen",
     "sku": "DEMO-VW-GOL-012",
     "image": "/remotes/012_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Confirm smart key version and emergency blade style before pairing.",
-    "warnings": "Not a real product record.",
-    "createdAt": "2026-03-16T10:11:00.000Z",
-    "updatedAt": "2026-03-16T10:11:00.000Z"
+    "skuKey": "demo-vw-gol-012",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-merlin-c945-garage-remote",
@@ -225,13 +225,13 @@
     "brand": "Merlin",
     "sku": "DEMO-ME-C945-013",
     "image": "/remotes/013_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Follow your opener's learn-mode instructions and pair the remote to the receiver.",
-    "warnings": "Development-only sample product.",
-    "createdAt": "2026-03-16T10:12:00.000Z",
-    "updatedAt": "2026-03-16T10:12:00.000Z"
+    "skuKey": "demo-me-c945-013",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-ata-ptx5v2-remote",
@@ -243,13 +243,13 @@
     "brand": "ATA",
     "sku": "DEMO-ATA-PTX-014",
     "image": "/remotes/014_sprds3_18.png",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Put the receiver into learn mode and press the desired button until the opener confirms pairing.",
-    "warnings": "Fake local testing data only.",
-    "createdAt": "2026-03-16T10:13:00.000Z",
-    "updatedAt": "2026-03-16T10:13:00.000Z"
+    "skuKey": "demo-ata-ptx-014",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-bnd-tb6-tritran-remote",
@@ -261,13 +261,13 @@
     "brand": "B&D",
     "sku": "DEMO-BND-TB6-015",
     "image": "/remotes/015_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Use the opener motor's learn button to register the new transmitter.",
-    "warnings": "UI testing record only.",
-    "createdAt": "2026-03-16T10:14:00.000Z",
-    "updatedAt": "2026-03-16T10:14:00.000Z"
+    "skuKey": "demo-bnd-tb6-015",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-steelline-stl-remote",
@@ -279,13 +279,13 @@
     "brand": "Steel-Line",
     "sku": "DEMO-STL-016",
     "image": "/remotes/016_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Pair the transmitter according to the Steel-Line motor manual.",
-    "warnings": "Out-of-stock demo item used for local testing.",
-    "createdAt": "2026-03-16T10:15:00.000Z",
-    "updatedAt": "2026-03-16T10:15:00.000Z"
+    "skuKey": "demo-stl-016",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-centurion-nova-gate-remote",
@@ -297,13 +297,13 @@
     "brand": "Centurion",
     "sku": "DEMO-CEN-NOV-017",
     "image": "/remotes/017_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Enter receiver programming mode and assign the remote button to the required output.",
-    "warnings": "Demo content for local UI validation.",
-    "createdAt": "2026-03-16T10:16:00.000Z",
-    "updatedAt": "2026-03-16T10:16:00.000Z"
+    "skuKey": "demo-cen-nov-017",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-nice-flor-s-gate-remote",
@@ -315,13 +315,13 @@
     "brand": "Nice",
     "sku": "DEMO-NI-FLO-018",
     "image": "/remotes/018_s-l140.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Copy or learn the remote using the receiver instructions for your Nice automation system.",
-    "warnings": "Local fake data only.",
-    "createdAt": "2026-03-16T10:17:00.000Z",
-    "updatedAt": "2026-03-16T10:17:00.000Z"
+    "skuKey": "demo-ni-flo-018",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-liftmaster-visor-remote",
@@ -333,13 +333,13 @@
     "brand": "LiftMaster",
     "sku": "DEMO-LM-VIS-019",
     "image": "/remotes/019_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Program the visor remote using the learn button on the LiftMaster opener.",
-    "warnings": "Demo storefront record for local testing.",
-    "createdAt": "2026-03-16T10:18:00.000Z",
-    "updatedAt": "2026-03-16T10:18:00.000Z"
+    "skuKey": "demo-lm-vis-019",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   },
   {
     "id": "demo-chamberlain-wireless-keypad",
@@ -351,12 +351,12 @@
     "brand": "Chamberlain",
     "sku": "DEMO-CH-KPD-020",
     "image": "/remotes/020_s-l500.webp",
+    "imageIndex": 0,
     "condition": "Brand New",
     "returns": "30 day returns on unused demo stock",
     "seller": "AllRemotes Local Demo Store",
-    "instructions": "Mount the keypad near the opener and complete the PIN pairing process according to the Chamberlain manual.",
-    "warnings": "Development-only product seed data.",
-    "createdAt": "2026-03-16T10:19:00.000Z",
-    "updatedAt": "2026-03-16T10:19:00.000Z"
+    "skuKey": "demo-ch-kpd-020",
+    "updatedAt": "2026-03-18T02:58:21.542Z",
+    "createdAt": "2026-03-18T02:58:21.542Z"
   }
 ]
