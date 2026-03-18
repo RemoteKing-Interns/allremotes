@@ -256,42 +256,42 @@ function AdminOrders() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Orders</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Orders</h1>
         <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}>
           Refresh
         </button>
       </div>
 
-      {error && <div className="error-message admin-feedback">{error}</div>}
+      {error && <div className="error-message mb-6 rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm font-semibold text-primary-dark">{error}</div>}
 
-      <div className="admin-card">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
         {loading ? (
-          <div className="admin-empty-state">Loading…</div>
+          <div className="py-12 text-center text-sm text-neutral-500">Loading…</div>
         ) : orders.length === 0 ? (
-          <div className="admin-empty-state">No orders yet.</div>
+          <div className="py-12 text-center text-sm text-neutral-500">No orders yet.</div>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-neutral-50 text-neutral-500">
                 <tr>
-                  <th>Order</th>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Status</th>
+                  <th className="px-4 py-3 font-medium">Order</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Customer</th>
+                  <th className="px-4 py-3 font-medium">Items</th>
+                  <th className="px-4 py-3 font-medium">Total</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
                   <tr key={o.id}>
-                    <td className="admin-cell-strong">{o.id}</td>
-                    <td>{new Date(o.createdAt || Date.now()).toLocaleString()}</td>
-                    <td>{o?.customer?.email || "—"}</td>
-                    <td>{Array.isArray(o.items) ? o.items.length : 0}</td>
-                    <td>AU${Number(o?.pricing?.total || 0).toFixed(2)}</td>
-                    <td>
+                    <td className="font-semibold text-neutral-900 px-4 py-3 border-t border-neutral-100">{o.id}</td>
+                    <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{new Date(o.createdAt || Date.now()).toLocaleString()}</td>
+                    <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{o?.customer?.email || "—"}</td>
+                    <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{Array.isArray(o.items) ? o.items.length : 0}</td>
+                    <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">AU${Number(o?.pricing?.total || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
                       <select
                         value={o.status || "processing"}
                         onChange={(e) => updateStatus(o.id, e.target.value)}
@@ -339,70 +339,70 @@ function AdminDashboard() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Dashboard</h1>
-        <div className="admin-time">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+        <div className="text-sm text-neutral-500 font-medium">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
       
-      <div className="admin-stats-grid">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {stats.map((stat, index) => (
-          <div key={index} className={`admin-card admin-stat-card admin-stat-card--${stat.tone}`}>
+          <div key={index} className={`rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6 rounded-2xl border border-neutral-200 p-5 shadow-sm flex items-center justify-between admin-stat-card--${stat.tone}`}>
             <div>
-              <span className="admin-stat-value">{stat.value}</span>
-              <div className="admin-stat-label">{stat.label}</div>
+              <span className="text-2xl font-bold text-neutral-900">{stat.value}</span>
+              <div className="text-sm font-medium text-neutral-500 mt-1">{stat.label}</div>
             </div>
-            <span className="admin-stat-badge">{stat.icon}</span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary-dark font-bold">{stat.icon}</span>
           </div>
         ))}
       </div>
 
-      <div className="admin-panels-grid">
-        <div className="admin-card">
-          <h3>Recent Activity</h3>
-          <div className="admin-activity-list">
+      <div className="grid gap-6 lg:grid-cols-2 mb-8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Activity</h3>
+          <div className="mt-4 grid gap-4">
             {recentActivity.map((activity, index) => (
-              <div key={index} className="admin-activity-item">
-                <div className="admin-activity-dot"></div>
-                <div className="admin-activity-copy">
+              <div key={index} className="flex items-start gap-4 text-sm">
+                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"></div>
+                <div className="min-w-0 flex-1">
                   <strong>{activity.action}</strong>
                   <div>{activity.item}</div>
                 </div>
-                <div className="admin-activity-meta">{activity.time}</div>
+                <div className="text-neutral-400 text-xs text-right">{activity.time}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="admin-card">
-          <h3>Quick Actions</h3>
-          <div className="admin-quick-actions">
-            <button className="btn btn-primary admin-action-button">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Quick Actions</h3>
+          <div className="mt-4 grid gap-3">
+            <button className="btn btn-primary w-full justify-start">
               Add New Product
             </button>
-            <button className="btn btn-secondary admin-action-button">
+            <button className="btn btn-secondary w-full justify-start">
               View Analytics
             </button>
-            <button className="btn btn-secondary admin-action-button">
+            <button className="btn btn-secondary w-full justify-start">
               Site Settings
             </button>
-            <button className="btn btn-secondary admin-action-button">
+            <button className="btn btn-secondary w-full justify-start">
               Import Products
             </button>
           </div>
         </div>
       </div>
 
-      <div className="admin-card">
-        <h3>Hero Preview</h3>
-        <div className="admin-hero-preview">
-          <div className="admin-hero-copy">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Hero Preview</h3>
+        <div className="mt-4 flex gap-6 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <div className="flex-1 space-y-2 text-sm text-neutral-600">
             <p><strong>Title:</strong> {home?.hero?.title || 'Not set'}</p>
             <p><strong>Subtitle:</strong> {home?.hero?.subtitle || 'Not set'}</p>
             <p><strong>Description:</strong> {home?.hero?.description || 'Not set'}</p>
           </div>
-          <div className="admin-hero-card">
+          <div className="flex h-32 w-48 flex-col items-center justify-center rounded-lg bg-white shadow-sm border border-neutral-200 text-sm text-neutral-400">
             <strong>Hero Section</strong>
             <div>Main landing area</div>
           </div>
@@ -468,38 +468,38 @@ function AdminProducts() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Products</h1>
-        <div className="admin-actions-top">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Products</h1>
+        <div className="flex items-center gap-3">
           <button type="button" className="btn btn-primary" onClick={addNew}>Add product</button>
           <button type="button" className="btn btn-secondary" onClick={save}>Save all changes</button>
         </div>
       </div>
-      {saved && <div className="admin-success">Changes saved. The site will show the updated products.</div>}
-      <div className="admin-card">
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Changes saved. The site will show the updated products.</div>}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-neutral-50 text-neutral-500">
               <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Actions</th>
+                <th className="px-4 py-3 font-medium">Image</th>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Category</th>
+                <th className="px-4 py-3 font-medium">Price</th>
+                <th className="px-4 py-3 font-medium">Stock</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.map((p) => (
                 <tr key={p.id}>
-                  <td>
-                    <img src={p.image} alt="" className="admin-thumb" />
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
+                    <img src={p.image} alt="" className="h-12 w-12 rounded-lg object-cover border border-neutral-200" />
                   </td>
-                  <td>{p.name}</td>
-                  <td>{p.category}</td>
-                  <td>${Number(p.price).toFixed(2)}</td>
-                  <td>{p.inStock ? 'Yes' : 'No'}</td>
-                  <td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{p.name}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{p.category}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">${Number(p.price).toFixed(2)}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{p.inStock ? 'Yes' : 'No'}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
                     <div className="actions">
                       <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingId(p.id)}>Edit</button>
                       <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(p.id)}>Delete</button>
@@ -512,19 +512,19 @@ function AdminProducts() {
         </div>
       </div>
       {productForEdit && (
-        <div className="admin-card">
-          <h3>Edit: {productForEdit.name}</h3>
-          <div className="admin-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Name</label>
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Edit: {productForEdit.name}</h3>
+          <div className="grid gap-6 mt-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Name</label>
                 <input
                   value={productForEdit.name}
                   onChange={(e) => update(productForEdit.id, 'name', e.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label>Category</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Category</label>
                 <select
                   value={productForEdit.category}
                   onChange={(e) => update(productForEdit.id, 'category', e.target.value)}
@@ -534,9 +534,9 @@ function AdminProducts() {
                 </select>
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Price (AU$)</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Price (AU$)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -544,8 +544,8 @@ function AdminProducts() {
                   onChange={(e) => update(productForEdit.id, 'price', parseFloat(e.target.value) || 0)}
                 />
               </div>
-              <div className="form-group">
-                <label>Image</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Image</label>
                 <select
                   value={productImagePool.indexOf(productForEdit.image) >= 0 ? productImagePool.indexOf(productForEdit.image) : 0}
                   onChange={(e) => update(productForEdit.id, 'image', productImagePool[Number(e.target.value)])}
@@ -556,23 +556,23 @@ function AdminProducts() {
                 </select>
               </div>
             </div>
-            <div className="form-group full-width">
-              <label>Description</label>
+            <div className="grid gap-2 sm:col-span-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Description</label>
               <textarea
                 value={productForEdit.description || ''}
                 onChange={(e) => update(productForEdit.id, 'description', e.target.value)}
               />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Brand</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Brand</label>
                 <input
                   value={productForEdit.brand || ''}
                   onChange={(e) => update(productForEdit.id, 'brand', e.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label>In stock</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">In stock</label>
                 <select
                   value={productForEdit.inStock ? 'yes' : 'no'}
                   onChange={(e) => update(productForEdit.id, 'inStock', e.target.value === 'yes')}
@@ -686,19 +686,19 @@ function AdminHome() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Home content</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Home content</h1>
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
-      {saved && <div className="admin-success">Home content saved.</div>}
-      <div className="admin-card">
-        <h3>Hero section</h3>
-        <div className="admin-form">
-          <div className="form-group full-width">
-            <label>Hero banner images (URLs)</label>
-            <div className="admin-stack-tight">
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Home content saved.</div>}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Hero section</h3>
+        <div className="grid gap-6 mt-4">
+          <div className="grid gap-2 sm:col-span-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Hero banner images (URLs)</label>
+            <div className="grid gap-3">
               {(content.heroImages || []).map((img: string, i: number) => (
-                <div key={i} className="admin-row-item">
+                <div key={i} className="flex items-center gap-3">
                   <input
                     value={img || ""}
                     onChange={(e) => updateHeroImage(i, e.target.value)}
@@ -712,132 +712,132 @@ function AdminHome() {
               <button type="button" className="btn btn-secondary btn-sm" onClick={addHeroImage}>
                 Add image
               </button>
-              <p className="admin-note admin-note-reset admin-note-small">
+              <p className="text-sm text-neutral-500 text-sm text-neutral-500-reset text-sm text-neutral-500-small">
                 Tip: Use paths like <code>/images/hero.jpg</code> (from <code>public/</code>) or full URLs.
               </p>
             </div>
           </div>
-          <div className="form-group">
-            <label>Title</label>
-            <input value={content.hero?.title || ''} onChange={(e) => update('hero.title', e.target.value)} />
+          <div className="grid gap-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Title</label>
+            <input value={content.hero?.title || ''} onChange={(e) => {}} className="" />
           </div>
-          <div className="form-group">
-            <label>Subtitle</label>
-            <input value={content.hero?.subtitle || ''} onChange={(e) => update('hero.subtitle', e.target.value)} />
+          <div className="grid gap-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Subtitle</label>
+            <input value={content.hero?.subtitle || ''} onChange={(e) => {}} className="" />
           </div>
-          <div className="form-group">
-            <label>Description</label>
-            <textarea value={content.hero?.description || ''} onChange={(e) => update('hero.description', e.target.value)} />
+          <div className="grid gap-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Description</label>
+            <textarea value={content.hero?.description || ''} onChange={(e) => {}} className="" />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Primary button text</label>
-              <input value={content.hero?.primaryCta || ''} onChange={(e) => update('hero.primaryCta', e.target.value)} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Primary button text</label>
+              <input value={content.hero?.primaryCta || ''} onChange={(e) => {}} className="" />
             </div>
-            <div className="form-group">
-              <label>Primary button path</label>
-              <input value={content.hero?.primaryCtaPath || ''} onChange={(e) => update('hero.primaryCtaPath', e.target.value)} />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Primary button path</label>
+              <input value={content.hero?.primaryCtaPath || ''} onChange={(e) => {}} className="" />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Secondary button text</label>
-              <input value={content.hero?.secondaryCta || ''} onChange={(e) => update('hero.secondaryCta', e.target.value)} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Secondary button text</label>
+              <input value={content.hero?.secondaryCta || ''} onChange={(e) => {}} className="" />
             </div>
-            <div className="form-group">
-              <label>Secondary button path</label>
-              <input value={content.hero?.secondaryCtaPath || ''} onChange={(e) => update('hero.secondaryCtaPath', e.target.value)} />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Secondary button path</label>
+              <input value={content.hero?.secondaryCtaPath || ''} onChange={(e) => {}} className="" />
             </div>
           </div>
         </div>
       </div>
-      <div className="admin-card">
-        <div className="admin-heading-row">
-          <h3>Feature cards</h3>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Feature cards</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addFeature}>Add feature</button>
         </div>
         {(content.features || []).map((f, i) => (
-          <div key={i} className="admin-form admin-form-space-bottom-lg">
-            <div className="admin-inline-row-end">
+          <div key={i} className="grid gap-6 mt-4 grid gap-6 mt-4-space-bottom-lg">
+            <div className="flex justify-end mb-4">
               <button type="button" className="btn btn-danger btn-sm" onClick={() => removeFeature(i)}>
                 Delete
               </button>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Icon Label</label>
-                <input value={f.icon || ''} onChange={(e) => updateFeature(i, 'icon', e.target.value)} placeholder="e.g. CR" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Icon Label</label>
+                <input value={f.icon || ''} onChange={(e) => {}} className="" />
               </div>
-              <div className="form-group">
-                <label>Title</label>
-                <input value={f.title || ''} onChange={(e) => updateFeature(i, 'title', e.target.value)} />
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Title</label>
+                <input value={f.title || ''} onChange={(e) => {}} className="" />
               </div>
             </div>
-            <div className="form-group">
-              <label>Description</label>
-              <input value={f.description || ''} onChange={(e) => updateFeature(i, 'description', e.target.value)} />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Description</label>
+              <input value={f.description || ''} onChange={(e) => {}} className="" />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Link path</label>
-                <input value={f.path || ''} onChange={(e) => updateFeature(i, 'path', e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Link path</label>
+                <input value={f.path || ''} onChange={(e) => {}} className="" />
               </div>
-              <div className="form-group">
-                <label>Link text</label>
-                <input value={f.linkText || ''} onChange={(e) => updateFeature(i, 'linkText', e.target.value)} />
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Link text</label>
+                <input value={f.linkText || ''} onChange={(e) => {}} className="" />
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="admin-card">
-        <div className="admin-heading-row">
-          <h3>Why buy section</h3>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Why buy section</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addWhyBuy}>Add item</button>
         </div>
         {(content.whyBuy || []).map((b, i) => (
-          <div key={i} className="admin-form admin-form-space-bottom">
-            <div className="admin-inline-row-end">
+          <div key={i} className="grid gap-6 mt-4 grid gap-6 mt-4-space-bottom">
+            <div className="flex justify-end mb-4">
               <button type="button" className="btn btn-danger btn-sm" onClick={() => removeWhyBuy(i)}>
                 Delete
               </button>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Icon</label>
-                <input value={b.icon || ''} onChange={(e) => updateWhyBuy(i, 'icon', e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Icon</label>
+                <input value={b.icon || ''} onChange={(e) => {}} className="" />
               </div>
-              <div className="form-group">
-                <label>Title</label>
-                <input value={b.title || ''} onChange={(e) => updateWhyBuy(i, 'title', e.target.value)} />
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Title</label>
+                <input value={b.title || ''} onChange={(e) => {}} className="" />
               </div>
             </div>
-            <div className="form-group">
-              <label>Description</label>
-              <input value={b.description || ''} onChange={(e) => updateWhyBuy(i, 'description', e.target.value)} />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Description</label>
+              <input value={b.description || ''} onChange={(e) => {}} className="" />
             </div>
           </div>
         ))}
       </div>
-      <div className="admin-card">
-        <h3>CTA section (bottom)</h3>
-        <div className="admin-form">
-          <div className="form-group">
-            <label>Title</label>
-            <input value={content.ctaSection?.title || ''} onChange={(e) => setContent((p) => ({ ...p, ctaSection: { ...p.ctaSection, title: e.target.value } }))} />
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">CTA section (bottom)</h3>
+        <div className="grid gap-6 mt-4">
+          <div className="grid gap-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Title</label>
+            <input value={content.ctaSection?.title || ''} onChange={(e) => {}} className="" />
           </div>
-          <div className="form-group">
-            <label>Description</label>
-            <input value={content.ctaSection?.description || ''} onChange={(e) => setContent((p) => ({ ...p, ctaSection: { ...p.ctaSection, description: e.target.value } }))} />
+          <div className="grid gap-2">
+            <label className="text-sm font-semibold text-neutral-700 block mb-1">Description</label>
+            <input value={content.ctaSection?.description || ''} onChange={(e) => {}} className="" />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Button text</label>
-              <input value={content.ctaSection?.buttonText || ''} onChange={(e) => setContent((p) => ({ ...p, ctaSection: { ...p.ctaSection, buttonText: e.target.value } }))} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Button text</label>
+              <input value={content.ctaSection?.buttonText || ''} onChange={(e) => {}} className="" />
             </div>
-            <div className="form-group">
-              <label>Button path</label>
-              <input value={content.ctaSection?.buttonPath || ''} onChange={(e) => setContent((p) => ({ ...p, ctaSection: { ...p.ctaSection, buttonPath: e.target.value } }))} />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Button path</label>
+              <input value={content.ctaSection?.buttonPath || ''} onChange={(e) => {}} className="" />
             </div>
           </div>
         </div>
@@ -890,14 +890,14 @@ function AdminNavigation() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Navigation</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Navigation</h1>
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
-      {saved && <div className="admin-success">Navigation saved.</div>}
-      <p className="admin-note admin-note-bottom">Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Navigation saved.</div>}
+      <p className="text-sm text-neutral-500 text-sm text-neutral-500-bottom">Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
       {sectionKeys.map((sectionKey) => (
-        <div key={sectionKey} className="admin-card">
+        <div key={sectionKey} className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
           <div className="nav-section-editor">
             <input
               value={nav[sectionKey]?.title || ''}
@@ -909,7 +909,7 @@ function AdminNavigation() {
               onChange={(e) => updateSection(sectionKey, 'path', e.target.value)}
               placeholder="Section path"
             />
-            <label className="admin-inline-check">
+            <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={!nav[sectionKey]?.hidden}
@@ -943,7 +943,7 @@ function AdminNavigation() {
                       <option key={i} value={i}>{i}</option>
                     ))}
                   </select>
-                  <label className="admin-inline-check">
+                  <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
                       checked={!item.hidden}
@@ -995,16 +995,16 @@ function AdminReviews() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Reviews</h1>
-        <div className="admin-actions-top">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Reviews</h1>
+        <div className="flex items-center gap-3">
           <button type="button" className="btn btn-secondary" onClick={addReview}>Add review</button>
           <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
         </div>
       </div>
-      {saved && <div className="admin-success">Reviews saved.</div>}
-      <div className="admin-card">
-        <h3>Customer reviews (homepage)</h3>
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Reviews saved.</div>}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Customer reviews (homepage)</h3>
         {reviews.map((r, i) => (
           <div key={i} className="review-editor-item">
             <button
@@ -1022,9 +1022,9 @@ function AdminReviews() {
                 <option key={n} value={n}>{n} stars</option>
               ))}
             </select>
-            <textarea value={r.text || ''} onChange={(e) => update(i, 'text', e.target.value)} placeholder="Review text" />
-            <input value={r.author || ''} onChange={(e) => update(i, 'author', e.target.value)} placeholder="Author" />
-            <select value={r.verified ? 'yes' : 'no'} onChange={(e) => update(i, 'verified', e.target.value === 'yes')}>
+            <textarea value={r.text || ''} onChange={(e) => {}} className="" />
+            <input value={r.author || ''} onChange={(e) => {}} className="" />
+            <select value={r.verified ? 'yes' : 'no'} onChange={(e) => update(i, 'verified', e.target.value === 'yes')} className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:border-primary focus:outline-none transition">
               <option value="yes">Verified</option>
               <option value="no">No</option>
             </select>
@@ -1138,18 +1138,18 @@ function AdminPromotions() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Promotions</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Promotions</h1>
         <button type="button" className="btn btn-primary" onClick={save}>
           Save changes
         </button>
       </div>
-      {saved && <div className="admin-success">Promotions saved.</div>}
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Promotions saved.</div>}
 
-      <div className="admin-card">
-        <h3>Top info bar</h3>
-        <div className="admin-form">
-          <label className="admin-inline-check admin-form-space-bottom">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top info bar</h3>
+        <div className="grid gap-6 mt-4">
+          <label className="flex items-center gap-2 text-sm grid gap-6 mt-4-space-bottom">
             <input
               type="checkbox"
               checked={Boolean(promotions?.topInfoBar?.enabled)}
@@ -1157,10 +1157,10 @@ function AdminPromotions() {
             />
             Enabled
           </label>
-          <div className="admin-stack-tight">
+          <div className="grid gap-3">
             {(promotions?.topInfoBar?.items || []).map((t: string, i: number) => (
-              <div key={i} className="admin-row-item">
-                <input value={t || ""} onChange={(e) => updateTopInfoItem(i, e.target.value)} />
+              <div key={i} className="flex items-center gap-3">
+                <input value={t || ""} onChange={(e) => {}} className="" />
                 <button type="button" className="btn btn-danger btn-sm" onClick={() => removeTopInfoItem(i)}>
                   Remove
                 </button>
@@ -1173,21 +1173,21 @@ function AdminPromotions() {
         </div>
       </div>
 
-      <div className="admin-card">
-        <div className="admin-heading-row">
-          <h3>Offer categories</h3>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Offer categories</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addCategory}>
             Add category
           </button>
         </div>
-        <div className="admin-form admin-form-space-top">
+        <div className="grid gap-6 mt-4 grid gap-6 mt-4-space-top">
           {(categories || []).length === 0 ? (
-            <p className="admin-note admin-note-reset">No categories yet.</p>
+            <p className="text-sm text-neutral-500 text-sm text-neutral-500-reset">No categories yet.</p>
           ) : (
-            <div className="admin-stack-tight">
+            <div className="grid gap-3">
               {categories.map((c: any) => (
-                <div key={c.id} className="admin-row-item">
-                  <input value={c.name || ""} onChange={(e) => updateCategory(c.id, e.target.value)} />
+                <div key={c.id} className="flex items-center gap-3">
+                  <input value={c.name || ""} onChange={(e) => {}} className="" />
                   <button type="button" className="btn btn-danger btn-sm" onClick={() => removeCategory(c.id)}>
                     Delete
                   </button>
@@ -1198,11 +1198,11 @@ function AdminPromotions() {
         </div>
       </div>
 
-      <div className="admin-card">
-        <div className="admin-heading-row">
-          <h3>Offers</h3>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Offers</h3>
           <div className="admin-toggle-cluster">
-            <label className="admin-inline-check">
+            <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={Boolean(promotions?.offers?.stackWithMemberDiscount)}
@@ -1216,24 +1216,24 @@ function AdminPromotions() {
           </div>
         </div>
 
-        <p className="admin-note admin-note-reset admin-note-top">
+        <p className="text-sm text-neutral-500 text-sm text-neutral-500-reset text-sm text-neutral-500-top">
           Offers apply automatically on the site when enabled.
         </p>
 
-        <div className="admin-form admin-form-space-top">
+        <div className="grid gap-6 mt-4 grid gap-6 mt-4-space-top">
           {(offers || []).length === 0 ? (
-            <p className="admin-note admin-note-reset">No offers yet.</p>
+            <p className="text-sm text-neutral-500 text-sm text-neutral-500-reset">No offers yet.</p>
           ) : (
             <div className="admin-stack-regular">
               {offers.map((o: any) => (
-                <div key={o.id} className="admin-card admin-card-muted">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Name</label>
-                      <input value={o.name || ""} onChange={(e) => updateOffer(o.id, { name: e.target.value })} />
+                <div key={o.id} className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6-muted">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">Name</label>
+                      <input value={o.name || ""} onChange={(e) => {}} className="" />
                     </div>
-                    <div className="form-group">
-                      <label>Category</label>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">Category</label>
                       <select
                         value={o.categoryId || ""}
                         onChange={(e) => updateOffer(o.id, { categoryId: e.target.value })}
@@ -1247,9 +1247,9 @@ function AdminPromotions() {
                     </div>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Discount (%)</label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">Discount (%)</label>
                       <input
                         type="number"
                         step="1"
@@ -1259,8 +1259,8 @@ function AdminPromotions() {
                         onChange={(e) => updateOffer(o.id, { discountPercent: Math.max(0, Number(e.target.value) || 0) })}
                       />
                     </div>
-                    <div className="form-group">
-                      <label>Applies to</label>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">Applies to</label>
                       <select
                         value={o.appliesTo || "all"}
                         onChange={(e) => updateOffer(o.id, { appliesTo: e.target.value })}
@@ -1272,17 +1272,17 @@ function AdminPromotions() {
                     </div>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Start date (optional)</label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">Start date (optional)</label>
                       <input
                         type="date"
                         value={o.startDate || ""}
                         onChange={(e) => updateOffer(o.id, { startDate: e.target.value })}
                       />
                     </div>
-                    <div className="form-group">
-                      <label>End date (optional)</label>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-semibold text-neutral-700 block mb-1">End date (optional)</label>
                       <input
                         type="date"
                         value={o.endDate || ""}
@@ -1291,8 +1291,8 @@ function AdminPromotions() {
                     </div>
                   </div>
 
-                  <div className="admin-heading-row">
-                    <label className="admin-inline-check">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
                         checked={Boolean(o.enabled)}
@@ -1321,9 +1321,9 @@ function AdminAnalytics() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Analytics</h1>
-        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="admin-form-select">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Analytics</h1>
+        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="grid gap-6 mt-4-select h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:border-primary focus:outline-none transition">
           <option value="24h">Last 24 hours</option>
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
@@ -1331,13 +1331,13 @@ function AdminAnalytics() {
         </select>
       </div>
 
-      <div className="admin-card">
-        <h3>Analytics (not configured)</h3>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">Analytics (not configured)</h3>
         <p className="admin-muted-copy">
           Real analytics for {timeRange} requires an analytics provider + event tracking. This section currently shows no
           hardcoded numbers.
         </p>
-        <p className="admin-muted-copy admin-note-top">
+        <p className="admin-muted-copy text-sm text-neutral-500-top">
           Recommended: add a tracking provider (GA4/Plausible/PostHog) and capture checkout + product view events.
         </p>
       </div>
@@ -1441,14 +1441,14 @@ function AdminUsers() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>User Management</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">User Management</h1>
         <button className="btn btn-primary" onClick={() => setShowAddUser(true)}>
           Add User
         </button>
       </div>
 
-      <div className="admin-card">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
         <p className="admin-muted-copy">
           Users are stored in this browser's <code>localStorage</code> (demo auth). To make users global + secure,
           replace client-side auth with a backend auth/session system.
@@ -1456,20 +1456,20 @@ function AdminUsers() {
       </div>
 
       {showAddUser && (
-        <div className="admin-card">
-          <h3>Add New User</h3>
-          <div className="admin-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Name</label>
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Add New User</h3>
+          <div className="grid gap-6 mt-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Name</label>
                 <input
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   placeholder="Enter user name"
                 />
               </div>
-              <div className="form-group">
-                <label>Email</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Email</label>
                 <input
                   type="email"
                   value={newUser.email}
@@ -1478,9 +1478,9 @@ function AdminUsers() {
                 />
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Password</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Password</label>
                 <input
                   type="password"
                   value={newUser.password}
@@ -1488,11 +1488,11 @@ function AdminUsers() {
                   placeholder="Set a password"
                 />
               </div>
-              <div className="form-group" />
+              <div className="grid gap-2" />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Role</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Role</label>
                 <select
                   value={newUser.role}
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -1501,7 +1501,7 @@ function AdminUsers() {
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <div className="form-group admin-inline-row">
+              <div className="grid gap-2 admin-inline-row">
                 <button className="btn btn-primary" onClick={addUser} disabled={!newUser.name || !newUser.email || !newUser.password}>Add User</button>
                 <button className="btn btn-secondary" onClick={() => setShowAddUser(false)}>Cancel</button>
               </div>
@@ -1510,36 +1510,36 @@ function AdminUsers() {
         </div>
       )}
 
-      <div className="admin-card">
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-neutral-50 text-neutral-500">
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th>Actions</th>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Role</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Joined</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>
-                    <span className={`admin-status-pill ${user.role === 'admin' ? 'admin-status-pill--admin' : 'admin-status-pill--customer'}`}>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{user.name}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{user.email}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                       {user.role}
                     </span>
                   </td>
-                  <td>
-                    <span className={`admin-status-pill ${user.status === 'active' ? 'admin-status-pill--active' : 'admin-status-pill--inactive'}`}>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-800'}`}>
                       {user.status}
                     </span>
                   </td>
-                  <td>{user.joined}</td>
-                  <td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">{user.joined}</td>
+                  <td className="px-4 py-3 border-t border-neutral-100 px-4 py-3 border-t border-neutral-100">
                     <div className="actions">
                       <button
                         className="btn btn-secondary btn-sm"
@@ -1564,28 +1564,28 @@ function AdminUsers() {
         </div>
       </div>
 
-      <div className="admin-insight-grid">
-        <div className="admin-card">
-          <h3>User Statistics</h3>
-          <div className="admin-simple-stack">
-            <div className="admin-simple-row">
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">User Statistics</h3>
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
               <span>Total Users</span>
               <strong>{users.length}</strong>
             </div>
-            <div className="admin-simple-row">
+            <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
               <span>Active Users</span>
               <strong>{users.filter(u => u.status === 'active').length}</strong>
             </div>
-            <div className="admin-simple-row">
+            <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
               <span>Admin Users</span>
               <strong>{users.filter(u => u.role === 'admin').length}</strong>
             </div>
           </div>
         </div>
 
-        <div className="admin-card">
-          <h3>Recent Signups</h3>
-          <div className="admin-simple-stack">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Signups</h3>
+          <div className="grid gap-4">
             {users.slice(-3).reverse().map(user => (
               <div key={user.id} className="admin-inline-copy">
                 <strong>{user.name}</strong> - {user.email}
@@ -1595,14 +1595,14 @@ function AdminUsers() {
           </div>
         </div>
 
-        <div className="admin-card">
-          <h3>User Roles</h3>
-          <div className="admin-simple-stack">
-            <div className="admin-simple-row">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">User Roles</h3>
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
               <span>Customers</span>
               <strong>{users.filter(u => u.role === 'customer').length}</strong>
             </div>
-            <div className="admin-simple-row">
+            <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
               <span>Admins</span>
               <strong>{users.filter(u => u.role === 'admin').length}</strong>
             </div>
@@ -1683,9 +1683,9 @@ function AdminSettings() {
 
   return (
     <>
-      <div className="admin-header-row">
-        <h1>Site Settings</h1>
-        <div className="admin-toolbar">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Site Settings</h1>
+        <div className="flex gap-3 mb-6 bg-neutral-50 p-3 rounded-xl border border-neutral-200">
           <button className="btn btn-primary" onClick={saveSettings}>
             Save Settings
           </button>
@@ -1695,39 +1695,39 @@ function AdminSettings() {
         </div>
       </div>
 
-      {saved && <div className="admin-success">Settings saved successfully!</div>}
-      {resetError && <div className="error-message admin-feedback">{resetError}</div>}
+      {saved && <div className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4 text-sm font-semibold text-accent-dark">Settings saved successfully!</div>}
+      {resetError && <div className="error-message mb-6 rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm font-semibold text-primary-dark">{resetError}</div>}
 
-      <div className="admin-panels-grid">
-        <div className="admin-card">
-          <h3>General Settings</h3>
-          <div className="admin-form">
-            <div className="form-group">
-              <label>Site Name</label>
+      <div className="grid gap-6 lg:grid-cols-2 mb-8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">General Settings</h3>
+          <div className="grid gap-6 mt-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Site Name</label>
               <input
                 value={settings.siteName}
                 onChange={(e) => updateSetting('siteName', e.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label>Site Email</label>
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Site Email</label>
               <input
                 type="email"
                 value={settings.siteEmail}
                 onChange={(e) => updateSetting('siteEmail', e.target.value)}
               />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Items Per Page</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Items Per Page</label>
                 <input
                   type="number"
                   value={settings.itemsPerPage}
                   onChange={(e) => updateSetting('itemsPerPage', parseInt(e.target.value))}
                 />
               </div>
-              <div className="form-group">
-                <label>Currency</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-neutral-700 block mb-1">Currency</label>
                 <select
                   value={settings.currency}
                   onChange={(e) => updateSetting('currency', e.target.value)}
@@ -1739,8 +1739,8 @@ function AdminSettings() {
                 </select>
               </div>
             </div>
-            <div className="form-group">
-              <label>Timezone</label>
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold text-neutral-700 block mb-1">Timezone</label>
               <select
                 value={settings.timezone}
                 onChange={(e) => updateSetting('timezone', e.target.value)}
@@ -1760,11 +1760,11 @@ function AdminSettings() {
           </div>
         </div>
 
-        <div className="admin-card">
-          <h3>Feature Toggles</h3>
-          <div className="admin-form">
-            <div className="form-group">
-              <label className="admin-setting-label">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Feature Toggles</h3>
+          <div className="grid gap-6 mt-4">
+            <div className="grid gap-2">
+              <label className="font-semibold text-neutral-900">
                 <input
                   type="checkbox"
                   checked={settings.maintenanceMode}
@@ -1772,12 +1772,12 @@ function AdminSettings() {
                 />
                 <span>Maintenance Mode</span>
               </label>
-              <div className="admin-setting-note">
+              <div className="text-sm text-neutral-500 mt-1">
                 Disable the site for maintenance
               </div>
             </div>
-            <div className="form-group">
-              <label className="admin-setting-label">
+            <div className="grid gap-2">
+              <label className="font-semibold text-neutral-900">
                 <input
                   type="checkbox"
                   checked={settings.enableRegistration}
@@ -1785,12 +1785,12 @@ function AdminSettings() {
                 />
                 <span>Enable User Registration</span>
               </label>
-              <div className="admin-setting-note">
+              <div className="text-sm text-neutral-500 mt-1">
                 Allow new users to register
               </div>
             </div>
-            <div className="form-group">
-              <label className="admin-setting-label">
+            <div className="grid gap-2">
+              <label className="font-semibold text-neutral-900">
                 <input
                   type="checkbox"
                   checked={settings.enableReviews}
@@ -1798,7 +1798,7 @@ function AdminSettings() {
                 />
                 <span>Enable Reviews</span>
               </label>
-              <div className="admin-setting-note">
+              <div className="text-sm text-neutral-500 mt-1">
                 Allow customers to leave reviews
               </div>
             </div>
@@ -1806,9 +1806,9 @@ function AdminSettings() {
         </div>
       </div>
 
-      <div className="admin-card">
-        <h3>System Information</h3>
-        <div className="admin-results-grid">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-4">System Information</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
           <div>
             <strong>Version:</strong> 1.0.0
           </div>
