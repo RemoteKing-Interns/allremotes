@@ -174,105 +174,100 @@ const Home = () => {
   return (
     <div className="animate-fadeIn">
       <section className="relative overflow-hidden">
+        {/* Background slides */}
         <div className="absolute inset-0">
           {heroSlides.map((slide, index) => (
             <div
               key={index}
-              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${
+              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
                 index === currentSlide ? "opacity-100" : "opacity-0"
               }`}
               style={{ backgroundImage: `url(${slide.image})` }}
             />
           ))}
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,16,0.62),rgba(5,8,16,0.35),rgba(251,248,245,0.92))]" />
+        {/* Dark overlay — no white gradient at bottom */}
+        <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/75 via-neutral-900/50 to-neutral-900/80" />
 
-        <div className="container relative py-10 sm:py-14 lg:py-16">
-          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.95fr)] lg:gap-10">
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-6 shadow-glass backdrop-blur-md sm:p-8">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/90">
+        <div className="container relative py-14 sm:py-20 lg:py-24">
+          <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] lg:gap-12">
+            {/* Left — Main content */}
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-light backdrop-blur-sm">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                   {currentHeroSlide.subtitle}
-                </p>
-                <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[11px] font-semibold text-white/70 backdrop-blur-sm">
                   {currentHeroSlide.sideKicker}
                 </span>
               </div>
 
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-[3.5rem] lg:leading-[1.1]">
                 {currentHeroSlide.title}
               </h1>
-              <p className="mt-4 max-w-prose text-sm leading-7 text-white/80 sm:text-base">
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
                 {currentHeroSlide.description}
               </p>
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href={currentHeroSlide.primaryCtaPath}
-                  className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-primary-dark hover:shadow-xl active:scale-[0.98]"
                 >
                   {currentHeroSlide.primaryCta}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </Link>
                 <Link
                   href={currentHeroSlide.secondaryCtaPath}
-                  className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-extrabold text-white shadow-soft backdrop-blur hover:bg-white/15"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-white/15"
                 >
                   {currentHeroSlide.secondaryCta}
                 </Link>
               </div>
 
-              <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                {heroMetrics.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur"
-                  >
-                    <strong className="block text-lg font-extrabold tracking-tight text-white">
-                      {item.value}
-                    </strong>
-                    <span className="mt-1 block text-xs font-semibold text-white/75">
-                      {item.label}
-                    </span>
+              {/* Metrics row */}
+              <div className="mt-10 flex flex-wrap gap-6 border-t border-white/10 pt-8">
+                {heroMetrics.map((item, i) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    {i > 0 && <div className="hidden h-8 w-px bg-white/15 sm:block" />}
+                    <div className={i > 0 ? "sm:pl-3" : ""}>
+                      <strong className="block text-2xl font-extrabold tracking-tight text-white">
+                        {item.value}
+                      </strong>
+                      <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        {item.label}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex items-center gap-2">
-                {heroImages.map((_, index) => (
-                  <button
-                    key={index}
-                    className={`h-2.5 w-2.5 rounded-full border transition ${
-                      index === currentSlide
-                        ? "border-white bg-white"
-                        : "border-white/40 bg-transparent hover:border-white/70"
-                    }`}
-                    onClick={() => setCurrentSlide(index)}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
                 ))}
               </div>
             </div>
 
-            <aside className="rounded-2xl border border-white/15 bg-white/10 p-6 shadow-glass backdrop-blur-md sm:p-8">
-              <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/80">
+            {/* Right — Feature panel */}
+            <aside className="hidden lg:block rounded-xl border border-white/12 bg-white/8 p-7 backdrop-blur-lg">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-accent-light">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 {currentHeroSlide.sideKicker}
               </span>
-              <strong className="mt-3 block text-xl font-semibold tracking-tight text-white">
+              <h2 className="mt-3 text-xl font-bold tracking-tight text-white">
                 {currentHeroSlide.sideTitle}
-              </strong>
-              <p className="mt-3 text-sm leading-7 text-white/80">
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-white/65">
                 {currentHeroSlide.sideDescription}
               </p>
 
-              <div className="mt-6 grid gap-4">
+              <div className="mt-6 space-y-4">
                 {(currentHeroSlide.highlights || []).map((item) => (
-                  <div key={item.title} className="flex gap-3">
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                  <div key={item.title} className="flex gap-3 rounded-lg border border-white/8 bg-white/5 p-3.5">
+                    <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent-light">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
                     <div className="min-w-0">
                       <strong className="block text-sm font-semibold text-white">
                         {item.title}
                       </strong>
-                      <p className="mt-1 text-sm leading-6 text-white/75">
+                      <p className="mt-0.5 text-xs leading-relaxed text-white/60">
                         {item.description}
                       </p>
                     </div>
@@ -280,6 +275,22 @@ const Home = () => {
                 ))}
               </div>
             </aside>
+          </div>
+
+          {/* Slide indicators */}
+          <div className="mt-8 flex items-center gap-2">
+            {heroImages.map((_, index) => (
+              <button
+                key={index}
+                className={`h-1.5 rounded-full transition-all ${
+                  index === currentSlide
+                    ? "w-8 bg-white"
+                    : "w-1.5 bg-white/30 hover:bg-white/50"
+                }`}
+                onClick={() => setCurrentSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -353,8 +364,8 @@ const Home = () => {
               No products available right now.
             </div>
           ) : (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {products.slice(0, 6).map((product) => (
+            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {products.slice(0, 8).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

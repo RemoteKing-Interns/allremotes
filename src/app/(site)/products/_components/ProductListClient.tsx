@@ -48,49 +48,70 @@ function FiltersPanel({
   onClear: () => void;
 }) {
   return (
-    <>
-      <h3>Filters</h3>
+    <div className="grid gap-4">
+      <h3 className="text-lg font-semibold text-neutral-900">Filters</h3>
 
-      <label>Search</label>
-      <input
-        type="text"
-        placeholder="Search products..."
-        value={searchQuery}
-        onChange={(e) => onSearchQueryChange(e.target.value)}
-      />
+      <div className="grid gap-2">
+        <label className="text-sm font-semibold text-neutral-700">Search</label>
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
+        />
+      </div>
 
-      <label>Category</label>
-      <select value={selectedCategory} onChange={(e) => onSelectedCategoryChange(e.target.value)}>
-        <option value="all">All Products</option>
-        <option value="garage">Garage & Gate</option>
-        <option value="car">Automotive</option>
-        <option value="home">For The Home</option>
-        <option value="locksmith">Locksmithing</option>
-      </select>
+      <div className="grid gap-2">
+        <label className="text-sm font-semibold text-neutral-700">Category</label>
+        <select 
+          value={selectedCategory} 
+          onChange={(e) => onSelectedCategoryChange(e.target.value)}
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
+        >
+          <option value="all">All Products</option>
+          <option value="garage">Garage & Gate</option>
+          <option value="car">Automotive</option>
+          <option value="home">For The Home</option>
+          <option value="locksmith">Locksmithing</option>
+        </select>
+      </div>
 
-      <label>Brand</label>
-      <select value={selectedBrand} onChange={(e) => onSelectedBrandChange(e.target.value)}>
-        {brands.map((brand) => {
-          const b = String(brand);
-          return (
-            <option key={b} value={b}>
-              {b === "all" ? "All Brands" : b}
-            </option>
-          );
-        })}
-      </select>
+      <div className="grid gap-2">
+        <label className="text-sm font-semibold text-neutral-700">Brand</label>
+        <select 
+          value={selectedBrand} 
+          onChange={(e) => onSelectedBrandChange(e.target.value)}
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
+        >
+          {brands.map((brand) => {
+            const b = String(brand);
+            return (
+              <option key={b} value={b}>
+                {b === "all" ? "All Brands" : b}
+              </option>
+            );
+          })}
+        </select>
+      </div>
 
-      <label>Stock</label>
-      <select value={stockStatus} onChange={(e) => onStockStatusChange(e.target.value)}>
-        <option value="all">All</option>
-        <option value="in">In Stock</option>
-        <option value="out">Out of Stock</option>
-      </select>
+      <div className="grid gap-2">
+        <label className="text-sm font-semibold text-neutral-700">Stock</label>
+        <select 
+          value={stockStatus} 
+          onChange={(e) => onStockStatusChange(e.target.value)}
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
+        >
+          <option value="all">All</option>
+          <option value="in">In Stock</option>
+          <option value="out">Out of Stock</option>
+        </select>
+      </div>
 
-      <Button type="button" variant="outline" width="full" className="clear-btn" onClick={onClear}>
+      <Button type="button" variant="outline" className="w-full mt-2" onClick={onClear}>
         Clear Filters
       </Button>
-    </>
+    </div>
   );
 }
 

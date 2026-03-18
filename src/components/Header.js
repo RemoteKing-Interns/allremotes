@@ -208,15 +208,49 @@ const Header = () => {
     };
   }, []);
 
+  const topBarIcons = {
+    'WARRANTY': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    ),
+    'RETURNS': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    ),
+    'SAFE': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    ),
+    'SECURE': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    ),
+    'TRADE': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    ),
+    'SHIPPING': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    ),
+    'PRICING': (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    ),
+  };
+
+  const getIconForText = (text) => {
+    const upper = (text || '').toUpperCase();
+    for (const [keyword, icon] of Object.entries(topBarIcons)) {
+      if (upper.includes(keyword)) return icon;
+    }
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md">
       {promotions?.topInfoBar?.enabled && (promotions?.topInfoBar?.items || []).length > 0 && (
-        <div className="border-b border-neutral-200 bg-neutral-100/70">
+        <div className="border-b border-accent-dark/50 bg-accent-dark">
           <div className="container">
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-2 text-xs font-semibold text-neutral-700 sm:justify-between">
+            <div className="flex items-center justify-center gap-x-6 py-2 text-[11px] font-semibold tracking-wide text-white/90 uppercase">
               {(promotions.topInfoBar.items || []).map((text, idx) => (
-                <span key={`${idx}-${text}`} className="inline-flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent/70" />
+                <span key={`${idx}-${text}`} className="inline-flex items-center gap-1.5">
+                  <span className="text-accent-light">{getIconForText(text)}</span>
                   {text}
                 </span>
               ))}
@@ -227,24 +261,24 @@ const Header = () => {
 
       <div>
         <div className="container">
-          <div className="flex items-center gap-3 py-4 md:gap-5">
+          <div className="flex items-center gap-4 py-4 md:gap-6">
             <Link href="/" className="shrink-0" aria-label="ALLREMOTES home">
-              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto sm:h-11" />
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-12 w-auto sm:h-14" />
             </Link>
 
-            <div className="relative hidden flex-1 md:block" ref={searchRef}>
+            <div className="relative hidden w-full max-w-2xl mx-auto md:block" ref={searchRef}>
               <form onSubmit={handleSearchSubmit} className="relative">
                 <input
                   type="text"
                   placeholder="Search remote, brand, or model"
-                  className="h-12 w-full rounded-2xl border border-neutral-200 bg-white/90 pl-4 pr-12 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/40"
+                  className="h-12 w-full rounded-lg border border-neutral-300 bg-white pl-5 pr-12 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/50 focus:ring-1 focus:ring-accent/20 focus:outline-none transition-colors"
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => searchQuery && setShowSearchResults(true)}
                 />
                 <button
                   type="submit"
-                  className="absolute right-1 top-1 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-dark transition hover:bg-accent/15"
+                  className="absolute right-1.5 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-accent text-white transition hover:bg-accent-dark"
                   aria-label="Search"
                 >
                   <svg
@@ -262,7 +296,7 @@ const Header = () => {
               </form>
 
               {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-[1300] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong">
+                <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong">
                   <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
                     <span>Search Results ({searchResults.length})</span>
                     <span className="text-neutral-400">Top matches</span>
@@ -278,7 +312,7 @@ const Header = () => {
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="h-12 w-12 rounded-xl border border-neutral-200 bg-white object-contain p-1"
+                          className="h-12 w-12 rounded-lg border border-neutral-200 bg-white object-contain p-1"
                           onError={(e) => {
                             e.currentTarget.src = "/images/mainlogo.png";
                           }}
@@ -320,7 +354,7 @@ const Header = () => {
                       <button
                         type="button"
                         onClick={handleSearchSubmit}
-                        className="w-full rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
+                        className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
                       >
                         View All Results
                       </button>
@@ -332,7 +366,7 @@ const Header = () => {
               {showSearchResults &&
                 searchQuery.trim().length > 0 &&
                 searchResults.length === 0 && (
-                  <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-[1300] rounded-2xl border border-neutral-200 bg-white p-4 shadow-strong">
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] rounded-lg border border-neutral-200 bg-white p-4 shadow-strong">
                     <p className="text-sm font-semibold text-neutral-900">
                       No products found for &quot;{searchQuery}&quot;
                     </p>
@@ -366,7 +400,7 @@ const Header = () => {
                   >
                     <Link
                       href="/account"
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100"
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
                       aria-label="Account menu"
@@ -387,7 +421,7 @@ const Header = () => {
 
                     {showAccountMenu && (
                       <div
-                        className="absolute right-0 top-[calc(100%+0.6rem)] z-[1400] w-[18rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
+                        className="absolute right-0 top-[calc(100%+0.4rem)] z-[1400] w-[18rem] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong"
                         role="menu"
                         onMouseEnter={cancelAccountMenuClose}
                         onMouseLeave={scheduleAccountMenuClose}
@@ -461,7 +495,7 @@ const Header = () => {
                   </Button>
                 </>
               )}
-              <Link href="/cart" className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100" aria-label="Cart">
+              <Link href="/cart" className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100" aria-label="Cart">
                   <svg
                     width="26"
                     height="26"
@@ -485,7 +519,7 @@ const Header = () => {
               {/* Hamburger Button - Mobile Only */}
               <button
                 ref={hamburgerRef}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 md:hidden"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 md:hidden"
                 onClick={openDrawer}
                 aria-expanded={mobileDrawerOpen}
                 aria-controls="mobile-drawer"
@@ -603,18 +637,17 @@ const Header = () => {
 
       <nav className="hidden border-t border-neutral-200 bg-white/70 md:block" ref={dropdownRef}>
         <div className="container">
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-center py-2">
             <div className="flex items-center gap-1">
               {navItems.map((menuItem, index) => {
                   const visibleColumns = getVisibleColumns(menuItem);
                   const isDropdownOpen = activeDropdown === menuItem.key;
                   const isCurrentRoute = isRouteActive(menuItem.path);
-                  const shouldAlignRight = index >= Math.max(navItems.length - 2, 0);
 
                   return (
                     <div
                       key={menuItem.key}
-                      className={`relative ${shouldAlignRight ? "ml-auto" : ""}`}
+                      className="relative"
                       onMouseEnter={() => openDropdown(menuItem.key)}
                       onMouseLeave={scheduleDropdownClose}
                       onFocus={() => openDropdown(menuItem.key)}
@@ -633,10 +666,10 @@ const Header = () => {
                     >
                       <Link
                         href={menuItem.path}
-                        className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition ${
                           isCurrentRoute || isDropdownOpen
                             ? "bg-accent/10 text-accent-dark"
-                            : "text-neutral-800 hover:bg-neutral-100"
+                            : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
                         }`}
                         aria-current={isCurrentRoute ? "page" : undefined}
                         aria-haspopup={visibleColumns.length > 0 ? "menu" : undefined}
@@ -666,13 +699,14 @@ const Header = () => {
 
                       {isDropdownOpen && visibleColumns.length > 0 && (
                         <div
-                          className={`absolute top-[calc(100%+0.6rem)] z-[1400] ${
-                            shouldAlignRight ? "right-0" : "left-0"
+                          className={`absolute top-[calc(100%+0.4rem)] z-[1400] ${
+                            index >= navItems.length - 2 ? "right-0" : index === 0 ? "left-0" : "left-1/2 -translate-x-1/2"
                           }`}
+                          style={{ maxWidth: 'calc(100vw - 2rem)' }}
                           onMouseEnter={cancelDropdownClose}
                           onMouseLeave={scheduleDropdownClose}
                         >
-                          <div className="w-[44rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong">
+                          <div className="w-[44rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong">
                             <div className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
                               {visibleColumns.map((column, colIndex) => (
                                 <div
@@ -682,23 +716,23 @@ const Header = () => {
                                   <h3 className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
                                     {column.title}
                                   </h3>
-                                  <ul className="mt-4 grid gap-2">
+                                  <ul className="mt-3 grid gap-1">
                                     {column.items.map((item, itemIndex) => (
                                       <li key={itemIndex}>
                                         <Link
                                           href={item.path}
-                                          className={`group flex items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-neutral-100 ${
+                                          className={`group flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-neutral-100 ${
                                             item.isShopAll ? "bg-primary/5 hover:bg-primary/10" : ""
                                           }`}
                                           onClick={() =>
                                             setActiveDropdown(null)
                                           }
                                         >
-                                          <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                                          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white shadow-xs">
                                             <img
                                               src={item.icon}
                                               alt={item.name}
-                                              className="h-6 w-6 object-contain"
+                                              className="h-5 w-5 object-contain"
                                             />
                                           </span>
                                           <span className={`min-w-0 truncate text-sm font-semibold ${
@@ -732,13 +766,13 @@ const Header = () => {
                     </div>
                   );
                 })}
+              <Link
+                href="/products/all"
+                className="ml-2 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-extrabold text-white shadow-sm hover:bg-primary-dark transition"
+              >
+                View Products
+              </Link>
             </div>
-            <Link
-              href="/products/all"
-              className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
-            >
-              View Products
-            </Link>
           </div>
         </div>
       </nav>

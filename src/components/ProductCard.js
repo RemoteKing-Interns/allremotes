@@ -37,7 +37,7 @@ const ProductCard = ({ product, onAddToCart = null }) => {
 
   const brandLabel = product.brand?.trim() || "ALLREMOTES";
   const productName =
-    product.name?.trim() || `${brandLabel} Replacement Remote`;
+    product.model?.trim() || product.name?.trim() || "Replacement Remote";
   const discountPercent =
     pricing.hasDiscount && pricing.originalPrice > 0
       ? Math.round((pricing.discountAmount / pricing.originalPrice) * 100)
@@ -91,7 +91,7 @@ const ProductCard = ({ product, onAddToCart = null }) => {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-strong"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-strong"
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
@@ -103,8 +103,7 @@ const ProductCard = ({ product, onAddToCart = null }) => {
         className="absolute inset-0 z-10"
       />
 
-      {/* Image Container */}
-      <div className="relative aspect-square bg-neutral-100/80 flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square bg-white flex items-center justify-center overflow-hidden">
         {/* Fallback Letter */}
         {imageError && (
           <div className="text-7xl font-extrabold text-neutral-300">
@@ -119,7 +118,7 @@ const ProductCard = ({ product, onAddToCart = null }) => {
             alt={productName}
             loading="lazy"
             decoding="async"
-            className={`w-full h-full object-contain p-5 transition-transform duration-300 group-hover:scale-110 ${
+            className={`w-full h-full object-contain p-3 sm:p-5 transition-transform duration-300 group-hover:scale-110 ${
               !product.inStock ? "opacity-50" : ""
             }`}
             onError={() => setImageError(true)}
@@ -166,11 +165,11 @@ const ProductCard = ({ product, onAddToCart = null }) => {
 
         {/* Quick Add Button - Bottom */}
         {product.inStock && (
-          <div className="absolute bottom-3 left-3 right-3 z-20 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <div className="absolute bottom-3 left-3 right-3 z-[25] opacity-100 md:opacity-0 transition-opacity duration-200 md:group-hover:opacity-100">
             <button
               type="button"
               onClick={handleAddToCart}
-              className="relative z-20 w-full rounded-2xl bg-primary py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
+              className="relative z-[25] flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
             >
               <ShoppingCart size={16} strokeWidth={1.5} />
               Quick Add
@@ -180,19 +179,19 @@ const ProductCard = ({ product, onAddToCart = null }) => {
       </div>
 
       {/* Product Info */}
-      <div className="relative z-20 p-5">
-        <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+      <div className="relative z-20 flex flex-1 flex-col p-3 sm:p-5 bg-white">
+        <p className="mb-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
           {brandLabel}
         </p>
-        <h3 className="mb-3 line-clamp-2 text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
+        <h3 className="mb-2 sm:mb-3 line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
           {productName}
         </h3>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-extrabold tracking-tight text-neutral-900">
+        <div className="mt-auto flex items-baseline gap-2">
+          <span className="text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
             AU${pricing.finalPrice.toFixed(2)}
           </span>
           {pricing.hasDiscount && (
-            <span className="text-sm font-semibold text-neutral-400 line-through">
+            <span className="text-xs sm:text-sm font-semibold text-neutral-400 line-through">
               AU${pricing.originalPrice.toFixed(2)}
             </span>
           )}

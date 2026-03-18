@@ -56,12 +56,12 @@ module.exports = {
         "6xl": ["5.6rem", { lineHeight: "1" }],
       },
       borderRadius: {
-        xs: "0.75rem",
-        sm: "1rem",
-        md: "1.4rem",
-        lg: "2rem",
-        xl: "2.5rem",
-        "2xl": "1.85rem",
+        xs: "0.25rem",
+        sm: "0.3rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        "2xl": "1rem",
       },
       boxShadow: {
         glass: "0 24px 48px rgba(7, 17, 20, 0.14)",

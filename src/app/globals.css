@@ -64,15 +64,6 @@
     @apply px-4 py-2 text-xs;
   }
 
-  .error-message {
-    @apply rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm font-semibold text-primary-dark;
-  }
-
-  .success-message,
-  .admin-success {
-    @apply rounded-2xl border border-accent/15 bg-accent/5 p-4 text-sm font-semibold text-accent-dark;
-  }
-
   /* Basic page shells used across legacy routes */
   .shop-page,
   .checkout-page,
