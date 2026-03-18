@@ -127,10 +127,28 @@
   background-color: var(--gray-light);
 }
 
+/* .quantity {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 600;
+} */
+
 .quantity {
   min-width: 30px;
   text-align: center;
   font-weight: 600;
+  /* make input look like span */
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 2.5rem;
+  -moz-appearance: textfield;
+}
+
+.quantity::-webkit-outer-spin-button,
+.quantity::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .btn-remove {

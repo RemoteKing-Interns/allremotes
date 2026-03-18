@@ -31,18 +31,18 @@ const Cart = () => {
     if (!isAnyModalOpen) return;
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setSelectedItem(null);
         setShowCheckoutModal(false);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [isAnyModalOpen]);
 
@@ -80,7 +80,7 @@ const Cart = () => {
         <h1>Shopping Cart</h1>
         <div className="cart-content">
           <div className="cart-items">
-            {cart.map(item => (
+            {cart.map((item) => (
               <div key={item.id} className="cart-item">
                 <img
                   src={item.image}
@@ -93,16 +93,22 @@ const Cart = () => {
                 <div className="cart-item-info">
                   <h3>{item.name}</h3>
                   <p className="cart-item-category">
-                    {item.category === 'car' ? '🚗 Car Remote' : '🚪 Garage Remote'}
+                    {item.category === "car"
+                      ? "🚗 Car Remote"
+                      : "🚪 Garage Remote"}
                   </p>
                   {(() => {
                     const pricing = getItemPriceBreakdown(item);
                     return (
                       <p className="cart-item-price">
                         {pricing.hasDiscount && (
-                          <span className="price-original">AU${pricing.originalPrice.toFixed(2)}</span>
+                          <span className="price-original">
+                            AU${pricing.originalPrice.toFixed(2)}
+                          </span>
                         )}
-                        <span className="price-current">AU${pricing.finalPrice.toFixed(2)}</span>
+                        <span className="price-current">
+                          AU${pricing.finalPrice.toFixed(2)}
+                        </span>
                       </p>
                     );
                   })()}
@@ -115,9 +121,32 @@ const Cart = () => {
                     >
                       −
                     </button>
-                    <span className="quantity">{item.quantity}</span>
-                    <button
+                    <input
+                      type="number"
+                      className="quantity"
+                      value={item.quantity}
+                      min={1}
+                      max={1000}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1 && val <= 1000)
+                          updateQuantity(item.id, val);
+                      }}
+                    />
+                    {/* <span className="quantity">{item.quantity}</span> */}
+                    {/* <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="quantity-btn"
+                    >
+                      +
+                    </button> */}
+                    <button
+                      onClick={() =>
+                        updateQuantity(
+                          item.id,
+                          Math.min(item.quantity + 1, 1000),
+                        )
+                      }
                       className="quantity-btn"
                     >
                       +
@@ -144,7 +173,9 @@ const Cart = () => {
                   return (
                     <div className="cart-item-total">
                       {pricing.hasDiscount && (
-                        <span className="line-total-original">AU${originalLine.toFixed(2)}</span>
+                        <span className="line-total-original">
+                          AU${originalLine.toFixed(2)}
+                        </span>
                       )}
                       <span>AU${lineTotal.toFixed(2)}</span>
                     </div>
@@ -173,7 +204,10 @@ const Cart = () => {
               <span>Total</span>
               <span>AU${discountedTotal.toFixed(2)}</span>
             </div>
-            <button onClick={handleCheckout} className="btn btn-primary btn-large btn-checkout">
+            <button
+              onClick={handleCheckout}
+              className="btn btn-primary btn-large btn-checkout"
+            >
               Proceed to Checkout
             </button>
             <button onClick={clearCart} className="btn btn-outline btn-clear">
@@ -186,7 +220,10 @@ const Cart = () => {
         </div>
       </div>
       {isModalOpen && (
-        <div className="cart-modal-backdrop" onClick={() => setSelectedItem(null)}>
+        <div
+          className="cart-modal-backdrop"
+          onClick={() => setSelectedItem(null)}
+        >
           <div
             className="cart-modal"
             role="dialog"
@@ -205,25 +242,33 @@ const Cart = () => {
             <div className="cart-modal-body">
               <img
                 src={selectedItem?.image}
-                alt={selectedItem?.name || 'Product'}
+                alt={selectedItem?.name || "Product"}
                 onError={(e) => {
                   e.currentTarget.src = "/images/logo.png";
                 }}
               />
               <div className="cart-modal-info">
-                <p className="cart-modal-brand">{selectedItem?.brand || 'Remote Pro'}</p>
+                <p className="cart-modal-brand">
+                  {selectedItem?.brand || "Remote Pro"}
+                </p>
                 <h3>{selectedItem?.name}</h3>
                 {selectedItem?.description && (
-                  <p className="cart-modal-description">{selectedItem.description}</p>
+                  <p className="cart-modal-description">
+                    {selectedItem.description}
+                  </p>
                 )}
                 <div className="cart-modal-meta">
                   <div>
                     <span>Category</span>
-                    <strong>{selectedItem?.category === 'car' ? 'Car Remote' : 'Garage Remote'}</strong>
+                    <strong>
+                      {selectedItem?.category === "car"
+                        ? "Car Remote"
+                        : "Garage Remote"}
+                    </strong>
                   </div>
                   <div>
                     <span>Condition</span>
-                    <strong>{selectedItem?.condition || 'Brand New'}</strong>
+                    <strong>{selectedItem?.condition || "Brand New"}</strong>
                   </div>
                 </div>
                 <div className="cart-modal-pricing">
@@ -233,8 +278,12 @@ const Cart = () => {
                       const pricing = getItemPriceBreakdown(selectedItem || {});
                       return pricing.hasDiscount ? (
                         <div className="modal-price-stack">
-                          <span className="modal-price-original">AU${pricing.originalPrice.toFixed(2)}</span>
-                          <strong className="modal-price-discounted">AU${pricing.finalPrice.toFixed(2)}</strong>
+                          <span className="modal-price-original">
+                            AU${pricing.originalPrice.toFixed(2)}
+                          </span>
+                          <strong className="modal-price-discounted">
+                            AU${pricing.finalPrice.toFixed(2)}
+                          </strong>
                         </div>
                       ) : (
                         <strong>AU${pricing.finalPrice.toFixed(2)}</strong>
@@ -250,11 +299,16 @@ const Cart = () => {
                     {(() => {
                       const lineTotal = getItemLineTotal(selectedItem || {});
                       const pricing = getItemPriceBreakdown(selectedItem || {});
-                      const originalLine = pricing.originalPrice * (selectedItem?.quantity || 1);
+                      const originalLine =
+                        pricing.originalPrice * (selectedItem?.quantity || 1);
                       return pricing.hasDiscount ? (
                         <div className="modal-price-stack">
-                          <span className="modal-price-original">AU${originalLine.toFixed(2)}</span>
-                          <strong className="modal-price-discounted">AU${lineTotal.toFixed(2)}</strong>
+                          <span className="modal-price-original">
+                            AU${originalLine.toFixed(2)}
+                          </span>
+                          <strong className="modal-price-discounted">
+                            AU${lineTotal.toFixed(2)}
+                          </strong>
                         </div>
                       ) : (
                         <strong>AU${lineTotal.toFixed(2)}</strong>
@@ -284,7 +338,10 @@ const Cart = () => {
         </div>
       )}
       {showCheckoutModal && (
-        <div className="cart-modal-backdrop" onClick={() => setShowCheckoutModal(false)}>
+        <div
+          className="cart-modal-backdrop"
+          onClick={() => setShowCheckoutModal(false)}
+        >
           <div
             className="cart-modal checkout-modal"
             role="dialog"
