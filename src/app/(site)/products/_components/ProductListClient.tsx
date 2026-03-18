@@ -1,12 +1,21 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
+import { Button } from "../../../../components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "../../../../components/ui/sheet";
 
 const PAGE_SIZE = 15;
 
@@ -78,9 +87,9 @@ function FiltersPanel({
         <option value="out">Out of Stock</option>
       </select>
 
-      <button type="button" className="clear-btn" onClick={onClear}>
+      <Button type="button" variant="outline" width="full" className="clear-btn" onClick={onClear}>
         Clear Filters
-      </button>
+      </Button>
     </>
   );
 }
@@ -208,22 +217,6 @@ export default function ProductListClient({
     };
   }, [isModalOpen]);
 
-  useEffect(() => {
-    if (!isFilterDrawerOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsFilterDrawerOpen(false);
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [isFilterDrawerOpen]);
-
   // Persist brand/search/category/page into the URL without triggering Next.js navigation,
   // to avoid remounting this component (which can drop focus while typing in the filter input).
   useEffect(() => {
@@ -291,8 +284,8 @@ export default function ProductListClient({
           <p>Browse our complete range of remotes and accessories</p>
 
           <div className="hero-badges">
-            <span>✓ Quality Tested</span>
-            <span>🚚 Fast Shipping</span>
+            <span>Quality Tested</span>
+            <span>Fast Shipping</span>
           </div>
         </div>
       </div>
@@ -324,52 +317,42 @@ export default function ProductListClient({
 	            />
 	          </aside>
 
-	          {isFilterDrawerOpen && (
-	            <div
-              className="filter-drawer-backdrop"
-              onClick={() => setIsFilterDrawerOpen(false)}
-            >
-              <div className="filter-drawer" onClick={(e) => e.stopPropagation()}>
-                <div className="filter-drawer-header">
-                  <h2>Filters</h2>
-                  <button
-                    type="button"
-                    className="filter-drawer-close"
-                    onClick={() => setIsFilterDrawerOpen(false)}
-                    aria-label="Close filters"
-                  >
-                    ✕
-                  </button>
-	                </div>
-	                <div className="filter-drawer-content">
-	                  <FiltersPanel
-	                    brands={brands}
-	                    searchQuery={searchQuery}
-	                    selectedCategory={selectedCategory}
-	                    selectedBrand={selectedBrand}
-	                    stockStatus={stockStatus}
-	                    onSearchQueryChange={(next) => setSearchQuery(next)}
-	                    onSelectedCategoryChange={(next) => {
-	                      setSelectedCategory(next);
-	                      if (routeCategory && routeCategory !== "all") {
-	                        router.push(`/products/${next === "all" ? "all" : next}`);
-	                      }
-	                    }}
-	                    onSelectedBrandChange={(next) => setSelectedBrand(next)}
-	                    onStockStatusChange={(next) => setStockStatus(next)}
-	                    onClear={() => {
-	                      setSearchQuery("");
-	                      setSelectedCategory(
-	                        routeCategory && routeCategory !== "all" ? routeCategory : "all",
-	                      );
-	                      setSelectedBrand("all");
-	                      setStockStatus("all");
-	                    }}
-	                  />
-	                </div>
-	              </div>
-	            </div>
-	          )}
+            <Sheet open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+              <SheetContent className="filter-drawer">
+                <SheetHeader className="filter-drawer-header">
+                  <SheetTitle>Filters</SheetTitle>
+                  <SheetDescription>
+                    Narrow the catalog by brand, category, and stock status.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="filter-drawer-content">
+                  <FiltersPanel
+                    brands={brands}
+                    searchQuery={searchQuery}
+                    selectedCategory={selectedCategory}
+                    selectedBrand={selectedBrand}
+                    stockStatus={stockStatus}
+                    onSearchQueryChange={(next) => setSearchQuery(next)}
+                    onSelectedCategoryChange={(next) => {
+                      setSelectedCategory(next);
+                      if (routeCategory && routeCategory !== "all") {
+                        router.push(`/products/${next === "all" ? "all" : next}`);
+                      }
+                    }}
+                    onSelectedBrandChange={(next) => setSelectedBrand(next)}
+                    onStockStatusChange={(next) => setStockStatus(next)}
+                    onClear={() => {
+                      setSearchQuery("");
+                      setSelectedCategory(
+                        routeCategory && routeCategory !== "all" ? routeCategory : "all",
+                      );
+                      setSelectedBrand("all");
+                      setStockStatus("all");
+                    }}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
 
           <main>
             <div className="products-header">
@@ -379,14 +362,16 @@ export default function ProductListClient({
                 – {Math.min(clampedPage * PAGE_SIZE, filteredProducts.length)} of{" "}
                 {filteredProducts.length} products
               </p>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 className="filter-toggle-btn"
                 onClick={() => setIsFilterDrawerOpen(true)}
                 aria-label="Open filters"
               >
                 ☰ Filters
-              </button>
+              </Button>
             </div>
 
             {filteredProducts.length === 0 ? (
@@ -395,73 +380,108 @@ export default function ProductListClient({
               <>
                 <div className="products-grid">
                   {pageProducts.map((product) => (
-                    <Link
-                      href={`/product/${product.id}`}
+                    <motion.div
                       key={product.id}
-                      className="product-card product-card--shop"
+                      className="product-card-animated"
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-40px" }}
+                      transition={{ duration: 0.32, ease: "easeOut" }}
+                      whileHover={{ y: -6 }}
                     >
-                      <div className="image-box">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          onError={(e: any) => (e.currentTarget.src = "/images/logo.png")}
-                        />
-                      </div>
-
-                      <div className="card-body">
-                        <p className="brand">{product.brand}</p>
-                        <h3>{product.name}</h3>
-
-                        <div className="price-row">
-                          <span className="price">
-                            {(() => {
-                              const pricing = getPriceBreakdown(
-                                product.price,
-                                hasDiscount,
-                                { promotions, product },
-                              );
-                              if (!pricing.hasDiscount) {
-                                return `AU$${pricing.finalPrice.toFixed(2)}`;
-                              }
-                              return (
-                                <span className="price-discount-wrap">
-                                  <span className="price-original">
-                                    AU${pricing.originalPrice.toFixed(2)}
-                                  </span>
-                                  <span className="price-discounted">
-                                    AU${pricing.finalPrice.toFixed(2)}
-                                  </span>
-                                </span>
-                              );
-                            })()}
-                          </span>
-                          <span className={`stock ${product.inStock ? "in" : "out"}`}>
-                            {product.inStock ? "In Stock" : "Out"}
-                          </span>
+                      <Link
+                        href={`/product/${product.id}`}
+                        className="product-card product-card--shop"
+                      >
+                        <div className="image-box">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            onError={(e: any) => (e.currentTarget.src = "/images/mainlogo.png")}
+                          />
                         </div>
-                        <button
-                          type="button"
-                          className="add-to-cart"
-                          onClick={(e) => handleAddToCart(e, product)}
-                          disabled={!product.inStock}
-                        >
-                          {product.inStock ? "Add to Cart" : "Out of Stock"}
-                        </button>
-                      </div>
-                    </Link>
+
+                        <div className="card-body">
+                          <div className="card-meta-row">
+                            <span className="card-brand-pill">
+                              {product.brand?.trim() || "ALLREMOTES"}
+                            </span>
+                            <span
+                              className={`card-stock ${product.inStock ? "in" : "out"}`}
+                            >
+                              <span className="card-stock-dot" />
+                              {product.inStock ? "In Stock" : "Sold Out"}
+                            </span>
+                          </div>
+                          <p className="brand">
+                            {product.category === "car"
+                              ? "Automotive Remote"
+                              : "Garage & Gate Remote"}
+                          </p>
+                          <h3>{product.name}</h3>
+                          <p className="card-summary">
+                            {product.description?.trim() ||
+                              "Dependable remote replacement with clean everyday fitment and fast reorder-ready stock."}
+                          </p>
+
+                          <div className="card-footer">
+                            <div className="price-row">
+                              {(() => {
+                                const pricing = getPriceBreakdown(
+                                  product.price,
+                                  hasDiscount,
+                                  { promotions, product },
+                                );
+                                if (!pricing.hasDiscount) {
+                                  return (
+                                    <span className="price">
+                                      AU${pricing.finalPrice.toFixed(2)}
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="price-discount-wrap">
+                                    <span className="price-original">
+                                      AU${pricing.originalPrice.toFixed(2)}
+                                    </span>
+                                    <span className="price-discounted">
+                                      AU${pricing.finalPrice.toFixed(2)}
+                                    </span>
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            <p className="card-shipping-note">Buy now</p>
+                          </div>
+                          <Button
+                            type="button"
+                            className="add-to-cart"
+                            onClick={(e) => handleAddToCart(e, product)}
+                            disabled={!product.inStock}
+                            variant={product.inStock ? "secondary" : "outline"}
+                            size="sm"
+                            width="full"
+                          >
+                            {product.inStock ? "Add to Cart" : "Out of Stock"}
+                          </Button>
+                        </div>
+                      </Link>
+                    </motion.div>
                   ))}
                 </div>
 
                 {totalPages > 1 && (
                   <div className="pager" aria-label="Pagination">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       className="pager-btn"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={clampedPage <= 1}
                     >
                       Prev
-                    </button>
+                    </Button>
 
                     <div className="pager-pages">
                       {visiblePages.map((p, idx) =>
@@ -470,26 +490,30 @@ export default function ProductListClient({
                             …
                           </span>
                         ) : (
-                          <button
+                          <Button
                             key={p}
                             type="button"
+                            variant={p === clampedPage ? "default" : "outline"}
+                            size="sm"
                             className={`pager-page ${p === clampedPage ? "active" : ""}`}
                             onClick={() => setCurrentPage(Number(p))}
                           >
                             {p}
-                          </button>
+                          </Button>
                         ),
                       )}
                     </div>
 
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       className="pager-btn"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={clampedPage >= totalPages}
                     >
                       Next
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>
@@ -520,8 +544,7 @@ export default function ProductListClient({
                 src={addedItem?.image}
                 alt={addedItem?.name || "Product"}
                 onError={(e: any) => {
-                  e.target.src =
-                    "https://via.placeholder.com/300x300?text=Remote";
+                  e.currentTarget.src = "/images/mainlogo.png";
                 }}
               />
               <div className="cart-modal-info">
@@ -589,16 +612,16 @@ export default function ProductListClient({
                   </div>
                 </div>
                 <div className="cart-modal-actions">
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-outline"
+                    variant="outline"
                     onClick={() => setAddedItem(null)}
                   >
                     Continue Shopping
-                  </button>
-                  <Link href="/cart" className="btn btn-primary">
-                    View Cart
-                  </Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/cart">View Cart</Link>
+                  </Button>
                 </div>
               </div>
             </div>

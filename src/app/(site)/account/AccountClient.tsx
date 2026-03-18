@@ -20,14 +20,14 @@ const Account = () => {
 
   const tabs = useMemo(
     () => [
-      { id: 'basics', label: 'Account Basics', icon: '🧍' },
-      { id: 'orders', label: 'Orders & Shopping', icon: '📦' },
-      { id: 'payments', label: 'Payments & Billing', icon: '💳' },
-      { id: 'addresses', label: 'Addresses', icon: '🚚' },
-      { id: 'preferences', label: 'Preferences & Saved', icon: '❤️' },
-      { id: 'reviews', label: 'Reviews & Interactions', icon: '⭐' },
-      { id: 'notifications', label: 'Notifications & Settings', icon: '🔔' },
-      { id: 'help', label: 'Help & Support', icon: '🛟' },
+      { id: 'basics', label: 'Account Basics', icon: 'AB' },
+      { id: 'orders', label: 'Orders & Shopping', icon: 'OR' },
+      { id: 'payments', label: 'Payments & Billing', icon: 'PY' },
+      { id: 'addresses', label: 'Addresses', icon: 'AD' },
+      { id: 'preferences', label: 'Preferences & Saved', icon: 'SV' },
+      { id: 'reviews', label: 'Reviews & Interactions', icon: 'RV' },
+      { id: 'notifications', label: 'Notifications & Settings', icon: 'NT' },
+      { id: 'help', label: 'Help & Support', icon: 'HP' },
     ],
     [],
   );
@@ -50,8 +50,25 @@ const Account = () => {
     <div className="account-page">
       <div className="container">
         <div className="account-header">
-          <h1>My Account</h1>
-          <p>Manage your account settings and preferences</p>
+          <div className="account-header-copy">
+            <span className="account-kicker">Customer portal</span>
+            <h1>My Account</h1>
+            <p>Manage profile settings, orders, saved details, and support in one place.</p>
+          </div>
+          <div className="account-header-stats">
+            <div className="account-stat">
+              <strong>{tabs.length}</strong>
+              <span>service sections</span>
+            </div>
+            <div className="account-stat">
+              <strong>24/7</strong>
+              <span>self-service access</span>
+            </div>
+            <div className="account-stat">
+              <strong>Secure</strong>
+              <span>order records</span>
+            </div>
+          </div>
         </div>
 
         <div className="account-content">
@@ -66,15 +83,25 @@ const Account = () => {
                   </div>
                 )}
               </div>
-              <h3>{user.name}</h3>
-              <p>{user.email}</p>
+              <div className="account-profile-text">
+                <h3>{user.name}</h3>
+                <p className="account-profile-caption">Secure customer portal</p>
+                <p>{user.email}</p>
+                <div className="account-profile-meta">
+                  <span className="account-profile-chip">Orders</span>
+                  <span className="account-profile-chip">Saved Items</span>
+                  <span className="account-profile-chip">Support</span>
+                </div>
+              </div>
             </div>
 
             <nav className="account-nav">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
+                  type="button"
                   className={`account-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                  aria-pressed={activeTab === tab.id}
                   onClick={() => {
                     setActiveTab(tab.id);
                     router.replace(`/account?tab=${tab.id}`);

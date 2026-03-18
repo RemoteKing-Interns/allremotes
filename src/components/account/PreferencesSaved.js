@@ -128,12 +128,11 @@ const PreferencesSaved = () => {
           ) : (
             <div className="products-grid-mini">
               {wishlist.map(product => (
-                <div key={product.id} style={{ position: "relative" }}>
+                <div key={product.id} className="account-card-shell">
                   <ProductCard product={product} />
                   <button
                     type="button"
-                    className="btn btn-outline-red btn-small"
-                    style={{ position: "absolute", top: 10, right: 10 }}
+                    className="btn btn-outline-red btn-small account-card-action"
                     onClick={() => removeWishlist(product.id)}
                   >
                     Remove
@@ -156,12 +155,11 @@ const PreferencesSaved = () => {
           ) : (
             <div className="products-grid-mini">
               {recentlyViewed.map(product => (
-                <div key={product.id} style={{ position: "relative" }}>
+                <div key={product.id} className="account-card-shell">
                   <ProductCard product={product} />
                   <button
                     type="button"
-                    className="btn btn-outline-red btn-small"
-                    style={{ position: "absolute", top: 10, right: 10 }}
+                    className="btn btn-outline-red btn-small account-card-action"
                     onClick={() => removeRecently(product.id)}
                   >
                     Remove
@@ -177,13 +175,13 @@ const PreferencesSaved = () => {
         <div className="saved-searches-section">
           <h3>Saved Searches</h3>
 
-          <div className="account-form" style={{ marginBottom: 14 }}>
-            <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
+          <div className="account-form account-form-spaced">
+            <div className="form-row form-row-search">
+              <div className="form-group">
                 <label>Search query</label>
                 <input value={newSearch} onChange={(e) => setNewSearch(e.target.value)} placeholder="e.g. garage remote" />
               </div>
-              <div className="form-group" style={{ display: "flex", alignItems: "flex-end" }}>
+              <div className="form-group form-group-action-end">
                 <button type="button" className="btn btn-secondary" onClick={addSearch} disabled={!newSearch.trim()}>
                   Save Search
                 </button>

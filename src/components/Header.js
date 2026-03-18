@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useStore } from "../context/StoreContext";
 import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
+import { Button } from "./ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./ui/sheet";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -27,73 +29,106 @@ const Header = () => {
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
   const hamburgerRef = useRef(null);
-  const drawerRef = useRef(null);
-  const firstFocusableRef = useRef(null);
+  const dropdownCloseTimeoutRef = useRef(null);
+  const accountMenuCloseTimeoutRef = useRef(null);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
+  const navItems = Object.entries(navigationMenu || {})
+    .filter(([, item]) => !item?.hidden)
+    .map(([key, item]) => ({ key, ...item }));
 
-  const handleMouseEnter = (key) => {
-    const section = navigationMenu[key];
-    if (!section || section.hidden) return;
-    const visibleColumns = (section.columns || [])
+  const getVisibleColumns = (section) =>
+    (section?.columns || [])
       .map((col) => ({
         ...col,
         items: (col.items || []).filter((i) => !i?.hidden),
       }))
       .filter((col) => (col.items || []).length > 0);
 
+  const isRouteActive = (path) => {
+    if (!path) return false;
+    if (pathname === path) return true;
+    return pathname.startsWith(`${path}/`);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
+
+  const openDropdown = (key) => {
+    const section = navigationMenu[key];
+    if (!section || section.hidden) return;
+    const visibleColumns = getVisibleColumns(section);
+
     if (visibleColumns.length > 0) {
+      if (dropdownCloseTimeoutRef.current) {
+        clearTimeout(dropdownCloseTimeoutRef.current);
+        dropdownCloseTimeoutRef.current = null;
+      }
       setActiveDropdown(key);
     }
   };
 
-  const handleMouseLeave = () => {
-    setActiveDropdown(null);
+  const scheduleDropdownClose = () => {
+    if (dropdownCloseTimeoutRef.current) {
+      clearTimeout(dropdownCloseTimeoutRef.current);
+    }
+    dropdownCloseTimeoutRef.current = window.setTimeout(() => {
+      setActiveDropdown(null);
+      dropdownCloseTimeoutRef.current = null;
+    }, 160);
   };
 
-  // Open drawer and focus first element
+  const cancelDropdownClose = () => {
+    if (dropdownCloseTimeoutRef.current) {
+      clearTimeout(dropdownCloseTimeoutRef.current);
+      dropdownCloseTimeoutRef.current = null;
+    }
+  };
+
+  const openAccountMenu = () => {
+    if (accountMenuCloseTimeoutRef.current) {
+      clearTimeout(accountMenuCloseTimeoutRef.current);
+      accountMenuCloseTimeoutRef.current = null;
+    }
+    setShowAccountMenu(true);
+  };
+
+  const scheduleAccountMenuClose = () => {
+    if (accountMenuCloseTimeoutRef.current) {
+      clearTimeout(accountMenuCloseTimeoutRef.current);
+    }
+    accountMenuCloseTimeoutRef.current = window.setTimeout(() => {
+      setShowAccountMenu(false);
+      accountMenuCloseTimeoutRef.current = null;
+    }, 180);
+  };
+
+  const cancelAccountMenuClose = () => {
+    if (accountMenuCloseTimeoutRef.current) {
+      clearTimeout(accountMenuCloseTimeoutRef.current);
+      accountMenuCloseTimeoutRef.current = null;
+    }
+  };
+
   const openDrawer = () => {
     setMobileDrawerOpen(true);
-    setTimeout(() => {
-      // Try to focus the active link first
-      const activeLink = document.querySelector(".drawer-nav-link.active");
-      if (activeLink) {
-        activeLink.focus();
-      } else if (firstFocusableRef.current) {
-        firstFocusableRef.current.focus();
-      }
-    }, 100);
   };
 
-  // Close drawer and return focus to hamburger
   const closeDrawer = () => {
     setMobileDrawerOpen(false);
-    if (hamburgerRef.current) {
-      hamburgerRef.current.focus();
-    }
+    window.requestAnimationFrame(() => {
+      if (hamburgerRef.current) hamburgerRef.current.focus();
+    });
   };
 
-  // Handle ESC key
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === "Escape" && mobileDrawerOpen) {
-        closeDrawer();
-      }
-    };
-
-    if (mobileDrawerOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
-    };
-  }, [mobileDrawerOpen]);
+    cancelDropdownClose();
+    cancelAccountMenuClose();
+    setActiveDropdown(null);
+    setShowAccountMenu(false);
+    setShowSearchResults(false);
+  }, [pathname]);
 
   // Search functionality
   useEffect(() => {
@@ -138,15 +173,26 @@ const Header = () => {
     closeDrawer();
   };
 
+  const handleAccountTriggerClick = (e) => {
+    if (!showAccountMenu) {
+      e.preventDefault();
+      openAccountMenu();
+      return;
+    }
+    setShowAccountMenu(false);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        cancelDropdownClose();
         setActiveDropdown(null);
       }
       if (
         accountMenuRef.current &&
         !accountMenuRef.current.contains(event.target)
       ) {
+        cancelAccountMenuClose();
         setShowAccountMenu(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -156,6 +202,8 @@ const Header = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
+      cancelDropdownClose();
+      cancelAccountMenuClose();
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
@@ -166,9 +214,7 @@ const Header = () => {
         <div className="top-info-bar">
           <div className="container">
             <div className="info-items">
-              {(promotions.topInfoBar.items || [])
-                .concat(promotions.topInfoBar.items || [])
-                .map((text, idx) => (
+              {(promotions.topInfoBar.items || []).map((text, idx) => (
                   <span key={`${idx}-${text}`} className="info-item">
                     {text}
                   </span>
@@ -189,7 +235,7 @@ const Header = () => {
               <form onSubmit={handleSearchSubmit} className="search-form">
                 <input
                   type="text"
-                  placeholder="Search Products"
+                  placeholder="Search remote, brand, or model"
                   className="search-input"
                   value={searchQuery}
                   onChange={handleSearchChange}
@@ -229,8 +275,7 @@ const Header = () => {
                           alt={product.name}
                           className="search-result-image"
                           onError={(e) => {
-                            e.target.src =
-                              "https://via.placeholder.com/60x60?text=Remote";
+                            e.currentTarget.src = "/images/mainlogo.png";
                           }}
                         />
                         <div className="search-result-info">
@@ -258,8 +303,8 @@ const Header = () => {
                           })()}
                           <div className="search-result-category">
                             {product.category === "car"
-                              ? "🚗 Car Remote"
-                              : "🚪 Garage Remote"}
+                              ? "Automotive Remote"
+                              : "Garage & Gate Remote"}
                           </div>
                         </div>
                       </Link>
@@ -299,11 +344,12 @@ const Header = () => {
                   <div
                     ref={accountMenuRef}
                     className="account-menu-container"
-                    onMouseEnter={() => setShowAccountMenu(true)}
-                    onMouseLeave={() => setShowAccountMenu(false)}
-                    onFocus={() => setShowAccountMenu(true)}
+                    onMouseEnter={openAccountMenu}
+                    onMouseLeave={scheduleAccountMenuClose}
+                    onFocus={openAccountMenu}
                     onBlur={(e) => {
                       if (!e.currentTarget.contains(e.relatedTarget)) {
+                        cancelAccountMenuClose();
                         setShowAccountMenu(false);
                       }
                     }}
@@ -317,6 +363,7 @@ const Header = () => {
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
                       aria-label="Account menu"
+                      onClick={handleAccountTriggerClick}
                     >
                       <svg
                         width="24"
@@ -332,7 +379,12 @@ const Header = () => {
                     </Link>
 
                     {showAccountMenu && (
-                      <div className="account-menu-dropdown" role="menu">
+                      <div
+                        className="account-menu-dropdown"
+                        role="menu"
+                        onMouseEnter={cancelAccountMenuClose}
+                        onMouseLeave={scheduleAccountMenuClose}
+                      >
                         <div className="account-menu-header">
                           <div className="account-menu-name">{user.name}</div>
                           {user.email && (
@@ -394,12 +446,12 @@ const Header = () => {
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="btn btn-outline btn-small">
-                    Login
-                  </Link>
-                  <Link href="/register" className="btn btn-primary btn-small">
-                    Register
-                  </Link>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/login">Login</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/register">Register</Link>
+                  </Button>
                 </>
               )}
               <Link href="/cart" className="cart-icon-new">
@@ -441,155 +493,141 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileDrawerOpen && (
-        <>
-          {/* Overlay */}
-          <div
-            className="drawer-overlay"
-            onClick={closeDrawer}
-            aria-hidden="true"
-          ></div>
+      <Sheet
+        open={mobileDrawerOpen}
+        onOpenChange={(open) => {
+          setMobileDrawerOpen(open);
+          if (!open) {
+            window.requestAnimationFrame(() => {
+              if (hamburgerRef.current) hamburgerRef.current.focus();
+            });
+          }
+        }}
+      >
+        <SheetContent id="mobile-drawer" className="mobile-drawer">
+          <SheetHeader className="drawer-content-header">
+            <SheetTitle className="drawer-title">Menu</SheetTitle>
+            <SheetDescription>
+              Browse categories, shop products, and access your account.
+            </SheetDescription>
+          </SheetHeader>
 
-          {/* Drawer */}
-          <div
-            ref={drawerRef}
-            id="mobile-drawer"
-            className="mobile-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="drawer-title"
-          >
-            {/* Close Button */}
-            <button
-              className="drawer-close-btn"
-              onClick={closeDrawer}
-              aria-label="Close navigation menu"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          <div className="drawer-content">
+            <nav className="drawer-nav">
+              {navItems.map((menuItem) => {
+                const isActive = isRouteActive(menuItem.path);
+                return (
+                  <Link
+                    key={menuItem.key}
+                    href={menuItem.path}
+                    className={`drawer-nav-link ${isActive ? "active current" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={handleNavLinkClick}
+                  >
+                    {menuItem.title}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/products/all"
+                className={`drawer-nav-link drawer-nav-cta ${isRouteActive("/products/all") ? "active current" : ""}`}
+                aria-current={isRouteActive("/products/all") ? "page" : undefined}
+                onClick={handleNavLinkClick}
               >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+                View Products
+              </Link>
+            </nav>
 
-            {/* Drawer Content */}
-            <div className="drawer-content">
-              <h2 id="drawer-title" className="drawer-title">
-                Menu
-              </h2>
-
-              {/* Navigation Links */}
-              <nav className="drawer-nav">
-                {Object.keys(navigationMenu)
-                  .filter((key) => !navigationMenu[key]?.hidden)
-                  .map((key, index) => {
-                    const menuItem = navigationMenu[key];
-                    const isFirst = index === 0;
-                    const isActive = pathname === menuItem.path;
-                    return (
-                      <Link
-                        key={key}
-                        ref={isFirst ? firstFocusableRef : null}
-                        href={menuItem.path}
-                        className={`drawer-nav-link ${isActive ? "active" : ""}`}
-                        onClick={handleNavLinkClick}
-                      >
-                        {menuItem.title}
-                      </Link>
-                    );
-                  })}
-                <Link
-                  href="/products/all"
-                  className={`drawer-nav-link drawer-nav-cta ${pathname === "/products/all" ? "active" : ""}`}
-                  onClick={handleNavLinkClick}
-                >
-                  View Products
-                </Link>
-              </nav>
-
-              {/* Auth Links - Mobile */}
-              <div className="drawer-auth-section">
-                {user ? (
-                  <>
-                    <Link
-                      href="/account"
-                      className={`drawer-auth-link ${pathname === "/account" ? "active" : ""}`}
-                      onClick={handleNavLinkClick}
-                    >
-                      My Account
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        closeDrawer();
-                      }}
-                      className="drawer-auth-btn drawer-logout"
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className={`drawer-auth-btn drawer-auth-outline ${pathname === "/login" ? "active" : ""}`}
-                      onClick={handleNavLinkClick}
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/register"
-                      className={`drawer-auth-btn drawer-auth-primary ${pathname === "/register" ? "active" : ""}`}
-                      onClick={handleNavLinkClick}
-                    >
-                      Register
-                    </Link>
-                  </>
-                )}
-              </div>
+            <div className="drawer-auth-section">
+              {user ? (
+                <>
+                  <Link
+                    href="/account"
+                    className={`drawer-auth-link ${pathname === "/account" ? "active" : ""}`}
+                    onClick={handleNavLinkClick}
+                  >
+                    My Account
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      closeDrawer();
+                    }}
+                    className="drawer-auth-btn drawer-logout"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className={`drawer-auth-btn drawer-auth-outline ${pathname === "/login" ? "active" : ""}`}
+                    onClick={handleNavLinkClick}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className={`drawer-auth-btn drawer-auth-primary ${pathname === "/register" ? "active" : ""}`}
+                    onClick={handleNavLinkClick}
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
             </div>
           </div>
-        </>
-      )}
+        </SheetContent>
+      </Sheet>
 
       <nav className="main-nav" ref={dropdownRef}>
         <div className="container">
           <div className="nav-inner">
             <div className="nav-links">
-              {Object.keys(navigationMenu)
-                .filter((key) => !navigationMenu[key]?.hidden)
-                .map((key) => {
-                  const menuItem = navigationMenu[key];
-                  const visibleColumns = (menuItem.columns || [])
-                    .map((col) => ({
-                      ...col,
-                      items: (col.items || []).filter((i) => !i?.hidden),
-                    }))
-                    .filter((col) => (col.items || []).length > 0);
-                  const isActive = activeDropdown === key;
+              {navItems.map((menuItem, index) => {
+                  const visibleColumns = getVisibleColumns(menuItem);
+                  const isDropdownOpen = activeDropdown === menuItem.key;
+                  const isCurrentRoute = isRouteActive(menuItem.path);
+                  const shouldAlignRight = index >= Math.max(navItems.length - 2, 0);
 
                   return (
                     <div
-                      key={key}
-                      className="nav-item-wrapper"
-                      onMouseEnter={() => handleMouseEnter(key)}
-                      onMouseLeave={handleMouseLeave}
+                      key={menuItem.key}
+                      className={`nav-item-wrapper ${shouldAlignRight ? "nav-item-wrapper--right" : ""}`}
+                      onMouseEnter={() => openDropdown(menuItem.key)}
+                      onMouseLeave={scheduleDropdownClose}
+                      onFocus={() => openDropdown(menuItem.key)}
+                      onBlur={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                          cancelDropdownClose();
+                          setActiveDropdown(null);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          cancelDropdownClose();
+                          setActiveDropdown(null);
+                        }
+                      }}
                     >
                       <Link
                         href={menuItem.path}
-                        className={`nav-link ${isActive ? "active" : ""}`}
+                        className={`nav-link ${isDropdownOpen ? "active" : ""} ${isCurrentRoute ? "current" : ""}`}
+                        aria-current={isCurrentRoute ? "page" : undefined}
+                        aria-haspopup={visibleColumns.length > 0 ? "menu" : undefined}
+                        aria-expanded={visibleColumns.length > 0 ? isDropdownOpen : undefined}
+                        onClick={(e) => {
+                          if (visibleColumns.length > 0 && !isDropdownOpen) {
+                            e.preventDefault();
+                            openDropdown(menuItem.key);
+                          }
+                        }}
                       >
                         {menuItem.title}
                         {visibleColumns.length > 0 && (
                           <svg
-                            className={`chevron ${isActive ? "up" : "down"}`}
+                            className={`chevron ${isDropdownOpen ? "up" : "down"}`}
                             width="12"
                             height="12"
                             viewBox="0 0 12 12"
@@ -597,7 +635,7 @@ const Header = () => {
                             stroke="currentColor"
                             strokeWidth="2"
                           >
-                            {isActive ? (
+                            {isDropdownOpen ? (
                               <path d="M2 8l4-4 4 4" />
                             ) : (
                               <path d="M2 4l4 4 4-4" />
@@ -606,8 +644,12 @@ const Header = () => {
                         )}
                       </Link>
 
-                      {isActive && visibleColumns.length > 0 && (
-                        <div className="mega-menu-wrapper">
+                      {isDropdownOpen && visibleColumns.length > 0 && (
+                        <div
+                          className="mega-menu-wrapper"
+                          onMouseEnter={cancelDropdownClose}
+                          onMouseLeave={scheduleDropdownClose}
+                        >
                           <div className="mega-menu">
                             <div className="mega-menu-content">
                               {visibleColumns.map((column, colIndex) => (

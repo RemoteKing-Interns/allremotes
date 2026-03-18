@@ -25,17 +25,17 @@ const defaultHomeContent = {
     secondaryCtaPath: '/products/garage',
   },
   features: [
-    { icon: '🚗', title: 'Car Remotes', description: 'Universal and brand-specific car remotes with advanced security features', path: '/products/car', linkText: 'Explore →' },
-    { icon: '🚪', title: 'Garage Remotes', description: 'Reliable garage door and gate remotes for all your home automation needs', path: '/products/garage', linkText: 'Explore →' },
-    { icon: '✓', title: 'Quality Guaranteed', description: 'All our products come with quality assurance and customer support', path: '', linkText: '' },
+    { icon: 'CR', title: 'Car Remotes', description: 'Universal and brand-specific car remotes with advanced security features', path: '/products/car', linkText: 'Explore →' },
+    { icon: 'GG', title: 'Garage Remotes', description: 'Reliable garage door and gate remotes for all your home automation needs', path: '/products/garage', linkText: 'Explore →' },
+    { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products come with quality assurance and customer support', path: '', linkText: '' },
   ],
   whyBuy: [
-    { icon: '✓', title: 'Quality Guaranteed', description: 'All our products are genuine and come with quality assurance. We stand behind every product we sell.' },
-    { icon: '🚚', title: 'Free Shipping Australia Wide', description: 'We offer free shipping on all non-bulky items across Australia. Fast and reliable delivery.' },
-    { icon: '🔄', title: '30 Day Returns & 12 Month Warranty', description: 'All purchases include a 30-day return option and 12-month warranty for your peace of mind.' },
-    { icon: '💬', title: 'Unbeatable Support', description: 'Friendly, reliable support you can trust. Our experienced team is ready to help via phone, email, or live chat.' },
-    { icon: '🔒', title: 'Secure Payments', description: 'Mastercard, VISA, AMEX, Bank Deposit, Afterpay - All payment options are surcharge-free and secure.' },
-    { icon: '⭐', title: 'Trusted by Thousands', description: 'Over 1,500 five-star reviews and trusted by homeowners, tradespeople, and businesses across Australia.' },
+    { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products are genuine and come with quality assurance. We stand behind every product we sell.' },
+    { icon: 'FS', title: 'Free Shipping Australia Wide', description: 'We offer free shipping on all non-bulky items across Australia. Fast and reliable delivery.' },
+    { icon: 'WR', title: '30 Day Returns & 12 Month Warranty', description: 'All purchases include a 30-day return option and 12-month warranty for your peace of mind.' },
+    { icon: 'CS', title: 'Unbeatable Support', description: 'Friendly, reliable support you can trust. Our experienced team is ready to help via phone, email, or live chat.' },
+    { icon: 'PM', title: 'Secure Payments', description: 'Mastercard, VISA, AMEX, Bank Deposit, Afterpay - All payment options are surcharge-free and secure.' },
+    { icon: 'TR', title: 'Trusted by Thousands', description: 'Over 1,500 five-star reviews and trusted by homeowners, tradespeople, and businesses across Australia.' },
   ],
   ctaSection: {
     title: 'Ready to Find Your Perfect Remote?',
@@ -93,6 +93,39 @@ const defaultSettings = {
 
 // Product images: use first 12 from remoteImages for product catalog
 const productImagePool = remoteImages.slice(0, 12);
+
+const iconLabelMap = {
+  '🚗': 'CR',
+  '🚪': 'GG',
+  '✓': 'QA',
+  '🚚': 'FS',
+  '🔄': 'WR',
+  '💬': 'CS',
+  '🔒': 'PM',
+  '⭐': 'TR',
+};
+
+function normalizeIconLabel(value, fallback = 'AR') {
+  const key = String(value || '').trim();
+  if (!key) return fallback;
+  return iconLabelMap[key] || key;
+}
+
+function normalizeHomeContent(content) {
+  if (!content || typeof content !== 'object') return defaultHomeContent;
+  return {
+    ...defaultHomeContent,
+    ...content,
+    features: (Array.isArray(content.features) ? content.features : defaultHomeContent.features).map((feature) => ({
+      ...feature,
+      icon: normalizeIconLabel(feature?.icon, 'AR'),
+    })),
+    whyBuy: (Array.isArray(content.whyBuy) ? content.whyBuy : defaultHomeContent.whyBuy).map((item) => ({
+      ...item,
+      icon: normalizeIconLabel(item?.icon, 'AR'),
+    })),
+  };
+}
 
 function loadProducts() {
   try {
@@ -244,7 +277,7 @@ export const StoreProvider = ({ children }) => {
       if (typeof window === 'undefined') return defaultHomeContent;
       const raw = localStorage.getItem(STORAGE_KEYS.homeContent);
       if (!raw) return defaultHomeContent;
-      return { ...defaultHomeContent, ...JSON.parse(raw) };
+      return normalizeHomeContent(JSON.parse(raw));
     } catch {
       return defaultHomeContent;
     }
@@ -253,9 +286,10 @@ export const StoreProvider = ({ children }) => {
 
   const setHomeContent = useCallback((content) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(content));
+    const normalized = normalizeHomeContent(content);
+    localStorage.setItem(STORAGE_KEYS.homeContent, JSON.stringify(normalized));
     setHomeVersion((v) => v + 1);
-    postJson('/api/content/home', content);
+    postJson('/api/content/home', normalized);
   }, [postJson]);
 
   const resolveNavIcons = useCallback((nav) => {

@@ -137,7 +137,7 @@ const ProductDetail = () => {
               src={product.image}
               alt={product.name}
               onError={(e) =>
-                (e.currentTarget.src = "https://via.placeholder.com/600x450")
+                (e.currentTarget.src = "/images/mainlogo.png")
               }
             />
           </div>
@@ -170,12 +170,27 @@ const ProductDetail = () => {
 
             {/* Quantity */}
             {product.inStock && (
-              <div className="quantity-box">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>
-                  -
-                </button>
-                <span>{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)}>+</button>
+              <div className="quantity-section">
+                <span className="quantity-label">Quantity</span>
+                <div className="quantity-box" aria-label="Product quantity selector">
+                  <button
+                    type="button"
+                    className="quantity-btn"
+                    aria-label="Decrease quantity"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  >
+                    -
+                  </button>
+                  <span className="quantity-value">{quantity}</span>
+                  <button
+                    type="button"
+                    className="quantity-btn"
+                    aria-label="Increase quantity"
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             )}
 

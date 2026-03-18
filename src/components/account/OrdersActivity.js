@@ -39,25 +39,12 @@ const OrdersActivity = () => {
     };
   }, [email]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'delivered':
-        return 'var(--primary-teal)';
-      case 'shipped':
-        return 'var(--teal-light)';
-      case 'processing':
-        return 'var(--primary-red)';
-      default:
-        return 'var(--gray-dark)';
-    }
-  };
-
   return (
     <div className="account-section">
       <h2>Orders & Shopping Activity</h2>
       
       <div className="section-content">
-        {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+        {error && <div className="error-message account-feedback">{error}</div>}
         {loading ? (
           <div className="empty-state">
             <p>Loading orders…</p>
@@ -78,17 +65,8 @@ const OrdersActivity = () => {
                     <h3>Order {order.id}</h3>
                     <p className="order-date">Placed on {new Date(order.createdAt || Date.now()).toLocaleDateString()}</p>
                   </div>
-                  <span 
-                    className="order-status"
-                    style={{ 
-                      background: getStatusColor(order.status),
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      textTransform: 'uppercase'
-                    }}
+                  <span
+                    className={`order-status ${order.status || 'pending'}`}
                   >
                     {order.status}
                   </span>
@@ -126,8 +104,8 @@ const OrdersActivity = () => {
                 </div>
 
                 {expandedId === order.id && (
-                  <div style={{ marginTop: 14, fontSize: 14, color: "#444" }}>
-                    <div style={{ display: "grid", gap: 6 }}>
+                  <div className="order-details-panel">
+                    <div className="order-details-grid">
                       <div><strong>Status:</strong> {order.status}</div>
                       <div><strong>Ship to:</strong> {order?.shipping?.address}, {order?.shipping?.city} {order?.shipping?.state} {order?.shipping?.zipCode}</div>
                       <div><strong>Subtotal:</strong> AU${Number(order?.pricing?.subtotal || 0).toFixed(2)}</div>

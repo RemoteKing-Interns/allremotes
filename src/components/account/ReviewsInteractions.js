@@ -92,9 +92,9 @@ const ReviewsInteractions = () => {
         <div className="reviews-section">
           <h3>Reviews You've Written</h3>
 
-          <form onSubmit={submitReview} className="account-form" style={{ marginBottom: 16 }}>
+          <form onSubmit={submitReview} className="account-form account-form-spaced">
             <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
+              <div className="form-group">
                 <label>Product</label>
                 <input
                   value={newReview.productName}
@@ -102,7 +102,7 @@ const ReviewsInteractions = () => {
                   placeholder="Product name"
                 />
               </div>
-              <div className="form-group" style={{ width: 160 }}>
+              <div className="form-group form-group-compact">
                 <label>Rating</label>
                 <select
                   value={newReview.rating}
@@ -142,7 +142,7 @@ const ReviewsInteractions = () => {
                     <h4>{review.productName}</h4>
                     <div className="review-rating">
                       {[...Array(5)].map((_, i) => (
-                        <span key={i} style={{ color: i < review.rating ? '#ffc107' : '#ddd' }}>
+                        <span key={i} className={`review-star ${i < review.rating ? 'filled' : ''}`}>
                           ★
                         </span>
                       ))}
@@ -168,9 +168,9 @@ const ReviewsInteractions = () => {
         <div className="questions-section">
           <h3>Questions & Answers</h3>
 
-          <form onSubmit={submitQuestion} className="account-form" style={{ marginBottom: 16 }}>
+          <form onSubmit={submitQuestion} className="account-form account-form-spaced">
             <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
+              <div className="form-group">
                 <label>Product</label>
                 <input
                   value={newQuestion.productName}

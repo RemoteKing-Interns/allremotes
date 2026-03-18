@@ -174,17 +174,17 @@ const HelpSupport = () => {
           <h3>Contact Support</h3>
           <div className="contact-options">
             <div className="contact-option">
-              <h4>📧 Email</h4>
+              <h4>Email Support</h4>
               <p>support@allremotes.com</p>
               <p className="contact-time">Response within 24 hours</p>
             </div>
             <div className="contact-option">
-              <h4>📞 Phone</h4>
+              <h4>Phone Support</h4>
               <p>1-800-REMOTES</p>
               <p className="contact-time">Mon-Fri, 9 AM - 5 PM EST</p>
             </div>
             <div className="contact-option">
-              <h4>💬 Live Chat</h4>
+              <h4>Live Chat</h4>
               <button className="btn btn-gradient">Start Chat</button>
               <p className="contact-time">Available now</p>
             </div>

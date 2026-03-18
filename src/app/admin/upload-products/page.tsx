@@ -37,12 +37,14 @@ export default function AdminUploadProducts() {
   if (!user) {
     return (
       <div className="admin-page">
-        <div className="container" style={{ padding: 60, textAlign: 'center' }}>
-          <h1>Admin</h1>
-          <p>Please sign in first.</p>
-          <Link href="/admin" className="btn btn-primary" style={{ marginTop: 16 }}>
-            Go to admin login
-          </Link>
+        <div className="admin-center-shell">
+          <div className="admin-access-state">
+            <h1>Admin</h1>
+            <p>Please sign in first.</p>
+            <Link href="/admin" className="btn btn-primary">
+              Go to admin login
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -51,12 +53,14 @@ export default function AdminUploadProducts() {
   if (!isAdmin) {
     return (
       <div className="admin-page">
-        <div className="container" style={{ padding: 60, textAlign: 'center' }}>
-          <h1>Access denied</h1>
-          <p>You need admin rights to view this page.</p>
-          <Link href="/" className="btn btn-primary" style={{ marginTop: 20 }}>
-            Go home
-          </Link>
+        <div className="admin-center-shell">
+          <div className="admin-access-state">
+            <h1>Access denied</h1>
+            <p>You need admin rights to view this page.</p>
+            <Link href="/" className="btn btn-primary">
+              Go home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -129,26 +133,29 @@ export default function AdminUploadProducts() {
     <div className="admin-page">
       <div className="admin-layout">
         <aside className="admin-sidebar">
-          <h2>Admin</h2>
+          <div className="admin-brand">
+            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-brand-logo" />
+            <div className="admin-brand-copy">
+              <strong>Operations Console</strong>
+              <span>Website, catalog, and content management</span>
+            </div>
+          </div>
           <nav className="admin-nav">
             <button
               type="button"
               className="admin-nav-item"
               onClick={() => router.push("/admin")}
             >
-              <span>←</span>
+              <span className="admin-nav-icon">BK</span>
               <span>Back</span>
             </button>
-            <div className="admin-nav-item active" style={{ cursor: 'default' }}>
-              <span>📥</span>
+            <div className="admin-nav-item active">
+              <span className="admin-nav-icon">UP</span>
               <span>Upload CSV</span>
             </div>
           </nav>
-          <div style={{ padding: 20, marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-            <Link
-              href="/"
-              style={{ color: "rgba(255,255,255,0.9)", fontSize: 14 }}
-            >
+          <div className="admin-sidebar-footer">
+            <Link href="/" className="admin-sidebar-link">
               ← View site
             </Link>
           </div>
@@ -162,15 +169,15 @@ export default function AdminUploadProducts() {
 
           <div className="admin-card">
             <h3>Upload</h3>
-            <p style={{ marginTop: 0 }}>
+            <p className="admin-muted-copy">
               This imports into the server datastore (MongoDB if configured, otherwise <code>products.json</code>) and upserts by <strong>Product Code</strong>.
             </p>
 
-            {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+            {error && <div className="error-message admin-feedback">{error}</div>}
             {debugDetails && (
-              <div style={{ marginBottom: 16, fontSize: 13, opacity: 0.9 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Details</div>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{debugDetails}</pre>
+              <div className="admin-debug">
+                <div className="admin-debug-title">Details</div>
+                <pre>{debugDetails}</pre>
               </div>
             )}
 
@@ -192,28 +199,28 @@ export default function AdminUploadProducts() {
           {result && (
             <div className="admin-card">
               <h3>Results</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                <div className="admin-card" style={{ marginBottom: 0 }}>
-                  <strong style={{ fontSize: 26, color: 'var(--primary-teal)' }}>{result.totalRows ?? 0}</strong>
+              <div className="admin-results-grid">
+                <div className="admin-card admin-result-card">
+                  <strong className="admin-result-number">{result.totalRows ?? 0}</strong>
                   <div>Rows processed</div>
                 </div>
-                <div className="admin-card" style={{ marginBottom: 0 }}>
-                  <strong style={{ fontSize: 26, color: 'var(--primary-teal)' }}>{result.created ?? 0}</strong>
+                <div className="admin-card admin-result-card">
+                  <strong className="admin-result-number">{result.created ?? 0}</strong>
                   <div>Created</div>
                 </div>
-                <div className="admin-card" style={{ marginBottom: 0 }}>
-                  <strong style={{ fontSize: 26, color: 'var(--primary-teal)' }}>{result.updated ?? 0}</strong>
+                <div className="admin-card admin-result-card">
+                  <strong className="admin-result-number">{result.updated ?? 0}</strong>
                   <div>Updated</div>
                 </div>
-                <div className="admin-card" style={{ marginBottom: 0 }}>
-                  <strong style={{ fontSize: 26, color: 'var(--primary-red)' }}>{result.failed ?? 0}</strong>
+                <div className="admin-card admin-result-card">
+                  <strong className="admin-result-number admin-result-number--error">{result.failed ?? 0}</strong>
                   <div>Failed</div>
                 </div>
               </div>
 
               {Array.isArray(result.failures) && result.failures.length > 0 && (
-                <div style={{ marginTop: 18 }}>
-                  <h4 style={{ margin: '0 0 10px 0' }}>Failed rows</h4>
+                <div className="admin-form-space-top">
+                  <h4>Failed rows</h4>
                   <div className="admin-table-wrap">
                     <table className="admin-table">
                       <thead>

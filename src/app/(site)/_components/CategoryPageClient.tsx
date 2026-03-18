@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useStore } from "../../../context/StoreContext";
 import ProductCard from "../../../components/ProductCard";
 
-const HERO_BG = "/images/heroimg2.jpg";
-
 export default function CategoryPageClient({ category }: { category: string }) {
   const { getNavigation, getProducts } = useStore();
   const navigationMenu = getNavigation();
@@ -53,10 +51,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
   return (
     <div className="category-page">
       {category !== "contact" && (
-        <div
-          className="category-hero"
-          style={{ backgroundImage: `url(${HERO_BG})` }}
-        >
+        <div className="category-hero category-hero--default">
           <div className="category-hero-overlay"></div>
           <div className="container">
             <h1>{menuItem.title}</h1>
@@ -169,4 +164,3 @@ export default function CategoryPageClient({ category }: { category: string }) {
     </div>
   );
 }
-

@@ -26,6 +26,7 @@ const Cart = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const isModalOpen = Boolean(selectedItem);
   const isAnyModalOpen = isModalOpen || showCheckoutModal;
+  const totalItems = cart.reduce((count, item) => count + Number(item.quantity || 0), 0);
 
   useEffect(() => {
     if (!isAnyModalOpen) return;
@@ -50,7 +51,26 @@ const Cart = () => {
     return (
       <div className="cart-page">
         <div className="container">
-          <h1>Shopping Cart</h1>
+          <div className="cart-header">
+            <div className="cart-header-copy">
+              <span className="cart-kicker">Checkout ready</span>
+              <h1>Shopping Cart</h1>
+              <p className="cart-copy">
+                Review your remote selection, update quantities, and continue to a
+                secure checkout flow.
+              </p>
+            </div>
+            <div className="cart-meta">
+              <div className="cart-meta-card">
+                <strong>0</strong>
+                <span>items in cart</span>
+              </div>
+              <div className="cart-meta-card">
+                <strong>Free</strong>
+                <span>standard shipping</span>
+              </div>
+            </div>
+          </div>
           <div className="empty-cart">
             <p>Your cart is empty</p>
             <Link href="/products/all" className="btn btn-primary">
@@ -77,7 +97,26 @@ const Cart = () => {
   return (
     <div className="cart-page">
       <div className="container">
-        <h1>Shopping Cart</h1>
+        <div className="cart-header">
+          <div className="cart-header-copy">
+            <span className="cart-kicker">Checkout ready</span>
+            <h1>Shopping Cart</h1>
+            <p className="cart-copy">
+              Confirm quantities, review line totals, and move through checkout with
+              a clear order summary.
+            </p>
+          </div>
+          <div className="cart-meta">
+            <div className="cart-meta-card">
+              <strong>{totalItems}</strong>
+              <span>{totalItems === 1 ? "item selected" : "items selected"}</span>
+            </div>
+            <div className="cart-meta-card">
+              <strong>{hasDiscount ? `${Math.round(discountRate * 100)}%` : "Free"}</strong>
+              <span>{hasDiscount ? "member pricing active" : "standard shipping"}</span>
+            </div>
+          </div>
+        </div>
         <div className="cart-content">
           <div className="cart-items">
             {cart.map(item => (
@@ -87,13 +126,13 @@ const Cart = () => {
                   alt={item.name}
                   className="cart-item-image"
                   onError={(e) => {
-                    e.currentTarget.src = "/images/logo.png";
+                    e.currentTarget.src = "/images/mainlogo.png";
                   }}
                 />
                 <div className="cart-item-info">
                   <h3>{item.name}</h3>
                   <p className="cart-item-category">
-                    {item.category === 'car' ? '🚗 Car Remote' : '🚪 Garage Remote'}
+                    {item.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}
                   </p>
                   {(() => {
                     const pricing = getItemPriceBreakdown(item);
@@ -155,6 +194,10 @@ const Cart = () => {
           </div>
           <div className="cart-summary">
             <h2>Order Summary</h2>
+            <p className="cart-summary-note">
+              Secure checkout, order confirmation, and shipping updates are included
+              with every order.
+            </p>
             <div className="summary-row">
               <span>Subtotal</span>
               <span>AU${originalTotal.toFixed(2)}</span>
@@ -207,7 +250,7 @@ const Cart = () => {
                 src={selectedItem?.image}
                 alt={selectedItem?.name || 'Product'}
                 onError={(e) => {
-                  e.currentTarget.src = "/images/logo.png";
+                  e.currentTarget.src = "/images/mainlogo.png";
                 }}
               />
               <div className="cart-modal-info">
@@ -219,7 +262,7 @@ const Cart = () => {
                 <div className="cart-modal-meta">
                   <div>
                     <span>Category</span>
-                    <strong>{selectedItem?.category === 'car' ? 'Car Remote' : 'Garage Remote'}</strong>
+                    <strong>{selectedItem?.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}</strong>
                   </div>
                   <div>
                     <span>Condition</span>

@@ -38,9 +38,10 @@ const Admin = () => {
       <div className="admin-page">
         <div className="admin-login-wrap">
           <div className="admin-login-box">
+            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-login-logo" />
             <h1>Admin</h1>
             <span className="admin-badge">Staff only</span>
-            <p className="auth-subtitle" style={{ textAlign: 'center', marginBottom: 24 }}>
+            <p className="auth-subtitle admin-login-subtitle">
               Sign in with your admin account to manage the website.
             </p>
             {loginError && <div className="error-message">{loginError}</div>}
@@ -66,11 +67,11 @@ const Admin = () => {
                   required
                 />
               </div>
-              <button type="submit" className="btn btn-primary btn-large" style={{ width: '100%' }}>
+              <button type="submit" className="btn btn-primary btn-large admin-submit">
                 Sign in
               </button>
             </form>
-            <p className="auth-footer" style={{ marginTop: 20 }}>
+            <p className="auth-footer admin-login-footer">
               <Link href="/">← Back to site</Link>
             </p>
           </div>
@@ -82,35 +83,43 @@ const Admin = () => {
   if (!isAdmin) {
     return (
       <div className="admin-page">
-        <div className="container" style={{ padding: 60, textAlign: 'center' }}>
+        <div className="admin-center-shell">
+          <div className="admin-access-state">
           <h1>Access denied</h1>
           <p>You need admin rights to view this page.</p>
-          <Link href="/" className="btn btn-primary" style={{ marginTop: 20 }}>
+          <Link href="/" className="btn btn-primary">
             Go home
           </Link>
+        </div>
         </div>
       </div>
     );
   }
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'analytics', label: 'Analytics', icon: '📈' },
-    { id: 'users', label: 'Users', icon: '👥' },
-    { id: 'products', label: 'Products', icon: '📦' },
-    { id: 'orders', label: 'Orders', icon: '🧾' },
-    { id: 'home', label: 'Home content', icon: '🏠' },
-    { id: 'promotions', label: 'Promotions', icon: '🏷️' },
-    { id: 'navigation', label: 'Navigation', icon: '🧭' },
-    { id: 'reviews', label: 'Reviews', icon: '⭐' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
+    { id: 'analytics', label: 'Analytics', icon: 'AN' },
+    { id: 'users', label: 'Users', icon: 'US' },
+    { id: 'products', label: 'Products', icon: 'PD' },
+    { id: 'orders', label: 'Orders', icon: 'OD' },
+    { id: 'home', label: 'Home content', icon: 'HM' },
+    { id: 'promotions', label: 'Promotions', icon: 'PM' },
+    { id: 'navigation', label: 'Navigation', icon: 'NV' },
+    { id: 'reviews', label: 'Reviews', icon: 'RV' },
+    { id: 'settings', label: 'Settings', icon: 'ST' },
   ];
 
   return (
     <div className="admin-page">
       <div className="admin-layout">
         <aside className="admin-sidebar">
-          <h2>Admin</h2>
+          <div className="admin-brand">
+            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="admin-brand-logo" />
+            <div className="admin-brand-copy">
+              <strong>Operations Console</strong>
+              <span>Website, catalog, and content management</span>
+            </div>
+          </div>
           <nav className="admin-nav">
             {tabs.map((tab) => (
               <button
@@ -119,17 +128,17 @@ const Admin = () => {
                 className={`admin-nav-item ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
-                <span>{tab.icon}</span>
+                <span className="admin-nav-icon">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
             <Link className="admin-nav-item" href="/admin/upload-products">
-              <span>📥</span>
+              <span className="admin-nav-icon">UP</span>
               <span>Upload CSV</span>
             </Link>
           </nav>
-          <div style={{ padding: 20, marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-            <Link href="/" style={{ color: "rgba(255,255,255,0.9)", fontSize: 14 }}>
+          <div className="admin-sidebar-footer">
+            <Link href="/" className="admin-sidebar-link">
               ← View site
             </Link>
           </div>
@@ -205,13 +214,13 @@ function AdminOrders() {
         </button>
       </div>
 
-      {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+      {error && <div className="error-message admin-feedback">{error}</div>}
 
       <div className="admin-card">
         {loading ? (
-          <div style={{ padding: 12 }}>Loading…</div>
+          <div className="admin-empty-state">Loading…</div>
         ) : orders.length === 0 ? (
-          <div style={{ padding: 12 }}>No orders yet.</div>
+          <div className="admin-empty-state">No orders yet.</div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -228,7 +237,7 @@ function AdminOrders() {
               <tbody>
                 {orders.map((o) => (
                   <tr key={o.id}>
-                    <td style={{ fontWeight: 600 }}>{o.id}</td>
+                    <td className="admin-cell-strong">{o.id}</td>
                     <td>{new Date(o.createdAt || Date.now()).toLocaleString()}</td>
                     <td>{o?.customer?.email || "—"}</td>
                     <td>{Array.isArray(o.items) ? o.items.length : 0}</td>
@@ -266,10 +275,10 @@ function AdminDashboard() {
   const navKeys = Object.keys(nav || {});
   
   const stats = [
-    { label: 'Total Products', value: productCount, icon: '📦', color: '#667eea' },
-    { label: 'Navigation Items', value: navKeys.length, icon: '🧭', color: '#764ba2' },
-    { label: 'Reviews', value: reviews?.length ?? 0, icon: '⭐', color: '#f59e0b' },
-    { label: 'Active Promotions', value: 3, icon: '🏷️', color: '#10b981' },
+    { label: 'Total Products', value: productCount, icon: 'PD', tone: 'teal' },
+    { label: 'Navigation Items', value: navKeys.length, icon: 'NV', tone: 'mixed' },
+    { label: 'Reviews', value: reviews?.length ?? 0, icon: 'RV', tone: 'gold' },
+    { label: 'Active Promotions', value: 3, icon: 'PM', tone: 'red' },
   ];
 
   const recentActivity = [
@@ -288,32 +297,30 @@ function AdminDashboard() {
         </div>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 32 }}>
+      <div className="admin-stats-grid">
         {stats.map((stat, index) => (
-          <div key={index} className="admin-card" style={{ marginBottom: 0, background: `linear-gradient(135deg, ${stat.color} 0%, ${stat.color}dd 100%)`, color: 'white' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>{stat.value}</div>
-                <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
-              </div>
-              <div style={{ fontSize: 32, opacity: 0.8 }}>{stat.icon}</div>
+          <div key={index} className={`admin-card admin-stat-card admin-stat-card--${stat.tone}`}>
+            <div>
+              <span className="admin-stat-value">{stat.value}</span>
+              <div className="admin-stat-label">{stat.label}</div>
             </div>
+            <span className="admin-stat-badge">{stat.icon}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+      <div className="admin-panels-grid">
         <div className="admin-card">
           <h3>Recent Activity</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="admin-activity-list">
             {recentActivity.map((activity, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#667eea' }}></div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{activity.action}</div>
-                  <div style={{ fontSize: 13, color: '#666' }}>{activity.item}</div>
+              <div key={index} className="admin-activity-item">
+                <div className="admin-activity-dot"></div>
+                <div className="admin-activity-copy">
+                  <strong>{activity.action}</strong>
+                  <div>{activity.item}</div>
                 </div>
-                <div style={{ fontSize: 12, color: '#999' }}>{activity.time}</div>
+                <div className="admin-activity-meta">{activity.time}</div>
               </div>
             ))}
           </div>
@@ -321,18 +328,18 @@ function AdminDashboard() {
 
         <div className="admin-card">
           <h3>Quick Actions</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button className="btn btn-primary" style={{ justifyContent: 'flex-start' }}>
-              <span>➕</span> Add New Product
+          <div className="admin-quick-actions">
+            <button className="btn btn-primary admin-action-button">
+              Add New Product
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
-              <span>📊</span> View Analytics
+            <button className="btn btn-secondary admin-action-button">
+              View Analytics
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
-              <span>⚙️</span> Site Settings
+            <button className="btn btn-secondary admin-action-button">
+              Site Settings
             </button>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start' }}>
-              <span>📥</span> Import Products
+            <button className="btn btn-secondary admin-action-button">
+              Import Products
             </button>
           </div>
         </div>
@@ -340,16 +347,15 @@ function AdminDashboard() {
 
       <div className="admin-card">
         <h3>Hero Preview</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, alignItems: 'center' }}>
-          <div>
+        <div className="admin-hero-preview">
+          <div className="admin-hero-copy">
             <p><strong>Title:</strong> {home?.hero?.title || 'Not set'}</p>
             <p><strong>Subtitle:</strong> {home?.hero?.subtitle || 'Not set'}</p>
             <p><strong>Description:</strong> {home?.hero?.description || 'Not set'}</p>
           </div>
-          <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: 20, borderRadius: 12, color: 'white', textAlign: 'center' }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>🎯</div>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>Hero Section</div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>Main landing area</div>
+          <div className="admin-hero-card">
+            <strong>Hero Section</strong>
+            <div>Main landing area</div>
           </div>
         </div>
       </div>
@@ -438,7 +444,7 @@ function AdminProducts() {
               {products.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <img src={p.image} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+                    <img src={p.image} alt="" className="admin-thumb" />
                   </td>
                   <td>{p.name}</td>
                   <td>{p.category}</td>
@@ -564,7 +570,7 @@ function AdminHome() {
       ...prev,
       features: [
         ...(prev.features || []),
-        { icon: "✓", title: "New feature", description: "", path: "", linkText: "" },
+        { icon: "QA", title: "New feature", description: "", path: "", linkText: "" },
       ],
     }));
   };
@@ -588,7 +594,7 @@ function AdminHome() {
       ...prev,
       whyBuy: [
         ...(prev.whyBuy || []),
-        { icon: "✓", title: "New item", description: "" },
+        { icon: "QA", title: "New item", description: "" },
       ],
     }));
   };
@@ -641,9 +647,9 @@ function AdminHome() {
         <div className="admin-form">
           <div className="form-group full-width">
             <label>Hero banner images (URLs)</label>
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="admin-stack-tight">
               {(content.heroImages || []).map((img: string, i: number) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div key={i} className="admin-row-item">
                   <input
                     value={img || ""}
                     onChange={(e) => updateHeroImage(i, e.target.value)}
@@ -657,7 +663,7 @@ function AdminHome() {
               <button type="button" className="btn btn-secondary btn-sm" onClick={addHeroImage}>
                 Add image
               </button>
-              <p style={{ margin: 0, opacity: 0.8, fontSize: 13 }}>
+              <p className="admin-note admin-note-reset admin-note-small">
                 Tip: Use paths like <code>/images/hero.jpg</code> (from <code>public/</code>) or full URLs.
               </p>
             </div>
@@ -697,21 +703,21 @@ function AdminHome() {
         </div>
       </div>
       <div className="admin-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <h3 style={{ margin: 0 }}>Feature cards</h3>
+        <div className="admin-heading-row">
+          <h3>Feature cards</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addFeature}>Add feature</button>
         </div>
         {(content.features || []).map((f, i) => (
-          <div key={i} className="admin-form" style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div key={i} className="admin-form admin-form-space-bottom-lg">
+            <div className="admin-inline-row-end">
               <button type="button" className="btn btn-danger btn-sm" onClick={() => removeFeature(i)}>
                 Delete
               </button>
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label>Icon (emoji)</label>
-                <input value={f.icon || ''} onChange={(e) => updateFeature(i, 'icon', e.target.value)} placeholder="🚗" />
+                <label>Icon Label</label>
+                <input value={f.icon || ''} onChange={(e) => updateFeature(i, 'icon', e.target.value)} placeholder="e.g. CR" />
               </div>
               <div className="form-group">
                 <label>Title</label>
@@ -736,13 +742,13 @@ function AdminHome() {
         ))}
       </div>
       <div className="admin-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <h3 style={{ margin: 0 }}>Why buy section</h3>
+        <div className="admin-heading-row">
+          <h3>Why buy section</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addWhyBuy}>Add item</button>
         </div>
         {(content.whyBuy || []).map((b, i) => (
-          <div key={i} className="admin-form" style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div key={i} className="admin-form admin-form-space-bottom">
+            <div className="admin-inline-row-end">
               <button type="button" className="btn btn-danger btn-sm" onClick={() => removeWhyBuy(i)}>
                 Delete
               </button>
@@ -840,7 +846,7 @@ function AdminNavigation() {
         <button type="button" className="btn btn-primary" onClick={save}>Save changes</button>
       </div>
       {saved && <div className="admin-success">Navigation saved.</div>}
-      <p style={{ marginBottom: 20 }}>Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
+      <p className="admin-note admin-note-bottom">Toggle “Show” to hide a navigation section or item. Icon = image index (0–29).</p>
       {sectionKeys.map((sectionKey) => (
         <div key={sectionKey} className="admin-card">
           <div className="nav-section-editor">
@@ -854,7 +860,7 @@ function AdminNavigation() {
               onChange={(e) => updateSection(sectionKey, 'path', e.target.value)}
               placeholder="Section path"
             />
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+            <label className="admin-inline-check">
               <input
                 type="checkbox"
                 checked={!nav[sectionKey]?.hidden}
@@ -888,7 +894,7 @@ function AdminNavigation() {
                       <option key={i} value={i}>{i}</option>
                     ))}
                   </select>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', fontSize: 14 }}>
+                  <label className="admin-inline-check">
                     <input
                       type="checkbox"
                       checked={!item.hidden}
@@ -954,8 +960,7 @@ function AdminReviews() {
           <div key={i} className="review-editor-item">
             <button
               type="button"
-              className="btn btn-danger btn-sm"
-              style={{ justifySelf: "end" }}
+              className="btn btn-danger btn-sm admin-self-end"
               onClick={() => removeReview(i)}
             >
               Delete
@@ -1095,7 +1100,7 @@ function AdminPromotions() {
       <div className="admin-card">
         <h3>Top info bar</h3>
         <div className="admin-form">
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <label className="admin-inline-check admin-form-space-bottom">
             <input
               type="checkbox"
               checked={Boolean(promotions?.topInfoBar?.enabled)}
@@ -1103,9 +1108,9 @@ function AdminPromotions() {
             />
             Enabled
           </label>
-          <div style={{ display: "grid", gap: 10 }}>
+          <div className="admin-stack-tight">
             {(promotions?.topInfoBar?.items || []).map((t: string, i: number) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div key={i} className="admin-row-item">
                 <input value={t || ""} onChange={(e) => updateTopInfoItem(i, e.target.value)} />
                 <button type="button" className="btn btn-danger btn-sm" onClick={() => removeTopInfoItem(i)}>
                   Remove
@@ -1120,19 +1125,19 @@ function AdminPromotions() {
       </div>
 
       <div className="admin-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <h3 style={{ margin: 0 }}>Offer categories</h3>
+        <div className="admin-heading-row">
+          <h3>Offer categories</h3>
           <button type="button" className="btn btn-secondary btn-sm" onClick={addCategory}>
             Add category
           </button>
         </div>
-        <div className="admin-form" style={{ marginTop: 16 }}>
+        <div className="admin-form admin-form-space-top">
           {(categories || []).length === 0 ? (
-            <p style={{ margin: 0, opacity: 0.8 }}>No categories yet.</p>
+            <p className="admin-note admin-note-reset">No categories yet.</p>
           ) : (
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="admin-stack-tight">
               {categories.map((c: any) => (
-                <div key={c.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div key={c.id} className="admin-row-item">
                   <input value={c.name || ""} onChange={(e) => updateCategory(c.id, e.target.value)} />
                   <button type="button" className="btn btn-danger btn-sm" onClick={() => removeCategory(c.id)}>
                     Delete
@@ -1145,10 +1150,10 @@ function AdminPromotions() {
       </div>
 
       <div className="admin-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <h3 style={{ margin: 0 }}>Offers</h3>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+        <div className="admin-heading-row">
+          <h3>Offers</h3>
+          <div className="admin-toggle-cluster">
+            <label className="admin-inline-check">
               <input
                 type="checkbox"
                 checked={Boolean(promotions?.offers?.stackWithMemberDiscount)}
@@ -1162,17 +1167,17 @@ function AdminPromotions() {
           </div>
         </div>
 
-        <p style={{ marginTop: 12, marginBottom: 0, opacity: 0.8 }}>
+        <p className="admin-note admin-note-reset admin-note-top">
           Offers apply automatically on the site when enabled.
         </p>
 
-        <div className="admin-form" style={{ marginTop: 16 }}>
+        <div className="admin-form admin-form-space-top">
           {(offers || []).length === 0 ? (
-            <p style={{ margin: 0, opacity: 0.8 }}>No offers yet.</p>
+            <p className="admin-note admin-note-reset">No offers yet.</p>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
+            <div className="admin-stack-regular">
               {offers.map((o: any) => (
-                <div key={o.id} className="admin-card" style={{ marginBottom: 0, background: "var(--gray-light)" }}>
+                <div key={o.id} className="admin-card admin-card-muted">
                   <div className="form-row">
                     <div className="form-group">
                       <label>Name</label>
@@ -1237,8 +1242,8 @@ function AdminPromotions() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                    <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                  <div className="admin-heading-row">
+                    <label className="admin-inline-check">
                       <input
                         type="checkbox"
                         checked={Boolean(o.enabled)}
@@ -1269,7 +1274,7 @@ function AdminAnalytics() {
     <>
       <div className="admin-header-row">
         <h1>Analytics</h1>
-        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="admin-form-select" style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid rgba(0,0,0,0.08)' }}>
+        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="admin-form-select">
           <option value="24h">Last 24 hours</option>
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
@@ -1279,11 +1284,11 @@ function AdminAnalytics() {
 
       <div className="admin-card">
         <h3>Analytics (not configured)</h3>
-        <p style={{ margin: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+        <p className="admin-muted-copy">
           Real analytics for {timeRange} requires an analytics provider + event tracking. This section currently shows no
           hardcoded numbers.
         </p>
-        <p style={{ marginTop: 10, marginBottom: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+        <p className="admin-muted-copy admin-note-top">
           Recommended: add a tracking provider (GA4/Plausible/PostHog) and capture checkout + product view events.
         </p>
       </div>
@@ -1390,12 +1395,12 @@ function AdminUsers() {
       <div className="admin-header-row">
         <h1>User Management</h1>
         <button className="btn btn-primary" onClick={() => setShowAddUser(true)}>
-          <span>➕</span> Add User
+          Add User
         </button>
       </div>
 
-      <div className="admin-card" style={{ marginBottom: 20 }}>
-        <p style={{ margin: 0, color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+      <div className="admin-card">
+        <p className="admin-muted-copy">
           Users are stored in this browser's <code>localStorage</code> (demo auth). To make users global + secure,
           replace client-side auth with a backend auth/session system.
         </p>
@@ -1447,7 +1452,7 @@ function AdminUsers() {
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+              <div className="form-group admin-inline-row">
                 <button className="btn btn-primary" onClick={addUser} disabled={!newUser.name || !newUser.email || !newUser.password}>Add User</button>
                 <button className="btn btn-secondary" onClick={() => setShowAddUser(false)}>Cancel</button>
               </div>
@@ -1475,26 +1480,12 @@ function AdminUsers() {
                   <td>{user.name}</td>
                   <td>{user.email}</td>
                   <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      background: user.role === 'admin' ? '#667eea20' : '#10b98120',
-                      color: user.role === 'admin' ? '#667eea' : '#10b981'
-                    }}>
+                    <span className={`admin-status-pill ${user.role === 'admin' ? 'admin-status-pill--admin' : 'admin-status-pill--customer'}`}>
                       {user.role}
                     </span>
                   </td>
                   <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      background: user.status === 'active' ? '#10b98120' : '#ef444420',
-                      color: user.status === 'active' ? '#10b981' : '#ef4444'
-                    }}>
+                    <span className={`admin-status-pill ${user.status === 'active' ? 'admin-status-pill--active' : 'admin-status-pill--inactive'}`}>
                       {user.status}
                     </span>
                   </td>
@@ -1524,19 +1515,19 @@ function AdminUsers() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+      <div className="admin-insight-grid">
         <div className="admin-card">
           <h3>User Statistics</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="admin-simple-stack">
+            <div className="admin-simple-row">
               <span>Total Users</span>
               <strong>{users.length}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="admin-simple-row">
               <span>Active Users</span>
               <strong>{users.filter(u => u.status === 'active').length}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="admin-simple-row">
               <span>Admin Users</span>
               <strong>{users.filter(u => u.role === 'admin').length}</strong>
             </div>
@@ -1545,11 +1536,11 @@ function AdminUsers() {
 
         <div className="admin-card">
           <h3>Recent Signups</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="admin-simple-stack">
             {users.slice(-3).reverse().map(user => (
-              <div key={user.id} style={{ fontSize: 14 }}>
+              <div key={user.id} className="admin-inline-copy">
                 <strong>{user.name}</strong> - {user.email}
-                <div style={{ fontSize: 12, color: '#666' }}>Joined {user.joined}</div>
+                <small>Joined {user.joined}</small>
               </div>
             ))}
           </div>
@@ -1557,12 +1548,12 @@ function AdminUsers() {
 
         <div className="admin-card">
           <h3>User Roles</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="admin-simple-stack">
+            <div className="admin-simple-row">
               <span>Customers</span>
               <strong>{users.filter(u => u.role === 'customer').length}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="admin-simple-row">
               <span>Admins</span>
               <strong>{users.filter(u => u.role === 'admin').length}</strong>
             </div>
@@ -1645,20 +1636,20 @@ function AdminSettings() {
     <>
       <div className="admin-header-row">
         <h1>Site Settings</h1>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="admin-toolbar">
           <button className="btn btn-primary" onClick={saveSettings}>
-            <span>💾</span> Save Settings
+            Save Settings
           </button>
           <button className="btn btn-danger" onClick={resetAllData} disabled={resetting}>
-            <span>🧹</span> {resetting ? "Resetting…" : "Reset Test Data"}
+            {resetting ? "Resetting…" : "Reset Test Data"}
           </button>
         </div>
       </div>
 
       {saved && <div className="admin-success">Settings saved successfully!</div>}
-      {resetError && <div className="error-message" style={{ marginBottom: 16 }}>{resetError}</div>}
+      {resetError && <div className="error-message admin-feedback">{resetError}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+      <div className="admin-panels-grid">
         <div className="admin-card">
           <h3>General Settings</h3>
           <div className="admin-form">
@@ -1724,41 +1715,41 @@ function AdminSettings() {
           <h3>Feature Toggles</h3>
           <div className="admin-form">
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label className="admin-setting-label">
                 <input
                   type="checkbox"
                   checked={settings.maintenanceMode}
                   onChange={(e) => updateSetting('maintenanceMode', e.target.checked)}
                 />
-                <span style={{ flex: 1, minWidth: 0 }}>Maintenance Mode</span>
+                <span>Maintenance Mode</span>
               </label>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4, marginLeft: 32 }}>
+              <div className="admin-setting-note">
                 Disable the site for maintenance
               </div>
             </div>
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label className="admin-setting-label">
                 <input
                   type="checkbox"
                   checked={settings.enableRegistration}
                   onChange={(e) => updateSetting('enableRegistration', e.target.checked)}
                 />
-                <span style={{ flex: 1, minWidth: 0 }}>Enable User Registration</span>
+                <span>Enable User Registration</span>
               </label>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4, marginLeft: 32 }}>
+              <div className="admin-setting-note">
                 Allow new users to register
               </div>
             </div>
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label className="admin-setting-label">
                 <input
                   type="checkbox"
                   checked={settings.enableReviews}
                   onChange={(e) => updateSetting('enableReviews', e.target.checked)}
                 />
-                <span style={{ flex: 1, minWidth: 0 }}>Enable Reviews</span>
+                <span>Enable Reviews</span>
               </label>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4, marginLeft: 32 }}>
+              <div className="admin-setting-note">
                 Allow customers to leave reviews
               </div>
             </div>
@@ -1768,7 +1759,7 @@ function AdminSettings() {
 
       <div className="admin-card">
         <h3>System Information</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+        <div className="admin-results-grid">
           <div>
             <strong>Version:</strong> 1.0.0
           </div>

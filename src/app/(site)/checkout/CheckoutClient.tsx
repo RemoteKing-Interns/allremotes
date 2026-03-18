@@ -248,10 +248,14 @@ const Checkout = () => {
             <h1>Order Placed Successfully!</h1>
             <p>Thank you for your purchase{user ? `, ${user.name}` : ''}!</p>
             <p>Your order has been confirmed and will be shipped soon.</p>
-            {placedOrderId && <p style={{ marginTop: 10, opacity: 0.9 }}>Order ID: <strong>{placedOrderId}</strong></p>}
+            {placedOrderId && (
+              <p className="order-success-id">
+                Order ID: <strong>{placedOrderId}</strong>
+              </p>
+            )}
             <button
               onClick={() => router.push("/")}
-              className="btn btn-primary btn-large"
+              className="btn btn-primary btn-large order-success-action"
             >
               Continue Shopping
             </button>
@@ -264,12 +268,34 @@ const Checkout = () => {
   return (
     <div className="checkout-page">
       <div className="container">
-        <h1>Checkout</h1>
-        {placeError && <div className="error-message" style={{ marginBottom: 16 }}>{placeError}</div>}
+        <div className="checkout-header">
+          <div className="checkout-header-copy">
+            <span className="checkout-kicker">Secure checkout</span>
+            <h1>Checkout</h1>
+            <p className="checkout-copy">
+              Confirm shipping details, payment information, and your final order
+              summary before placing the order.
+            </p>
+          </div>
+          <div className="checkout-highlights">
+            <div className="checkout-highlight">
+              <strong>Free</strong>
+              <span>standard shipping</span>
+            </div>
+            <div className="checkout-highlight">
+              <strong>Secure</strong>
+              <span>order confirmation</span>
+            </div>
+          </div>
+        </div>
+        {placeError && <div className="error-message checkout-feedback">{placeError}</div>}
         <div className="checkout-content">
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="form-section">
               <h2>Shipping Information</h2>
+              <p className="checkout-section-note">
+                Use your delivery details exactly as they should appear on the shipment.
+              </p>
               <div className="form-group">
                 <label>Full Name</label>
                 <input
@@ -390,6 +416,9 @@ const Checkout = () => {
 
             <div className="form-section">
               <h2>Payment Information</h2>
+              <p className="checkout-section-note">
+                Payment fields are collected for checkout flow simulation only in this environment.
+              </p>
               <div className="form-group">
                 <label>Card Number</label>
                 <input
@@ -443,7 +472,7 @@ const Checkout = () => {
 
             <button
               type="submit"
-              className="btn btn-primary btn-large"
+              className="btn btn-primary btn-large checkout-submit"
               disabled={loading}
             >
               {loading ? 'Processing...' : `Place Order - AU$${discountedTotal.toFixed(2)}`}
@@ -452,10 +481,13 @@ const Checkout = () => {
 
           <div className="order-summary">
             <h2>Order Summary</h2>
+            <p className="order-summary-note">
+              Review your line items and final price before confirming the order.
+            </p>
             <div className="summary-items">
               {cart.map(item => (
                 <div key={item.id} className="summary-item">
-                  <span>{item.name} x{item.quantity}</span>
+                  <span className="summary-item-name">{item.name} x{item.quantity}</span>
                   {(() => {
                     const pricing = getItemPriceBreakdown(item);
                     const originalLine = pricing.originalPrice * item.quantity;

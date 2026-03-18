@@ -88,75 +88,88 @@ const AccountBasics = () => {
       
       <div className="section-content">
         <form onSubmit={handleSaveProfile} className="account-form">
-          <div className="form-group-photo">
-            <label>Profile Photo</label>
-            <div className="photo-upload">
-              <div className="photo-preview">
-                {formData.profilePhoto ? (
-                  <img src={formData.profilePhoto} alt="Profile" />
-                ) : (
-                  <div className="photo-placeholder">
-                    {formData.name.charAt(0).toUpperCase()}
+          <div className="account-basics-grid">
+            <div className="account-basics-aside">
+              <div className="form-group-photo">
+                <label>Profile Photo</label>
+                <div className="photo-upload photo-upload-column">
+                  <div className="photo-preview">
+                    {formData.profilePhoto ? (
+                      <img src={formData.profilePhoto} alt="Profile" />
+                    ) : (
+                      <div className="photo-placeholder">
+                        {formData.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <input
+                    id="account-profile-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="file-input"
+                  />
+                  <label
+                    htmlFor="account-profile-photo"
+                    className="btn btn-outline"
+                  >
+                    Change Photo
+                  </label>
+                  <p className="account-photo-note">
+                    Keep your account details current so orders, saved items, and support activity stay easy to manage.
+                  </p>
+                </div>
               </div>
-              <input
-                id="account-profile-photo"
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="file-input"
-              />
-              <label
-                htmlFor="account-profile-photo"
-                className="btn btn-outline"
-              >
-                Change Photo
-              </label>
+            </div>
+
+            <div className="account-basics-details">
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label htmlFor="name">Full Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="email">Email Address</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+
+              {saved && <div className="success-message">Profile updated successfully!</div>}
+
+              <div className="account-submit-row">
+                <button type="submit" className="btn btn-gradient">
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="+1 (555) 123-4567"
-            />
-          </div>
-
-          {saved && <div className="success-message">Profile updated successfully!</div>}
-
-          <button type="submit" className="btn btn-gradient">
-            Save Changes
-          </button>
         </form>
 
         <div className="section-divider"></div>

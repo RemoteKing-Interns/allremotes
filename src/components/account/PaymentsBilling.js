@@ -188,7 +188,7 @@ const PaymentsBilling = () => {
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <div className="form-group checkbox-field">
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
@@ -211,7 +211,9 @@ const PaymentsBilling = () => {
             ) : paymentMethods.map(method => (
               <div key={method.id} className="payment-method-card">
                 <div className="method-info">
-                  <div className="method-icon">{method.brand === 'Visa' ? '💳' : '💳'}</div>
+                  <div className="method-icon">
+                    {String(method.brand || 'Card').slice(0, 2).toUpperCase()}
+                  </div>
                   <div>
                     <p className="method-brand">{method.brand} •••• {method.last4}</p>
                     <p className="method-expiry">Expires {method.expiry}</p>
