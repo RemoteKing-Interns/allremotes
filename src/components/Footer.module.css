@@ -2,12 +2,12 @@
   position: relative;
   margin-top: 0;
   overflow: hidden;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--white);
+  font-family: var(--font-body);
   background:
-    radial-gradient(circle at top left, rgba(137, 220, 211, 0.16), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(239, 116, 98, 0.16), transparent 22%),
-    linear-gradient(120deg, #0d5953 0%, #374147 48%, #a63731 100%);
+    radial-gradient(circle at 6% 18%, rgba(10, 71, 67, 0.48), transparent 30%),
+    radial-gradient(circle at 94% 18%, rgba(126, 32, 43, 0.42), transparent 34%),
+    linear-gradient(100deg, #0d2020 0%, #272326 48%, #5d1f29 100%);
 }
 
 .shell::before {
@@ -15,20 +15,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.024) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px;
-  opacity: 0.24;
-}
-
-.shell::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 36%);
 }
 
 .inner {
@@ -36,209 +23,138 @@
   z-index: 1;
   width: min(var(--container-wide), calc(100% - var(--container-gutter)));
   margin: 0 auto;
-  padding: 1.85rem 0 1.2rem;
+  padding: 4.3rem 0 2rem;
 }
 
 .layout {
   display: grid;
-  gap: 0.95rem;
+  gap: clamp(2rem, 4vw, 3.9rem);
   align-items: start;
 }
 
 .brandPanel {
   min-width: 0;
-}
-
-.brandBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.42rem 0.9rem;
-  backdrop-filter: blur(10px);
-}
-
-.brandBadgeDot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 999px;
-  background: rgba(159, 235, 226, 0.96);
-}
-
-.brandBadgeLabel {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  display: grid;
+  gap: 1.2rem;
+  align-content: start;
 }
 
 .logoLink {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  margin-top: 0.85rem;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 0;
 }
 
 .logo {
-  width: min(100%, 13.25rem);
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 14px 24px rgba(9, 20, 22, 0.16));
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: clamp(3.1rem, 5.5vw, 3.85rem);
+  filter: brightness(0) invert(1);
 }
 
 .brandCopy {
-  max-width: 34rem;
-  margin: 0.8rem 0 0;
+  max-width: 22rem;
+  margin: 0;
   color: rgba(255, 255, 255, 0.8);
-  font-size: 0.94rem;
-  line-height: 1.65;
+  font-size: 0.98rem;
+  line-height: 1.8;
 }
 
-.noteRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 1rem;
-}
-
-.notePill {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  padding: 0.48rem 0.8rem;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(183, 239, 232, 0.95);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.brandMeta {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.92rem;
+  line-height: 1.6;
 }
 
 .columns {
   display: grid;
-  gap: 0.75rem;
+  gap: clamp(1.8rem, 3vw, 3.4rem);
 }
 
 .sectionCard {
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.2rem;
-  padding: 0.92rem 0.98rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 14px 24px rgba(7, 17, 20, 0.08);
-  backdrop-filter: blur(10px);
 }
 
 .sectionTitle {
-  margin: 0 0 0.68rem;
-  color: var(--white);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  margin: 0 0 1.3rem;
+  color: rgba(255, 255, 255, 0.96);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .linkList {
   display: grid;
-  gap: 0.28rem;
+  gap: 1.05rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .linkItem {
-  display: flex;
-  width: 100%;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  border-radius: 0.9rem;
-  padding: 0.52rem 0.68rem;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.98rem;
+  line-height: 1.35;
   transition:
     color 180ms ease,
-    background-color 180ms ease,
-    transform 180ms ease;
+    opacity 180ms ease;
 }
 
 .linkItem:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: rgba(255, 255, 255, 1);
-  transform: translateX(4px);
+  color: rgba(255, 255, 255, 0.98);
 }
 
 .linkLabel {
   min-width: 0;
-  flex: 1;
-  white-space: normal;
-}
-
-.linkArrow {
-  opacity: 0;
-  transform: translateX(-4px);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.linkItem:hover .linkArrow {
-  opacity: 1;
-  transform: translateX(0);
 }
 
 .bottomBar {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  margin-top: 1rem;
-  padding-top: 0.95rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  gap: 1rem;
+  margin-top: 3.2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .highlightRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.8rem;
 }
 
 .highlightPill {
   display: inline-flex;
   align-items: center;
+  min-height: 2.2rem;
+  padding: 0.45rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.34rem 0.75rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.94rem;
+  font-weight: 500;
 }
 
 .copyright {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.92rem;
-}
-
-@media (max-width: 768px) {
-  .inner {
-    width: min(var(--container-wide), calc(100% - var(--container-gutter-mobile)));
-    padding: 1.65rem 0 1.1rem;
-  }
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.96rem;
+  text-align: right;
 }
 
 @media (min-width: 900px) {
   .layout {
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.48fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 2.9fr);
   }
 
   .columns {
@@ -254,8 +170,23 @@
   }
 }
 
+@media (max-width: 768px) {
+  .inner {
+    width: min(var(--container-wide), calc(100% - var(--container-gutter-mobile)));
+    padding: 3rem 0 1.5rem;
+  }
+
+  .bottomBar {
+    margin-top: 2.4rem;
+    padding-top: 1.5rem;
+  }
+
+  .copyright {
+    text-align: left;
+  }
+}
+
 @media (max-width: 480px) {
-  .brandBadge,
   .highlightPill {
     width: 100%;
     justify-content: center;

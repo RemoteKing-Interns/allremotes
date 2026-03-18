@@ -40,8 +40,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ["Sora", "Avenir Next", "Segoe UI", "sans-serif"],
-        body: ["Manrope", "Avenir Next", "Segoe UI", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
+        display: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
+        body: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
       },
       fontSize: {
         xs: ["0.72rem", { lineHeight: "1.2" }],

@@ -9,6 +9,7 @@ const categoriesItems = [
   { href: "/for-the-home", label: "For The Home" },
   { href: "/locksmithing", label: "Locksmithing" },
   { href: "/shop-by-brand", label: "Shop By Brand" },
+  { href: "/products/all", label: "All Products" },
 ];
 
 const policyItems = [
@@ -22,26 +23,12 @@ const supportItems = [
   { href: "/support", label: "Support Center" },
   { href: "/contact", label: "Contact Us" },
   { href: "mailto:support@allremotes.com", label: "support@allremotes.com" },
-  { href: "tel:+18007366837", label: "1-800-REMOTES" },
-];
-
-const brandNotes = [
-  "Australia-Wide Dispatch",
-  "12 Month Warranty",
-  "Compatibility Support",
 ];
 
 const footerHighlights = ["30 Day Returns", "Trade Support", "Secure Payments"];
 
 function FooterItem({ href, label }) {
-  const content = (
-    <>
-      <span className={styles.linkLabel}>{label}</span>
-      <span className={styles.linkArrow} aria-hidden="true">
-        →
-      </span>
-    </>
-  );
+  const content = <span className={styles.linkLabel}>{label}</span>;
 
   if (href.startsWith("/")) {
     return (
@@ -81,39 +68,27 @@ const Footer = () => {
       <div className={styles.inner}>
         <div className={styles.layout}>
           <section className={styles.brandPanel}>
-            <div className={styles.brandBadge}>
-              <span className={styles.brandBadgeDot} />
-              <span className={styles.brandBadgeLabel}>Quality Is Guaranteed</span>
-            </div>
-
             <Link href="/" className={styles.logoLink} aria-label="ALLREMOTES home">
               <Image
-                src="/images/logo-transparent.png"
+                src="/images/mainlogo.png"
                 alt="ALLREMOTES"
-                width={2402}
-                height={574}
+                width={3160}
+                height={1247}
+                sizes="(max-width: 768px) 210px, 240px"
                 className={styles.logo}
               />
             </Link>
 
             <p className={styles.brandCopy}>
-              Premium remote solutions for automotive, garage, gate, home, and
-              locksmith customers who want dependable stock and practical support.
+              Australia&apos;s trusted source for premium remote controls,
+              automotive keys, and locksmithing tools. Quality guaranteed.
             </p>
-
-            <div className={styles.noteRow}>
-              {brandNotes.map((note) => (
-                <span key={note} className={styles.notePill}>
-                  {note}
-                </span>
-              ))}
-            </div>
           </section>
 
           <div className={styles.columns}>
-            <FooterColumn title="Categories" items={categoriesItems} />
-            <FooterColumn title="Policies" items={policyItems} />
+            <FooterColumn title="Shop" items={categoriesItems} />
             <FooterColumn title="Support" items={supportItems} />
+            <FooterColumn title="Company" items={policyItems} />
           </div>
         </div>
 

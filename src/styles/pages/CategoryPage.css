@@ -20,8 +20,16 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(135deg, rgba(245, 245, 247, 0.84), rgba(245, 245, 247, 0.54)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.32));
+    linear-gradient(
+      135deg,
+      rgba(245, 245, 247, 0.84),
+      rgba(245, 245, 247, 0.54)
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.32)
+    );
 }
 
 .category-hero .container {
@@ -100,8 +108,26 @@
 
 .category-products .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
+}
+
+@media (max-width: 1536px) {
+  .category-products .products-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .category-products .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .category-products .products-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .contact-content {

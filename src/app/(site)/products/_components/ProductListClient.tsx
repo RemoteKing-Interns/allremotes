@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "../../../../context/StoreContext";
@@ -9,6 +8,7 @@ import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
 import { Button } from "../../../../components/ui/button";
+import ProductCard from "../../../../components/ProductCard";
 import {
   Sheet,
   SheetContent,
@@ -262,13 +262,6 @@ export default function ProductListClient({
   const hasDiscount = isDiscountEligible(user);
   const modalPrice = getPriceBreakdown(addedItem?.price || 0, hasDiscount, { promotions, product: addedItem });
 
-  const handleAddToCart = (e: React.MouseEvent, product: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addToCart(product);
-    setAddedItem(product);
-  };
-
   const handleModalQuantityChange = (nextQuantity: any) => {
     if (!addedItem) return;
     const parsed = Number(nextQuantity);
@@ -380,93 +373,18 @@ export default function ProductListClient({
               <>
                 <div className="products-grid">
                   {pageProducts.map((product) => (
-                    <motion.div
+                    <div
                       key={product.id}
                       className="product-card-animated"
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-40px" }}
-                      transition={{ duration: 0.32, ease: "easeOut" }}
-                      whileHover={{ y: -6 }}
                     >
-                      <Link
-                        href={`/product/${product.id}`}
-                        className="product-card product-card--shop"
-                      >
-                        <div className="image-box">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            onError={(e: any) => (e.currentTarget.src = "/images/mainlogo.png")}
-                          />
-                        </div>
-
-                        <div className="card-body">
-                          <div className="card-meta-row">
-                            <span className="card-brand-pill">
-                              {product.brand?.trim() || "ALLREMOTES"}
-                            </span>
-                            <span
-                              className={`card-stock ${product.inStock ? "in" : "out"}`}
-                            >
-                              <span className="card-stock-dot" />
-                              {product.inStock ? "In Stock" : "Sold Out"}
-                            </span>
-                          </div>
-                          <p className="brand">
-                            {product.category === "car"
-                              ? "Automotive Remote"
-                              : "Garage & Gate Remote"}
-                          </p>
-                          <h3>{product.name}</h3>
-                          <p className="card-summary">
-                            {product.description?.trim() ||
-                              "Dependable remote replacement with clean everyday fitment and fast reorder-ready stock."}
-                          </p>
-
-                          <div className="card-footer">
-                            <div className="price-row">
-                              {(() => {
-                                const pricing = getPriceBreakdown(
-                                  product.price,
-                                  hasDiscount,
-                                  { promotions, product },
-                                );
-                                if (!pricing.hasDiscount) {
-                                  return (
-                                    <span className="price">
-                                      AU${pricing.finalPrice.toFixed(2)}
-                                    </span>
-                                  );
-                                }
-                                return (
-                                  <span className="price-discount-wrap">
-                                    <span className="price-original">
-                                      AU${pricing.originalPrice.toFixed(2)}
-                                    </span>
-                                    <span className="price-discounted">
-                                      AU${pricing.finalPrice.toFixed(2)}
-                                    </span>
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                            <p className="card-shipping-note">Buy now</p>
-                          </div>
-                          <Button
-                            type="button"
-                            className="add-to-cart"
-                            onClick={(e) => handleAddToCart(e, product)}
-                            disabled={!product.inStock}
-                            variant={product.inStock ? "secondary" : "outline"}
-                            size="sm"
-                            width="full"
-                          >
-                            {product.inStock ? "Add to Cart" : "Out of Stock"}
-                          </Button>
-                        </div>
-                      </Link>
-                    </motion.div>
+                      <ProductCard
+                        product={product}
+                        onAddToCart={(nextProduct) => {
+                          addToCart(nextProduct);
+                          setAddedItem(nextProduct);
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
 

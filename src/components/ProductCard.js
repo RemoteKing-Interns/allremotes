@@ -3,34 +3,28 @@
 import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ImageOff } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useStore } from "../context/StoreContext";
 import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
-import { Button } from "./ui/button";
-import styles from "./ProductCard.module.css";
 
-const CATEGORY_LABELS = {
-  car: "Automotive",
-  garage: "Garage & Gate",
-  "garage-gate": "Garage & Gate",
-  home: "For The Home",
-  "for-the-home": "For The Home",
-  locksmith: "Locksmithing",
-  locksmithing: "Locksmithing",
-};
-
-function getCategoryLabel(category) {
-  const key = String(category || "").trim().toLowerCase();
-  return CATEGORY_LABELS[key] || "Remote Control";
+function readWishlist(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map((item) => String(item)) : [];
+  } catch {
+    return [];
+  }
 }
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onAddToCart = null }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { getPromotions } = useStore();
   const [imageError, setImageError] = React.useState(false);
+  const [isWishlisted, setIsWishlisted] = React.useState(false);
   const promotions = getPromotions();
   const pricing = getPriceBreakdown(product.price, isDiscountEligible(user), {
     promotions,
@@ -41,123 +35,167 @@ const ProductCard = ({ product }) => {
     setImageError(false);
   }, [product.image]);
 
-  const categoryLabel = getCategoryLabel(product.category);
   const brandLabel = product.brand?.trim() || "ALLREMOTES";
-  const productName = product.name?.trim() || `${brandLabel} Replacement Remote`;
-  const skuLabel = product.sku?.trim() || brandLabel.toUpperCase();
-  const detailLabel = `${brandLabel} ${categoryLabel}`;
-  const footerMeta = product.condition?.trim() || detailLabel;
-  const savingsCopy = pricing.hasDiscount
-    ? `Save AU$${pricing.discountAmount.toFixed(2)}`
-    : "";
+  const productName =
+    product.name?.trim() || `${brandLabel} Replacement Remote`;
+  const discountPercent =
+    pricing.hasDiscount && pricing.originalPrice > 0
+      ? Math.round((pricing.discountAmount / pricing.originalPrice) * 100)
+      : 0;
+  const fallbackInitial = brandLabel.charAt(0).toUpperCase();
+  const userKey = React.useMemo(
+    () => user?.id || user?.email || "guest",
+    [user],
+  );
+  const wishlistKey = React.useMemo(
+    () => `allremotes_wishlist_${userKey}`,
+    [userKey],
+  );
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !product?.id) return;
+    const wishlist = readWishlist(wishlistKey);
+    setIsWishlisted(wishlist.includes(String(product.id)));
+  }, [wishlistKey, product?.id]);
 
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!product.inStock) return;
+    if (typeof onAddToCart === "function") {
+      onAddToCart(product);
+      return;
+    }
     addToCart(product);
   };
 
+  const toggleWishlist = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof window === "undefined" || !product?.id) return;
+
+    const id = String(product.id);
+    const wishlist = readWishlist(wishlistKey);
+    const next = wishlist.includes(id)
+      ? wishlist.filter((item) => item !== id)
+      : [id, ...wishlist];
+
+    try {
+      localStorage.setItem(wishlistKey, JSON.stringify(next));
+    } catch {}
+
+    setIsWishlisted(next.includes(id));
+  };
+
   return (
-    <motion.article
-      className={styles.card}
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+      className="group rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md overflow-hidden transition-all duration-300"
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.32, ease: "easeOut" }}
-      whileHover={{ y: -6 }}
     >
-      <Link
-        href={`/product/${product.id}`}
-        className={styles.link}
-        aria-label={`View ${productName}`}
-      >
-        <div className={styles.mediaStage}>
-          <div className={styles.mediaHeader}>
-            <span className={styles.categoryTag}>{categoryLabel}</span>
+      {/* Image Container */}
+      <div className="relative aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+        {/* Fallback Letter */}
+        {imageError && (
+          <div className="text-7xl font-extrabold text-gray-300">
+            {fallbackInitial}
           </div>
+        )}
 
-          <div className={styles.imageWrap}>
-            <div className={styles.imageGlow} />
-            {imageError ? (
-              <div className={styles.fallback}>
-                <div className={styles.fallbackIcon}>
-                  <ImageOff size={24} strokeWidth={2.1} />
-                </div>
-                <p className={styles.fallbackTitle}>Image coming soon</p>
-              </div>
-            ) : (
-              <img
-                src={product.image}
-                alt={productName}
-                loading="lazy"
-                decoding="async"
-                className={`${styles.productImage} ${
-                  product.inStock ? "" : styles.productImageMuted
-                }`}
-                onError={() => {
-                  setImageError(true);
-                }}
-              />
-            )}
-          </div>
-        </div>
+        {/* Product Image */}
+        {!imageError && (
+          <img
+            src={product.image}
+            alt={productName}
+            loading="lazy"
+            decoding="async"
+            className={`w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110 ${
+              !product.inStock ? "opacity-50" : ""
+            }`}
+            onError={() => setImageError(true)}
+          />
+        )}
 
-        <div className={styles.body}>
-          <p className={styles.eyebrow}>{skuLabel}</p>
-          <h3 className={styles.title}>{productName}</h3>
-          <p className={styles.detail}>{detailLabel}</p>
-        </div>
-      </Link>
-
-      <div className={styles.footer}>
-        <div className={styles.footerShell}>
-          <div className={styles.footerHeader}>
-            <div className={styles.footerPriceBlock}>
-              {pricing.hasDiscount && (
-                <span className={styles.originalPrice}>
-                  AU${pricing.originalPrice.toFixed(2)}
-                </span>
-              )}
-              <div className={styles.footerPriceLine}>
-                <span className={styles.finalPrice}>
-                  AU${pricing.finalPrice.toFixed(2)}
-                </span>
-                {pricing.hasDiscount && (
-                  <span className={styles.offerPill}>{savingsCopy}</span>
-                )}
-              </div>
-            </div>
-
-            <span
-              className={`${styles.footerStock} ${
-                product.inStock ? styles.footerStockIn : styles.footerStockOut
-              }`}
-            >
-              <span className={styles.footerStockDot} />
-              {product.inStock ? "In stock" : "Sold out"}
+        {/* Badges - Top Left */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-20">
+          {product.inStock ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 text-xs font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+              In Stock
             </span>
-          </div>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-gray-200 text-gray-600 text-xs font-semibold">
+              Out of Stock
+            </span>
+          )}
+          {discountPercent > 0 && (
+            <span className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold">
+              {discountPercent}% OFF
+            </span>
+          )}
+        </div>
 
-          <div className={styles.footerMetaRow}>
-            <span className={styles.footerMetaPill}>{skuLabel}</span>
-            <span className={styles.footerMetaText}>{footerMeta}</span>
-          </div>
+        {/* Heart Button - Top Right */}
+        <button
+          type="button"
+          onClick={toggleWishlist}
+          className={`absolute top-3 right-3 z-30 h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-200 shadow-sm ${
+            isWishlisted
+              ? "bg-white text-red-500"
+              : "bg-white/90 backdrop-blur text-gray-700 opacity-0 group-hover:opacity-100"
+          }`}
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={isWishlisted}
+        >
+          <Heart
+            size={18}
+            strokeWidth={1.5}
+            fill={isWishlisted ? "currentColor" : "none"}
+          />
+        </button>
 
-          <div className={styles.footerActionRow}>
-            <Button
+        {/* Quick Add Button - Bottom */}
+        {product.inStock && (
+          <div className="absolute bottom-3 left-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <button
+              type="button"
               onClick={handleAddToCart}
-              disabled={!product.inStock}
-              size="sm"
-              variant={product.inStock ? "secondary" : "outline"}
-              className={styles.actionButton}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 active:scale-95 transition-all"
             >
-              {product.inStock ? "Add to Cart" : "Unavailable"}
-            </Button>
+              <ShoppingCart size={16} strokeWidth={1.5} />
+              Quick Add
+            </button>
           </div>
+        )}
+      </div>
+
+      {/* Product Info */}
+      <div className="p-4">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+          {brandLabel}
+        </p>
+        <Link href={`/product/${product.id}`} className="block">
+          <h3 className="font-semibold text-sm text-gray-900 leading-snug hover:text-red-500 transition-colors line-clamp-2 mb-3">
+            {productName}
+          </h3>
+        </Link>
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-extrabold text-gray-900 font-mono">
+            ${pricing.finalPrice.toFixed(2)}
+          </span>
+          {pricing.hasDiscount && (
+            <span className="text-sm text-gray-400 line-through font-mono">
+              ${pricing.originalPrice.toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
-    </motion.article>
+    </motion.div>
   );
 };
 
 export default ProductCard;
+
