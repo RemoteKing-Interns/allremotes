@@ -13,6 +13,16 @@ import NotificationsSettings from "../../../components/account/NotificationsSett
 import HelpSupport from "../../../components/account/HelpSupport";
 import { tw } from "../../../components/account/tw";
 import { cn } from "../../../lib/utils";
+import {
+  User,
+  ShoppingBag,
+  CreditCard,
+  MapPin,
+  Bookmark,
+  Star,
+  Bell,
+  LifeBuoy,
+} from "lucide-react";
 
 const Account = () => {
   const { user, loading } = useAuth();
@@ -22,15 +32,53 @@ const Account = () => {
 
   const tabs = useMemo(
     () => [
-      { id: "basics", label: "Account Basics", icon: "AB" },
-      { id: "orders", label: "Orders & Shopping", icon: "OR" },
-      { id: "payments", label: "Payments & Billing", icon: "PY" },
-      { id: "addresses", label: "Addresses", icon: "AD" },
-      { id: "preferences", label: "Preferences & Saved", icon: "SV" },
-      { id: "reviews", label: "Reviews & Interactions", icon: "RV" },
-      { id: "notifications", label: "Notifications & Settings", icon: "NT" },
-      { id: "help", label: "Help & Support", icon: "HP" },
+      { id: "basics", label: "Account Basics", icon: User },
+      { id: "orders", label: "Orders & Shopping", icon: ShoppingBag },
+      { id: "payments", label: "Payments & Billing", icon: CreditCard },
+      { id: "addresses", label: "Addresses", icon: MapPin },
+      { id: "preferences", label: "Preferences & Saved", icon: Bookmark },
+      { id: "reviews", label: "Reviews & Interactions", icon: Star },
+      { id: "notifications", label: "Notifications & Settings", icon: Bell },
+      { id: "help", label: "Help & Support", icon: LifeBuoy },
     ],
+    [],
+  );
+
+  const iconHoverStyles = useMemo(
+    () => ({
+      basics: {
+        hover: "group-hover:border-sky-200 group-hover:bg-sky-50 group-hover:text-sky-700",
+        active: "border-sky-300 bg-sky-100 text-sky-700",
+      },
+      orders: {
+        hover: "group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+        active: "border-emerald-300 bg-emerald-100 text-emerald-700",
+      },
+      payments: {
+        hover: "group-hover:border-violet-200 group-hover:bg-violet-50 group-hover:text-violet-700",
+        active: "border-violet-300 bg-violet-100 text-violet-700",
+      },
+      addresses: {
+        hover: "group-hover:border-amber-200 group-hover:bg-amber-50 group-hover:text-amber-700",
+        active: "border-amber-300 bg-amber-100 text-amber-700",
+      },
+      preferences: {
+        hover: "group-hover:border-rose-200 group-hover:bg-rose-50 group-hover:text-rose-700",
+        active: "border-rose-300 bg-rose-100 text-rose-700",
+      },
+      reviews: {
+        hover: "group-hover:border-fuchsia-200 group-hover:bg-fuchsia-50 group-hover:text-fuchsia-700",
+        active: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-700",
+      },
+      notifications: {
+        hover: "group-hover:border-cyan-200 group-hover:bg-cyan-50 group-hover:text-cyan-700",
+        active: "border-cyan-300 bg-cyan-100 text-cyan-700",
+      },
+      help: {
+        hover: "group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-700",
+        active: "border-orange-300 bg-orange-100 text-orange-700",
+      },
+    }),
     [],
   );
 
@@ -94,29 +142,38 @@ const Account = () => {
 
             <nav className={tw.nav}>
               {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={cn(
-                    tw.navItem,
-                    activeTab === tab.id && tw.navItemActive,
-                  )}
-                  aria-pressed={activeTab === tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    router.replace(`/account?tab=${tab.id}`);
-                  }}
-                >
-                  <span
-                    className={cn(
-                      tw.navIcon,
-                      activeTab === tab.id && tw.navIconActive,
-                    )}
-                  >
-                    {tab.icon}
-                  </span>
-                  <span className={tw.navLabel}>{tab.label}</span>
-                </button>
+                (() => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={cn(
+                        tw.navItem,
+                        "group",
+                        activeTab === tab.id && tw.navItemActive,
+                      )}
+                      aria-pressed={activeTab === tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        router.replace(`/account?tab=${tab.id}`);
+                      }}
+                    >
+                      <span
+                        className={cn(
+                          tw.navIcon,
+                          iconHoverStyles[tab.id]?.hover,
+                          activeTab === tab.id
+                            ? iconHoverStyles[tab.id]?.active
+                            : tw.navIconActive,
+                        )}
+                      >
+                        <Icon size={16} strokeWidth={2.1} />
+                      </span>
+                      <span className={tw.navLabel}>{tab.label}</span>
+                    </button>
+                  );
+                })()
               ))}
             </nav>
           </div>

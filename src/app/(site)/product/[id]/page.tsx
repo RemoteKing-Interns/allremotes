@@ -188,10 +188,10 @@ const ProductDetail = () => {
 
             {/* Quantity */}
             {product.inStock && (
-              <div className="mt-6">
+              <div className="mt-6 flex flex-wrap items-center gap-4">
                 <span className="text-sm font-semibold text-neutral-800">Quantity</span>
                 <div
-                  className="mt-2 inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
+                  className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
                   aria-label="Product quantity selector"
                 >
                   <button

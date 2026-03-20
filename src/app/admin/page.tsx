@@ -5,6 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
+import {
+  LayoutDashboard,
+  BarChart3,
+  Users,
+  Package,
+  ShoppingCart,
+  Home,
+  Megaphone,
+  Compass,
+  MessageSquareText,
+  Settings,
+  Upload,
+  Plus,
+  Import,
+} from "lucide-react";
 
 const ADMIN_EMAIL = 'admin@allremotes.com';
 
@@ -35,7 +50,7 @@ const Admin = () => {
 
   if (!user) {
     return (
-      <div className="animate-fadeIn">
+      <div className="admin-a11y animate-fadeIn">
         <div className="container py-10 sm:py-14">
           <div className="mx-auto grid w-full max-w-5xl items-stretch gap-8 lg:grid-cols-2">
             <div className="rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-panel backdrop-blur sm:p-8">
@@ -122,7 +137,7 @@ const Admin = () => {
 
   if (!isAdmin) {
     return (
-      <div className="animate-fadeIn">
+      <div className="admin-a11y animate-fadeIn">
         <div className="container py-10 sm:py-14">
           <div className="mx-auto max-w-2xl rounded-xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Access denied</h1>
@@ -137,20 +152,70 @@ const Admin = () => {
   }
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
-    { id: 'analytics', label: 'Analytics', icon: 'AN' },
-    { id: 'users', label: 'Users', icon: 'US' },
-    { id: 'products', label: 'Products', icon: 'PD' },
-    { id: 'orders', label: 'Orders', icon: 'OD' },
-    { id: 'home', label: 'Home content', icon: 'HM' },
-    { id: 'promotions', label: 'Promotions', icon: 'PM' },
-    { id: 'navigation', label: 'Navigation', icon: 'NV' },
-    { id: 'reviews', label: 'Reviews', icon: 'RV' },
-    { id: 'settings', label: 'Settings', icon: 'ST' },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      iconHover: "group-hover:border-rose-200 group-hover:bg-rose-50 group-hover:text-rose-700",
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: BarChart3,
+      iconHover: "group-hover:border-sky-200 group-hover:bg-sky-50 group-hover:text-sky-700",
+    },
+    {
+      id: 'users',
+      label: 'Users',
+      icon: Users,
+      iconHover: "group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+    },
+    {
+      id: 'products',
+      label: 'Products',
+      icon: Package,
+      iconHover: "group-hover:border-amber-200 group-hover:bg-amber-50 group-hover:text-amber-700",
+    },
+    {
+      id: 'orders',
+      label: 'Orders',
+      icon: ShoppingCart,
+      iconHover: "group-hover:border-violet-200 group-hover:bg-violet-50 group-hover:text-violet-700",
+    },
+    {
+      id: 'home',
+      label: 'Home content',
+      icon: Home,
+      iconHover: "group-hover:border-cyan-200 group-hover:bg-cyan-50 group-hover:text-cyan-700",
+    },
+    {
+      id: 'promotions',
+      label: 'Promotions',
+      icon: Megaphone,
+      iconHover: "group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-700",
+    },
+    {
+      id: 'navigation',
+      label: 'Navigation',
+      icon: Compass,
+      iconHover: "group-hover:border-fuchsia-200 group-hover:bg-fuchsia-50 group-hover:text-fuchsia-700",
+    },
+    {
+      id: 'reviews',
+      label: 'Reviews',
+      icon: MessageSquareText,
+      iconHover: "group-hover:border-indigo-200 group-hover:bg-indigo-50 group-hover:text-indigo-700",
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      iconHover: "group-hover:border-teal-200 group-hover:bg-teal-50 group-hover:text-teal-700",
+    },
   ];
 
   return (
-    <div className="animate-fadeIn">
+    <div className="admin-a11y animate-fadeIn">
       <div className="container py-6 sm:py-8">
         <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
           <aside className="rounded-xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur lg:sticky lg:top-24">
@@ -165,11 +230,12 @@ const Admin = () => {
             <nav className="mt-5 grid gap-2">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                    className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
                       isActive
                         ? "bg-primary text-white shadow-soft"
                         : "text-neutral-600 hover:bg-neutral-100/80 hover:text-neutral-900"
@@ -177,24 +243,24 @@ const Admin = () => {
                     onClick={() => setActiveTab(tab.id)}
                   >
                     <span
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-extrabold shadow-sm transition-colors ${
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-extrabold shadow-sm transition-colors ${
                         isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-white text-neutral-500 border border-neutral-200"
+                          ? "border-white/20 bg-white/20 text-white"
+                          : `border-neutral-200 bg-white text-neutral-500 ${tab.iconHover}`
                       }`}
                     >
-                      {tab.icon}
+                      <Icon size={16} strokeWidth={2.1} />
                     </span>
                     <span>{tab.label}</span>
                   </button>
                 );
               })}
               <Link
-                className="flex flex-row items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-neutral-600 transition-all duration-200 hover:bg-neutral-100/80 hover:text-neutral-900"
+                className="group flex flex-row items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-neutral-600 transition-all duration-200 hover:bg-neutral-100/80 hover:text-neutral-900"
                 href="/admin/upload-products"
               >
-                <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs font-extrabold text-neutral-500 shadow-sm transition-colors">
-                  UP
+                <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors group-hover:border-sky-200 group-hover:bg-sky-50 group-hover:text-sky-700">
+                  <Upload size={16} strokeWidth={2.1} />
                 </span>
                 <span>Upload CSV</span>
               </Link>
@@ -208,7 +274,12 @@ const Admin = () => {
           </aside>
 
           <main className="min-w-0">
-            {activeTab === 'dashboard' && <AdminDashboard />}
+            {activeTab === 'dashboard' && (
+              <AdminDashboard
+                onNavigateTab={(tabId) => setActiveTab(tabId)}
+                onImportProducts={() => router.push("/admin/upload-products")}
+              />
+            )}
             {activeTab === 'analytics' && <AdminAnalytics />}
             {activeTab === 'users' && <AdminUsers />}
             {activeTab === 'products' && <AdminProducts />}
@@ -375,7 +446,13 @@ function AdminOrders() {
   );
 }
 
-function AdminDashboard() {
+function AdminDashboard({
+  onNavigateTab,
+  onImportProducts,
+}: {
+  onNavigateTab?: (tabId: string) => void;
+  onImportProducts?: () => void;
+}) {
   const { getProducts, getHomeContent, getNavigation, getReviews } = useStore();
   const products = getProducts();
   const home = getHomeContent();
@@ -385,10 +462,10 @@ function AdminDashboard() {
   const navKeys = Object.keys(nav || {});
 
   const stats = [
-    { label: "Total Products", value: productCount, icon: "PD", tone: "from-blue-500 to-cyan-400" },
-    { label: "Navigation Items", value: navKeys.length, icon: "NV", tone: "from-purple-500 to-pink-400" },
-    { label: "Reviews", value: reviews?.length ?? 0, icon: "RV", tone: "from-amber-400 to-orange-400" },
-    { label: "Active Promos", value: 3, icon: "PM", tone: "from-emerald-400 to-teal-400" },
+    { label: "Total Products", value: productCount, icon: Package, tone: "from-blue-500 to-cyan-400" },
+    { label: "Navigation Items", value: navKeys.length, icon: Compass, tone: "from-purple-500 to-pink-400" },
+    { label: "Reviews", value: reviews?.length ?? 0, icon: MessageSquareText, tone: "from-amber-400 to-orange-400" },
+    { label: "Active Promos", value: 3, icon: Megaphone, tone: "from-emerald-400 to-teal-400" },
   ];
 
   const recentActivity = [
@@ -396,6 +473,35 @@ function AdminDashboard() {
     { action: "Review updated", item: "Customer feedback", time: "5 hours ago" },
     { action: "Price changed", item: "Premium Remote", time: "1 day ago" },
     { action: "Navigation updated", item: "Main menu", time: "2 days ago" },
+  ];
+
+  const quickActions = [
+    {
+      label: "Add New Product",
+      icon: Plus,
+      onClick: () => onNavigateTab?.("products"),
+    },
+    {
+      label: "View Analytics",
+      icon: BarChart3,
+      onClick: () => onNavigateTab?.("analytics"),
+    },
+    {
+      label: "Site Settings",
+      icon: Settings,
+      onClick: () => onNavigateTab?.("settings"),
+    },
+    {
+      label: "Import Products",
+      icon: Import,
+      onClick: () => {
+        if (onImportProducts) {
+          onImportProducts();
+          return;
+        }
+        onNavigateTab?.("products");
+      },
+    },
   ];
 
   return (
@@ -412,21 +518,26 @@ function AdminDashboard() {
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-panel"
-          >
-            <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${stat.tone} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-semibold text-neutral-500">{stat.label}</p>
-                <p className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">{stat.value}</p>
+          (() => {
+            const StatIcon = stat.icon;
+            return (
+              <div
+                key={index}
+                className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-panel"
+              >
+                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${stat.tone} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-500">{stat.label}</p>
+                    <p className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">{stat.value}</p>
+                  </div>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${stat.tone} text-white shadow-soft transition-transform duration-200 group-hover:scale-105`}>
+                    <StatIcon size={20} strokeWidth={2.2} />
+                  </div>
+                </div>
               </div>
-              <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${stat.tone} text-white shadow-soft`}>
-                <span className="font-extrabold">{stat.icon}</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()
         ))}
       </div>
 
@@ -436,15 +547,15 @@ function AdminDashboard() {
             <h3 className="text-lg font-bold text-neutral-900">Recent Activity</h3>
             <button className="text-sm font-semibold text-primary hover:text-primary-dark">View all</button>
           </div>
-          <div className="relative border-l-2 border-dashed border-neutral-100 pl-4 space-y-6">
+          <div className="relative border-l-2 border-dashed border-neutral-200 pl-4 space-y-6">
             {recentActivity.map((activity, index) => (
               <div key={index} className="relative flex items-start gap-4 text-sm">
                 <div className="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white" />
                 <div className="min-w-0 flex-1">
                   <strong className="text-neutral-900">{activity.action}</strong>
-                  <p className="mt-0.5 text-neutral-500">{activity.item}</p>
+                  <p className="mt-0.5 text-neutral-600">{activity.item}</p>
                 </div>
-                <div className="text-xs font-medium text-neutral-400">{activity.time}</div>
+                <div className="shrink-0 pt-0.5 text-xs font-semibold text-neutral-600">{activity.time}</div>
               </div>
             ))}
           </div>
@@ -453,42 +564,47 @@ function AdminDashboard() {
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-bold text-neutral-900 mb-6">Quick Actions</h3>
           <div className="grid gap-3">
-            {[
-              { label: "Add New Product", icon: "➕" },
-              { label: "View Analytics", icon: "📊" },
-              { label: "Site Settings", icon: "⚙️" },
-              { label: "Import Products", icon: "📥" },
-            ].map((action, i) => (
-              <button key={i} className="flex w-full items-center gap-3 rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-left text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary-dark">
-                <span className="text-lg">{action.icon}</span>
+            {quickActions.map((action, i) => {
+              const ActionIcon = action.icon;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={action.onClick}
+                  className="group flex w-full items-center gap-3 rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-left text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary-dark"
+                >
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors group-hover:border-primary/25 group-hover:bg-primary/10 group-hover:text-primary-dark">
+                    <ActionIcon size={17} strokeWidth={2.2} />
+                  </span>
                 {action.label}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
         <h3 className="text-lg font-bold text-neutral-900 mb-4">Hero Preview</h3>
-        <div className="flex flex-col sm:flex-row gap-6 rounded-lg border border-neutral-100 bg-neutral-50 p-5">
+        <div className="flex flex-col sm:flex-row gap-6 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
           <div className="flex-1 space-y-3 text-sm">
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-neutral-400">Title</span>
+              <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Title</span>
               <span className="mt-1 block font-semibold text-neutral-900">{home?.hero?.title || "Not set"}</span>
             </div>
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-neutral-400">Subtitle</span>
-              <span className="mt-1 block text-neutral-700">{home?.hero?.subtitle || "Not set"}</span>
+              <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Subtitle</span>
+              <span className="mt-1 block font-medium text-neutral-800">{home?.hero?.subtitle || "Not set"}</span>
             </div>
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-neutral-400">Description</span>
-              <span className="mt-1 block text-neutral-600 line-clamp-2">{home?.hero?.description || "Not set"}</span>
+              <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Description</span>
+              <span className="mt-1 block leading-relaxed text-neutral-700 line-clamp-2">{home?.hero?.description || "Not set"}</span>
             </div>
           </div>
           <div className="flex h-32 w-full sm:w-56 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-neutral-800 to-neutral-900 shadow-soft text-sm text-white relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
             <strong className="tracking-tight">HERO SECTION</strong>
-            <span className="text-xs text-neutral-400 mt-1">Main landing area</span>
+            <span className="mt-1 text-xs text-neutral-200">Main landing area</span>
           </div>
         </div>
       </div>
@@ -692,93 +808,159 @@ function AdminProducts() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="px-6 py-5 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between">
             <h3 className="font-semibold text-neutral-700">All Products</h3>
             <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-bold text-neutral-600">
               {products.length} Total
             </span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="border-b border-neutral-100 bg-white text-neutral-500">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Image</th>
-                  <th className="px-6 py-4 font-semibold">Name</th>
-                  <th className="px-6 py-4 font-semibold">Category</th>
-                  <th className="px-6 py-4 font-semibold">Price</th>
-                  <th className="px-6 py-4 font-semibold text-center">Status</th>
-                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {products.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
-                      No products found. Add your first product!
-                    </td>
-                  </tr>
-                ) : (
-                  products.map((p) => (
-                    <tr key={p.id} className="transition-colors hover:bg-neutral-50/70">
-                      <td className="px-6 py-3">
-                        <div className="h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
-                          <img src={p.image} alt="" className="h-full w-full object-contain p-1" />
+          {products.length === 0 ? (
+            <div className="px-6 py-12 text-center text-neutral-500">
+              No products found. Add your first product!
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-neutral-100 lg:hidden">
+                {products.map((p) => (
+                  <div key={p.id} className="grid gap-3 px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                        <img src={p.image} alt="" className="h-full w-full object-contain p-1" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold leading-6 text-neutral-900 break-words">
+                          {p.name}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-neutral-900">{p.name}</div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
-                          {p.brand && <span className="font-medium text-neutral-600">{p.brand}</span>}
-                          <span className="text-neutral-300">•</span>
-                          <span className="font-mono text-[10px] uppercase text-neutral-400">ID: {p.id.slice(-6)}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-700">
+                          <span className="font-semibold tracking-wide text-accent-dark">
+                            {(p.sku || p.brand || "Model Unset").toString()}
+                          </span>
+                          <span className="text-neutral-400">•</span>
+                          <span className="font-medium capitalize text-neutral-700">{p.category}</span>
+                          <span className="text-neutral-400">•</span>
+                          <span className="font-medium text-neutral-700">ID:</span>
+                          <span className="font-mono text-[11px] uppercase text-neutral-800">{p.id.slice(-6)}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium capitalize text-neutral-600">
-                          {p.category}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-base font-extrabold text-neutral-900">
+                        AU${Number(p.price).toFixed(2)}
+                      </span>
+                      {p.inStock ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                          In Stock
                         </span>
-                      </td>
-                      <td className="px-6 py-4 font-extrabold text-neutral-900">
-                        ${Number(p.price).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {p.inStock ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                            In Stock
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-                            Out of Stock
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            className="inline-flex min-w-[64px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 hover:text-primary-dark"
-                            onClick={() => setEditingId(p.id)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="inline-flex min-w-[64px] items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-100"
-                            onClick={() => remove(p.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                          Out of Stock
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex min-w-[72px] flex-1 items-center justify-center rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 hover:text-primary-dark"
+                        onClick={() => setEditingId(p.id)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex min-w-[72px] flex-1 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-100"
+                        onClick={() => remove(p.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-hidden lg:block">
+                <table className="w-full table-fixed text-left text-sm">
+                  <thead className="border-b border-neutral-100 bg-white text-neutral-500">
+                    <tr>
+                      <th className="w-20 px-6 py-4 font-semibold">Image</th>
+                      <th className="px-6 py-4 font-semibold">Name</th>
+                      <th className="w-32 px-6 py-4 font-semibold">Category</th>
+                      <th className="w-32 px-6 py-4 font-semibold">Price</th>
+                      <th className="w-40 px-6 py-4 font-semibold text-center">Status</th>
+                      <th className="w-40 px-6 py-4 font-semibold text-right">Actions</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {products.map((p) => (
+                      <tr key={p.id} className="transition-colors hover:bg-neutral-50/70">
+                        <td className="px-6 py-3 align-top">
+                          <div className="h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                            <img src={p.image} alt="" className="h-full w-full object-contain p-1" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 align-top">
+                          <div className="font-semibold leading-6 text-neutral-900 break-words">
+                            {p.name}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-700">
+                            <span className="font-semibold tracking-wide text-accent-dark">
+                              {(p.sku || p.brand || "Model Unset").toString()}
+                            </span>
+                            <span className="text-neutral-400">•</span>
+                            <span className="font-medium text-neutral-700">ID:</span>
+                            <span className="font-mono text-[11px] uppercase text-neutral-800">{p.id.slice(-6)}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 align-top">
+                          <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium capitalize text-neutral-600">
+                            {p.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 align-top font-extrabold text-neutral-900">
+                          AU${Number(p.price).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-center align-top">
+                          {p.inStock ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                              In Stock
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                              Out of Stock
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right align-top">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex min-w-[56px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 hover:text-primary-dark"
+                              onClick={() => setEditingId(p.id)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex min-w-[56px] items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-100"
+                              onClick={() => remove(p.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -887,7 +1069,7 @@ function AdminHome() {
           <p className="mt-1 text-sm text-neutral-500">Manage the hero section, features, and promotions on the homepage.</p>
         </div>
         <button 
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           onClick={save}
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -984,13 +1166,14 @@ function AdminHome() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {(content.heroImages || []).map((img, i) => (
-                <div key={i} className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div key={i} className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Image {i + 1}</span>
                     <button 
                       type="button" 
                       className="rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
                       onClick={() => removeHeroImage(i)}
+                      aria-label={`Remove image ${i + 1}`}
                       title="Remove image"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -998,6 +1181,21 @@ function AdminHome() {
                       </svg>
                     </button>
                   </div>
+
+                  <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                    {img ? (
+                      <img
+                        src={img}
+                        alt={`Hero image ${i + 1} preview`}
+                        className="h-28 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-28 items-center justify-center text-xs font-medium text-neutral-400">
+                        No preview
+                      </div>
+                    )}
+                  </div>
+
                   <input
                     className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     value={img}
@@ -1051,6 +1249,7 @@ function AdminHome() {
                     type="button" 
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                     onClick={() => removeFeature(i)}
+                    aria-label={`Remove feature ${i + 1}`}
                     title="Remove feature"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1130,6 +1329,7 @@ function AdminHome() {
                     type="button" 
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                     onClick={() => removeWhyBuy(i)}
+                    aria-label={`Remove reason ${i + 1}`}
                     title="Remove reason"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1794,6 +1994,7 @@ function AdminPromotions() {
                       type="button"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
                       onClick={() => removeCategory(c.id)}
+                      aria-label={`Delete category ${c.name || ""}`.trim()}
                       title="Delete Category"
                     >
                       🗑️
@@ -1877,6 +2078,7 @@ function AdminPromotions() {
                         type="button"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-rose-400 border border-transparent hover:border-rose-200 hover:bg-rose-50"
                         onClick={() => removeOffer(o.id)}
+                        aria-label={`Delete offer ${o.name || ""}`.trim()}
                         title="Delete Offer"
                       >
                         🗑️
@@ -2382,7 +2584,7 @@ function AdminSettings() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button 
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             onClick={saveSettings}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -2,6 +2,35 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
 
+@keyframes feedbackMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes heroImageIn {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes heroContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @layer base {
   :root {
     color-scheme: light;
@@ -267,5 +296,70 @@
 
   .checkout-page .order-success-action {
     @apply mt-2;
+  }
+
+  .feedback-marquee {
+    @apply relative overflow-hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(0, 0, 0, 1) 7%,
+      rgba(0, 0, 0, 1) 93%,
+      transparent 100%
+    );
+  }
+
+  .feedback-marquee-track {
+    @apply flex w-max;
+    animation: feedbackMarquee 34s linear infinite;
+    will-change: transform;
+  }
+
+  .feedback-marquee:hover .feedback-marquee-track {
+    animation-play-state: paused;
+  }
+
+  .hero-slide-image {
+    transform: scale(1.04);
+    will-change: transform;
+  }
+
+  .hero-slide-image--active {
+    animation: heroImageIn 6.2s linear both;
+  }
+
+  .hero-slide-content {
+    animation: heroContentIn 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-marquee-track {
+      animation: none;
+      transform: none;
+    }
+
+    .hero-slide-image,
+    .hero-slide-image--active,
+    .hero-slide-content {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  .admin-a11y :where(button, a, input, textarea, select):focus-visible {
+    @apply outline-none ring-2 ring-accent/40 ring-offset-2 ring-offset-white;
+  }
+
+  .admin-a11y button {
+    @apply min-h-10;
+  }
+
+  .admin-a11y :where(input, textarea, select) {
+    @apply border-neutral-300 text-neutral-900 placeholder:text-neutral-500;
+  }
+
+  .admin-a11y :where(input, textarea, select):disabled {
+    @apply cursor-not-allowed bg-neutral-100 text-neutral-500;
   }
 }

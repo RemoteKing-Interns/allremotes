@@ -129,11 +129,11 @@ const PreferencesSaved = () => {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,280px))] items-start justify-start gap-3.5">
               {wishlist.map(product => (
-                <div key={product.id} className="grid gap-2 rounded-2xl">
-                  <ProductCard product={product} />
+                <div key={product.id} className="relative">
+                  <ProductCard product={product} showWishlistButton={false} />
                   <button
                     type="button"
-                    className={`${btn.outlineDangerSm} mt-0 w-auto justify-self-end`}
+                    className={`${btn.outlineDangerSm} absolute right-3 top-3 z-40 px-3 py-1.5 text-[11px]`}
                     onClick={() => removeWishlist(product.id)}
                   >
                     Remove
@@ -156,11 +156,11 @@ const PreferencesSaved = () => {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,280px))] items-start justify-start gap-3.5">
               {recentlyViewed.map(product => (
-                <div key={product.id} className="grid gap-2 rounded-2xl">
-                  <ProductCard product={product} />
+                <div key={product.id} className="relative">
+                  <ProductCard product={product} showWishlistButton={false} />
                   <button
                     type="button"
-                    className={`${btn.outlineDangerSm} mt-0 w-auto justify-self-end`}
+                    className={`${btn.outlineDangerSm} absolute right-3 top-3 z-40 px-3 py-1.5 text-[11px]`}
                     onClick={() => removeRecently(product.id)}
                   >
                     Remove

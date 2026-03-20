@@ -19,7 +19,11 @@ function readWishlist(key) {
   }
 }
 
-const ProductCard = ({ product, onAddToCart = null }) => {
+const ProductCard = ({
+  product,
+  onAddToCart = null,
+  showWishlistButton = true,
+}) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { getPromotions } = useStore();
@@ -145,37 +149,26 @@ const ProductCard = ({ product, onAddToCart = null }) => {
         </div>
 
         {/* Heart Button - Top Right */}
-        <button
-          type="button"
-          onClick={toggleWishlist}
-          className={`absolute top-3 right-3 z-30 flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 ${
-            isWishlisted
-              ? "bg-white text-primary"
-              : "bg-white/90 backdrop-blur text-neutral-700 opacity-0 group-hover:opacity-100"
-          }`}
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          aria-pressed={isWishlisted}
-        >
-          <Heart
-            size={18}
-            strokeWidth={1.5}
-            fill={isWishlisted ? "currentColor" : "none"}
-          />
-        </button>
-
-        {/* Quick Add Button - Bottom */}
-        {product.inStock && (
-          <div className="absolute bottom-3 left-3 right-3 z-[25] opacity-100 md:opacity-0 transition-opacity duration-200 md:group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              className="relative z-[25] flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
-            >
-              <ShoppingCart size={16} strokeWidth={1.5} />
-              Quick Add
-            </button>
-          </div>
+        {showWishlistButton && (
+          <button
+            type="button"
+            onClick={toggleWishlist}
+            className={`absolute top-3 right-3 z-30 flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 ${
+              isWishlisted
+                ? "bg-white text-primary"
+                : "bg-white/90 backdrop-blur text-neutral-700 opacity-0 group-hover:opacity-100"
+            }`}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-pressed={isWishlisted}
+          >
+            <Heart
+              size={18}
+              strokeWidth={1.5}
+              fill={isWishlisted ? "currentColor" : "none"}
+            />
+          </button>
         )}
+
       </div>
 
       {/* Product Info */}
@@ -186,14 +179,27 @@ const ProductCard = ({ product, onAddToCart = null }) => {
         <h3 className="mb-2 sm:mb-3 line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
           {productName}
         </h3>
-        <div className="mt-auto flex items-baseline gap-2">
-          <span className="text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
-            AU${pricing.finalPrice.toFixed(2)}
-          </span>
-          {pricing.hasDiscount && (
-            <span className="text-xs sm:text-sm font-semibold text-neutral-400 line-through">
-              AU${pricing.originalPrice.toFixed(2)}
+        <div className="mt-auto flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
+              AU${pricing.finalPrice.toFixed(2)}
             </span>
+            {pricing.hasDiscount && (
+              <span className="text-xs sm:text-sm font-semibold text-neutral-400 line-through">
+                AU${pricing.originalPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
+
+          {product.inStock && (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="relative z-30 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
+            >
+              <ShoppingCart size={14} strokeWidth={1.8} />
+              Add to Cart
+            </button>
           )}
         </div>
       </div>

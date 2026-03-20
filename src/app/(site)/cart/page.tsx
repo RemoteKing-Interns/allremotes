@@ -106,6 +106,8 @@ const Cart = () => {
     return value || "Brand New";
   };
 
+  const getProductHref = (id) => `/product/${encodeURIComponent(String(id))}`;
+
   const originalTotal = getCartOriginalTotal();
   const discountedTotal = getCartTotal();
   const discountTotal = getCartDiscountTotal();
@@ -145,16 +147,30 @@ const Cart = () => {
             {cart.map(item => (
               <div key={item.id} className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur">
                 <div className="flex gap-4">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-24 w-24 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3"
-                    onError={(e) => {
-                      e.currentTarget.src = "/images/mainlogo.png";
-                    }}
-                  />
+                  <Link
+                    href={getProductHref(item.id)}
+                    className="group shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 transition hover:border-accent/40 hover:bg-accent/5"
+                    aria-label={`View details for ${item.name}`}
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-24 w-24 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/mainlogo.png";
+                      }}
+                    />
+                  </Link>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-semibold text-neutral-900 line-clamp-2">{item.name}</h3>
+                    <Link
+                      href={getProductHref(item.id)}
+                      className="group inline-block max-w-full"
+                      aria-label={`Open ${item.name} product page`}
+                    >
+                      <h3 className="line-clamp-2 text-base font-semibold text-neutral-900 transition group-hover:text-accent-dark">
+                        {item.name}
+                      </h3>
+                    </Link>
                     <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
                       {item.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}
                     </p>

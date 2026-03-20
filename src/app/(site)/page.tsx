@@ -2,8 +2,76 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  CreditCard,
+  Headset,
+  RotateCcw,
+  ShieldCheck,
+  Star,
+  Truck,
+  Users,
+} from "lucide-react";
 import { useStore } from "../../context/StoreContext";
 import ProductCard from "../../components/ProductCard";
+
+const DEFAULT_FEEDBACK_REVIEWS = [
+  {
+    rating: 5,
+    text: "Fast dispatch and clear compatibility notes. The remote paired in minutes.",
+    author: "Daniel S.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Exactly what we needed for workshop reorders. Product quality is consistent.",
+    author: "Mia L.",
+    verified: true,
+  },
+  {
+    rating: 4,
+    text: "Good pricing and support replied quickly with programming guidance.",
+    author: "Cooper R.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Ordered two gate remotes and both worked perfectly. Packaging was secure.",
+    author: "Harper T.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Trade account workflow is smooth and reordering is much faster now.",
+    author: "Ava K.",
+    verified: true,
+  },
+  {
+    rating: 4,
+    text: "Reliable stock levels and straightforward checkout. Will buy again.",
+    author: "Noah P.",
+    verified: true,
+  },
+];
+
+const WHY_BUY_ICON_MAP = {
+  qa: ShieldCheck,
+  shieldcheck: ShieldCheck,
+  shield: ShieldCheck,
+  fs: Truck,
+  truck: Truck,
+  shipping: Truck,
+  wr: RotateCcw,
+  returns: RotateCcw,
+  warranty: RotateCcw,
+  cs: Headset,
+  support: Headset,
+  pm: CreditCard,
+  payment: CreditCard,
+  securepayments: CreditCard,
+  tr: Users,
+  trusted: Users,
+  reviews: Star,
+};
 
 const Home = () => {
   const { getProducts, getHomeContent, getReviews } = useStore();
@@ -18,9 +86,38 @@ const Home = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-    }, 4000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [heroImages.length]);
+
+  const feedbackReviews = React.useMemo(() => {
+    const normalized = (reviews || []).map((r, idx) => ({
+      rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
+      text: String(r?.text || "").trim(),
+      author: String(r?.author || "").trim() || `Customer ${idx + 1}`,
+      verified: Boolean(r?.verified),
+    })).filter((r) => r.text);
+
+    const next = [...normalized];
+    const seen = new Set(
+      normalized.map((r) => `${r.text}__${r.author}`.toLowerCase()),
+    );
+
+    for (const review of DEFAULT_FEEDBACK_REVIEWS) {
+      if (next.length >= 9) break;
+      const key = `${review.text}__${review.author}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push(review);
+    }
+
+    return next.length > 0 ? next : DEFAULT_FEEDBACK_REVIEWS;
+  }, [reviews]);
+
+  const feedbackMarqueeReviews = React.useMemo(() => {
+    const base = feedbackReviews.length > 0 ? feedbackReviews : DEFAULT_FEEDBACK_REVIEWS;
+    return [...base, ...base];
+  }, [feedbackReviews]);
 
   const hero = home?.hero || {};
   const features = home?.features || [];
@@ -49,25 +146,6 @@ const Home = () => {
   const heroSideReasons = heroReasons.slice(1);
   const carProductsCount = products.filter((product) => product?.category === "car").length;
   const garageProductsCount = products.filter((product) => product?.category === "garage").length;
-  const categoryCount = new Set(
-    (products || [])
-      .map((product) => String(product?.category || "").trim())
-      .filter(Boolean),
-  ).size;
-  const heroMetrics = [
-    {
-      value: products.length > 0 ? `${products.length.toLocaleString()}+` : "1,000+",
-      label: "Remote Models",
-    },
-    {
-      value: reviews.length > 0 ? `${reviews.length.toLocaleString()}+` : "1,500+",
-      label: "Verified Reviews",
-    },
-    {
-      value: categoryCount > 0 ? `${categoryCount}` : "4",
-      label: "Product Lines",
-    },
-  ];
   const featureImagesByTitle = {
     "Car Remotes": "/remotes/010_s-l500.webp",
     "Garage Remotes": "/remotes/002_s-l500.webp",
@@ -155,6 +233,23 @@ const Home = () => {
       ],
     },
   ];
+
+  const resolveWhyBuyIcon = (card, index) => {
+    const keyFromIcon = String(card?.icon || "")
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+    const keyFromTitle = String(card?.title || "")
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+    const iconByIconKey = WHY_BUY_ICON_MAP[keyFromIcon];
+    const iconByTitleKey = WHY_BUY_ICON_MAP[keyFromTitle];
+
+    if (iconByIconKey) return iconByIconKey;
+    if (iconByTitleKey) return iconByTitleKey;
+
+    const fallbackIcons = [ShieldCheck, Truck, RotateCcw, Headset, CreditCard, Users];
+    return fallbackIcons[index % fallbackIcons.length];
+  };
   const heroSlides = heroImages.map((image, index) => {
     const fallback = fallbackHeroSlides[index % fallbackHeroSlides.length];
     const configured = configuredHeroSlides[index] || {};
@@ -169,123 +264,83 @@ const Home = () => {
       highlights: configuredHighlights,
     };
   });
-  const currentHeroSlide = heroSlides[currentSlide] || fallbackHeroSlides[0];
-
   return (
     <div className="animate-fadeIn">
-      <section className="relative overflow-hidden">
-        {/* Background slides */}
-        <div className="absolute inset-0">
-          {heroSlides.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
-                index === currentSlide ? "opacity-100" : "opacity-0"
-              }`}
-              style={{ backgroundImage: `url(${slide.image})` }}
-            />
-          ))}
-        </div>
-        {/* Dark overlay — no white gradient at bottom */}
-        <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/75 via-neutral-900/50 to-neutral-900/80" />
-
-        <div className="container relative py-14 sm:py-20 lg:py-24">
-          <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] lg:gap-12">
-            {/* Left — Main content */}
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-light backdrop-blur-sm">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  {currentHeroSlide.subtitle}
-                </span>
-                <span className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[11px] font-semibold text-white/70 backdrop-blur-sm">
-                  {currentHeroSlide.sideKicker}
-                </span>
-              </div>
-
-              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-[3.5rem] lg:leading-[1.1]">
-                {currentHeroSlide.title}
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
-                {currentHeroSlide.description}
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href={currentHeroSlide.primaryCtaPath}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-primary-dark hover:shadow-xl active:scale-[0.98]"
-                >
-                  {currentHeroSlide.primaryCta}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                </Link>
-                <Link
-                  href={currentHeroSlide.secondaryCtaPath}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-white/15"
-                >
-                  {currentHeroSlide.secondaryCta}
-                </Link>
-              </div>
-
-              {/* Metrics row */}
-              <div className="mt-10 flex flex-wrap gap-6 border-t border-white/10 pt-8">
-                {heroMetrics.map((item, i) => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    {i > 0 && <div className="hidden h-8 w-px bg-white/15 sm:block" />}
-                    <div className={i > 0 ? "sm:pl-3" : ""}>
-                      <strong className="block text-2xl font-extrabold tracking-tight text-white">
-                        {item.value}
-                      </strong>
-                      <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                        {item.label}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right — Feature panel */}
-            <aside className="hidden lg:block rounded-xl border border-white/12 bg-white/8 p-7 backdrop-blur-lg">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-accent-light">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                {currentHeroSlide.sideKicker}
-              </span>
-              <h2 className="mt-3 text-xl font-bold tracking-tight text-white">
-                {currentHeroSlide.sideTitle}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-white/65">
-                {currentHeroSlide.sideDescription}
-              </p>
-
-              <div className="mt-6 space-y-4">
-                {(currentHeroSlide.highlights || []).map((item) => (
-                  <div key={item.title} className="flex gap-3 rounded-lg border border-white/8 bg-white/5 p-3.5">
-                    <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent-light">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span>
-                    <div className="min-w-0">
-                      <strong className="block text-sm font-semibold text-white">
-                        {item.title}
-                      </strong>
-                      <p className="mt-0.5 text-xs leading-relaxed text-white/60">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </aside>
+      <section className="relative overflow-hidden border-b border-neutral-200/70">
+        <div className="relative h-[460px] sm:h-[540px] lg:h-[620px]">
+          <div className="absolute inset-0">
+            {heroSlides.map((slide, index) => (
+              <img
+                key={index}
+                src={slide.image}
+                alt=""
+                className={`hero-slide-image absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${
+                  index === currentSlide
+                    ? "hero-slide-image--active opacity-100"
+                    : "opacity-0"
+                }`}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/92 via-neutral-900/72 to-neutral-900/46" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.18),transparent_42%)]" />
           </div>
 
-          {/* Slide indicators */}
-          <div className="mt-8 flex items-center gap-2">
+          <div className="container relative z-10 flex h-full items-center py-8 sm:py-10">
+            <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px]">
+              {heroSlides.map((slide, index) => (
+                <div
+                  key={`hero-content-${index}`}
+                  className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    index === currentSlide
+                      ? "hero-slide-content translate-y-0 opacity-100"
+                      : "pointer-events-none translate-y-3 opacity-0"
+                  }`}
+                >
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/35 bg-accent/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-accent-light backdrop-blur-sm">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {slide.subtitle}
+                  </div>
+
+                  <h1 className="mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white">
+                    {slide.title}
+                  </h1>
+                  <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
+                    {slide.description}
+                  </p>
+
+                  <div className="mt-7 flex flex-wrap gap-3">
+                    <Link
+                      href={slide.primaryCtaPath}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark"
+                    >
+                      {slide.primaryCta}
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                      </svg>
+                    </Link>
+                    <Link
+                      href={slide.secondaryCtaPath}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15"
+                    >
+                      {slide.secondaryCta}
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
             {heroImages.map((_, index) => (
               <button
                 key={index}
-                className={`h-1.5 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-all duration-500 ease-out ${
                   index === currentSlide
                     ? "w-8 bg-white"
-                    : "w-1.5 bg-white/30 hover:bg-white/50"
+                    : "w-2 bg-white/45 hover:bg-white/70"
                 }`}
                 onClick={() => setCurrentSlide(index)}
                 aria-label={`Go to slide ${index + 1}`}
@@ -393,9 +448,14 @@ const Home = () => {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {whyBuyCards.map((b, i) => (
               <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-sm font-extrabold text-accent-dark">
-                  {String(b.icon || "AR").slice(0, 2)}
-                </div>
+                {(() => {
+                  const WhyBuyIcon = resolveWhyBuyIcon(b, i);
+                  return (
+                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
+                      <WhyBuyIcon size={22} strokeWidth={2.1} />
+                    </div>
+                  );
+                })()}
                 <h3 className="text-base font-semibold text-neutral-900">{b.title || ""}</h3>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">{b.description || ""}</p>
               </div>
@@ -416,29 +476,37 @@ const Home = () => {
               keys, and access-control products.
           </p>
         </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {reviews.map((r, i) => (
-              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
-                <div className="text-sm font-extrabold text-gold">
-                  <span className="text-primary">{'★'.repeat(r.rating || 5)}</span>
-                  <span className="text-neutral-300">{'☆'.repeat(5 - (r.rating || 5))}</span>
+          <div className="feedback-marquee mt-8" aria-live="polite">
+            <div className="feedback-marquee-track">
+              {feedbackMarqueeReviews.map((r, i) => (
+                <div
+                  key={`${r.author}-${i}`}
+                  aria-hidden={i >= feedbackMarqueeReviews.length / 2}
+                  className="w-[min(86vw,22rem)] shrink-0 pr-4 sm:w-[20rem] lg:w-[22rem]"
+                >
+                  <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+                    <div className="text-sm font-extrabold text-gold">
+                      <span className="text-primary">{'★'.repeat(r.rating || 5)}</span>
+                      <span className="text-neutral-300">{'☆'.repeat(5 - (r.rating || 5))}</span>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-neutral-700">&quot;{r.text || ""}&quot;</p>
+                    <div className="mt-5 flex items-center justify-between gap-3">
+                      <strong className="text-sm font-semibold text-neutral-900">{r.author || ""}</strong>
+                      {r.verified && (
+                        <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-dark">
+                          Verified Purchase
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-4 text-sm leading-7 text-neutral-700">&quot;{r.text || ""}&quot;</p>
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <strong className="text-sm font-semibold text-neutral-900">{r.author || ""}</strong>
-                  {r.verified && (
-                    <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-dark">
-                      Verified Purchase
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
       </section>
 
       <section className="container py-10 sm:py-14">
-        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-8 shadow-panel backdrop-blur sm:p-12">
+        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(130%_120%_at_2%_0%,rgba(26,122,110,0.30)_0%,rgba(26,122,110,0.10)_40%,transparent_68%),radial-gradient(110%_120%_at_100%_4%,rgba(192,57,43,0.24)_0%,rgba(192,57,43,0.08)_46%,transparent_74%),linear-gradient(102deg,rgba(26,122,110,0.14)_0%,rgba(60,150,151,0.12)_52%,rgba(192,57,43,0.14)_100%)] p-8 shadow-panel backdrop-blur sm:p-12">
           <div className="max-w-2xl">
             <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
               {cta.title || "Ready to Find Your Perfect Remote?"}

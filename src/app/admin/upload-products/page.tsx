@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Upload } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
 
@@ -36,7 +37,7 @@ export default function AdminUploadProducts() {
 
   if (!user) {
     return (
-      <div className="animate-fadeIn">
+      <div className="admin-a11y animate-fadeIn">
         <div className="container py-10 sm:py-14">
           <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Admin</h1>
@@ -52,7 +53,7 @@ export default function AdminUploadProducts() {
 
   if (!isAdmin) {
     return (
-      <div className="animate-fadeIn">
+      <div className="admin-a11y animate-fadeIn">
         <div className="container py-10 sm:py-14">
           <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white/85 p-8 text-center shadow-panel backdrop-blur">
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Access denied</h1>
@@ -130,7 +131,7 @@ export default function AdminUploadProducts() {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="admin-a11y animate-fadeIn">
       <div className="container py-6 sm:py-8">
         <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
           <aside className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur lg:sticky lg:top-24">
@@ -144,14 +145,18 @@ export default function AdminUploadProducts() {
             <nav className="mt-5 grid gap-1">
               <button
                 type="button"
-                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100"
+                className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100"
                 onClick={() => router.push("/admin")}
               >
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">BK</span>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-700 shadow-xs transition-colors group-hover:border-sky-200 group-hover:bg-sky-50 group-hover:text-sky-700">
+                  <ArrowLeft size={16} strokeWidth={2.2} />
+                </span>
                 <span>Back</span>
               </button>
               <div className="flex items-center gap-3 rounded-2xl bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent-dark">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xs font-extrabold text-neutral-700 shadow-xs">UP</span>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-accent/25 bg-white text-accent-dark shadow-xs">
+                  <Upload size={16} strokeWidth={2.2} />
+                </span>
                 <span>Upload CSV</span>
               </div>
             </nav>
