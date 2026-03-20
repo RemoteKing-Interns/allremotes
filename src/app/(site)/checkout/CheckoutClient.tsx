@@ -272,10 +272,6 @@ const Checkout = () => {
           <div className="checkout-header-copy">
             <span className="checkout-kicker">Secure checkout</span>
             <h1>Checkout</h1>
-            <p className="checkout-copy">
-              Confirm shipping details, payment information, and your final order
-              summary before placing the order.
-            </p>
           </div>
           <div className="checkout-highlights">
             <div className="checkout-highlight">
@@ -293,9 +289,6 @@ const Checkout = () => {
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="form-section">
               <h2>Shipping Information</h2>
-              <p className="checkout-section-note">
-                Use your delivery details exactly as they should appear on the shipment.
-              </p>
               <div className="form-group">
                 <label>Full Name</label>
                 <input
@@ -416,9 +409,6 @@ const Checkout = () => {
 
             <div className="form-section">
               <h2>Payment Information</h2>
-              <p className="checkout-section-note">
-                Payment fields are collected for checkout flow simulation only in this environment.
-              </p>
               <div className="form-group">
                 <label>Card Number</label>
                 <input

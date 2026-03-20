@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { btn, tw } from './tw';
 
 const ReviewsInteractions = () => {
   const { user } = useAuth();
@@ -85,26 +86,28 @@ const ReviewsInteractions = () => {
   };
 
   return (
-    <div className="account-section">
-      <h2>Reviews & Interactions</h2>
+    <div className={tw.section}>
+      <h2 className={tw.sectionTitle}>Reviews & Interactions</h2>
       
-      <div className="section-content">
-        <div className="reviews-section">
-          <h3>Reviews You've Written</h3>
+      <div className={tw.sectionContent}>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Reviews You've Written</h3>
 
-          <form onSubmit={submitReview} className="account-form account-form-spaced">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Product</label>
+          <form onSubmit={submitReview} className={tw.formSpaced}>
+            <div className={tw.formRow2}>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Product</label>
                 <input
+                  className={tw.input}
                   value={newReview.productName}
                   onChange={(e) => setNewReview({ ...newReview, productName: e.target.value })}
                   placeholder="Product name"
                 />
               </div>
-              <div className="form-group form-group-compact">
-                <label>Rating</label>
+              <div className={`${tw.formGroup} md:max-w-40`}>
+                <label className={tw.label}>Rating</label>
                 <select
+                  className={tw.input}
                   value={newReview.rating}
                   onChange={(e) => setNewReview({ ...newReview, rating: Number(e.target.value) })}
                 >
@@ -116,46 +119,50 @@ const ReviewsInteractions = () => {
                 </select>
               </div>
             </div>
-            <div className="form-group">
-              <label>Review</label>
+            <div className={tw.formGroup}>
+              <label className={tw.label}>Review</label>
               <textarea
+                className={tw.textarea}
                 rows="3"
                 value={newReview.review}
                 onChange={(e) => setNewReview({ ...newReview, review: e.target.value })}
                 placeholder="Write your review…"
               />
             </div>
-            <button type="submit" className="btn btn-secondary" disabled={!newReview.productName.trim() || !newReview.review.trim()}>
+            <button type="submit" className={btn.secondary} disabled={!newReview.productName.trim() || !newReview.review.trim()}>
               Submit Review
             </button>
           </form>
           
           {reviews.length === 0 ? (
-            <div className="empty-state">
+            <div className={tw.emptyState}>
               <p>You haven't written any reviews yet</p>
             </div>
           ) : (
-            <div className="reviews-list">
+            <div className={tw.gridList}>
               {reviews.map(review => (
-                <div key={review.id} className="review-card">
-                  <div className="review-header">
-                    <h4>{review.productName}</h4>
-                    <div className="review-rating">
+                <div key={review.id} className={tw.card}>
+                  <div className={tw.cardHeader}>
+                    <h4 className={tw.strongText}>{review.productName}</h4>
+                    <div className="inline-flex items-center gap-0.5">
                       {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`review-star ${i < review.rating ? 'filled' : ''}`}>
+                        <span
+                          key={i}
+                          className={i < review.rating ? "text-base text-amber-500" : "text-base text-neutral-300"}
+                        >
                           ★
                         </span>
                       ))}
                     </div>
                   </div>
-                  <p className="review-text">{review.review}</p>
-                  <div className="review-footer">
-                    <span className="review-date">{new Date(review.date).toLocaleDateString()}</span>
-                    <span className="review-helpful">{review.helpful} people found this helpful</span>
+                  <p className="mt-2 text-sm text-neutral-700">{review.review}</p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-neutral-500">{new Date(review.date).toLocaleDateString()}</span>
+                    <span className="text-xs text-neutral-500">{review.helpful} people found this helpful</span>
                   </div>
-                  <div className="review-actions">
-                    <button className="btn btn-outline btn-small" type="button" disabled title="Editing coming soon">Edit</button>
-                    <button className="btn btn-outline-red btn-small" type="button" onClick={() => deleteReview(review.id)}>Delete</button>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button className={btn.outlineSm} type="button" disabled title="Editing coming soon">Edit</button>
+                    <button className={btn.outlineDangerSm} type="button" onClick={() => deleteReview(review.id)}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -163,54 +170,56 @@ const ReviewsInteractions = () => {
           )}
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="questions-section">
-          <h3>Questions & Answers</h3>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Questions & Answers</h3>
 
-          <form onSubmit={submitQuestion} className="account-form account-form-spaced">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Product</label>
+          <form onSubmit={submitQuestion} className={tw.formSpaced}>
+            <div className={tw.formRow2}>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Product</label>
                 <input
+                  className={tw.input}
                   value={newQuestion.productName}
                   onChange={(e) => setNewQuestion({ ...newQuestion, productName: e.target.value })}
                   placeholder="Product name"
                 />
               </div>
             </div>
-            <div className="form-group">
-              <label>Question</label>
+            <div className={tw.formGroup}>
+              <label className={tw.label}>Question</label>
               <textarea
+                className={tw.textarea}
                 rows="3"
                 value={newQuestion.question}
                 onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
                 placeholder="Ask a question…"
               />
             </div>
-            <button type="submit" className="btn btn-secondary" disabled={!newQuestion.productName.trim() || !newQuestion.question.trim()}>
+            <button type="submit" className={btn.secondary} disabled={!newQuestion.productName.trim() || !newQuestion.question.trim()}>
               Submit Question
             </button>
           </form>
           
           {questions.length === 0 ? (
-            <div className="empty-state">
+            <div className={tw.emptyState}>
               <p>You haven't asked or answered any questions yet</p>
             </div>
           ) : (
-            <div className="questions-list">
+            <div className={tw.gridList}>
               {questions.map(q => (
-                <div key={q.id} className="question-card">
-                  <h4>{q.productName}</h4>
-                  <div className="question-item">
-                    <p className="question-label">Q:</p>
-                    <p className="question-text">{q.question}</p>
+                <div key={q.id} className={tw.card}>
+                  <h4 className={tw.strongText}>{q.productName}</h4>
+                  <div className="mt-2 flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
+                    <p className="w-5 shrink-0 font-bold text-neutral-700">Q:</p>
+                    <p className="text-neutral-700">{q.question}</p>
                   </div>
-                  <div className="question-item">
-                    <p className="answer-label">A:</p>
-                    <p className="answer-text">{q.answer || 'No answer yet'}</p>
+                  <div className="mt-2 flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
+                    <p className="w-5 shrink-0 font-bold text-neutral-700">A:</p>
+                    <p className="text-neutral-700">{q.answer || 'No answer yet'}</p>
                   </div>
-                  <span className="question-date">{new Date(q.date).toLocaleDateString()}</span>
+                  <span className="mt-2 inline-block text-xs text-neutral-500">{new Date(q.date).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>

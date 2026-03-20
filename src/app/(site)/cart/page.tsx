@@ -91,6 +91,21 @@ const Cart = () => {
     router.push("/checkout");
   };
 
+  const getCategoryLabel = (category) => {
+    const value = String(category || "").trim().toLowerCase();
+    if (!value) return "General";
+    if (value === "car") return "Automotive Remote";
+    if (value === "garage") return "Garage & Gate Remote";
+    return value
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  };
+
+  const getConditionLabel = (item) => {
+    const value = String(item?.condition || "").trim();
+    return value || "Brand New";
+  };
+
   const originalTotal = getCartOriginalTotal();
   const discountedTotal = getCartTotal();
   const discountTotal = getCartDiscountTotal();
@@ -106,9 +121,6 @@ const Cart = () => {
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
               Shopping Cart
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
-              Confirm quantities, review line totals, and move through checkout with a clear order summary.
-            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <div className="rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs">
@@ -210,7 +222,6 @@ const Cart = () => {
                         const lineTotal = getItemLineTotal(item);
                         return (
                           <div className="text-right">
-                            <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Line total</div>
                             <div className="mt-1 flex items-baseline justify-end gap-2">
                               {pricing.hasDiscount && (
                                 <span className="text-xs font-semibold text-neutral-400 line-through">
@@ -233,10 +244,6 @@ const Cart = () => {
 
           <div className="rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur lg:sticky lg:top-28">
             <h2 className="text-xl font-semibold tracking-tight text-neutral-900">Order Summary</h2>
-            <p className="mt-2 text-sm leading-7 text-neutral-600">
-              Secure checkout, order confirmation, and shipping updates are included with every order.
-            </p>
-
             <div className="mt-6 grid gap-3 text-sm">
               <div className="flex items-center justify-between font-semibold text-neutral-700">
                 <span>Subtotal</span>
@@ -279,83 +286,127 @@ const Cart = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[1600] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
+            className="w-full max-w-6xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
             role="dialog"
             aria-modal="true"
             aria-label="Product details"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 p-4">
-              <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">Item details</div>
-              <button type="button" className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200" onClick={() => setSelectedItem(null)}>
-                Close
+            <div className="relative p-5 pt-4 lg:p-7 lg:pt-5">
+              <button
+                type="button"
+                className="absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-700 shadow-xs transition hover:bg-neutral-100 hover:text-neutral-900 lg:right-4 lg:top-4"
+                aria-label="Close details"
+                onClick={() => setSelectedItem(null)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
               </button>
-            </div>
 
-            <div className="grid gap-5 p-5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start sm:p-6">
-              <img
-                src={selectedItem?.image}
-                alt={selectedItem?.name || 'Product'}
-                className="h-32 w-32 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3"
-                onError={(e) => {
-                  e.currentTarget.src = "/images/mainlogo.png";
-                }}
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">{selectedItem?.brand || 'Remote Pro'}</p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-neutral-900">{selectedItem?.name}</h3>
-                {selectedItem?.description && (
-                  <p className="mt-2 text-sm leading-7 text-neutral-600">{selectedItem.description}</p>
-                )}
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Price</div>
-                    <div className="mt-2">
-                      {(() => {
-                        const pricing = getItemPriceBreakdown(selectedItem || {});
-                        return pricing.hasDiscount ? (
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-xs font-semibold text-neutral-400 line-through">AU${pricing.originalPrice.toFixed(2)}</span>
-                            <strong className="text-lg font-extrabold text-neutral-900">AU${pricing.finalPrice.toFixed(2)}</strong>
-                          </div>
-                        ) : (
-                          <strong className="text-lg font-extrabold text-neutral-900">AU${pricing.finalPrice.toFixed(2)}</strong>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
-                    <strong className="mt-2 block text-lg font-extrabold text-neutral-900">{selectedItem?.quantity}</strong>
-                  </div>
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Total</div>
-                    <div className="mt-2">
-                      {(() => {
-                        const lineTotal = getItemLineTotal(selectedItem || {});
-                        const pricing = getItemPriceBreakdown(selectedItem || {});
-                        const originalLine = pricing.originalPrice * (selectedItem?.quantity || 1);
-                        return pricing.hasDiscount ? (
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-xs font-semibold text-neutral-400 line-through">AU${originalLine.toFixed(2)}</span>
-                            <strong className="text-lg font-extrabold text-neutral-900">AU${lineTotal.toFixed(2)}</strong>
-                          </div>
-                        ) : (
-                          <strong className="text-lg font-extrabold text-neutral-900">AU${lineTotal.toFixed(2)}</strong>
-                        );
-                      })()}
-                    </div>
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-7">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-100 p-5">
+                  <div className="flex h-full min-h-64 items-center justify-center rounded-xl bg-white p-4">
+                    <img
+                      src={selectedItem?.image}
+                      alt={selectedItem?.name || 'Product'}
+                      className="h-auto max-h-80 w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/mainlogo.png";
+                      }}
+                    />
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button type="button" className="rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-100" onClick={() => setSelectedItem(null)}>
-                    Continue Shopping
-                  </button>
-                  <button type="button" className="rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark" onClick={handleCheckout}>
-                    Go to Checkout
-                  </button>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    {selectedItem?.sku || selectedItem?.brand || "ALLREMOTES"}
+                  </p>
+                  <h3 className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight text-neutral-900">
+                    {selectedItem?.name}
+                  </h3>
+                  <p className="mt-3 break-words text-sm leading-7 text-neutral-600">
+                    {selectedItem?.description &&
+                    selectedItem.description.trim().toLowerCase() !== String(selectedItem?.name || "").trim().toLowerCase()
+                      ? selectedItem.description
+                      : "Review item details, condition, and category before checkout."}
+                  </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Category</div>
+                      <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
+                        {getCategoryLabel(selectedItem?.category)}
+                      </strong>
+                    </div>
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Condition</div>
+                      <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
+                        {getConditionLabel(selectedItem)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Price</div>
+                      <div className="mt-2">
+                        {(() => {
+                          const pricing = getItemPriceBreakdown(selectedItem || {});
+                          return pricing.hasDiscount ? (
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <span className="text-sm font-semibold text-neutral-400 line-through">AU${pricing.originalPrice.toFixed(2)}</span>
+                              <strong className="text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${pricing.finalPrice.toFixed(2)}</strong>
+                            </div>
+                          ) : (
+                            <strong className="break-words text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${pricing.finalPrice.toFixed(2)}</strong>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
+                      <strong className="mt-2 block text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">{selectedItem?.quantity}</strong>
+                    </div>
+
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Total</div>
+                      <div className="mt-2">
+                        {(() => {
+                          const lineTotal = getItemLineTotal(selectedItem || {});
+                          const pricing = getItemPriceBreakdown(selectedItem || {});
+                          const originalLine = pricing.originalPrice * (selectedItem?.quantity || 1);
+                          return pricing.hasDiscount ? (
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <span className="text-sm font-semibold text-neutral-400 line-through">AU${originalLine.toFixed(2)}</span>
+                              <strong className="text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${lineTotal.toFixed(2)}</strong>
+                            </div>
+                          ) : (
+                            <strong className="break-words text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${lineTotal.toFixed(2)}</strong>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <button
+                      type="button"
+                      className="rounded-full border border-transparent bg-transparent px-4 py-3 text-sm font-extrabold text-accent-dark hover:bg-accent/5"
+                      onClick={() => setSelectedItem(null)}
+                    >
+                      Continue Shopping
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+                      onClick={handleCheckout}
+                    >
+                      Go to Checkout
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

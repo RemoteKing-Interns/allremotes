@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { btn, tw } from './tw';
 
 const PaymentsBilling = () => {
   const { user } = useAuth();
@@ -132,15 +133,15 @@ const PaymentsBilling = () => {
   };
 
   return (
-    <div className="account-section">
-      <h2>Payments & Billing</h2>
+    <div className={tw.section}>
+      <h2 className={tw.sectionTitle}>Payments & Billing</h2>
       
-      <div className="section-content">
-        <div className="payment-methods-section">
-          <div className="section-header">
-            <h3>Saved Payment Methods</h3>
+      <div className={tw.sectionContent}>
+        <div className="grid gap-3">
+          <div className={tw.sectionHeader}>
+            <h3 className={tw.sectionH3}>Saved Payment Methods</h3>
             <button 
-              className="btn btn-gradient btn-small"
+              className={btn.gradientSm}
               onClick={() => setShowAddCard(!showAddCard)}
             >
               {showAddCard ? 'Cancel' : '+ Add Card'}
@@ -148,10 +149,11 @@ const PaymentsBilling = () => {
           </div>
 
           {showAddCard && (
-            <form onSubmit={handleAddCard} className="account-form">
-              <div className="form-group">
-                <label>Card Number</label>
+            <form onSubmit={handleAddCard} className={tw.form}>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Card Number</label>
                 <input
+                  className={tw.input}
                   type="text"
                   placeholder="1234 5678 9012 3456"
                   value={cardForm.number}
@@ -159,10 +161,11 @@ const PaymentsBilling = () => {
                   required
                 />
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Expiry Date</label>
+              <div className={tw.formRow2}>
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>Expiry Date</label>
                   <input
+                    className={tw.input}
                     type="text"
                     placeholder="MM/YY"
                     value={cardForm.expiry}
@@ -170,15 +173,16 @@ const PaymentsBilling = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>CVV</label>
-                  <input type="text" placeholder="123" required />
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>CVV</label>
+                  <input className={tw.input} type="text" placeholder="123" required />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Brand</label>
+              <div className={tw.formRow2}>
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>Brand</label>
                   <select
+                    className={tw.input}
                     value={cardForm.brand}
                     onChange={(e) => setCardForm({ ...cardForm, brand: e.target.value })}
                   >
@@ -188,8 +192,8 @@ const PaymentsBilling = () => {
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div className="form-group checkbox-field">
-                  <label className="checkbox-label">
+                <div className="flex items-end">
+                  <label className={tw.checkboxLabel}>
                     <input
                       type="checkbox"
                       checked={Boolean(cardForm.makeDefault)}
@@ -199,34 +203,34 @@ const PaymentsBilling = () => {
                   </label>
                 </div>
               </div>
-              <button type="submit" className="btn btn-secondary">Add Card</button>
+              <button type="submit" className={btn.secondary}>Add Card</button>
             </form>
           )}
 
-          <div className="payment-methods-list">
+          <div className={tw.gridList}>
             {paymentMethods.length === 0 ? (
-              <div className="empty-state">
+              <div className={tw.emptyState}>
                 <p>No saved payment methods</p>
               </div>
             ) : paymentMethods.map(method => (
-              <div key={method.id} className="payment-method-card">
-                <div className="method-info">
-                  <div className="method-icon">
+              <div key={method.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm max-sm:flex-col max-sm:items-start">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-100 text-xs font-bold text-neutral-700">
                     {String(method.brand || 'Card').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p className="method-brand">{method.brand} •••• {method.last4}</p>
-                    <p className="method-expiry">Expires {method.expiry}</p>
+                    <p className="text-sm font-semibold text-neutral-900">{method.brand} •••• {method.last4}</p>
+                    <p className="text-xs text-neutral-500">Expires {method.expiry}</p>
                   </div>
                 </div>
-                <div className="method-actions">
-                  {method.isDefault && <span className="default-badge">Default</span>}
+                <div className="flex flex-wrap items-center gap-2">
+                  {method.isDefault && <span className={tw.badgeDefault}>Default</span>}
                   {!method.isDefault && (
-                    <button type="button" className="btn btn-outline btn-small" onClick={() => setDefaultCard(method.id)}>
+                    <button type="button" className={btn.outlineSm} onClick={() => setDefaultCard(method.id)}>
                       Set Default
                     </button>
                   )}
-                  <button type="button" className="btn btn-outline-red btn-small" onClick={() => removeCard(method.id)}>
+                  <button type="button" className={btn.outlineDangerSm} onClick={() => removeCard(method.id)}>
                     Remove
                   </button>
                 </div>
@@ -235,13 +239,13 @@ const PaymentsBilling = () => {
           </div>
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="billing-addresses-section">
-          <div className="section-header">
-            <h3>Billing Addresses</h3>
+        <div className="grid gap-3">
+          <div className={tw.sectionHeader}>
+            <h3 className={tw.sectionH3}>Billing Addresses</h3>
             <button 
-              className="btn btn-gradient btn-small"
+              className={btn.gradientSm}
               onClick={() => setShowAddAddress(!showAddAddress)}
             >
               {showAddAddress ? 'Cancel' : '+ Add Address'}
@@ -249,10 +253,11 @@ const PaymentsBilling = () => {
           </div>
 
           {showAddAddress && (
-            <form onSubmit={handleAddAddress} className="account-form">
-              <div className="form-group">
-                <label>Address Label</label>
+            <form onSubmit={handleAddAddress} className={tw.form}>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Address Label</label>
                 <input
+                  className={tw.input}
                   type="text"
                   placeholder="Home, Work, etc."
                   value={billingForm.name}
@@ -260,37 +265,41 @@ const PaymentsBilling = () => {
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>Street Address</label>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Street Address</label>
                 <input
+                  className={tw.input}
                   type="text"
                   value={billingForm.street}
                   onChange={(e) => setBillingForm({ ...billingForm, street: e.target.value })}
                   required
                 />
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>City</label>
+              <div className={tw.formRow3}>
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>City</label>
                   <input
+                    className={tw.input}
                     type="text"
                     value={billingForm.city}
                     onChange={(e) => setBillingForm({ ...billingForm, city: e.target.value })}
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>State</label>
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>State</label>
                   <input
+                    className={tw.input}
                     type="text"
                     value={billingForm.state}
                     onChange={(e) => setBillingForm({ ...billingForm, state: e.target.value })}
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>ZIP Code</label>
+                <div className={tw.formGroup}>
+                  <label className={tw.label}>ZIP Code</label>
                   <input
+                    className={tw.input}
                     type="text"
                     value={billingForm.zip}
                     onChange={(e) => setBillingForm({ ...billingForm, zip: e.target.value })}
@@ -298,9 +307,10 @@ const PaymentsBilling = () => {
                   />
                 </div>
               </div>
-              <div className="form-group">
-                <label>Country</label>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Country</label>
                 <select
+                  className={tw.input}
                   value={billingForm.country}
                   onChange={(e) => setBillingForm({ ...billingForm, country: e.target.value })}
                   required
@@ -311,8 +321,8 @@ const PaymentsBilling = () => {
                   <option>United Kingdom</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label className="checkbox-label">
+              <div className={tw.formGroup}>
+                <label className={tw.checkboxLabel}>
                   <input
                     type="checkbox"
                     checked={Boolean(billingForm.isDefault)}
@@ -321,31 +331,31 @@ const PaymentsBilling = () => {
                   Set as default billing address
                 </label>
               </div>
-              <button type="submit" className="btn btn-secondary">Add Address</button>
+              <button type="submit" className={btn.secondary}>Add Address</button>
             </form>
           )}
 
-          <div className="addresses-list">
+          <div className={tw.gridList}>
             {billingAddresses.length === 0 ? (
-              <div className="empty-state">
+              <div className={tw.emptyState}>
                 <p>No billing addresses</p>
               </div>
             ) : billingAddresses.map(address => (
-              <div key={address.id} className="address-card">
+              <div key={address.id} className={tw.card}>
                 <div>
-                  <h4>{address.name}</h4>
-                  <p>{address.street}</p>
-                  <p>{address.city}, {address.state} {address.zip}</p>
-                  <p>{address.country}</p>
+                  <h4 className={tw.strongText}>{address.name}</h4>
+                  <p className="text-sm text-neutral-700">{address.street}</p>
+                  <p className="text-sm text-neutral-700">{address.city}, {address.state} {address.zip}</p>
+                  <p className="text-sm text-neutral-700">{address.country}</p>
                 </div>
-                <div className="address-actions">
-                  {address.isDefault && <span className="default-badge">Default</span>}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {address.isDefault && <span className={tw.badgeDefault}>Default</span>}
                   {!address.isDefault && (
-                    <button type="button" className="btn btn-outline btn-small" onClick={() => setDefaultBilling(address.id)}>
+                    <button type="button" className={btn.outlineSm} onClick={() => setDefaultBilling(address.id)}>
                       Set Default
                     </button>
                   )}
-                  <button type="button" className="btn btn-outline-red btn-small" onClick={() => removeBilling(address.id)}>
+                  <button type="button" className={btn.outlineDangerSm} onClick={() => removeBilling(address.id)}>
                     Remove
                   </button>
                 </div>
@@ -354,29 +364,29 @@ const PaymentsBilling = () => {
           </div>
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="transaction-history">
-          <h3>Transaction History</h3>
-          <div className="transactions-list">
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Transaction History</h3>
+          <div className={tw.gridList}>
             {ordersLoading ? (
-              <div className="transaction-item">
+              <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
                 <div>
-                  <p className="transaction-description">Loading…</p>
+                  <p className="text-sm font-semibold text-neutral-900">Loading…</p>
                 </div>
               </div>
             ) : orders.length === 0 ? (
-              <div className="empty-state">
+              <div className={tw.emptyState}>
                 <p>No transactions yet</p>
               </div>
             ) : (
               orders.slice(0, 20).map((o) => (
-                <div key={o.id} className="transaction-item">
+                <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 max-sm:flex-col max-sm:items-start">
                   <div>
-                    <p className="transaction-description">Order {o.id}</p>
-                    <p className="transaction-date">{new Date(o.createdAt || Date.now()).toLocaleDateString()}</p>
+                    <p className="text-sm font-semibold text-neutral-900">Order {o.id}</p>
+                    <p className="text-xs text-neutral-500">{new Date(o.createdAt || Date.now()).toLocaleDateString()}</p>
                   </div>
-                  <div className="transaction-amount">-AU${Number(o?.pricing?.total || 0).toFixed(2)}</div>
+                  <div className="text-sm font-bold text-neutral-900">-AU${Number(o?.pricing?.total || 0).toFixed(2)}</div>
                 </div>
               ))
             )}
