@@ -39,6 +39,7 @@
   html {
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
       BlinkMacSystemFont, "Segoe UI", sans-serif;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -52,6 +53,12 @@
   select:focus-visible {
     outline: 3px solid rgba(26, 122, 110, 0.28);
     outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }
 
