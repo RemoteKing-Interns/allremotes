@@ -48,7 +48,14 @@ const defaultHomeContent = {
 const defaultPromotions = {
   topInfoBar: {
     enabled: true,
-    items: ["12 MONTH WARRANTY", "30 DAY RETURNS", "SAFE & SECURE", "TRADE PRICING"],
+    items: [
+      "12 MONTH WARRANTY",
+      "30 DAY RETURNS",
+      "SAFE & SECURE",
+      "TRADE PRICING",
+      "NO MINIMUM ORDER",
+      "FREE SHIPPING",
+    ],
   },
   offers: {
     categories: [
