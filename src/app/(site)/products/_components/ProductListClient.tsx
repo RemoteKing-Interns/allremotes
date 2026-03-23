@@ -374,7 +374,7 @@ export default function ProductListClient({
               </SheetContent>
             </Sheet>
 
-          <main>
+          <main className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-neutral-600">
                 Showing{" "}
@@ -400,7 +400,7 @@ export default function ProductListClient({
               </div>
             ) : (
               <>
-                <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                   {pageProducts.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -463,15 +463,15 @@ export default function ProductListClient({
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[1600] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setAddedItem(null)}>
+        <div className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setAddedItem(null)}>
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
+            className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-label="Added to cart"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-4">
               <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">
                 Added to cart
               </div>
@@ -484,7 +484,7 @@ export default function ProductListClient({
               <img
                 src={addedItem?.image}
                 alt={addedItem?.name || "Product"}
-                className="h-32 w-32 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3"
+                className="mx-auto h-28 w-28 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3 sm:mx-0 sm:h-32 sm:w-32"
                 onError={(e: any) => {
                   e.currentTarget.src = "/images/mainlogo.png";
                 }}
@@ -524,11 +524,12 @@ export default function ProductListClient({
                   <Button
                     type="button"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={() => setAddedItem(null)}
                   >
                     Continue Shopping
                   </Button>
-                  <Button asChild>
+                  <Button asChild className="w-full sm:w-auto">
                     <Link href="/cart">View Cart</Link>
                   </Button>
                 </div>

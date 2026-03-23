@@ -8,10 +8,10 @@ export const tw = {
   headerSubtitle:
     "mx-auto mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] leading-relaxed text-neutral-600",
   content:
-    "grid items-start gap-4 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]",
+    "grid items-start gap-4 lg:gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]",
   sidebar: "grid gap-4 xl:sticky xl:top-[6.2rem]",
   profileSummary:
-    "flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white/95 p-4 shadow-sm max-sm:flex-col max-sm:items-start",
+    "flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white/95 p-4 shadow-sm max-md:flex-col max-md:items-start",
   profileAvatar:
     "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100",
   profileAvatarImg: "h-full w-full object-cover",
@@ -19,9 +19,9 @@ export const tw = {
     "flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/20 to-accent-light/35 text-lg font-extrabold text-neutral-700",
   profileText: "min-w-0",
   profileName: "truncate text-base font-bold text-neutral-900",
-  profileEmail: "truncate text-xs text-neutral-600",
+  profileEmail: "max-w-full break-all text-xs text-neutral-600",
   nav:
-    "grid gap-2 rounded-2xl border border-neutral-200/80 bg-white/95 p-2 shadow-sm max-xl:grid-cols-2 max-sm:grid-cols-1",
+    "grid gap-2 rounded-2xl border border-neutral-200/80 bg-white/95 p-2 shadow-sm md:grid-cols-2 xl:grid-cols-1",
   navItem:
     "flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-neutral-700 transition hover:border-neutral-200 hover:bg-neutral-100",
   navItemActive:

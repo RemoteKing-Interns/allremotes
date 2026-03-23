@@ -111,7 +111,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
                             }}
                           />
                         </span>
-                        <span className="text-sm font-semibold text-neutral-800 group-hover:text-primary transition-colors">
+                        <span className="min-w-0 flex-1 break-words text-sm font-semibold text-neutral-800 transition-colors group-hover:text-primary">
                           {item.name}
                         </span>
                         <svg className="ml-auto h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -130,7 +130,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
       {/* Products Grid */}
       {products.length > 0 && category !== "contact" && (
         <div className="container mx-auto max-w-6xl px-4 py-12">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Featured Products</h2>
             <Link
               href="/products/all"
@@ -142,7 +142,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
               </svg>
             </Link>
           </div>
-          <div className="grid gap-5 grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {products.slice(0, 8).map((product: any) => (
               <ProductCard key={product.id} product={product} />
             ))}

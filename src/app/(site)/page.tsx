@@ -267,7 +267,7 @@ const Home = () => {
   return (
     <div className="animate-fadeIn">
       <section className="relative overflow-hidden border-b border-neutral-200/70">
-        <div className="relative h-[460px] sm:h-[540px] lg:h-[620px]">
+        <div className="relative h-[500px] sm:h-[540px] lg:h-[620px]">
           <div className="absolute inset-0">
             {heroSlides.map((slide, index) => (
               <img
@@ -310,10 +310,10 @@ const Home = () => {
                     {slide.description}
                   </p>
 
-                  <div className="mt-7 flex flex-wrap gap-3">
+                  <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     <Link
                       href={slide.primaryCtaPath}
-                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark sm:w-auto"
                     >
                       {slide.primaryCta}
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -323,7 +323,7 @@ const Home = () => {
                     </Link>
                     <Link
                       href={slide.secondaryCtaPath}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15 sm:w-auto"
                     >
                       {slide.secondaryCta}
                     </Link>
@@ -419,7 +419,7 @@ const Home = () => {
               No products available right now.
             </div>
           ) : (
-            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {products.slice(0, 8).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -482,7 +482,7 @@ const Home = () => {
                 <div
                   key={`${r.author}-${i}`}
                   aria-hidden={i >= feedbackMarqueeReviews.length / 2}
-                  className="w-[min(86vw,22rem)] shrink-0 pr-4 sm:w-[20rem] lg:w-[22rem]"
+                  className="w-[min(88vw,22rem)] shrink-0 pr-3 sm:w-[20rem] sm:pr-4 lg:w-[22rem]"
                 >
                   <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-sm backdrop-blur">
                     <div className="text-sm font-extrabold text-gold">
@@ -516,7 +516,7 @@ const Home = () => {
             </p>
             <Link
               href={cta.buttonPath || "/products/all"}
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark sm:w-auto"
             >
               {cta.buttonText || "View All Products"}
             </Link>

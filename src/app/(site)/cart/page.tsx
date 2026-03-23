@@ -145,11 +145,11 @@ const Cart = () => {
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
           <div className="grid gap-4">
             {cart.map(item => (
-              <div key={item.id} className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur">
-                <div className="flex gap-4">
+              <div key={item.id} className="rounded-2xl border border-neutral-200 bg-white/85 p-4 shadow-panel backdrop-blur sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row">
                   <Link
                     href={getProductHref(item.id)}
-                    className="group shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 transition hover:border-accent/40 hover:bg-accent/5"
+                    className="group mx-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 transition hover:border-accent/40 hover:bg-accent/5 sm:mx-0"
                     aria-label={`View details for ${item.name}`}
                   >
                     <img
@@ -192,65 +192,75 @@ const Cart = () => {
                         );
                       })()}
 
-                      <div className="ml-auto flex items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
                         <button
                           type="button"
                           onClick={() => setSelectedItem(item)}
-                          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-700 shadow-xs hover:bg-neutral-100"
+                          className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
                         >
                           View
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.id)}
-                          className="rounded-full bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark hover:bg-primary/15"
+                          className="flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark hover:bg-primary/15 sm:flex-none"
                         >
                           Remove
                         </button>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                      <div className="inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
-                          disabled={Number(item.quantity) <= 1}
-                        >
-                          −
-                        </button>
-                        <span className="inline-flex h-10 w-12 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      {(() => {
-                        const pricing = getItemPriceBreakdown(item);
-                        const originalLine = pricing.originalPrice * item.quantity;
-                        const lineTotal = getItemLineTotal(item);
-                        return (
-                          <div className="text-right">
-                            <div className="mt-1 flex items-baseline justify-end gap-2">
-                              {pricing.hasDiscount && (
-                                <span className="text-xs font-semibold text-neutral-400 line-through">
-                                  AU${originalLine.toFixed(2)}
-                                </span>
-                              )}
-                              <span className="text-lg font-extrabold tracking-tight text-neutral-900">
-                                AU${lineTotal.toFixed(2)}
-                              </span>
-                            </div>
+                    <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                      <div className="grid gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <div className="flex items-center justify-between gap-3 sm:block">
+                          <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                            Quantity
+                          </span>
+                          <div className="inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
+                              disabled={Number(item.quantity) <= 1}
+                            >
+                              −
+                            </button>
+                            <span className="inline-flex h-10 w-12 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              +
+                            </button>
                           </div>
-                        );
-                      })()}
+                        </div>
+
+                        {(() => {
+                          const pricing = getItemPriceBreakdown(item);
+                          const originalLine = pricing.originalPrice * item.quantity;
+                          const lineTotal = getItemLineTotal(item);
+                          return (
+                            <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+                              <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                                Total
+                              </span>
+                              <div className="flex items-baseline justify-end gap-2 sm:mt-1">
+                                {pricing.hasDiscount && (
+                                  <span className="text-xs font-semibold text-neutral-400 line-through">
+                                    AU${originalLine.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="text-lg font-extrabold tracking-tight text-neutral-900">
+                                  AU${lineTotal.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -258,7 +268,7 @@ const Cart = () => {
             ))}
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur lg:sticky lg:top-28">
+          <div className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur sm:p-6 lg:sticky lg:top-24">
             <h2 className="text-xl font-semibold tracking-tight text-neutral-900">Order Summary</h2>
             <div className="mt-6 grid gap-3 text-sm">
               <div className="flex items-center justify-between font-semibold text-neutral-700">
@@ -300,15 +310,15 @@ const Cart = () => {
         </div>
       </div>
       {isModalOpen && (
-        <div className="fixed inset-0 z-[1600] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
+        <div className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setSelectedItem(null)}>
           <div
-            className="w-full max-w-6xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
+            className="my-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-label="Product details"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative p-5 pt-4 lg:p-7 lg:pt-5">
+            <div className="relative p-4 pt-14 sm:p-5 sm:pt-4 lg:p-7 lg:pt-5">
               <button
                 type="button"
                 className="absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-700 shadow-xs transition hover:bg-neutral-100 hover:text-neutral-900 lg:right-4 lg:top-4"
@@ -322,8 +332,8 @@ const Cart = () => {
               </button>
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-7">
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-100 p-5">
-                  <div className="flex h-full min-h-64 items-center justify-center rounded-xl bg-white p-4">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-100 p-4 sm:p-5">
+                  <div className="flex h-full min-h-56 items-center justify-center rounded-xl bg-white p-4 sm:min-h-64">
                     <img
                       src={selectedItem?.image}
                       alt={selectedItem?.name || 'Product'}
@@ -373,10 +383,10 @@ const Cart = () => {
                           return pricing.hasDiscount ? (
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                               <span className="text-sm font-semibold text-neutral-400 line-through">AU${pricing.originalPrice.toFixed(2)}</span>
-                              <strong className="text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${pricing.finalPrice.toFixed(2)}</strong>
+                              <strong className="text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${pricing.finalPrice.toFixed(2)}</strong>
                             </div>
                           ) : (
-                            <strong className="break-words text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${pricing.finalPrice.toFixed(2)}</strong>
+                            <strong className="break-words text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${pricing.finalPrice.toFixed(2)}</strong>
                           );
                         })()}
                       </div>
@@ -384,7 +394,7 @@ const Cart = () => {
 
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
                       <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
-                      <strong className="mt-2 block text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">{selectedItem?.quantity}</strong>
+                      <strong className="mt-2 block text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">{selectedItem?.quantity}</strong>
                     </div>
 
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
@@ -397,10 +407,10 @@ const Cart = () => {
                           return pricing.hasDiscount ? (
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                               <span className="text-sm font-semibold text-neutral-400 line-through">AU${originalLine.toFixed(2)}</span>
-                              <strong className="text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${lineTotal.toFixed(2)}</strong>
+                              <strong className="text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${lineTotal.toFixed(2)}</strong>
                             </div>
                           ) : (
-                            <strong className="break-words text-[2rem] font-extrabold leading-none tracking-tight text-accent-dark">AU${lineTotal.toFixed(2)}</strong>
+                            <strong className="break-words text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${lineTotal.toFixed(2)}</strong>
                           );
                         })()}
                       </div>
@@ -430,15 +440,15 @@ const Cart = () => {
         </div>
       )}
       {showCheckoutModal && (
-        <div className="fixed inset-0 z-[1600] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setShowCheckoutModal(false)}>
+        <div className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setShowCheckoutModal(false)}>
           <div
-            className="w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-label="Checkout options"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-4">
               <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">Checkout</div>
               <button type="button" className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200" onClick={() => setShowCheckoutModal(false)}>
                 Close

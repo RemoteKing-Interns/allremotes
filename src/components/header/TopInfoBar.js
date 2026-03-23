@@ -67,9 +67,12 @@ const TopInfoBar = ({ promotions }) => {
   return (
     <div className="border-b border-accent-dark/50 bg-accent-dark">
       <div className="container">
-        <div className="flex items-center justify-center gap-x-6 py-2 text-[11px] font-semibold tracking-wide text-white/90 uppercase">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-white/90 sm:gap-x-6 sm:text-[11px]">
           {items.map((text, idx) => (
-            <span key={`${idx}-${text}`} className="inline-flex items-center gap-1.5">
+            <span
+              key={`${idx}-${text}`}
+              className="inline-flex max-w-full items-center gap-1.5 text-center"
+            >
               <span className="text-accent-light">{getIconForText(text)}</span>
               {text}
             </span>

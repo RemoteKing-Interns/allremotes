@@ -6,7 +6,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
-import { ShoppingCart, ArrowLeft, Heart, Check } from "lucide-react";
+import {
+  ShoppingCart,
+  ArrowLeft,
+  Heart,
+  Check,
+  ChevronDown,
+} from "lucide-react";
 import {
   getPriceBreakdown,
   isDiscountEligible,
@@ -37,6 +43,23 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState("description");
+  const tabSections = [
+    {
+      id: "description",
+      label: "Description",
+      content: product?.description || "No description provided.",
+    },
+    {
+      id: "instructions",
+      label: "Instructions",
+      content: product?.instructions || "No instructions provided.",
+    },
+    {
+      id: "warnings",
+      label: "Warnings & Disclaimers",
+      content: product?.warnings || "No warnings provided.",
+    },
+  ];
 
   const userKey = useMemo(() => user?.id || user?.email || "guest", [user]);
   const wishlistKey = useMemo(
@@ -158,7 +181,7 @@ const ProductDetail = () => {
               {product.name}
             </h1>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-5 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               {pricing.hasDiscount ? (
                 <div className="flex items-baseline gap-3">
                   <p className="text-sm font-semibold text-neutral-400 line-through">
@@ -188,7 +211,7 @@ const ProductDetail = () => {
 
             {/* Quantity */}
             {product.inStock && (
-              <div className="mt-6 flex flex-wrap items-center gap-4">
+              <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
                 <span className="text-sm font-semibold text-neutral-800">Quantity</span>
                 <div
                   className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
@@ -273,66 +296,85 @@ const ProductDetail = () => {
 
         {/* TAB NAVIGATION */}
         <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur">
-          <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
-            <button
-              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
-                activeTab === "description"
-                  ? "bg-accent/10 text-accent-dark"
-                  : "text-neutral-700 hover:bg-neutral-100"
-              }`}
-              onClick={() => setActiveTab("description")}
-            >
-              DESCRIPTION
-            </button>
-            <button
-              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
-                activeTab === "instructions"
-                  ? "bg-accent/10 text-accent-dark"
-                  : "text-neutral-700 hover:bg-neutral-100"
-              }`}
-              onClick={() => setActiveTab("instructions")}
-            >
-              INSTRUCTIONS
-            </button>
-            <button
-              className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
-                activeTab === "warnings"
-                  ? "bg-accent/10 text-accent-dark"
-                  : "text-neutral-700 hover:bg-neutral-100"
-              }`}
-              onClick={() => setActiveTab("warnings")}
-            >
-              WARNINGS & DISCLAIMERS
-            </button>
+          <div className="md:hidden">
+            {tabSections.map((section, index) => {
+              const isOpen = activeTab === section.id;
+
+              return (
+                <div
+                  key={section.id}
+                  className={index > 0 ? "border-t border-neutral-200" : ""}
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+                    aria-expanded={isOpen}
+                    onClick={() =>
+                      setActiveTab((current) =>
+                        current === section.id ? "" : section.id,
+                      )
+                    }
+                  >
+                    <span
+                      className={`text-sm font-extrabold uppercase tracking-[0.12em] ${
+                        isOpen ? "text-accent-dark" : "text-neutral-700"
+                      }`}
+                    >
+                      {section.label}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className={`shrink-0 text-neutral-500 transition-transform ${
+                        isOpen ? "rotate-180 text-accent-dark" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-neutral-200 px-4 pb-4 pt-3">
+                      <p className="text-sm leading-7 text-neutral-700">
+                        {section.content}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="p-6 sm:p-8">
-            {activeTab === "description" && (
-              <div>
-                <h3 className="text-lg font-semibold text-neutral-900">Description</h3>
-                <p className="mt-3 text-sm leading-7 text-neutral-700">
-                  {product.description}
-                </p>
-              </div>
-            )}
+          <div className="hidden md:block">
+            <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
+              {tabSections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                    activeTab === section.id
+                      ? "bg-accent/10 text-accent-dark"
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                  onClick={() => setActiveTab(section.id)}
+                >
+                  {section.label.toUpperCase()}
+                </button>
+              ))}
+            </div>
 
-            {activeTab === "instructions" && (
-              <div>
-                <h3 className="text-lg font-semibold text-neutral-900">Instructions</h3>
-                <p className="mt-3 text-sm leading-7 text-neutral-700">
-                  {product.instructions || "No instructions provided."}
-                </p>
-              </div>
-            )}
-
-            {activeTab === "warnings" && (
-              <div>
-                <h3 className="text-lg font-semibold text-neutral-900">Warnings & Disclaimers</h3>
-                <p className="mt-3 text-sm leading-7 text-neutral-700">
-                  {product.warnings || "No warnings provided."}
-                </p>
-              </div>
-            )}
+            <div className="p-4 sm:p-8">
+              {tabSections.map(
+                (section) =>
+                  activeTab === section.id && (
+                    <div key={section.id}>
+                      <h3 className="text-lg font-semibold text-neutral-900">
+                        {section.label}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-700">
+                        {section.content}
+                      </p>
+                    </div>
+                  ),
+              )}
+            </div>
           </div>
         </div>
 
@@ -347,7 +389,7 @@ const ProductDetail = () => {
                 might like
               </p>
             </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}

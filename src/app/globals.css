@@ -40,10 +40,13 @@
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
       BlinkMacSystemFont, "Segoe UI", sans-serif;
     scroll-behavior: smooth;
+    max-width: 100%;
   }
 
   body {
     @apply bg-neutral-50 text-neutral-800 antialiased;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   a:focus-visible,
@@ -112,7 +115,7 @@
   }
 
   .checkout-page .checkout-header {
-    @apply flex flex-wrap items-end justify-between gap-4;
+    @apply flex flex-wrap items-start justify-between gap-4;
   }
 
   .checkout-page .checkout-header-copy h1 {
@@ -128,11 +131,11 @@
   }
 
   .checkout-page .checkout-highlights {
-    @apply flex flex-wrap gap-3;
+    @apply flex w-full flex-wrap gap-3 sm:w-auto;
   }
 
   .checkout-page .checkout-highlight {
-    @apply rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs;
+    @apply min-w-[10rem] flex-1 rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs sm:flex-none;
   }
 
   .checkout-page .checkout-highlight strong {
@@ -205,7 +208,7 @@
   }
 
   .checkout-page .form-row {
-    @apply mt-4 grid gap-3 md:grid-cols-3;
+    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3;
   }
 
   .checkout-page .address-autocomplete {
@@ -237,7 +240,7 @@
   }
 
   .checkout-page .order-summary {
-    @apply rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur lg:sticky lg:top-28;
+    @apply rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur sm:p-6 lg:sticky lg:top-24;
   }
 
   .checkout-page .order-summary-note {
@@ -249,15 +252,15 @@
   }
 
   .checkout-page .summary-item {
-    @apply flex items-start justify-between gap-3 border-b border-neutral-200 pb-3 last:border-b-0 last:pb-0;
+    @apply flex flex-wrap items-start justify-between gap-3 border-b border-neutral-200 pb-3 last:border-b-0 last:pb-0;
   }
 
   .checkout-page .summary-item-name {
-    @apply text-sm font-semibold text-neutral-800;
+    @apply min-w-0 flex-1 break-words text-sm font-semibold text-neutral-800;
   }
 
   .checkout-page .summary-item-price {
-    @apply flex items-baseline gap-2 whitespace-nowrap;
+    @apply flex shrink-0 flex-wrap items-baseline justify-end gap-2 text-right;
   }
 
   .checkout-page .summary-item-price-old {
@@ -282,7 +285,7 @@
   }
 
   .checkout-page .order-success {
-    @apply mx-auto mt-6 grid max-w-xl justify-items-center gap-3 rounded-2xl border border-neutral-200 bg-white/90 p-8 text-center shadow-panel;
+    @apply mx-auto mt-6 grid max-w-xl justify-items-center gap-3 rounded-2xl border border-neutral-200 bg-white/90 p-6 text-center shadow-panel sm:p-8;
   }
 
   .checkout-page .success-icon {

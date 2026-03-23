@@ -73,8 +73,8 @@ const Footer = () => {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_36%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-container-wide px-container py-12 sm:py-14">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2.85fr)] lg:gap-14">
-          <section className="grid min-w-0 content-start gap-4">
+        <div className="grid items-start gap-8 sm:gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2.85fr)] lg:gap-14">
+          <section className="grid min-w-0 content-start justify-items-center gap-4 text-center lg:justify-items-start lg:text-left">
             <Link href="/" className="inline-flex w-fit max-w-full items-center" aria-label="ALLREMOTES home">
               <Image
                 src="/images/mainlogo.png"
@@ -92,7 +92,7 @@ const Footer = () => {
             </p>
           </section>
 
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
             <FooterColumn title="Shop" items={categoriesItems} />
             <FooterColumn title="Support" items={supportItems} />
             <FooterColumn title="Company" items={policyItems} />

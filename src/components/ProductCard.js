@@ -107,7 +107,7 @@ const ProductCard = ({
         className="absolute inset-0 z-10"
       />
 
-      <div className="relative aspect-square bg-white flex items-center justify-center overflow-hidden">
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-white">
         {/* Fallback Letter */}
         {imageError && (
           <div className="text-7xl font-extrabold text-neutral-300">
@@ -122,7 +122,7 @@ const ProductCard = ({
             alt={productName}
             loading="lazy"
             decoding="async"
-            className={`w-full h-full object-contain p-3 sm:p-5 transition-transform duration-300 group-hover:scale-110 ${
+            className={`h-full w-full object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
               !product.inStock ? "opacity-50" : ""
             }`}
             onError={() => setImageError(true)}
@@ -130,19 +130,19 @@ const ProductCard = ({
         )}
 
         {/* Badges - Top Left */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5">
+        <div className="absolute left-2 top-2 right-12 z-20 flex flex-col gap-1 sm:left-3 sm:top-3 sm:right-auto sm:gap-1.5">
           {product.inStock ? (
-            <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-extrabold text-accent-dark">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <span className="inline-flex max-w-full items-center gap-1.5 self-start rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-extrabold text-accent-dark sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
               In Stock
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-neutral-200 px-3 py-1.5 text-xs font-extrabold text-neutral-600">
+            <span className="inline-flex max-w-full items-center self-start rounded-full bg-neutral-200 px-2.5 py-1 text-[10px] font-extrabold text-neutral-600 sm:px-3 sm:py-1.5 sm:text-xs">
               Out of Stock
             </span>
           )}
           {discountPercent > 0 && (
-            <span className="inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-extrabold text-white shadow-xs">
+            <span className="inline-flex max-w-full items-center self-start rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white shadow-xs sm:px-3 sm:py-1.5 sm:text-xs">
               {discountPercent}% OFF
             </span>
           )}
@@ -153,10 +153,10 @@ const ProductCard = ({
           <button
             type="button"
             onClick={toggleWishlist}
-            className={`absolute top-3 right-3 z-30 flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 ${
+            className={`absolute right-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 sm:right-3 sm:top-3 sm:h-10 sm:w-10 ${
               isWishlisted
                 ? "bg-white text-primary"
-                : "bg-white/90 backdrop-blur text-neutral-700 opacity-0 group-hover:opacity-100"
+                : "bg-white/90 text-neutral-700 opacity-100 backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
             }`}
             aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={isWishlisted}
@@ -179,7 +179,7 @@ const ProductCard = ({
         <h3 className="mb-2 sm:mb-3 line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
           {productName}
         </h3>
-        <div className="mt-auto flex items-end justify-between gap-3">
+        <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
               AU${pricing.finalPrice.toFixed(2)}
@@ -195,7 +195,7 @@ const ProductCard = ({
             <button
               type="button"
               onClick={handleAddToCart}
-              className="relative z-30 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
+              className="relative z-30 inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-xs font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99] sm:w-auto sm:py-2"
             >
               <ShoppingCart size={14} strokeWidth={1.8} />
               Add to Cart

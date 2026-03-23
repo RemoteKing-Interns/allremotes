@@ -34,12 +34,19 @@ const MainHeaderBar = ({
   return (
     <div>
       <div className="container">
-        <div className="flex items-center gap-4 py-4 md:gap-6">
+        <div className="flex flex-wrap items-center gap-3 py-3.5 sm:gap-4 md:gap-6 md:py-4">
           <Link href="/" className="shrink-0" aria-label="ALLREMOTES home">
-            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-12 w-auto sm:h-14" />
+            <img
+              src="/images/mainlogo.png"
+              alt="ALLREMOTES"
+              className="h-10 w-auto sm:h-12 lg:h-14"
+            />
           </Link>
 
-          <div className="relative hidden w-full max-w-2xl mx-auto md:block" ref={searchRef}>
+          <div
+            className="order-3 relative basis-full lg:order-none lg:mx-auto lg:flex-1 lg:max-w-2xl"
+            ref={searchRef}
+          >
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -63,7 +70,7 @@ const MainHeaderBar = ({
 
             {showSearchResults && searchResults.length > 0 && (
               <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong">
-                <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
+                <div className="flex flex-wrap items-center justify-between gap-1 border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
                   <span>Search Results ({searchResults.length})</span>
                   <span className="text-neutral-400">Top matches</span>
                 </div>
@@ -141,7 +148,7 @@ const MainHeaderBar = ({
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2 sm:gap-3 max-[359px]:w-full max-[359px]:justify-between">
             {user ? (
               <div
                 ref={accountMenuRef}
@@ -175,7 +182,7 @@ const MainHeaderBar = ({
 
                 {showAccountMenu && (
                   <div
-                    className="absolute right-0 top-[calc(100%+0.4rem)] z-[1400] w-[18rem] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong"
+                    className="absolute right-0 top-[calc(100%+0.4rem)] z-[1400] w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong"
                     role="menu"
                     onMouseEnter={cancelAccountMenuClose}
                     onMouseLeave={scheduleAccountMenuClose}
@@ -240,10 +247,15 @@ const MainHeaderBar = ({
               </div>
             ) : (
               <>
-                <Button asChild variant="outline" size="sm">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="max-[359px]:flex-1"
+                >
                   <Link href="/login">Login</Link>
                 </Button>
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="max-[359px]:flex-1">
                   <Link href="/register">Register</Link>
                 </Button>
               </>
@@ -269,7 +281,7 @@ const MainHeaderBar = ({
 
             <button
               ref={hamburgerRef}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 lg:hidden"
               onClick={openDrawer}
               aria-expanded={mobileDrawerOpen}
               aria-controls="mobile-drawer"

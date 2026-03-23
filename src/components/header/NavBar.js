@@ -170,7 +170,7 @@ const NavBar = ({
           }
         }}
       >
-        <SheetContent id="mobile-drawer" className="md:hidden">
+        <SheetContent id="mobile-drawer" className="lg:hidden">
           <SheetHeader>
             <SheetTitle>Menu</SheetTitle>
             <SheetDescription>
@@ -338,7 +338,7 @@ const NavBar = ({
         </SheetContent>
       </Sheet>
 
-      <nav className="hidden border-t border-neutral-200 bg-white/70 md:block" ref={dropdownRef}>
+      <nav className="hidden border-t border-neutral-200 bg-white/70 lg:block" ref={dropdownRef}>
         <div
           className="container relative"
           onMouseEnter={cancelDropdownClose}
