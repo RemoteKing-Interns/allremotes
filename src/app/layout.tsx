@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { getMetadataBase } from "@/lib/site-url";
 import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title:
     "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
   description:
