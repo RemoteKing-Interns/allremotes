@@ -156,8 +156,14 @@ const getIconForText = (text) => {
   );
 };
 
-const TopInfoBar = () => {
-  const items = STATIC_TOP_BAR_ITEMS;
+const TopInfoBar = ({ promotions }) => {
+  const configuredItems =
+    promotions?.topInfoBar?.enabled &&
+    Array.isArray(promotions?.topInfoBar?.items) &&
+    promotions.topInfoBar.items.length > 0
+      ? promotions.topInfoBar.items
+      : null;
+  const items = configuredItems || STATIC_TOP_BAR_ITEMS;
 
   return (
     <div className="border-b border-accent-dark/50 bg-accent-dark">
