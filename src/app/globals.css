@@ -1,19 +1,375 @@
-@import "../index.css";
-@import "../App.css";
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
-@import "../components/Header.css";
-@import "../components/Footer.css";
-@import "../components/CarFinder.css";
-@import "../components/ProductCard.css";
+@keyframes feedbackMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
 
-@import "../styles/pages/Home.css";
-@import "../styles/pages/ProductList.css";
-@import "../styles/pages/ProductDetail.css";
-@import "../styles/pages/CategoryPage.css";
-@import "../styles/pages/Auth.css";
-@import "../styles/pages/Cart.css";
-@import "../styles/pages/Checkout.css";
-@import "../styles/pages/Account.css";
-@import "../styles/pages/Admin.css";
+@keyframes heroImageIn {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
 
-@import "../components/account/AccountSection.css";
+@keyframes heroContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, "Segoe UI", sans-serif;
+    scroll-behavior: smooth;
+    max-width: 100%;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-800 antialiased;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid rgba(26, 122, 110, 0.28);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@layer components {
+  .container {
+    width: min(1328px, calc(100% - clamp(1rem, 3.6vw, 3rem) * 2));
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3.6vw, 3rem);
+  }
+
+  .container-wide {
+    width: min(1392px, calc(100% - clamp(1rem, 3.6vw, 3rem) * 2));
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3.6vw, 3rem);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3 text-sm font-semibold tracking-tight transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white shadow-soft hover:bg-primary-dark;
+  }
+
+  .btn-secondary {
+    @apply bg-accent text-white shadow-soft hover:bg-accent-dark;
+  }
+
+  .btn-outline {
+    @apply border border-neutral-200 bg-white text-neutral-800 hover:border-accent/30 hover:bg-accent/5 hover:text-accent-dark;
+  }
+
+  .btn-large {
+    @apply px-8 py-4 text-base;
+  }
+
+  .btn-small,
+  .btn-sm {
+    @apply px-4 py-2 text-xs;
+  }
+
+  /* Basic page shells used across legacy routes */
+  .shop-page,
+  .checkout-page,
+  .home {
+    @apply animate-fadeIn;
+  }
+
+  .checkout-page .container {
+    @apply py-8 sm:py-10;
+  }
+
+  .checkout-page .checkout-header {
+    @apply flex flex-wrap items-start justify-between gap-4;
+  }
+
+  .checkout-page .checkout-header-copy h1 {
+    @apply mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl;
+  }
+
+  .checkout-page .checkout-kicker {
+    @apply text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark;
+  }
+
+  .checkout-page .checkout-copy {
+    @apply mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base;
+  }
+
+  .checkout-page .checkout-highlights {
+    @apply flex w-full flex-wrap gap-3 sm:w-auto;
+  }
+
+  .checkout-page .checkout-highlight {
+    @apply min-w-[10rem] flex-1 rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs sm:flex-none;
+  }
+
+  .checkout-page .checkout-highlight strong {
+    @apply block text-2xl font-extrabold tracking-tight text-neutral-900;
+  }
+
+  .checkout-page .checkout-highlight span {
+    @apply mt-1 block text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500;
+  }
+
+  .checkout-page .checkout-feedback {
+    @apply mt-6 rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary-dark;
+  }
+
+  .checkout-page .checkout-content {
+    @apply mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start;
+  }
+
+  .checkout-page .checkout-form {
+    @apply grid gap-5;
+  }
+
+  .checkout-page .form-section {
+    @apply rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur sm:p-6;
+  }
+
+  .checkout-page .form-section h2,
+  .checkout-page .order-summary h2 {
+    @apply relative m-0 pl-4 text-xl font-extrabold tracking-tight text-neutral-900;
+  }
+
+  .checkout-page .form-section h2::before,
+  .checkout-page .order-summary h2::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 0.34rem;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #e04a37 0%, #c92d2d 100%);
+  }
+
+  .checkout-page .checkout-section-note {
+    @apply mt-2 text-sm leading-7 text-neutral-600;
+  }
+
+  .checkout-page .form-group {
+    @apply mt-4 grid gap-1.5;
+  }
+
+  .checkout-page .form-group label {
+    @apply text-xs font-bold uppercase tracking-[0.08em] text-neutral-600;
+  }
+
+  .checkout-page .form-group input,
+  .checkout-page .form-group select,
+  .checkout-page .form-group textarea {
+    @apply h-11 w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-sm text-neutral-900 shadow-sm transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30;
+  }
+
+  .checkout-page .form-group textarea {
+    @apply h-auto min-h-24 py-2.5;
+  }
+
+  .checkout-page .form-group input:disabled,
+  .checkout-page .form-group select:disabled,
+  .checkout-page .form-group textarea:disabled {
+    @apply cursor-not-allowed bg-neutral-100 text-neutral-500;
+  }
+
+  .checkout-page .form-row {
+    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .checkout-page .address-autocomplete {
+    @apply relative;
+  }
+
+  .checkout-page .address-suggestions {
+    @apply absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-xl;
+  }
+
+  .checkout-page .address-suggestion {
+    @apply block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 transition hover:bg-neutral-100;
+  }
+
+  .checkout-page .address-suggestion--active {
+    @apply bg-accent/10 text-accent-dark;
+  }
+
+  .checkout-page .address-suggestion--meta {
+    @apply cursor-default text-neutral-500 hover:bg-transparent;
+  }
+
+  .checkout-page .address-helper {
+    @apply mt-2 text-xs text-neutral-500;
+  }
+
+  .checkout-page .checkout-submit {
+    @apply mt-1 w-full;
+  }
+
+  .checkout-page .order-summary {
+    @apply rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur sm:p-6 lg:sticky lg:top-24;
+  }
+
+  .checkout-page .order-summary-note {
+    @apply mt-2 text-sm leading-7 text-neutral-600;
+  }
+
+  .checkout-page .summary-items {
+    @apply mt-4 grid gap-3;
+  }
+
+  .checkout-page .summary-item {
+    @apply flex flex-wrap items-start justify-between gap-3 border-b border-neutral-200 pb-3 last:border-b-0 last:pb-0;
+  }
+
+  .checkout-page .summary-item-name {
+    @apply min-w-0 flex-1 break-words text-sm font-semibold text-neutral-800;
+  }
+
+  .checkout-page .summary-item-price {
+    @apply flex shrink-0 flex-wrap items-baseline justify-end gap-2 text-right;
+  }
+
+  .checkout-page .summary-item-price-old {
+    @apply text-xs font-semibold text-neutral-400 line-through;
+  }
+
+  .checkout-page .summary-item-price-new {
+    @apply text-sm font-extrabold text-neutral-900;
+  }
+
+  .checkout-page .summary-subtotal,
+  .checkout-page .summary-discount {
+    @apply mt-3 flex items-center justify-between text-sm font-semibold text-neutral-700;
+  }
+
+  .checkout-page .summary-discount {
+    @apply text-primary-dark;
+  }
+
+  .checkout-page .summary-total {
+    @apply mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 text-base font-extrabold text-neutral-900;
+  }
+
+  .checkout-page .order-success {
+    @apply mx-auto mt-6 grid max-w-xl justify-items-center gap-3 rounded-2xl border border-neutral-200 bg-white/90 p-6 text-center shadow-panel sm:p-8;
+  }
+
+  .checkout-page .success-icon {
+    @apply inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-2xl font-black text-accent-dark;
+  }
+
+  .checkout-page .order-success h1 {
+    @apply text-2xl font-extrabold tracking-tight text-neutral-900;
+  }
+
+  .checkout-page .order-success p {
+    @apply text-sm leading-7 text-neutral-600;
+  }
+
+  .checkout-page .order-success-id {
+    @apply text-sm font-semibold text-neutral-700;
+  }
+
+  .checkout-page .order-success-action {
+    @apply mt-2;
+  }
+
+  .feedback-marquee {
+    @apply relative overflow-hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(0, 0, 0, 1) 7%,
+      rgba(0, 0, 0, 1) 93%,
+      transparent 100%
+    );
+  }
+
+  .feedback-marquee-track {
+    @apply flex w-max;
+    animation: feedbackMarquee 34s linear infinite;
+    will-change: transform;
+  }
+
+  .feedback-marquee:hover .feedback-marquee-track {
+    animation-play-state: paused;
+  }
+
+  .hero-slide-image {
+    transform: scale(1.04);
+    will-change: transform;
+  }
+
+  .hero-slide-image--active {
+    animation: heroImageIn 6.2s linear both;
+  }
+
+  .hero-slide-content {
+    animation: heroContentIn 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-marquee-track {
+      animation: none;
+      transform: none;
+    }
+
+    .hero-slide-image,
+    .hero-slide-image--active,
+    .hero-slide-content {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  .admin-a11y :where(button, a, input, textarea, select):focus-visible {
+    @apply outline-none ring-2 ring-accent/40 ring-offset-2 ring-offset-white;
+  }
+
+  .admin-a11y button {
+    @apply min-h-10;
+  }
+
+  .admin-a11y :where(input, textarea, select) {
+    @apply border-neutral-300 text-neutral-900 placeholder:text-neutral-500;
+  }
+
+  .admin-a11y :where(input, textarea, select):disabled {
+    @apply cursor-not-allowed bg-neutral-100 text-neutral-500;
+  }
+}

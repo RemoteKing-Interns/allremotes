@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { btn, tw } from './tw';
 
 const AccountBasics = () => {
   const { user, updateUser, changePassword } = useAuth();
@@ -22,9 +23,10 @@ const AccountBasics = () => {
   const [passwordError, setPasswordError] = useState('');
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
     setSaved(false);
   };
@@ -83,91 +85,111 @@ const AccountBasics = () => {
   };
 
   return (
-    <div className="account-section">
-      <h2>Account Basics</h2>
+    <div className={tw.section}>
+      <h2 className={tw.sectionTitle}>Account Basics</h2>
       
-      <div className="section-content">
-        <form onSubmit={handleSaveProfile} className="account-form">
-          <div className="form-group-photo">
-            <label>Profile Photo</label>
-            <div className="photo-upload">
-              <div className="photo-preview">
-                {formData.profilePhoto ? (
-                  <img src={formData.profilePhoto} alt="Profile" />
-                ) : (
-                  <div className="photo-placeholder">
-                    {formData.name.charAt(0).toUpperCase()}
+      <div className={tw.sectionContent}>
+        <form onSubmit={handleSaveProfile} className={tw.form}>
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] xl:gap-8 max-xl:grid-cols-1 max-xl:gap-4">
+            <div className="min-w-0 xl:max-w-[12rem] xl:pr-1">
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Profile Photo</label>
+                <div className="flex w-full flex-col items-center gap-3 max-xl:flex-row max-xl:flex-wrap max-xl:items-center max-sm:flex-col max-sm:items-center">
+                  <div className="h-28 w-28 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100">
+                    {formData.profilePhoto ? (
+                      <img
+                        src={formData.profilePhoto}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/15 to-accent-light/30 text-3xl font-black text-neutral-700">
+                        {formData.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <input
+                    id="account-profile-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className={tw.fileInput}
+                  />
+                  <label
+                    htmlFor="account-profile-photo"
+                    className={`${btn.outline} w-full justify-center max-xl:w-auto max-sm:w-full`}
+                  >
+                    Change Photo
+                  </label>
+                </div>
               </div>
-              <input
-                id="account-profile-photo"
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="file-input"
-              />
-              <label
-                htmlFor="account-profile-photo"
-                className="btn btn-outline"
-              >
-                Change Photo
-              </label>
+            </div>
+
+            <div className="grid gap-3.5 xl:border-l xl:border-neutral-200 xl:pl-8">
+              <div className={tw.formRow2}>
+                <div className={tw.formGroup}>
+                  <label htmlFor="name" className={tw.label}>Full Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className={tw.input}
+                  />
+                </div>
+
+                <div className={tw.formGroup}>
+                  <label htmlFor="email" className={tw.label}>Email Address</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className={tw.input}
+                  />
+                </div>
+              </div>
+
+              <div className={tw.formGroup}>
+                <label htmlFor="phone" className={tw.label}>Phone Number</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="+61"
+                  maxLength={15}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className={tw.input}
+                />
+              </div>
+
+              {saved && <div className={tw.success}>Profile updated successfully!</div>}
+
+              <div className="flex justify-start pt-1">
+                <button type="submit" className={btn.gradient}>
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="+1 (555) 123-4567"
-            />
-          </div>
-
-          {saved && <div className="success-message">Profile updated successfully!</div>}
-
-          <button type="submit" className="btn btn-gradient">
-            Save Changes
-          </button>
         </form>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="password-section">
-          <h3>Password & Security</h3>
-          <form onSubmit={handleChangePassword} className="account-form">
-            {passwordError && <div className="error-message">{passwordError}</div>}
-            {passwordSaved && <div className="success-message">Password updated.</div>}
-            <div className="form-group">
-              <label htmlFor="currentPassword">Current Password</label>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Password & Security</h3>
+          <form onSubmit={handleChangePassword} className={tw.form}>
+            {passwordError && <div className={tw.error}>{passwordError}</div>}
+            {passwordSaved && <div className={tw.success}>Password updated.</div>}
+            <div className={tw.formGroup}>
+              <label htmlFor="currentPassword" className={tw.label}>Current Password</label>
               <input
                 type="password"
                 id="currentPassword"
@@ -175,11 +197,12 @@ const AccountBasics = () => {
                 value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
                 required
+                className={tw.input}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="newPassword">New Password</label>
+            <div className={tw.formGroup}>
+              <label htmlFor="newPassword" className={tw.label}>New Password</label>
               <input
                 type="password"
                 id="newPassword"
@@ -188,11 +211,12 @@ const AccountBasics = () => {
                 onChange={handlePasswordChange}
                 required
                 minLength={6}
+                className={tw.input}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm New Password</label>
+            <div className={tw.formGroup}>
+              <label htmlFor="confirmPassword" className={tw.label}>Confirm New Password</label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -201,25 +225,26 @@ const AccountBasics = () => {
                 onChange={handlePasswordChange}
                 required
                 minLength={6}
+                className={tw.input}
               />
             </div>
 
-            <button type="submit" className="btn btn-secondary">
+            <button type="submit" className={btn.secondary}>
               Update Password
             </button>
           </form>
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="security-section">
-          <h3>Two-Factor Authentication</h3>
-          <div className="security-toggle">
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Two-Factor Authentication</h3>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
             <div>
-              <p className="security-label">Enable 2FA</p>
-              <p className="security-description">Add an extra layer of security to your account</p>
+              <p className="text-sm font-bold text-neutral-800">Enable 2FA</p>
+              <p className="text-xs text-neutral-600">Add an extra layer of security to your account</p>
             </div>
-            <label className="toggle-switch">
+            <label className={tw.toggleWrap}>
               <input
                 type="checkbox"
                 checked={twoFactorEnabled}
@@ -228,8 +253,10 @@ const AccountBasics = () => {
                   setTwoFactorEnabled(next);
                   updateUser({ twoFactorEnabled: next });
                 }}
+                className={tw.toggleInput}
               />
-              <span className="toggle-slider"></span>
+              <span className={tw.toggleTrack}></span>
+              <span className={tw.toggleThumb}></span>
             </label>
           </div>
         </div>

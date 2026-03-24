@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
+import { btn, tw } from './tw';
 
 const NotificationsSettings = () => {
   const { user } = useAuth();
@@ -72,20 +73,20 @@ const NotificationsSettings = () => {
   };
 
   return (
-    <div className="account-section">
-      <h2>Notifications & Settings</h2>
+    <div className={tw.section}>
+      <h2 className={tw.sectionTitle}>Notifications & Settings</h2>
       
-      <div className="section-content">
-        <div className="notifications-section">
-          <h3>Email Notifications</h3>
-          <div className="notifications-list">
+      <div className={tw.sectionContent}>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Email Notifications</h3>
+          <div className={tw.gridList}>
             {Object.entries(notifications.email).map(([key, value]) => (
-              <div key={key} className="notification-item">
+              <div key={key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 max-sm:flex-col max-sm:items-start">
                 <div>
-                  <p className="notification-label">
+                  <p className="text-sm font-semibold text-neutral-900">
                     {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                   </p>
-                  <p className="notification-description">
+                  <p className="mt-0.5 text-xs text-neutral-600">
                     {key === 'orderUpdates' && 'Get notified about your order status'}
                     {key === 'shippingUpdates' && 'Receive shipping and delivery updates'}
                     {key === 'promotions' && 'Receive special offers and promotions'}
@@ -93,52 +94,57 @@ const NotificationsSettings = () => {
                     {key === 'reviews' && 'Get notified when someone responds to your review'}
                   </p>
                 </div>
-                <label className="toggle-switch">
+                <label className={tw.toggleWrap}>
                   <input
                     type="checkbox"
                     checked={value}
                     onChange={() => handleNotificationChange('email', key)}
+                    className={tw.toggleInput}
                   />
-                  <span className="toggle-slider"></span>
+                  <span className={tw.toggleTrack}></span>
+                  <span className={tw.toggleThumb}></span>
                 </label>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="push-notifications-section">
-          <h3>Push Notifications</h3>
-          <div className="notifications-list">
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Push Notifications</h3>
+          <div className={tw.gridList}>
             {Object.entries(notifications.push).map(([key, value]) => (
-              <div key={key} className="notification-item">
+              <div key={key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 max-sm:flex-col max-sm:items-start">
                 <div>
-                  <p className="notification-label">
+                  <p className="text-sm font-semibold text-neutral-900">
                     {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                   </p>
                 </div>
-                <label className="toggle-switch">
+                <label className={tw.toggleWrap}>
                   <input
                     type="checkbox"
                     checked={value}
                     onChange={() => handleNotificationChange('push', key)}
+                    className={tw.toggleInput}
                   />
-                  <span className="toggle-slider"></span>
+                  <span className={tw.toggleTrack}></span>
+                  <span className={tw.toggleThumb}></span>
                 </label>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="preferences-section">
-          <h3>Language & Currency</h3>
-          <form className="account-form">
-            <div className="form-group">
-              <label>Language</label>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Language & Currency</h3>
+          <form className={tw.form}>
+            <div className={tw.formGroup}>
+              <label className={tw.label}>Language</label>
               <select
+                className={tw.input}
                 value={preferences.language}
                 onChange={(e) => handlePreferenceChange('language', e.target.value)}
               >
@@ -148,9 +154,10 @@ const NotificationsSettings = () => {
                 <option value="de">German</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Currency</label>
+            <div className={tw.formGroup}>
+              <label className={tw.label}>Currency</label>
               <select
+                className={tw.input}
                 value={preferences.currency}
                 onChange={(e) => handlePreferenceChange('currency', e.target.value)}
               >
@@ -160,9 +167,10 @@ const NotificationsSettings = () => {
                 <option value="AUD">AUD (A$)</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Timezone</label>
+            <div className={tw.formGroup}>
+              <label className={tw.label}>Timezone</label>
               <select
+                className={tw.input}
                 value={preferences.timezone}
                 onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
               >
@@ -174,8 +182,8 @@ const NotificationsSettings = () => {
                 <option value="Australia/Sydney">Sydney</option>
               </select>
             </div>
-            {saved && <div className="success-message">Saved.</div>}
-            <button type="button" className="btn btn-gradient" onClick={save}>Save Preferences</button>
+            {saved && <div className={tw.success}>Saved.</div>}
+            <button type="button" className={btn.gradient} onClick={save}>Save Preferences</button>
           </form>
         </div>
       </div>

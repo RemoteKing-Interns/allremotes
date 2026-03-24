@@ -26,34 +26,55 @@ const Cart = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const isModalOpen = Boolean(selectedItem);
   const isAnyModalOpen = isModalOpen || showCheckoutModal;
+  const totalItems = cart.reduce((count, item) => count + Number(item.quantity || 0), 0);
 
   useEffect(() => {
     if (!isAnyModalOpen) return;
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setSelectedItem(null);
         setShowCheckoutModal(false);
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
     };
   }, [isAnyModalOpen]);
 
   if (cart.length === 0) {
     return (
-      <div className="cart-page">
-        <div className="container">
-          <h1>Shopping Cart</h1>
-          <div className="empty-cart">
-            <p>Your cart is empty</p>
-            <Link href="/products/all" className="btn btn-primary">
+      <div className="animate-fadeIn">
+        <div className="container py-10 sm:py-12">
+          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-8 shadow-panel backdrop-blur sm:p-12">
+            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+              Checkout ready
+            </span>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+              Shopping Cart
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+              Your cart is empty. Browse the catalog and add a remote to get started.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <span className="inline-flex items-center rounded-full bg-neutral-100 px-4 py-2 text-xs font-extrabold text-neutral-700">
+                0 items
+              </span>
+              <span className="inline-flex items-center rounded-full bg-accent/10 px-4 py-2 text-xs font-extrabold text-accent-dark">
+                Free standard shipping
+              </span>
+            </div>
+
+            <Link
+              href="/products/all"
+              className="mt-8 inline-flex items-center justify-center rounded-full bg-primary px-8 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark"
+            >
               Continue Shopping
             </Link>
           </div>
@@ -70,267 +91,348 @@ const Cart = () => {
     router.push("/checkout");
   };
 
+  const getCategoryLabel = (category) => {
+    const value = String(category || "").trim().toLowerCase();
+    if (!value) return "General";
+    if (value === "car") return "Automotive Remote";
+    if (value === "garage") return "Garage & Gate Remote";
+    return value
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  };
+
+  const getConditionLabel = (item) => {
+    const value = String(item?.condition || "").trim();
+    return value || "Brand New";
+  };
+
+  const getProductHref = (id) => `/product/${encodeURIComponent(String(id))}`;
+
   const originalTotal = getCartOriginalTotal();
   const discountedTotal = getCartTotal();
   const discountTotal = getCartDiscountTotal();
 
   return (
-    <div className="cart-page">
-      <div className="container">
-        <h1>Shopping Cart</h1>
-        <div className="cart-content">
-          <div className="cart-items">
-            {cart.map((item) => (
-              <div key={item.id} className="cart-item">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="cart-item-image"
-                  onError={(e) => {
-                    e.currentTarget.src = "/images/logo.png";
-                  }}
-                />
-                <div className="cart-item-info">
-                  <h3>{item.name}</h3>
-                  <p className="cart-item-category">
-                    {item.category === "car"
-                      ? "🚗 Car Remote"
-                      : "🚪 Garage Remote"}
-                  </p>
-                  {(() => {
-                    const pricing = getItemPriceBreakdown(item);
-                    return (
-                      <p className="cart-item-price">
-                        {pricing.hasDiscount && (
-                          <span className="price-original">
-                            AU${pricing.originalPrice.toFixed(2)}
-                          </span>
-                        )}
-                        <span className="price-current">
-                          AU${pricing.finalPrice.toFixed(2)}
-                        </span>
-                      </p>
-                    );
-                  })()}
-                </div>
-                <div className="cart-item-controls">
-                  <div className="quantity-controls">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="quantity-btn"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      className="quantity"
-                      value={item.quantity}
-                      min={1}
-                      max={1000}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 1 && val <= 1000)
-                          updateQuantity(item.id, val);
+    <div className="animate-fadeIn">
+      <div className="container py-8 sm:py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+              Checkout ready
+            </span>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+              Shopping Cart
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs">
+              <strong className="block text-2xl font-extrabold tracking-tight text-neutral-900">{totalItems}</strong>
+              <span className="mt-1 block text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+                {totalItems === 1 ? "item selected" : "items selected"}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs">
+              <strong className="block text-2xl font-extrabold tracking-tight text-neutral-900">
+                {hasDiscount ? `${Math.round(discountRate * 100)}%` : "Free"}
+              </strong>
+              <span className="mt-1 block text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+                {hasDiscount ? "member pricing active" : "standard shipping"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+          <div className="grid gap-4">
+            {cart.map(item => (
+              <div key={item.id} className="rounded-2xl border border-neutral-200 bg-white/85 p-4 shadow-panel backdrop-blur sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <Link
+                    href={getProductHref(item.id)}
+                    className="group mx-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 transition hover:border-accent/40 hover:bg-accent/5 sm:mx-0"
+                    aria-label={`View details for ${item.name}`}
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-24 w-24 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/mainlogo.png";
                       }}
                     />
-                    {/* <span className="quantity">{item.quantity}</span> */}
-                    {/* <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="quantity-btn"
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={getProductHref(item.id)}
+                      className="group inline-block max-w-full"
+                      aria-label={`Open ${item.name} product page`}
                     >
-                      +
-                    </button> */}
-                    <button
-                      onClick={() =>
-                        updateQuantity(
-                          item.id,
-                          Math.min(item.quantity + 1, 1000),
-                        )
-                      }
-                      className="quantity-btn"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItem(item)}
-                    className="btn-view"
-                  >
-                    View Details
-                  </button>
-                  <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="btn-remove"
-                  >
-                    Remove
-                  </button>
-                </div>
-                {(() => {
-                  const pricing = getItemPriceBreakdown(item);
-                  const originalLine = pricing.originalPrice * item.quantity;
-                  const lineTotal = getItemLineTotal(item);
-                  return (
-                    <div className="cart-item-total">
-                      {pricing.hasDiscount && (
-                        <span className="line-total-original">
-                          AU${originalLine.toFixed(2)}
-                        </span>
-                      )}
-                      <span>AU${lineTotal.toFixed(2)}</span>
+                      <h3 className="line-clamp-2 text-base font-semibold text-neutral-900 transition group-hover:text-accent-dark">
+                        {item.name}
+                      </h3>
+                    </Link>
+                    <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+                      {item.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      {(() => {
+                        const pricing = getItemPriceBreakdown(item);
+                        return (
+                          <div className="flex items-baseline gap-2">
+                            {pricing.hasDiscount && (
+                              <span className="text-xs font-semibold text-neutral-400 line-through">
+                                AU${pricing.originalPrice.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-lg font-extrabold tracking-tight text-neutral-900">
+                              AU${pricing.finalPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItem(item)}
+                          className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(item.id)}
+                          className="flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark hover:bg-primary/15 sm:flex-none"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  );
-                })()}
+
+                    <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                      <div className="grid gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <div className="flex items-center justify-between gap-3 sm:block">
+                          <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                            Quantity
+                          </span>
+                          <div className="inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
+                              disabled={Number(item.quantity) <= 1}
+                            >
+                              −
+                            </button>
+                            <span className="inline-flex h-10 w-12 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {(() => {
+                          const pricing = getItemPriceBreakdown(item);
+                          const originalLine = pricing.originalPrice * item.quantity;
+                          const lineTotal = getItemLineTotal(item);
+                          return (
+                            <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+                              <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                                Total
+                              </span>
+                              <div className="flex items-baseline justify-end gap-2 sm:mt-1">
+                                {pricing.hasDiscount && (
+                                  <span className="text-xs font-semibold text-neutral-400 line-through">
+                                    AU${originalLine.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="text-lg font-extrabold tracking-tight text-neutral-900">
+                                  AU${lineTotal.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-          <div className="cart-summary">
-            <h2>Order Summary</h2>
-            <div className="summary-row">
-              <span>Subtotal</span>
-              <span>AU${originalTotal.toFixed(2)}</span>
-            </div>
-            {hasDiscount && (
-              <div className="summary-row discount">
-                <span>Member Discount ({Math.round(discountRate * 100)}%)</span>
-                <span>-AU${discountTotal.toFixed(2)}</span>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white/85 p-5 shadow-panel backdrop-blur sm:p-6 lg:sticky lg:top-24">
+            <h2 className="text-xl font-semibold tracking-tight text-neutral-900">Order Summary</h2>
+            <div className="mt-6 grid gap-3 text-sm">
+              <div className="flex items-center justify-between font-semibold text-neutral-700">
+                <span>Subtotal</span>
+                <span>AU${originalTotal.toFixed(2)}</span>
               </div>
-            )}
-            <div className="summary-row">
-              <span>Shipping</span>
-              <span>Free</span>
+              {hasDiscount && (
+                <div className="flex items-center justify-between font-semibold text-primary-dark">
+                  <span>Member Discount ({Math.round(discountRate * 100)}%)</span>
+                  <span>-AU${discountTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between font-semibold text-neutral-700">
+                <span>Shipping</span>
+                <span>Free</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-base font-extrabold text-neutral-900">
+                <span>Total</span>
+                <span>AU${discountedTotal.toFixed(2)}</span>
+              </div>
             </div>
-            <div className="summary-row total">
-              <span>Total</span>
-              <span>AU${discountedTotal.toFixed(2)}</span>
-            </div>
+
             <button
               onClick={handleCheckout}
-              className="btn btn-primary btn-large btn-checkout"
+              className="mt-6 w-full rounded-full bg-primary px-6 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark"
             >
               Proceed to Checkout
             </button>
-            <button onClick={clearCart} className="btn btn-outline btn-clear">
+            <button
+              onClick={clearCart}
+              className="mt-3 w-full rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-100"
+            >
               Clear Cart
             </button>
-            <Link href="/products/all" className="continue-shopping">
+            <Link href="/products/all" className="mt-4 block text-center text-sm font-semibold text-accent-dark hover:text-accent">
               Continue Shopping
             </Link>
           </div>
         </div>
       </div>
       {isModalOpen && (
-        <div
-          className="cart-modal-backdrop"
-          onClick={() => setSelectedItem(null)}
-        >
+        <div className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setSelectedItem(null)}>
           <div
-            className="cart-modal"
+            className="my-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-label="Product details"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              className="cart-modal-close"
-              onClick={() => setSelectedItem(null)}
-              aria-label="Close"
-            >
-              x
-            </button>
-            <div className="cart-modal-body">
-              <img
-                src={selectedItem?.image}
-                alt={selectedItem?.name || "Product"}
-                onError={(e) => {
-                  e.currentTarget.src = "/images/logo.png";
-                }}
-              />
-              <div className="cart-modal-info">
-                <p className="cart-modal-brand">
-                  {selectedItem?.brand || "Remote Pro"}
-                </p>
-                <h3>{selectedItem?.name}</h3>
-                {selectedItem?.description && (
-                  <p className="cart-modal-description">
-                    {selectedItem.description}
+            <div className="relative p-4 pt-14 sm:p-5 sm:pt-4 lg:p-7 lg:pt-5">
+              <button
+                type="button"
+                className="absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-700 shadow-xs transition hover:bg-neutral-100 hover:text-neutral-900 lg:right-4 lg:top-4"
+                aria-label="Close details"
+                onClick={() => setSelectedItem(null)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </button>
+
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-7">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-100 p-4 sm:p-5">
+                  <div className="flex h-full min-h-56 items-center justify-center rounded-xl bg-white p-4 sm:min-h-64">
+                    <img
+                      src={selectedItem?.image}
+                      alt={selectedItem?.name || 'Product'}
+                      className="h-auto max-h-80 w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/mainlogo.png";
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    {selectedItem?.sku || selectedItem?.brand || "ALLREMOTES"}
                   </p>
-                )}
-                <div className="cart-modal-meta">
-                  <div>
-                    <span>Category</span>
-                    <strong>
-                      {selectedItem?.category === "car"
-                        ? "Car Remote"
-                        : "Garage Remote"}
-                    </strong>
+                  <h3 className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight text-neutral-900">
+                    {selectedItem?.name}
+                  </h3>
+                  <p className="mt-3 break-words text-sm leading-7 text-neutral-600">
+                    {selectedItem?.description &&
+                    selectedItem.description.trim().toLowerCase() !== String(selectedItem?.name || "").trim().toLowerCase()
+                      ? selectedItem.description
+                      : "Review item details, condition, and category before checkout."}
+                  </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Category</div>
+                      <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
+                        {getCategoryLabel(selectedItem?.category)}
+                      </strong>
+                    </div>
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Condition</div>
+                      <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
+                        {getConditionLabel(selectedItem)}
+                      </strong>
+                    </div>
                   </div>
-                  <div>
-                    <span>Condition</span>
-                    <strong>{selectedItem?.condition || "Brand New"}</strong>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Price</div>
+                      <div className="mt-2">
+                        {(() => {
+                          const pricing = getItemPriceBreakdown(selectedItem || {});
+                          return pricing.hasDiscount ? (
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <span className="text-sm font-semibold text-neutral-400 line-through">AU${pricing.originalPrice.toFixed(2)}</span>
+                              <strong className="text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${pricing.finalPrice.toFixed(2)}</strong>
+                            </div>
+                          ) : (
+                            <strong className="break-words text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${pricing.finalPrice.toFixed(2)}</strong>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
+                      <strong className="mt-2 block text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">{selectedItem?.quantity}</strong>
+                    </div>
+
+                    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Total</div>
+                      <div className="mt-2">
+                        {(() => {
+                          const lineTotal = getItemLineTotal(selectedItem || {});
+                          const pricing = getItemPriceBreakdown(selectedItem || {});
+                          const originalLine = pricing.originalPrice * (selectedItem?.quantity || 1);
+                          return pricing.hasDiscount ? (
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <span className="text-sm font-semibold text-neutral-400 line-through">AU${originalLine.toFixed(2)}</span>
+                              <strong className="text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${lineTotal.toFixed(2)}</strong>
+                            </div>
+                          ) : (
+                            <strong className="break-words text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">AU${lineTotal.toFixed(2)}</strong>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="cart-modal-pricing">
-                  <div>
-                    <span>Price</span>
-                    {(() => {
-                      const pricing = getItemPriceBreakdown(selectedItem || {});
-                      return pricing.hasDiscount ? (
-                        <div className="modal-price-stack">
-                          <span className="modal-price-original">
-                            AU${pricing.originalPrice.toFixed(2)}
-                          </span>
-                          <strong className="modal-price-discounted">
-                            AU${pricing.finalPrice.toFixed(2)}
-                          </strong>
-                        </div>
-                      ) : (
-                        <strong>AU${pricing.finalPrice.toFixed(2)}</strong>
-                      );
-                    })()}
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <button
+                      type="button"
+                      className="rounded-full border border-transparent bg-transparent px-4 py-3 text-sm font-extrabold text-accent-dark hover:bg-accent/5"
+                      onClick={() => setSelectedItem(null)}
+                    >
+                      Continue Shopping
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+                      onClick={handleCheckout}
+                    >
+                      Go to Checkout
+                    </button>
                   </div>
-                  <div>
-                    <span>Quantity</span>
-                    <strong>{selectedItem?.quantity}</strong>
-                  </div>
-                  <div>
-                    <span>Total</span>
-                    {(() => {
-                      const lineTotal = getItemLineTotal(selectedItem || {});
-                      const pricing = getItemPriceBreakdown(selectedItem || {});
-                      const originalLine =
-                        pricing.originalPrice * (selectedItem?.quantity || 1);
-                      return pricing.hasDiscount ? (
-                        <div className="modal-price-stack">
-                          <span className="modal-price-original">
-                            AU${originalLine.toFixed(2)}
-                          </span>
-                          <strong className="modal-price-discounted">
-                            AU${lineTotal.toFixed(2)}
-                          </strong>
-                        </div>
-                      ) : (
-                        <strong>AU${lineTotal.toFixed(2)}</strong>
-                      );
-                    })()}
-                  </div>
-                </div>
-                <div className="cart-modal-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={() => setSelectedItem(null)}
-                  >
-                    Continue Shopping
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={handleCheckout}
-                  >
-                    Go to Checkout
-                  </button>
                 </div>
               </div>
             </div>
@@ -338,32 +440,27 @@ const Cart = () => {
         </div>
       )}
       {showCheckoutModal && (
-        <div
-          className="cart-modal-backdrop"
-          onClick={() => setShowCheckoutModal(false)}
-        >
+        <div className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setShowCheckoutModal(false)}>
           <div
-            className="cart-modal checkout-modal"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-label="Checkout options"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              className="cart-modal-close"
-              onClick={() => setShowCheckoutModal(false)}
-              aria-label="Close"
-            >
-              x
-            </button>
-            <div className="checkout-modal-body">
-              <h3>Continue to Checkout</h3>
-              <p>Select how you want to checkout.</p>
-              <div className="checkout-modal-actions">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-4">
+              <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">Checkout</div>
+              <button type="button" className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200" onClick={() => setShowCheckoutModal(false)}>
+                Close
+              </button>
+            </div>
+            <div className="p-6">
+              <h3 className="text-xl font-semibold tracking-tight text-neutral-900">Continue to Checkout</h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">Select how you want to checkout.</p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  className="btn btn-outline"
+                  className="rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-100"
                   onClick={() => {
                     setShowCheckoutModal(false);
                     router.push("/login");
@@ -373,7 +470,7 @@ const Cart = () => {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
                   onClick={() => {
                     setShowCheckoutModal(false);
                     router.push("/checkout?guest=1");

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useStore } from '../../context/StoreContext';
 import ProductCard from '../ProductCard';
 import { useAuth } from "../../context/AuthContext";
+import { btn, tw } from "./tw";
 
 const PreferencesSaved = () => {
   const { user } = useAuth();
@@ -106,34 +107,33 @@ const PreferencesSaved = () => {
   };
 
   return (
-    <div className="account-section">
-      <h2>Preferences & Saved Items</h2>
+    <div className={tw.section}>
+      <h2 className={tw.sectionTitle}>Preferences & Saved Items</h2>
       
-      <div className="section-content">
-        <div className="wishlist-section">
-            <div className="section-header">
-              <h3>Wishlist / Favorites</h3>
-            <Link href="/products/all" className="btn btn-gradient btn-small">
+      <div className={tw.sectionContent}>
+        <div className="grid gap-3">
+            <div className={tw.sectionHeader}>
+              <h3 className={tw.sectionH3}>Wishlist / Favorites</h3>
+            <Link href="/products/all" className={btn.gradientSm}>
               Browse More
             </Link>
           </div>
           
           {wishlist.length === 0 ? (
-            <div className="empty-state">
+            <div className={tw.emptyState}>
               <p>Your wishlist is empty</p>
-              <Link href="/products/all" className="btn btn-gradient">
+              <Link href="/products/all" className={btn.gradient}>
                 Start Shopping
               </Link>
             </div>
           ) : (
-            <div className="products-grid-mini">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,280px))] items-start justify-start gap-3.5">
               {wishlist.map(product => (
-                <div key={product.id} style={{ position: "relative" }}>
-                  <ProductCard product={product} />
+                <div key={product.id} className="relative">
+                  <ProductCard product={product} showWishlistButton={false} />
                   <button
                     type="button"
-                    className="btn btn-outline-red btn-small"
-                    style={{ position: "absolute", top: 10, right: 10 }}
+                    className={`${btn.outlineDangerSm} absolute right-3 top-3 z-40 px-3 py-1.5 text-[11px]`}
                     onClick={() => removeWishlist(product.id)}
                   >
                     Remove
@@ -144,24 +144,23 @@ const PreferencesSaved = () => {
           )}
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="recently-viewed-section">
-          <h3>Recently Viewed Items</h3>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Recently Viewed Items</h3>
           
           {recentlyViewed.length === 0 ? (
-            <div className="empty-state">
+            <div className={tw.emptyState}>
               <p>No recently viewed items</p>
             </div>
           ) : (
-            <div className="products-grid-mini">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,280px))] items-start justify-start gap-3.5">
               {recentlyViewed.map(product => (
-                <div key={product.id} style={{ position: "relative" }}>
-                  <ProductCard product={product} />
+                <div key={product.id} className="relative">
+                  <ProductCard product={product} showWishlistButton={false} />
                   <button
                     type="button"
-                    className="btn btn-outline-red btn-small"
-                    style={{ position: "absolute", top: 10, right: 10 }}
+                    className={`${btn.outlineDangerSm} absolute right-3 top-3 z-40 px-3 py-1.5 text-[11px]`}
                     onClick={() => removeRecently(product.id)}
                   >
                     Remove
@@ -172,19 +171,19 @@ const PreferencesSaved = () => {
           )}
         </div>
 
-        <div className="section-divider"></div>
+        <div className={tw.divider}></div>
 
-        <div className="saved-searches-section">
-          <h3>Saved Searches</h3>
+        <div className="grid gap-3">
+          <h3 className={tw.sectionH3}>Saved Searches</h3>
 
-          <div className="account-form" style={{ marginBottom: 14 }}>
-            <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label>Search query</label>
-                <input value={newSearch} onChange={(e) => setNewSearch(e.target.value)} placeholder="e.g. garage remote" />
+          <div className={tw.formSpaced}>
+            <div className={tw.formRowSearch}>
+              <div className={tw.formGroup}>
+                <label className={tw.label}>Search query</label>
+                <input className={tw.input} value={newSearch} onChange={(e) => setNewSearch(e.target.value)} placeholder="e.g. garage remote" />
               </div>
-              <div className="form-group" style={{ display: "flex", alignItems: "flex-end" }}>
-                <button type="button" className="btn btn-secondary" onClick={addSearch} disabled={!newSearch.trim()}>
+              <div className="flex items-end">
+                <button type="button" className={btn.secondary} onClick={addSearch} disabled={!newSearch.trim()}>
                   Save Search
                 </button>
               </div>
@@ -192,20 +191,20 @@ const PreferencesSaved = () => {
           </div>
           
           {savedSearches.length === 0 ? (
-            <div className="empty-state">
+            <div className={tw.emptyState}>
               <p>No saved searches</p>
             </div>
           ) : (
-            <div className="searches-list">
+            <div className={tw.gridList}>
               {savedSearches.map((query) => (
-                <div key={query} className="search-item">
+                <div key={query} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 max-sm:flex-col max-sm:items-start">
                   <div>
-                    <Link href={`/products/all?search=${encodeURIComponent(query)}`} className="search-query">
+                    <Link href={`/products/all?search=${encodeURIComponent(query)}`} className="text-sm font-semibold text-accent-dark hover:underline">
                       "{query}"
                     </Link>
-                    <p className="search-count">{countMatches(query)} products found</p>
+                    <p className="text-xs text-neutral-500">{countMatches(query)} products found</p>
                   </div>
-                  <button type="button" className="btn btn-outline-red btn-small" onClick={() => removeSearch(query)}>
+                  <button type="button" className={btn.outlineDangerSm} onClick={() => removeSearch(query)}>
                     Remove
                   </button>
                 </div>

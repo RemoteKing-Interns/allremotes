@@ -1,49 +1,52 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
-import { isAppleDevice } from "../../../utils/deviceDetection";
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
+import { Button } from "../../../components/ui/button";
 
-const Register = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+const Register = ({ googleEnabled }: { googleEnabled: boolean }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showAppleLogin, setShowAppleLogin] = useState(true);
+  const [showAppleLogin] = useState(true);
   const { register, loginWithOAuth } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Load Apple Sign In SDK on all devices
-    const script = document.createElement('script');
-    script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+    const script = document.createElement("script");
+    script.src =
+      "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
     script.async = true;
     document.body.appendChild(script);
-    
+
     script.onload = () => {
       const clientId = process.env.NEXT_PUBLIC_APPLE_SERVICE_ID;
       if ((window as any).AppleID && clientId) {
         try {
           (window as any).AppleID.auth.init({
-            clientId: clientId,
-            scope: 'name email',
+            clientId,
+            scope: "name email",
             redirectURI: window.location.origin,
-            usePopup: true
+            usePopup: true,
           });
-        } catch (error) {
-          console.error('Failed to initialize Apple Sign In:', error);
+        } catch (appleError) {
+          console.error("Failed to initialize Apple Sign In:", appleError);
         }
       } else {
-        console.warn('Apple Sign In not configured - missing NEXT_PUBLIC_APPLE_SERVICE_ID');
+        console.warn(
+          "Apple Sign In not configured - missing NEXT_PUBLIC_APPLE_SERVICE_ID",
+        );
       }
     };
-    
+
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
@@ -51,130 +54,153 @@ const Register = () => {
     };
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
     setLoading(true);
 
     const result = register(name, email, password);
-    
+
     if (result.success) {
       router.push("/");
     } else {
-      setError(result.error || 'Failed to register');
+      setError(result.error || "Failed to register");
     }
-    
+
     setLoading(false);
   };
 
-  const handleGoogleRegister = async (credentialResponse) => {
-    setError('');
+  const handleGoogleRegister = async (credentialResponse: any) => {
+    setError("");
     setLoading(true);
-    
+
     try {
-      // Decode the JWT token from Google
+      if (!credentialResponse?.credential) {
+        throw new Error("Missing Google credential");
+      }
+
       const decoded: any = jwtDecode(credentialResponse.credential);
-      
       const googleUser = {
         id: decoded.sub,
-        name: decoded.name || 'Google User',
-        email: decoded.email || '',
-        provider: 'google',
-        picture: decoded.picture || null
+        name: decoded.name || "Google User",
+        email: decoded.email || "",
+        provider: "google",
+        picture: decoded.picture || null,
       };
-      
-      const result = await loginWithOAuth('google', googleUser);
-      
+
+      const result = await loginWithOAuth("google", googleUser);
+
       if (result.success) {
         router.push("/");
       } else {
-        setError('Failed to register with Google');
+        setError("Failed to register with Google");
       }
-    } catch (err) {
-      setError('Failed to register with Google: ' + err.message);
+    } catch (err: any) {
+      setError(
+        `Failed to register with Google: ${err?.message || "Unknown error"}`,
+      );
     }
-    
+
     setLoading(false);
   };
 
   const handleAppleRegister = async () => {
-    setError('');
+    setError("");
     setLoading(true);
-    
+
     try {
-      // Check if Apple Sign In is available
-      if (typeof window === 'undefined' || !(window as any).AppleID) {
-        setError('Apple Sign In is not available');
+      if (typeof window === "undefined" || !(window as any).AppleID) {
+        setError("Apple Sign In is not available");
         setLoading(false);
         return;
       }
 
-      // Trigger Apple Sign In
       const data = await (window as any).AppleID.auth.signIn();
-      
-      // Send authorization code to backend for verification
-      const response = await fetch('/api/auth/apple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/apple", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: data.authorization.code,
-          user: data.user
-        })
+          user: data.user,
+        }),
       });
 
       const appleResult = await response.json();
 
       if (!appleResult.success) {
-        setError('Failed to verify Apple Sign In');
+        setError("Failed to verify Apple Sign In");
         setLoading(false);
         return;
       }
 
-      // Register with OAuth
-      const result = await loginWithOAuth('apple', {
+      const result = await loginWithOAuth("apple", {
         id: appleResult.user.id,
         name: appleResult.user.name,
         email: appleResult.user.email,
-        provider: 'apple',
-        picture: null
+        provider: "apple",
+        picture: null,
       });
-      
+
       if (result.success) {
         router.push("/");
       } else {
-        setError('Failed to register with Apple');
+        setError("Failed to register with Apple");
       }
     } catch (err) {
-      console.error('Apple registration error:', err);
-      setError('Failed to register with Apple');
+      console.error("Apple registration error:", err);
+      setError("Failed to register with Apple");
     }
-    
+
     setLoading(false);
   };
 
   return (
-    <div className="auth-page">
-      <div className="container">
-        <div className="auth-container">
-          <h1>Register</h1>
-          <p className="auth-subtitle">Create a new account to start shopping.</p>
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
+    <div className="mx-auto w-full max-w-container-wide px-container py-10 sm:py-14">
+      <div className="grid items-stretch gap-8 lg:grid-cols-2 lg:gap-12">
+        <motion.div
+          className="rounded-2xl border border-neutral-200 bg-neutral-50/90 p-6 shadow-panel backdrop-blur md:p-8"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          <Link href="/" className="inline-flex items-center" aria-label="ALLREMOTES home">
+            <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto" />
+          </Link>
+
+          <div className="mt-6">
+            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
+              New Account
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+              Register
+            </h1>
+            <p className="mt-3 max-w-prose text-sm leading-6 text-neutral-600">
+              Create your account to save orders, checkout faster, and manage remote purchases with less friction.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mt-6 rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm font-semibold text-primary-dark">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+            <div className="grid gap-2">
+              <label htmlFor="name" className="text-sm font-semibold text-neutral-800">
+                Full Name
+              </label>
               <input
                 type="text"
                 id="name"
@@ -182,11 +208,14 @@ const Register = () => {
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="Enter your full name"
+                className="h-12 w-full rounded-2xl border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-500 focus:border-accent/50"
               />
             </div>
-            
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
+
+            <div className="grid gap-2">
+              <label htmlFor="email" className="text-sm font-semibold text-neutral-800">
+                Email
+              </label>
               <input
                 type="email"
                 id="email"
@@ -194,11 +223,14 @@ const Register = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
+                className="h-12 w-full rounded-2xl border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-500 focus:border-accent/50"
               />
             </div>
-            
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
+
+            <div className="grid gap-2">
+              <label htmlFor="password" className="text-sm font-semibold text-neutral-800">
+                Password
+              </label>
               <input
                 type="password"
                 id="password"
@@ -207,11 +239,14 @@ const Register = () => {
                 required
                 placeholder="Create a password (min. 6 characters)"
                 minLength={6}
+                className="h-12 w-full rounded-2xl border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-500 focus:border-accent/50"
               />
             </div>
-            
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
+
+            <div className="grid gap-2">
+              <label htmlFor="confirmPassword" className="text-sm font-semibold text-neutral-800">
+                Confirm Password
+              </label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -220,54 +255,116 @@ const Register = () => {
                 required
                 placeholder="Confirm your password"
                 minLength={6}
+                className="h-12 w-full rounded-2xl border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-500 focus:border-accent/50"
               />
             </div>
-            
-            <button
-              type="submit"
-              className="btn btn-primary btn-large"
-              disabled={loading}
-            >
-              {loading ? 'Creating account...' : 'Register'}
-            </button>
+
+            <Button type="submit" size="lg" className="mt-2 w-full" disabled={loading}>
+              {loading ? "Creating account..." : "Register"}
+            </Button>
+
+            <div className="relative mt-2 flex items-center py-2">
+              <div className="flex-grow border-t border-neutral-200" />
+              <span className="shrink-0 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Or continue with
+              </span>
+              <div className="flex-grow border-t border-neutral-200" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex min-h-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-3 py-2 shadow-sm">
+                {googleEnabled ? (
+                  <GoogleLogin
+                    onSuccess={handleGoogleRegister}
+                    onError={() => setError("Google registration failed")}
+                    useOneTap={false}
+                    theme="outline"
+                    size="large"
+                    text="continue_with"
+                    shape="rectangular"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-neutral-400"
+                  >
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      className="h-5 w-5 opacity-50"
+                      alt="Google"
+                    />
+                    Google unavailable
+                  </button>
+                )}
+              </div>
+
+              {showAppleLogin && (
+                <button
+                  type="button"
+                  onClick={handleAppleRegister}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3 text-sm font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.701z" />
+                  </svg>
+                  Sign in with Apple
+                </button>
+              )}
+            </div>
           </form>
-          
-          <div className="oauth-divider">
-            <span>or continue with</span>
-          </div>
-          
-          <div className="oauth-buttons">
-            <div className="google-oauth-wrapper">
-              <GoogleLogin
-                onSuccess={handleGoogleRegister}
-                onError={() => setError('Google registration failed')}
-                useOneTap={false}
-                theme="outline"
-                size="large"
-                text="continue_with"
-                shape="rectangular"
-              />
-            </div>
-            
-            {showAppleLogin && (
-              <button
-                type="button"
-                className="btn-oauth btn-apple"
-                onClick={handleAppleRegister}
-                disabled={loading}
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M14.94 13.52c-.26.59-.39.86-.73 1.38-.48.74-1.16 1.66-2 1.67-.75.01-1.01-.49-1.87-.48-.86 0-1.14.49-1.86.49-.83.01-1.46-.85-1.94-1.59-1.35-2.07-1.49-4.49-.66-5.78.59-.92 1.52-1.46 2.39-1.46.89 0 1.45.49 2.18.49.71 0 1.14-.49 2.16-.49.77 0 1.58.42 2.16 1.14-1.9 1.04-1.59 3.75.17 4.63zm-2.95-8.8c.39-.5.68-1.19.59-1.9-.64.03-1.39.44-1.83.97-.39.47-.73 1.18-.64 1.87.72.05 1.45-.38 1.88-.94z"/>
-                </svg>
-                Continue with Apple
-              </button>
-            )}
-          </div>
-          
-          <p className="auth-footer">
-            Already have an account? <Link href="/login">Login here</Link>
+
+          <p className="mt-6 text-sm text-neutral-600">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-accent-dark hover:text-accent">
+              Login here
+            </Link>
           </p>
-        </div>
+        </motion.div>
+
+        <motion.aside
+          className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.14),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(251,248,245,0.85))] p-6 shadow-panel backdrop-blur md:p-8 lg:self-start"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut", delay: 0.08 }}
+        >
+          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
+            Designed for repeat buyers
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+            Set up once, then manage purchases, addresses, and future orders from one clean account area.
+          </h2>
+
+          <div className="mt-6 grid gap-4">
+            {[
+              {
+                title: "Save account details",
+                desc: "Keep your customer information ready for faster future checkouts.",
+              },
+              {
+                title: "Track remote purchases",
+                desc: "Review what you bought and quickly reorder the models you need again.",
+              },
+              {
+                title: "Support with context",
+                desc: "Reach support with your account history already connected to your orders.",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-xs"
+              >
+                <strong className="block text-sm font-semibold text-neutral-900">
+                  {item.title}
+                </strong>
+                <span className="mt-1 block text-sm leading-6 text-neutral-600">
+                  {item.desc}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.aside>
       </div>
     </div>
   );
@@ -275,15 +372,15 @@ const Register = () => {
 
 const RegisterWithProvider = () => {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  
+
   if (!clientId) {
-    console.error('Google Client ID not found in environment variables');
-    return <Register />;
+    console.error("Google Client ID not found in environment variables");
+    return <Register googleEnabled={false} />;
   }
-  
+
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <Register />
+      <Register googleEnabled />
     </GoogleOAuthProvider>
   );
 };
