@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const OrderSuccess = () => {
+const OrderSuccessContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [orderDetails, setOrderDetails] = useState(null);
@@ -87,6 +87,14 @@ const OrderSuccess = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const OrderSuccess = () => {
+  return (
+    <Suspense fallback={<div className="order-success-page"><div className="container"><div className="loading">Loading...</div></div></div>}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 };
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getDb } from '../../../lib/mongo';
+import { getDb } from '../../../../lib/mongo';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 

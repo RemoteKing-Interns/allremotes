@@ -31,11 +31,7 @@ const Checkout = () => {
     address: '',
     city: '',
     state: '',
-    zipCode: '',
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: ''
+    zipCode: ''
   });
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -510,67 +506,6 @@ const Checkout = () => {
             </div>
 
             <div className="form-section">
-<<<<<<< Updated upstream
-              <h2>Payment Information</h2>
-              <div className="form-group">
-                <label>Card Number</label>
-                <input
-                  type="text"
-                  name="cardNumber"
-                  value={formData.cardNumber}
-                  onChange={handleChange}
-                  required
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                />
-              </div>
-              <div className="form-group">
-                <label>Cardholder Name</label>
-                <input
-                  type="text"
-                  name="cardName"
-                  value={formData.cardName}
-                  onChange={handleChange}
-                  required
-                  placeholder="Name on card"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="text"
-                    name="expiryDate"
-                    value={formData.expiryDate}
-                    onChange={handleChange}
-                    required
-                    placeholder="MM/YY"
-                    maxLength={5}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>CVV</label>
-                  <input
-                    type="text"
-                    name="cvv"
-                    value={formData.cvv}
-                    onChange={handleChange}
-                    required
-                    placeholder="123"
-                    maxLength={3}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary btn-large checkout-submit"
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : `Place Order - AU$${discountedTotal.toFixed(2)}`}
-            </button>
-=======
               <h2>Shipping Options</h2>
               <ShippingCalculator
                 address={formData}
@@ -642,7 +577,6 @@ const Checkout = () => {
                 </button>
               )}
             </div>
->>>>>>> Stashed changes
           </form>
 
           <div className="order-summary">
