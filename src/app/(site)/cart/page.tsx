@@ -149,7 +149,7 @@ const Cart = () => {
                 <div className="flex flex-col gap-4 sm:flex-row">
                   <Link
                     href={getProductHref(item.id)}
-                    className="group mx-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 transition hover:border-accent/40 hover:bg-accent/5 sm:mx-0"
+                    className="group mx-auto shrink-0 rounded-2xl border border-neutral-200 bg-white p-3 transition hover:border-accent/40 sm:mx-0"
                     aria-label={`View details for ${item.name}`}
                   >
                     <img
@@ -332,7 +332,7 @@ const Cart = () => {
               </button>
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-7">
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-100 p-4 sm:p-5">
+                <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5">
                   <div className="flex h-full min-h-56 items-center justify-center rounded-xl bg-white p-4 sm:min-h-64">
                     <img
                       src={selectedItem?.image}

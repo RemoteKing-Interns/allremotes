@@ -4,6 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { useStore } from "../../../context/StoreContext";
 import ProductCard from "../../../components/ProductCard";
+import {
+  matchesSelectedCategory,
+  resolveProductsCategoryFromMenu,
+  toProductsCategoryPath,
+} from "../../../lib/category";
 
 export default function CategoryPageClient({ category }: { category: string }) {
   const { getNavigation, getProducts } = useStore();
@@ -20,7 +25,10 @@ export default function CategoryPageClient({ category }: { category: string }) {
     contact: "contact",
   };
 
-  const menuItem = navigationMenu[categoryMap[category] || category];
+  const menuCategoryKey = categoryMap[category] || category;
+  const menuItem = navigationMenu[menuCategoryKey];
+  const productsCategory = resolveProductsCategoryFromMenu(menuCategoryKey);
+  const productsListingPath = toProductsCategoryPath(menuCategoryKey);
 
   const visibleColumns = (menuItem?.columns || [])
     .map((col: any) => ({
@@ -29,14 +37,9 @@ export default function CategoryPageClient({ category }: { category: string }) {
     }))
     .filter((col: any) => (col.items || []).length > 0);
 
-  let products: any[] = [];
-  if (category === "garage-gate") {
-    products = allProducts.filter((p: any) => p.category === "garage");
-  } else if (category === "automotive") {
-    products = allProducts.filter((p: any) => p.category === "car");
-  } else {
-    products = allProducts;
-  }
+  const products = allProducts.filter((p: any) =>
+    matchesSelectedCategory(p?.category, productsCategory),
+  );
 
   const subtitleMap: Record<string, string> = {
     "garage-gate": "Explore our wide range of garage and gate automation products",
@@ -97,7 +100,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
                             ? `/products/all?brand=${encodeURIComponent(
                                 String(item.name || "").toUpperCase(),
                               )}`
-                            : "/products/all"
+                            : productsListingPath
                         }
                         className="group flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
                       >
@@ -133,7 +136,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
           <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Featured Products</h2>
             <Link
-              href="/products/all"
+              href={productsListingPath}
               className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               View All

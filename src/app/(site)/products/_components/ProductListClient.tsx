@@ -7,6 +7,10 @@ import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
+import {
+  matchesSelectedCategory,
+  resolveProductCategory,
+} from "../../../../lib/category";
 import { Button } from "../../../../components/ui/button";
 import ProductCard from "../../../../components/ProductCard";
 import {
@@ -131,11 +135,15 @@ export default function ProductListClient({
   const products = getProducts() || [];
   const initialBrand = searchParams.get("brand") || "all";
   const initialSearch = searchParams.get("search") || "";
-  const initialCategoryFromUrl = searchParams.get("category") || "all";
+  const initialCategoryFromUrl = resolveProductCategory(searchParams.get("category") || "all");
+  const routeCategoryKey = useMemo(
+    () => resolveProductCategory(routeCategory || "all"),
+    [routeCategory],
+  );
 
   const initialCategory =
-    routeCategory && routeCategory !== "all"
-      ? routeCategory
+    routeCategoryKey !== "all"
+      ? routeCategoryKey
       : initialCategoryFromUrl;
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
@@ -155,15 +163,16 @@ export default function ProductListClient({
   useEffect(() => {
     const urlBrand = searchParams.get("brand") || "all";
     const urlSearch = searchParams.get("search") || "";
-    const urlCategory = searchParams.get("category") || "all";
+    const urlCategory = resolveProductCategory(searchParams.get("category") || "all");
     const urlPage = Number(searchParams.get("page") || "1");
 
     setSelectedBrand(urlBrand);
     setSearchQuery(urlSearch);
-    if (!routeCategory || routeCategory === "all") setSelectedCategory(urlCategory);
+    if (routeCategoryKey === "all") setSelectedCategory(urlCategory);
+    else setSelectedCategory(routeCategoryKey);
     setCurrentPage(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString(), routeCategory]);
+  }, [searchParams.toString(), routeCategoryKey]);
 
   const brands = useMemo<string[]>(() => {
     const brandValues = (products || [])
@@ -174,10 +183,9 @@ export default function ProductListClient({
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    let result =
-      selectedCategory === "all"
-        ? products
-        : products.filter((p) => p.category === selectedCategory);
+    let result = products.filter((p) =>
+      matchesSelectedCategory(p.category, selectedCategory),
+    );
 
     if (selectedBrand !== "all") {
       result = result.filter((p) => p.brand === selectedBrand);
@@ -248,7 +256,7 @@ export default function ProductListClient({
     applyParam(next, "search", searchQuery || null);
     applyParam(next, "page", String(clampedPage));
 
-    if (!routeCategory || routeCategory === "all") {
+    if (routeCategoryKey === "all") {
       applyParam(next, "category", selectedCategory === "all" ? null : selectedCategory);
     }
 
@@ -256,7 +264,7 @@ export default function ProductListClient({
     const nextUrl = nextQs ? `${pathname}?${nextQs}` : pathname;
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) window.history.replaceState(null, "", nextUrl);
-  }, [pathname, selectedBrand, searchQuery, selectedCategory, clampedPage, routeCategory]);
+  }, [pathname, selectedBrand, searchQuery, selectedCategory, clampedPage, routeCategoryKey]);
 
   const visiblePages = useMemo(() => {
     const pages = new Set<number | string>([1, totalPages]);
@@ -290,6 +298,21 @@ export default function ProductListClient({
     updateQuantity(addedItem.id, Math.max(1, Math.floor(parsed)));
   };
 
+  const handleCategorySelectChange = (next: string) => {
+    const nextCategory = resolveProductCategory(next);
+    setSelectedCategory(nextCategory);
+    if (routeCategoryKey !== "all") {
+      router.push(`/products/${nextCategory === "all" ? "all" : nextCategory}`);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory(routeCategoryKey !== "all" ? routeCategoryKey : "all");
+    setSelectedBrand("all");
+    setStockStatus("all");
+  };
+
   return (
     <div className="animate-fadeIn">
       <div className="container py-8 sm:py-10">
@@ -320,20 +343,10 @@ export default function ProductListClient({
 	              selectedBrand={selectedBrand}
 	              stockStatus={stockStatus}
 	              onSearchQueryChange={(next) => setSearchQuery(next)}
-	              onSelectedCategoryChange={(next) => {
-	                setSelectedCategory(next);
-	                if (routeCategory && routeCategory !== "all") {
-	                  router.push(`/products/${next === "all" ? "all" : next}`);
-	                }
-	              }}
+	              onSelectedCategoryChange={handleCategorySelectChange}
 	              onSelectedBrandChange={(next) => setSelectedBrand(next)}
 	              onStockStatusChange={(next) => setStockStatus(next)}
-	              onClear={() => {
-	                setSearchQuery("");
-	                setSelectedCategory(routeCategory && routeCategory !== "all" ? routeCategory : "all");
-	                setSelectedBrand("all");
-	                setStockStatus("all");
-	              }}
+	              onClear={resetFilters}
 	            />
           </aside>
 
@@ -353,22 +366,10 @@ export default function ProductListClient({
                     selectedBrand={selectedBrand}
                     stockStatus={stockStatus}
                     onSearchQueryChange={(next) => setSearchQuery(next)}
-                    onSelectedCategoryChange={(next) => {
-                      setSelectedCategory(next);
-                      if (routeCategory && routeCategory !== "all") {
-                        router.push(`/products/${next === "all" ? "all" : next}`);
-                      }
-                    }}
+                    onSelectedCategoryChange={handleCategorySelectChange}
                     onSelectedBrandChange={(next) => setSelectedBrand(next)}
                     onStockStatusChange={(next) => setStockStatus(next)}
-                    onClear={() => {
-                      setSearchQuery("");
-                      setSelectedCategory(
-                        routeCategory && routeCategory !== "all" ? routeCategory : "all",
-                      );
-                      setSelectedBrand("all");
-                      setStockStatus("all");
-                    }}
+                    onClear={resetFilters}
                   />
                 </div>
               </SheetContent>

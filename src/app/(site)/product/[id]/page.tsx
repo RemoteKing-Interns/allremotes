@@ -139,7 +139,7 @@ const ProductDetail = () => {
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* LEFT: IMAGE */}
           <div
-            className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 shadow-panel"
+            className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-panel"
             onMouseMove={(e) => {
               const box = e.currentTarget;
               const img = box.querySelector("img");
@@ -160,7 +160,6 @@ const ProductDetail = () => {
               img.style.transform = "scale(2)";
             }}
           >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.10),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.08),transparent_45%)]" />
             <img
               src={product.image}
               alt={product.name}
