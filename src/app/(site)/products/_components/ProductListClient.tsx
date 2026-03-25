@@ -8,7 +8,8 @@ import { useCart } from "../../../../context/CartContext";
 import { useAuth } from "../../../../context/AuthContext";
 import { getPriceBreakdown, isDiscountEligible } from "../../../../utils/pricing";
 import {
-  matchesSelectedCategory,
+  getCategoryPageTitle,
+  matchesProductToCategory,
   resolveProductCategory,
 } from "../../../../lib/category";
 import { Button } from "../../../../components/ui/button";
@@ -26,6 +27,63 @@ const PAGE_SIZE = 15;
 function applyParam(searchParams: URLSearchParams, key: string, value: string | null) {
   if (value == null || value === "") searchParams.delete(key);
   else searchParams.set(key, value);
+}
+
+function normalizeBrand(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeSearchTerm(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getProductBrandSearchText(product: any) {
+  return [
+    product?.brand,
+    product?.name,
+    product?.title,
+    product?.model,
+    product?.description,
+    product?.sku,
+    product?.product_code,
+    product?.product_description,
+    product?.product_group,
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeSearchTerm(value))
+    .join(" ");
+}
+
+function matchesBrandFilter(product: any, selectedBrand: string) {
+  if (!selectedBrand || selectedBrand === "all") return true;
+
+  const selectedBrandKey = normalizeBrand(selectedBrand);
+  if (!selectedBrandKey) return true;
+
+  if (normalizeBrand(product?.brand) === selectedBrandKey) return true;
+
+  const selectedTerm = normalizeSearchTerm(selectedBrand);
+  if (!selectedTerm) return false;
+
+  const productText = getProductBrandSearchText(product);
+  if (!productText) return false;
+
+  const paddedText = ` ${productText} `;
+  const paddedTerm = ` ${selectedTerm} `;
+
+  if (paddedText.includes(paddedTerm) || productText.includes(selectedTerm)) {
+    return true;
+  }
+
+  // Fallback: support brand labels that include extra words (e.g. "ELSEMA RECEIVERS").
+  const tokens = selectedTerm.split(" ").filter((token) => token.length >= 3);
+  if (tokens.length === 0) return false;
+  return tokens.some((token) => productText.includes(token));
 }
 
 function FiltersPanel({
@@ -182,13 +240,31 @@ export default function ProductListClient({
     return ["all", ...unique];
   }, [products]);
 
+  const brandsWithSelected = useMemo(() => {
+    if (!selectedBrand || selectedBrand === "all") return brands;
+    const selectedKey = normalizeBrand(selectedBrand);
+    const hasSelected = brands.some((b) => normalizeBrand(b) === selectedKey);
+    if (hasSelected) return brands;
+    return ["all", selectedBrand, ...brands.filter((b) => b !== "all")];
+  }, [brands, selectedBrand]);
+
+  // Keep brand query param case-insensitive while still selecting a visible option value.
+  useEffect(() => {
+    if (!selectedBrand || selectedBrand === "all") return;
+    const selectedKey = normalizeBrand(selectedBrand);
+    const matched = brands.find((b) => normalizeBrand(b) === selectedKey);
+    if (matched && matched !== selectedBrand) {
+      setSelectedBrand(matched);
+    }
+  }, [brands, selectedBrand]);
+
   const filteredProducts = useMemo(() => {
     let result = products.filter((p) =>
-      matchesSelectedCategory(p.category, selectedCategory),
+      matchesProductToCategory(p, selectedCategory),
     );
 
     if (selectedBrand !== "all") {
-      result = result.filter((p) => p.brand === selectedBrand);
+      result = result.filter((p) => matchesBrandFilter(p, selectedBrand));
     }
 
     if (searchQuery.trim()) {
@@ -313,12 +389,20 @@ export default function ProductListClient({
     setStockStatus("all");
   };
 
+  const pageTitle = (() => {
+    const brandTitle = String(selectedBrand || "").trim();
+    if (brandTitle && selectedBrand !== "all") return brandTitle;
+    if (routeCategoryKey !== "all") return getCategoryPageTitle(routeCategory || selectedCategory);
+    if (selectedCategory !== "all") return getCategoryPageTitle(selectedCategory);
+    return "Shop All Products";
+  })();
+
   return (
     <div className="animate-fadeIn">
       <div className="container py-8 sm:py-10">
         <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-7 shadow-panel backdrop-blur sm:p-10">
           <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-            Shop All Products
+            {pageTitle}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
             Browse our complete range of remotes and accessories.
@@ -337,7 +421,7 @@ export default function ProductListClient({
         <div className="mt-8 grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
           <aside className="hidden rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur lg:block">
 	            <FiltersPanel
-	              brands={brands}
+	              brands={brandsWithSelected}
 	              searchQuery={searchQuery}
 	              selectedCategory={selectedCategory}
 	              selectedBrand={selectedBrand}
@@ -360,7 +444,7 @@ export default function ProductListClient({
                 </SheetHeader>
                 <div className="mt-4 grid gap-4">
                   <FiltersPanel
-                    brands={brands}
+                    brands={brandsWithSelected}
                     searchQuery={searchQuery}
                     selectedCategory={selectedCategory}
                     selectedBrand={selectedBrand}

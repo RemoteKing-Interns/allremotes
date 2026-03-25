@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useStore } from "../../../context/StoreContext";
 import ProductCard from "../../../components/ProductCard";
 import {
-  matchesSelectedCategory,
+  matchesProductToCategory,
   resolveProductsCategoryFromMenu,
   toProductsCategoryPath,
 } from "../../../lib/category";
@@ -38,7 +38,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
     .filter((col: any) => (col.items || []).length > 0);
 
   const products = allProducts.filter((p: any) =>
-    matchesSelectedCategory(p?.category, productsCategory),
+    matchesProductToCategory(p, productsCategory),
   );
 
   const subtitleMap: Record<string, string> = {
