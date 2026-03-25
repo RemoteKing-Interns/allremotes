@@ -11,6 +11,7 @@
   }
 }
 
+<<<<<<< Updated upstream
 @keyframes heroImageIn {
   from {
     transform: scale(1.08);
@@ -19,6 +20,18 @@
     transform: scale(1);
   }
 }
+=======
+@import "../styles/pages/Home.css";
+@import "../styles/pages/ProductList.css";
+@import "../styles/pages/ProductDetail.css";
+@import "../styles/pages/CategoryPage.css";
+@import "../styles/pages/Auth.css";
+@import "../styles/pages/Cart.css";
+@import "../styles/pages/Checkout.css";
+@import "../styles/pages/Account.css";
+@import "../styles/pages/Admin.css";
+@import "../styles/pages/StripePayment.css";
+>>>>>>> Stashed changes
 
 @keyframes heroContentIn {
   from {

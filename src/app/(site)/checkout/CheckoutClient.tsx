@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
+import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
+import ShippingCalculator from "../../../components/ShippingCalculator";
 
 const Checkout = () => {
   const {
@@ -43,6 +45,10 @@ const Checkout = () => {
   const [isAddressLoading, setIsAddressLoading] = useState(false);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cod'>('stripe');
+  const [stripePaymentComplete, setStripePaymentComplete] = useState(false);
+  const [selectedShipping, setSelectedShipping] = useState(null);
+  const [shippingCost, setShippingCost] = useState(0);
   const blurTimeoutRef = useRef(null);
   const originalTotal = getCartOriginalTotal();
   const discountTotal = getCartDiscountTotal();
@@ -141,6 +147,14 @@ const Checkout = () => {
     });
   };
 
+  const handleShippingSelect = (shippingOption) => {
+    setSelectedShipping(shippingOption);
+    setShippingCost(shippingOption.price);
+  };
+
+  // Calculate total with shipping
+  const finalTotal = discountedTotal + shippingCost;
+
   const applyAddressSuggestion = (suggestion) => {
     setFormData((prev) => ({
       ...prev,
@@ -176,6 +190,83 @@ const Checkout = () => {
       setShowAddressSuggestions(false);
       setActiveSuggestionIndex(-1);
     }
+  };
+
+  const handleStripePaymentSuccess = async (paymentIntent) => {
+    setPlaceError("");
+    setLoading(true);
+    setStripePaymentComplete(true);
+    
+    try {
+      const customer = {
+        fullName: user ? user.name : formData.fullName,
+        email: user ? user.email : formData.email,
+      };
+
+      const pricing = {
+        currency: "AUD",
+        subtotal: originalTotal,
+        discountTotal,
+        total: discountedTotal,
+        hasMemberDiscount: Boolean(hasDiscount),
+        memberDiscountRate: Number(discountRate || 0),
+      };
+
+      const items = cart.map((item) => {
+        const unit = getItemPriceBreakdown(item).finalPrice;
+        const line = getItemLineTotal(item);
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unitPrice: unit,
+          lineTotal: line,
+        };
+      });
+
+      const shipping = {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: "AU",
+      };
+
+      const orderData = {
+        customer, 
+        items, 
+        pricing, 
+        shipping,
+        payment: {
+          method: 'stripe',
+          paymentIntentId: paymentIntent.id,
+          status: 'succeeded'
+        }
+      };
+
+      const resp = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        throw new Error(data?.error || "Failed to place order");
+      }
+
+      setPlacedOrderId(data?.id || null);
+      setOrderPlaced(true);
+      clearCart();
+    } catch (err: any) {
+      setPlaceError(err?.message || "Failed to place order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStripePaymentError = (error) => {
+    setPlaceError(error.message || "Payment failed");
   };
 
   const handleSubmit = async (e) => {
@@ -219,10 +310,21 @@ const Checkout = () => {
         country: "AU",
       };
 
+      const orderData = {
+        customer, 
+        items, 
+        pricing, 
+        shipping,
+        payment: {
+          method: paymentMethod,
+          status: paymentMethod === 'cod' ? 'pending' : 'pending'
+        }
+      };
+
       const resp = await fetch("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ customer, items, pricing, shipping }),
+        body: JSON.stringify(orderData),
       });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) {
@@ -408,6 +510,7 @@ const Checkout = () => {
             </div>
 
             <div className="form-section">
+<<<<<<< Updated upstream
               <h2>Payment Information</h2>
               <div className="form-group">
                 <label>Card Number</label>
@@ -467,6 +570,79 @@ const Checkout = () => {
             >
               {loading ? 'Processing...' : `Place Order - AU$${discountedTotal.toFixed(2)}`}
             </button>
+=======
+              <h2>Shipping Options</h2>
+              <ShippingCalculator
+                address={formData}
+                onShippingSelect={handleShippingSelect}
+                selectedShipping={selectedShipping}
+              />
+            </div>
+
+            <div className="form-section">
+              <h2>Payment Method</h2>
+              <div className="payment-methods">
+                <label className="payment-method-option">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="stripe"
+                    checked={paymentMethod === 'stripe'}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'stripe' | 'cod')}
+                  />
+                  <span className="payment-method-label">
+                    <span className="payment-method-name">Credit/Debit Card</span>
+                    <span className="payment-method-desc">Secure payment via Stripe</span>
+                  </span>
+                </label>
+                <label className="payment-method-option">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'stripe' | 'cod')}
+                  />
+                  <span className="payment-method-label">
+                    <span className="payment-method-name">Cash on Delivery</span>
+                    <span className="payment-method-desc">Pay when you receive</span>
+                  </span>
+                </label>
+              </div>
+
+              {paymentMethod === 'stripe' && (
+                <div className="stripe-payment-section">
+                  <h3>Secure Payment via Stripe</h3>
+                  <p>Click the button below to be redirected to Stripe's secure payment page.</p>
+                  <StripeCheckoutButton
+                    amount={finalTotal}
+                    items={cart.map(item => ({
+                      id: item.id,
+                      name: item.name,
+                      category: item.category,
+                      price: getItemPriceBreakdown(item).finalPrice,
+                      quantity: item.quantity
+                    }))}
+                    customerEmail={user?.email || formData.email}
+                    onSuccess={handleStripePaymentSuccess}
+                    onError={handleStripePaymentError}
+                  />
+                </div>
+              )}
+
+              {paymentMethod === 'cod' && (
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-large"
+                  disabled={loading || stripePaymentComplete}
+                >
+                  {loading
+                    ? "Processing..."
+                    : `Place Order - AU$${finalTotal.toFixed(2)}`}
+                </button>
+              )}
+            </div>
+>>>>>>> Stashed changes
           </form>
 
           <div className="order-summary">
@@ -506,9 +682,17 @@ const Checkout = () => {
                 <span>-AU${discountTotal.toFixed(2)}</span>
               </div>
             )}
+            
+            {selectedShipping && (
+              <div className="summary-shipping">
+                <span>Shipping ({selectedShipping.name})</span>
+                <span>AU${shippingCost.toFixed(2)}</span>
+              </div>
+            )}
+            
             <div className="summary-total">
               <span>Total</span>
-              <span>AU${discountedTotal.toFixed(2)}</span>
+              <span>AU${finalTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>

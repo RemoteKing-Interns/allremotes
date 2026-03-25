@@ -6,11 +6,18 @@
     "@aws-sdk/client-s3": "^3.1009.0",
     "@aws-sdk/s3-request-presigner": "^3.1009.0",
     "@react-oauth/google": "^0.13.4",
+<<<<<<< Updated upstream
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "apple-signin-auth": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+=======
+    "@stripe/react-stripe-js": "^5.6.1",
+    "@stripe/stripe-js": "^8.11.0",
+    "apple-signin-auth": "^2.0.0",
+    "axios": "^1.13.6",
+>>>>>>> Stashed changes
     "concurrently": "^9.0.0",
     "express": "^4.22.1",
     "framer-motion": "^12.36.0",
@@ -21,7 +28,11 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
+<<<<<<< Updated upstream
     "tailwind-merge": "^3.5.0"
+=======
+    "stripe": "^20.4.1"
+>>>>>>> Stashed changes
   },
   "scripts": {
     "dev": "next dev",
