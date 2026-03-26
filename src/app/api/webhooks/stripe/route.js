@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { getDb } from '../../../../lib/mongo';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+function getStripeClient() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    throw new Error('Stripe is not configured');
+  }
+  return new Stripe(stripeSecretKey);
+}
 
 export async function POST(request) {
   try {
+    const stripe = getStripeClient();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const body = await request.text();
     const signature = headers().get('stripe-signature');
 
     if (!signature) {
       return NextResponse.json({ error: 'No signature' }, { status: 400 });
+    }
+
+    if (!webhookSecret) {
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
     let event;

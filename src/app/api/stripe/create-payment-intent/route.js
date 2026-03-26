@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+function getStripeClient() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    throw new Error('Stripe is not configured');
+  }
+  return new Stripe(stripeSecretKey);
+}
 
 export async function POST(request) {
   try {
+    const stripe = getStripeClient();
     const { amount, items, customer_email } = await request.json();
 
     if (!amount || amount <= 0) {

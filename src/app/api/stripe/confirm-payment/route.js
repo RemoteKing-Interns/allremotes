@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getDb } from '../../../../lib/mongo';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+function getStripeClient() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    throw new Error('Stripe is not configured');
+  }
+  return new Stripe(stripeSecretKey);
+}
 
 export async function POST(request) {
   try {
+    const stripe = getStripeClient();
     const { payment_intent_id } = await request.json();
 
     if (!payment_intent_id) {
