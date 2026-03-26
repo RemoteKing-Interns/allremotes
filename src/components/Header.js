@@ -24,6 +24,7 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [topBarCollapsed, setTopBarCollapsed] = useState(false);
   const dropdownRef = useRef(null);
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
@@ -206,9 +207,24 @@ const Header = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const collapseThreshold = 24;
+
+    const handleScroll = () => {
+      setTopBarCollapsed(window.scrollY > collapseThreshold);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md">
-      <TopInfoBar promotions={promotions} />
+      <TopInfoBar promotions={promotions} collapsed={topBarCollapsed} />
       <MainHeaderBar
         user={user}
         promotions={promotions}

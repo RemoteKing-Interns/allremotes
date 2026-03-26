@@ -135,6 +135,8 @@ const STATIC_TOP_BAR_ITEMS = [
   "FREE SHIPPING",
 ];
 
+const REQUIRED_TOP_BAR_ITEMS = ["NO MINIMUM ORDER", "FREE SHIPPING"];
+
 const getIconForText = (text) => {
   const upper = (text || "").toUpperCase();
   for (const [keyword, icon] of Object.entries(TOP_BAR_ICONS)) {
@@ -156,25 +158,57 @@ const getIconForText = (text) => {
   );
 };
 
-const TopInfoBar = ({ promotions }) => {
+const mergeTopBarItems = (items) => {
+  const merged = [];
+  const seen = new Set();
+
+  for (const item of Array.isArray(items) ? items : []) {
+    const normalized = typeof item === "string" ? item.trim() : "";
+    if (!normalized) continue;
+    const key = normalized.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(normalized);
+  }
+
+  for (const requiredItem of REQUIRED_TOP_BAR_ITEMS) {
+    const key = requiredItem.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(requiredItem);
+  }
+
+  return merged;
+};
+
+const TopInfoBar = ({ promotions, collapsed = false }) => {
   const configuredItems =
     promotions?.topInfoBar?.enabled &&
     Array.isArray(promotions?.topInfoBar?.items) &&
     promotions.topInfoBar.items.length > 0
       ? promotions.topInfoBar.items
       : null;
-  const items = configuredItems || STATIC_TOP_BAR_ITEMS;
+  const items = mergeTopBarItems(configuredItems || STATIC_TOP_BAR_ITEMS);
 
   return (
-    <div className="border-b border-accent-dark/50 bg-accent-dark">
+    <div
+      className={`overflow-hidden bg-accent-dark transition-[max-height,opacity,border-color] duration-300 ease-out ${
+        collapsed
+          ? "max-h-0 border-b border-transparent opacity-0"
+          : "max-h-24 border-b border-accent-dark/50 opacity-100"
+      }`}
+      aria-hidden={collapsed}
+    >
       <div className="container">
-        <div className="flex flex-wrap items-center justify-center gap-y-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-white/90 [column-gap:clamp(0.75rem,2.6vw,2.25rem)] sm:text-[11px]">
+        <div className="grid w-full grid-cols-3 items-center gap-x-2 gap-y-1.5 px-2 py-[clamp(0.35rem,1.35vw,0.55rem)] text-[9px] font-semibold uppercase leading-snug tracking-[0.04em] text-white/90 min-[390px]:text-[10px] sm:gap-x-4 sm:gap-y-1.5 sm:px-0 sm:py-2 sm:text-[11px] sm:tracking-wide lg:grid-cols-6">
           {items.map((text, idx) => (
             <span
               key={`${idx}-${text}`}
-              className="inline-flex max-w-full items-center gap-1.5 text-center"
+              className="inline-flex min-w-0 items-center justify-center gap-1 whitespace-normal py-px text-center sm:w-full sm:gap-1.5 sm:whitespace-nowrap sm:py-0"
             >
-              <span className="text-accent-light">{getIconForText(text)}</span>
+              <span className="shrink-0 text-accent-light [&_svg]:h-3 [&_svg]:w-3 min-[390px]:[&_svg]:h-3.5 min-[390px]:[&_svg]:w-3.5">
+                {getIconForText(text)}
+              </span>
               {text}
             </span>
           ))}
