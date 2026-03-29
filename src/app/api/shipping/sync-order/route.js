@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import StarshipitAPI from '../../../../lib/starshipit';
 
-const starshipit = new StarshipitAPI();
-
 export async function POST(request) {
   try {
     const orderData = await request.json();
@@ -14,12 +12,15 @@ export async function POST(request) {
       );
     }
 
-    // Create order in Starshipit
-    const starshipitOrder = await starshipit.createOrder(orderData);
+    // Initialize Starshipit API
+    const starshipit = new StarshipitAPI();
+    
+    // Sync order with Starshipit
+    const result = await starshipit.createOrder(orderData);
 
     return NextResponse.json({
       success: true,
-      starshipitOrderId: starshipitOrder.order_id,
+      starshipitOrderId: result.order_id,
       message: 'Order synced with Starshipit successfully',
     });
 

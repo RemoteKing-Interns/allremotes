@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import StarshipitAPI from '../../../../lib/starshipit';
 
-const starshipit = new StarshipitAPI();
-
 export async function POST(request) {
   try {
     const { address } = await request.json();
@@ -14,6 +12,9 @@ export async function POST(request) {
       );
     }
 
+    // Initialize Starshipit API
+    const starshipit = new StarshipitAPI();
+    
     // Get shipping rates from Starshipit
     const rates = await starshipit.getRates(address);
 

@@ -13,6 +13,10 @@ class StarshipitAPI {
 
   // Create authenticated axios instance
   getClient() {
+    if (!this.apiKey || !this.subscriptionKey) {
+      throw new Error('Starshipit API keys not configured');
+    }
+    
     return axios.create({
       baseURL: this.baseURL,
       headers: {
