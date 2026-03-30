@@ -39,12 +39,12 @@ const MainHeaderBar = ({
             <img
               src="/images/mainlogo.png"
               alt="ALLREMOTES"
-              className="h-10 w-auto sm:h-12 lg:h-14"
+              className="h-10 w-auto sm:h-12 xl:h-14"
             />
           </Link>
 
           <div
-            className="order-3 relative basis-full lg:order-none lg:mx-auto lg:flex-1 lg:max-w-2xl"
+            className="order-3 relative basis-full xl:order-none xl:mx-auto xl:flex-1 xl:max-w-2xl"
             ref={searchRef}
           >
             <form onSubmit={handleSearchSubmit} className="relative">
@@ -281,7 +281,7 @@ const MainHeaderBar = ({
 
             <button
               ref={hamburgerRef}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100 xl:hidden"
               onClick={openDrawer}
               aria-expanded={mobileDrawerOpen}
               aria-controls="mobile-drawer"

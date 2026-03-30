@@ -418,8 +418,8 @@ export default function ProductListClient({
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-          <aside className="hidden rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur lg:block">
+        <div className="mt-8 grid gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)] xl:items-start">
+          <aside className="hidden rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur xl:block">
 	            <FiltersPanel
 	              brands={brandsWithSelected}
 	              searchQuery={searchQuery}
@@ -435,7 +435,7 @@ export default function ProductListClient({
           </aside>
 
             <Sheet open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
-              <SheetContent className="lg:hidden">
+              <SheetContent className="xl:hidden">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                   <SheetDescription>
@@ -471,7 +471,7 @@ export default function ProductListClient({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="lg:hidden"
+                className="xl:hidden"
                 onClick={() => setIsFilterDrawerOpen(true)}
                 aria-label="Open filters"
               >
@@ -485,7 +485,7 @@ export default function ProductListClient({
               </div>
             ) : (
               <>
-                <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="mt-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
                   {pageProducts.map((product) => (
                     <ProductCard
                       key={product.id}
