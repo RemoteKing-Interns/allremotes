@@ -250,6 +250,12 @@ export const StoreProvider = ({ children }) => {
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const [promotionsVersion, setPromotionsVersion] = useState(0);
   const [settingsVersion, setSettingsVersion] = useState(0);
+  const [hasHydratedClient, setHasHydratedClient] = useState(false);
+
+  useEffect(() => {
+    setHasHydratedClient(true);
+  }, []);
+
   const apiBase = useMemo(() => {
     // Prefer same-origin by default. Override when hosting the API elsewhere.
     const fromEnv = String(process.env.NEXT_PUBLIC_API_BASE || '').trim();
@@ -486,6 +492,7 @@ export const StoreProvider = ({ children }) => {
   const getPromotions = useCallback(() => {
     try {
       if (typeof window === 'undefined') return defaultPromotions;
+      if (!hasHydratedClient) return defaultPromotions;
       const raw = localStorage.getItem(STORAGE_KEYS.promotions);
       if (!raw) return defaultPromotions;
       const parsed = JSON.parse(raw);
@@ -494,7 +501,7 @@ export const StoreProvider = ({ children }) => {
       return defaultPromotions;
     }
     // promotionsVersion forces re-render after setPromotions
-  }, [promotionsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [promotionsVersion, hasHydratedClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPromotions = useCallback((promotions) => {
     if (typeof window === 'undefined') return;
