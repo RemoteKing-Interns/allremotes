@@ -179,7 +179,7 @@ const ProductCard = ({
         <h3 className="mb-2 sm:mb-3 line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
           {productName}
         </h3>
-        <div className="mt-auto flex flex-col gap-3">
+        <div className="mt-auto flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="whitespace-nowrap text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
               AU${pricing.finalPrice.toFixed(2)}
@@ -195,7 +195,7 @@ const ProductCard = ({
             <button
               type="button"
               onClick={handleAddToCart}
-              className="relative z-30 inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-xs font-extrabold whitespace-nowrap text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99]"
+              className="relative z-30 inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-xs font-extrabold whitespace-nowrap text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.99] md:w-auto md:py-2"
             >
               <ShoppingCart size={14} strokeWidth={1.8} />
               Add to Cart
