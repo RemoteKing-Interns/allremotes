@@ -134,7 +134,6 @@ export async function getPublicProducts(): Promise<ProductRecord[]> {
     const products = await db
       .collection("products")
       .find({})
-      .project({ _id: 0, id: 1, category: 1, updatedAt: 1, createdAt: 1 })
       .toArray();
 
     return Array.isArray(products) ? (products as ProductRecord[]) : [];

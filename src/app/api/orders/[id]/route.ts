@@ -35,7 +35,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
-      const order = await col.findOne({ id }, { projection: { _id: 0 } });
+      const order = await col.findOne({ id });
       if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
       return NextResponse.json(order);
     }
@@ -69,8 +69,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const col = db.collection("orders");
       const res = await col.findOneAndUpdate(
         { id },
-        { $set: { status, updatedAt } },
-        { returnDocument: "after", projection: { _id: 0 } }
+        { $set: { status, updatedAt } }
       );
       if (!res.value) return NextResponse.json({ error: "Order not found" }, { status: 404 });
       return NextResponse.json(res.value);
