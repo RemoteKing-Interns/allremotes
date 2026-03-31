@@ -3,6 +3,12 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -30,25 +36,44 @@ function writeContentStore(store: ContentStore) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const section = String(searchParams.get("section") || "").trim().toLowerCase();
-  if (!section) return NextResponse.json({ error: "Missing section" }, { status: 400 });
-  if (!ALLOWED.has(section)) return NextResponse.json({ error: "Unknown section" }, { status: 404 });
+  if (!section) return NextResponse.json({ error: "Missing section" }, { 
+    status: 400,
+    headers: CORS_HEADERS 
+  });
+  if (!ALLOWED.has(section)) return NextResponse.json({ error: "Unknown section" }, { 
+    status: 404,
+    headers: CORS_HEADERS 
+  });
 
   try {
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection<{ _id: string; data: any; updatedAt: string }>("content");
       const doc = await col.findOne({ _id: section });
-      if (!doc) return NextResponse.json({ error: "Section not found" }, { status: 404 });
-      return NextResponse.json({ data: (doc as any).data ?? null });
+      if (!doc) return NextResponse.json({ error: "Section not found" }, { 
+        status: 404,
+        headers: CORS_HEADERS 
+      });
+      return NextResponse.json({ data: (doc as any).data ?? null }, {
+        headers: CORS_HEADERS
+      });
     }
 
     const store = readContentStore();
-    if (!store?.[section]) return NextResponse.json({ error: "Section not found" }, { status: 404 });
-    return NextResponse.json({ data: store[section]?.data ?? null });
+    if (!store?.[section]) return NextResponse.json({ error: "Section not found" }, { 
+      status: 404,
+      headers: CORS_HEADERS 
+    });
+    return NextResponse.json({ data: store[section]?.data ?? null }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to load content", details: err?.message || String(err) },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
 }
@@ -57,8 +82,14 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json().catch(() => null);
     const section = String(body?.section || "").trim().toLowerCase();
-    if (!section) return NextResponse.json({ error: "Missing section" }, { status: 400 });
-    if (!ALLOWED.has(section)) return NextResponse.json({ error: "Unknown section" }, { status: 404 });
+    if (!section) return NextResponse.json({ error: "Missing section" }, { 
+      status: 400,
+      headers: CORS_HEADERS 
+    });
+    if (!ALLOWED.has(section)) return NextResponse.json({ error: "Unknown section" }, { 
+      status: 404,
+      headers: CORS_HEADERS 
+    });
 
     const data = body?.data;
     const updatedAt = new Date().toISOString();
@@ -71,17 +102,31 @@ export async function PUT(request: Request) {
         { $set: { data: data ?? null, updatedAt } },
         { upsert: true }
       );
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true }, {
+        headers: CORS_HEADERS
+      });
     }
 
     const store = readContentStore();
     store[section] = { ...(store[section] || {}), data: data ?? null, updatedAt };
     writeContentStore(store);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to save content", details: err?.message || String(err) },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

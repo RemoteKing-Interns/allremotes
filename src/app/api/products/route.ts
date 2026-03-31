@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { readProductsJson } from "@/lib/products-json";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -63,7 +69,10 @@ export async function GET() {
     }
 
     return NextResponse.json(products, {
-      headers: { "Cache-Control": "no-store" },
+      headers: { 
+        "Cache-Control": "no-store",
+        ...CORS_HEADERS 
+      },
     });
   } catch (err: any) {
     const hint = mongoTroubleshootingHint(err);
@@ -73,7 +82,17 @@ export async function GET() {
         details: err?.message || String(err),
         ...(hint ? { hint } : null),
       },
-      { status: 500 },
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      },
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

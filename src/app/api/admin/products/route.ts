@@ -4,6 +4,12 @@ import { getDb, mongoEnabled } from "@/lib/mongo";
 import { getProductSkuForKey, normalizeSkuKey } from "@/lib/products-import";
 import { writeProductsJson } from "@/lib/products-json";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -14,7 +20,10 @@ export async function PUT(request: Request) {
     if (!Array.isArray(list)) {
       return NextResponse.json(
         { error: "Body must be an array of products." },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: CORS_HEADERS 
+        }
       );
     }
 
@@ -54,18 +63,32 @@ export async function PUT(request: Request) {
       if (ops.length > 0) {
         await col.bulkWrite(ops, { ordered: false });
       }
-      return NextResponse.json({ ok: true, saved: ops.length });
+      return NextResponse.json({ ok: true, saved: ops.length }, {
+        headers: CORS_HEADERS
+      });
     }
 
     await writeProductsJson(normalized);
-    return NextResponse.json({ ok: true, saved: normalized.length, storage: "products.json" });
+    return NextResponse.json({ ok: true, saved: normalized.length, storage: "products.json" }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       {
         error: "Failed to save products",
         details: err?.message || String(err),
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

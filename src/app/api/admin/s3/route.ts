@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -27,7 +33,10 @@ function buildPublicUrl(bucket: string, region: string, key: string) {
 export async function GET() {
   const { region, accessKeyId, secretAccessKey, bucket, configured } = getConfig();
   if (!configured) {
-    return NextResponse.json({ error: "S3 not configured", images: [] }, { status: 200 });
+    return NextResponse.json({ error: "S3 not configured", images: [] }, { 
+      status: 200,
+      headers: CORS_HEADERS 
+    });
   }
 
   try {
@@ -62,11 +71,23 @@ export async function GET() {
         return bTime - aTime;
       });
 
-    return NextResponse.json({ images });
+    return NextResponse.json({ images }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to list S3 images", images: [], details: err?.message || String(err) },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

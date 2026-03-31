@@ -4,6 +4,12 @@ import { resetOrdersJson } from "@/lib/orders-json";
 import { writeProductsJson } from "@/lib/products-json";
 import { resetContentJson } from "@/lib/content-json";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -19,7 +25,10 @@ export async function POST() {
   if (!resetAllowed()) {
     return NextResponse.json(
       { error: "Reset is disabled in production. Set ALLOW_ADMIN_RESET=1 to enable." },
-      { status: 403 }
+      { 
+        status: 403,
+        headers: CORS_HEADERS 
+      }
     );
   }
 
@@ -37,11 +46,23 @@ export async function POST() {
     await resetOrdersJson();
     await resetContentJson(CONTENT_KEYS);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to reset data", details: err?.message || String(err) },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

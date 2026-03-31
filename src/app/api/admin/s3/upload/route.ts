@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -30,7 +36,10 @@ function sanitizeFilename(filename: string) {
 export async function POST(request: Request) {
   const { region, accessKeyId, secretAccessKey, bucket, configured } = getConfig();
   if (!configured) {
-    return NextResponse.json({ error: "S3 not configured" }, { status: 200 });
+    return NextResponse.json({ error: "S3 not configured" }, { 
+      status: 200,
+      headers: CORS_HEADERS 
+    });
   }
 
   try {
@@ -39,7 +48,10 @@ export async function POST(request: Request) {
     const contentType = String(body?.contentType || "").trim();
 
     if (!filename || !contentType) {
-      return NextResponse.json({ error: "Missing filename or contentType" }, { status: 400 });
+      return NextResponse.json({ error: "Missing filename or contentType" }, { 
+        status: 400,
+        headers: CORS_HEADERS 
+      });
     }
 
     const safeName = sanitizeFilename(filename);
@@ -59,11 +71,23 @@ export async function POST(request: Request) {
     const presignedUrl = await getSignedUrl(client, command, { expiresIn: 300 });
     const publicUrl = buildPublicUrl(bucket, region, key);
 
-    return NextResponse.json({ presignedUrl, publicUrl, key });
+    return NextResponse.json({ presignedUrl, publicUrl, key }, {
+      headers: CORS_HEADERS
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to create upload URL", details: err?.message || String(err) },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }

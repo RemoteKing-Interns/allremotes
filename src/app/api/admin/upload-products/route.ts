@@ -3,6 +3,12 @@ import { getDb, mongoEnabled } from "@/lib/mongo";
 import { parseCsvText, rowsToRecords, upsertProductsFromCsvRecords } from "@/lib/products-import";
 import { readProductsJson, writeProductsJson } from "@/lib/products-json";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -13,7 +19,10 @@ export async function POST(request: Request) {
     if (!contentType.toLowerCase().includes("multipart/form-data")) {
       return NextResponse.json(
         { error: "Expected multipart/form-data" },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: CORS_HEADERS 
+        }
       );
     }
 
@@ -22,17 +31,26 @@ export async function POST(request: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json(
         { error: 'Missing file field "csv"' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: CORS_HEADERS 
+        }
       );
     }
 
     const name = String(file.name || "upload.csv");
     if (!name.toLowerCase().endsWith(".csv")) {
-      return NextResponse.json({ error: "Only .csv files are allowed" }, { status: 400 });
+      return NextResponse.json({ error: "Only .csv files are allowed" }, { 
+        status: 400,
+        headers: CORS_HEADERS 
+      });
     }
 
     if (file.size > 6 * 1024 * 1024) {
-      return NextResponse.json({ error: "Upload too large" }, { status: 413 });
+      return NextResponse.json({ error: "Upload too large" }, { 
+        status: 413,
+        headers: CORS_HEADERS 
+      });
     }
 
     const buf = Buffer.from(await file.arrayBuffer());
@@ -68,12 +86,25 @@ export async function POST(request: Request) {
       jsonStore,
     });
 
-    return NextResponse.json(result.body, { status: result.status });
+    return NextResponse.json(result.body, { 
+      status: result.status,
+      headers: CORS_HEADERS 
+    });
   } catch (err: any) {
     const msg = err?.message || String(err);
     return NextResponse.json(
       { error: "Failed to process CSV upload", details: msg },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: CORS_HEADERS 
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
 }
