@@ -29,7 +29,6 @@ export async function GET(request: Request) {
       await col.createIndex({ id: 1 }, { unique: true });
       const orders = await col
         .find({})
-        .project({ _id: 0 })
         .sort({ createdAt: -1 })
         .limit(limit)
         .toArray();
