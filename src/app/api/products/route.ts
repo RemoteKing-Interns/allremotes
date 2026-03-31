@@ -36,8 +36,11 @@ function mongoTroubleshootingHint(err: unknown) {
 }
 
 export async function GET() {
+  let mongoError: unknown = null;
+
   try {
-    let products: any[];
+    let products: any[] = [];
+    let source = "json";
 
     // ✅ LOCAL MOCK (uncomment to use when testing, comment out for production)
 
@@ -59,11 +62,17 @@ export async function GET() {
     // });
 
     if (mongoEnabled()) {
-      const db = await getDb();
-      const col = db.collection("products");
-      await col.createIndex({ id: 1 }, { unique: true });
-      await col.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
-      products = await col.find({}).toArray();
+      try {
+        const db = await getDb();
+        const col = db.collection("products");
+        products = await col.find({}).toArray();
+        source = "mongo";
+      } catch (err) {
+        // Keep API available by falling back to JSON when MongoDB is unreachable.
+        mongoError = err;
+        products = await readProductsJson();
+        source = "json-fallback";
+      }
     } else {
       products = await readProductsJson();
     }
@@ -71,15 +80,17 @@ export async function GET() {
     return NextResponse.json(products, {
       headers: { 
         "Cache-Control": "no-store",
+        "X-Products-Source": source,
         ...CORS_HEADERS 
       },
     });
   } catch (err: any) {
-    const hint = mongoTroubleshootingHint(err);
+    const relevantError = mongoError || err;
+    const hint = mongoTroubleshootingHint(relevantError);
     return NextResponse.json(
       {
         error: "Failed to load products",
-        details: err?.message || String(err),
+        details: (relevantError as any)?.message || String(relevantError),
         ...(hint ? { hint } : null),
       },
       { 
