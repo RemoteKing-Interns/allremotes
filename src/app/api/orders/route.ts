@@ -48,7 +48,7 @@ export async function GET() {
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
-      const orders = await col.find({}).project({ _id: 0 }).toArray();
+      const orders = await col.find({}).toArray();
       return NextResponse.json(orders, { 
         headers: { 
           "Cache-Control": "no-store",

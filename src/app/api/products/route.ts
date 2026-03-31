@@ -63,7 +63,7 @@ export async function GET() {
       const col = db.collection("products");
       await col.createIndex({ id: 1 }, { unique: true });
       await col.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
-      products = await col.find({}).project({ _id: 0 }).toArray();
+      products = await col.find({}).toArray();
     } else {
       products = await readProductsJson();
     }
