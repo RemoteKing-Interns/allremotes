@@ -192,7 +192,7 @@ const ProductCard = ({
         <h3 className="mb-2 sm:mb-3 line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-neutral-900 transition-colors group-hover:text-primary-dark">
           {productName}
         </h3>
-        <div className="mt-auto flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="mt-auto flex flex-col gap-2.5 sm:gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="whitespace-nowrap text-base sm:text-lg font-extrabold tracking-tight text-neutral-900">
               AU${pricing.finalPrice.toFixed(2)}

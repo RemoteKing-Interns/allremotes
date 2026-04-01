@@ -419,7 +419,7 @@ const Home = () => {
               No products available right now.
             </div>
           ) : (
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
               {products.slice(0, 8).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

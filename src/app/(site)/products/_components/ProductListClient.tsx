@@ -485,7 +485,7 @@ export default function ProductListClient({
               </div>
             ) : (
               <>
-                <div className="mt-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="mt-6 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
                   {pageProducts.map((product) => (
                     <ProductCard
                       key={product.id}
