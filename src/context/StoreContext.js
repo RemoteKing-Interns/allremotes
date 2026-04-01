@@ -175,10 +175,23 @@ function loadProducts() {
 function resolveProducts(productsData) {
   if (!productsData || !productsData.length) return [];
   return productsData.map((p) => {
+    const normalizedImages = Array.isArray(p?.images)
+      ? p.images
+          .map((img) => (typeof img === 'string' ? img.trim() : ''))
+          .filter(Boolean)
+      : [];
     let imageUrl = '';
     
+    // Prefer explicit multi-image gallery if present.
+    if (normalizedImages.length > 0) {
+      let preferredIndex = typeof p?.imgIndex === 'number' ? p.imgIndex : 0;
+      if (!Number.isFinite(preferredIndex) || preferredIndex < 0 || preferredIndex >= normalizedImages.length) {
+        preferredIndex = 0;
+      }
+      imageUrl = normalizedImages[preferredIndex];
+    }
     // If product has an image string
-    if (typeof p.image === 'string' && p.image.trim()) {
+    else if (typeof p.image === 'string' && p.image.trim()) {
       // If it's already an S3 URL, use it
       if (p.image.startsWith('http')) {
         imageUrl = p.image;
@@ -196,7 +209,12 @@ function resolveProducts(productsData) {
       imageUrl = productImagePool[0];
     }
     
-    return { ...p, image: imageUrl };
+    return {
+      ...p,
+      images: normalizedImages,
+      imgIndex: typeof p?.imgIndex === 'number' ? p.imgIndex : (typeof p?.imageIndex === 'number' ? p.imageIndex : 0),
+      image: imageUrl,
+    };
   });
 }
 
@@ -205,32 +223,69 @@ function coerceServerProductsToLocal(productsFromServer) {
   // the `imageIndex` field the UI expects for localStorage. Normalize here so
   // existing UI code keeps working.
   if (!Array.isArray(productsFromServer)) return null;
-  return productsFromServer.map((p) => ({
-    id: p?.id ?? String(Date.now()),
-    name: p?.name ?? '',
-    category: p?.category ?? 'garage',
-    price: p?.price ?? 0,
-    description: p?.description ?? '',
-    inStock: typeof p?.inStock === 'boolean' ? p.inStock : true,
-    brand: p?.brand ?? '',
-    sku: p?.sku ?? p?.product_code ?? '',
-    image: p?.image ?? '',
-    imageIndex: typeof p?.imageIndex === 'number' ? p.imageIndex : 0,
-    condition: p?.condition ?? 'Brand New',
-    returns: p?.returns ?? 'No returns accepted',
-    seller: p?.seller ?? 'AllRemotes (100% positive)',
-  }));
+  return productsFromServer.map((p) => {
+    const images = Array.isArray(p?.images)
+      ? p.images
+          .map((img) => (typeof img === 'string' ? img.trim() : ''))
+          .filter(Boolean)
+      : [];
+    const imgIndex = typeof p?.imgIndex === 'number'
+      ? p.imgIndex
+      : (typeof p?.imageIndex === 'number' ? p.imageIndex : 0);
+
+    return {
+      id: p?.id ?? String(Date.now()),
+      name: p?.name ?? '',
+      category: p?.category ?? 'garage',
+      price: p?.price ?? 0,
+      description: p?.description ?? '',
+      inStock: typeof p?.inStock === 'boolean' ? p.inStock : true,
+      brand: p?.brand ?? '',
+      sku: p?.sku ?? p?.product_code ?? '',
+      image: p?.image ?? images[0] ?? '',
+      images,
+      imgIndex,
+      imageIndex: typeof p?.imageIndex === 'number' ? p.imageIndex : imgIndex,
+      condition: p?.condition ?? 'Brand New',
+      returns: p?.returns ?? 'No returns accepted',
+      seller: p?.seller ?? 'AllRemotes (100% positive)',
+    };
+  });
 }
 
 function saveProducts(productsWithImages) {
   if (typeof window === 'undefined') return;
   const toSave = productsWithImages.map((p) => {
+    const normalizedImages = Array.isArray(p?.images)
+      ? p.images
+          .map((img) => (typeof img === 'string' ? img.trim() : ''))
+          .filter(Boolean)
+      : [];
+    const primaryFromIndex =
+      typeof p?.imgIndex === 'number' && p.imgIndex >= 0 && p.imgIndex < normalizedImages.length
+        ? normalizedImages[p.imgIndex]
+        : '';
+    const primaryImage = primaryFromIndex || (typeof p?.image === 'string' ? p.image : '');
     const { image, ...rest } = p;
-    const imageIndex = productImagePool.indexOf(image);
-    if (imageIndex >= 0) return { ...rest, imageIndex };
+    const imageIndex = productImagePool.indexOf(primaryImage);
+    if (imageIndex >= 0) {
+      return {
+        ...rest,
+        imageIndex,
+        imgIndex: typeof p?.imgIndex === 'number' ? p.imgIndex : 0,
+        images: normalizedImages,
+        image: primaryImage,
+      };
+    }
     // If the image isn't from our local pool (e.g. a URL from the CSV upload),
     // persist it directly so the UI can render it.
-    return { ...rest, imageIndex: null, image: typeof image === 'string' ? image : '' };
+    return {
+      ...rest,
+      imageIndex: null,
+      imgIndex: typeof p?.imgIndex === 'number' ? p.imgIndex : 0,
+      images: normalizedImages,
+      image: primaryImage,
+    };
   });
   localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(toSave));
 }

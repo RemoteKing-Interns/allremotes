@@ -25,7 +25,17 @@ type ContentDoc<T = any> = {
 
 type ProductRecord = {
   id?: string | number;
+  sku?: string;
+  brand?: string;
+  name?: string;
   category?: string | null;
+  price?: number;
+  inStock?: boolean;
+  image?: string; // Legacy single image (backward compat)
+  images?: string[]; // New: array of up to 3 image URLs
+  imgIndex?: number; // New: which image is primary/thumbnail (default 0)
+  condition?: string; // New: e.g., Brand New
+  description?: string;
   updatedAt?: string | null;
   createdAt?: string | null;
 };

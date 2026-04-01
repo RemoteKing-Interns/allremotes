@@ -19,6 +19,23 @@ import {
 } from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
 
+const HARD_CODED_WARNINGS = `WARNING: This product may contain a button/coin cell battery. To reduce the risk of SERIOUS INJURY or DEATH:
+
+Keep new and used batteries out of reach of children at all times.
+Do not use this product if the battery compartment is damaged or does not close securely.
+Dispose of used batteries immediately and safely - even flat batteries can still cause harm.
+Do not ingest the battery. Chemical burn hazard.
+Act immediately if you suspect a battery has been swallowed or inserted - severe or fatal injuries can occur within 2 hours.
+Seek urgent medical attention or call:
+- Australia: Poisons Information Centre on 13 11 26
+- New Zealand: National Poisons Centre on 0800 764 766
+
+Remote Pro supplies aftermarket products intended to be compatible with a wide range of original brands. Unless a product is expressly stated as genuine, all items sold on this website are aftermarket products and are not manufactured, authorised, endorsed, or approved by the original equipment manufacturers (OEMs).
+
+Any references to brand names, trademarks, or model numbers are used only to describe compatibility or suitability with relevant equipment. Remote Pro is not affiliated with, sponsored by, or associated with these brand owners, and no OEM approval or endorsement is implied.
+
+All trademarks, brand names, and product names remain the property of their respective owners. Remote Pro distributes a range of aftermarket products, including (but not limited to) remote controls compatible with garage and gate motors and receivers from other manufacturers, as well as substitute automotive keys, remote controls, and casings designed to be compatible with vehicles made by other manufacturers.`;
+
 const ProductDetail = () => {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -41,8 +58,34 @@ const ProductDetail = () => {
   });
 
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState("description");
+  
+  // Get images array (support both new images[] and legacy image field)
+  const images = React.useMemo(() => {
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images.filter((img) => String(img || "").trim() !== "");
+    }
+    if (product?.image) {
+      return [product.image];
+    }
+    return [];
+  }, [product?.images, product?.image]);
+  
+  // Get primary image index (default to imgIndex or 0)
+  const primaryImageIndex = React.useMemo(() => {
+    let idx = product?.imgIndex ?? 0;
+    if (!Number.isFinite(idx) || idx < 0 || idx >= images.length) {
+      idx = 0;
+    }
+    return idx;
+  }, [product?.imgIndex, images.length]);
+  
+  // Update selected index on product change
+  React.useEffect(() => {
+    setSelectedImageIndex(primaryImageIndex);
+  }, [product?.id, primaryImageIndex]);
   const tabSections = [
     {
       id: "description",
@@ -57,7 +100,7 @@ const ProductDetail = () => {
     {
       id: "warnings",
       label: "Warnings & Disclaimers",
-      content: product?.warnings || "No warnings provided.",
+      content: HARD_CODED_WARNINGS,
     },
   ];
 
@@ -137,37 +180,69 @@ const ProductDetail = () => {
         </Link>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
-          {/* LEFT: IMAGE */}
-          <div
-            className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-panel"
-            onMouseMove={(e) => {
-              const box = e.currentTarget;
-              const img = box.querySelector("img");
+          {/* LEFT: IMAGE GALLERY */}
+          <div className="flex flex-col gap-4">
+            {/* Main Image */}
+            <div
+              className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-panel"
+              onMouseMove={(e) => {
+                const box = e.currentTarget;
+                const img = box.querySelector("img");
+                if (!img) return;
+                const { left, top, width, height } = box.getBoundingClientRect();
+                const x = ((e.clientX - left) / width) * 100;
+                const y = ((e.clientY - top) / height) * 100;
+                img.style.transformOrigin = `${x}% ${y}%`;
+              }}
+              onMouseLeave={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (!img) return;
+                img.style.transformOrigin = "center center";
+                img.style.transform = "scale(1)";
+              }}
+              onMouseEnter={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (!img) return;
+                img.style.transform = "scale(2)";
+              }}
+            >
+              <img
+                key={selectedImageIndex}
+                src={images[selectedImageIndex] || "/images/mainlogo.png"}
+                alt={product.name}
+                className="relative h-full w-full max-h-[28rem] object-contain p-6 transition-transform duration-300 will-change-transform sm:max-h-[34rem]"
+                onError={(e) =>
+                  (e.currentTarget.src = "/images/mainlogo.png")
+                }
+              />
+            </div>
 
-              const { left, top, width, height } = box.getBoundingClientRect();
-              const x = ((e.clientX - left) / width) * 100;
-              const y = ((e.clientY - top) / height) * 100;
-
-              img.style.transformOrigin = `${x}% ${y}%`;
-            }}
-            onMouseLeave={(e) => {
-              const img = e.currentTarget.querySelector("img");
-              img.style.transformOrigin = "center center";
-              img.style.transform = "scale(1)";
-            }}
-            onMouseEnter={(e) => {
-              const img = e.currentTarget.querySelector("img");
-              img.style.transform = "scale(2)";
-            }}
-          >
-            <img
-              src={product.image}
-              alt={product.name}
-              className="relative h-full w-full max-h-[28rem] object-contain p-6 transition-transform duration-300 will-change-transform sm:max-h-[34rem]"
-              onError={(e) =>
-                (e.currentTarget.src = "/images/mainlogo.png")
-              }
-            />
+            {/* Thumbnail Row (only show if more than 1 image) */}
+            {images.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {images.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`relative flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                      selectedImageIndex === idx
+                        ? "border-primary shadow-md"
+                        : "border-neutral-200 hover:border-neutral-300"
+                    }`}
+                    aria-label={`View image ${idx + 1}`}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`${product.name} - image ${idx + 1}`}
+                      className="h-20 w-20 object-contain p-1"
+                      onError={(e) =>
+                        (e.currentTarget.src = "/images/mainlogo.png")
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: INFO */}
@@ -331,7 +406,11 @@ const ProductDetail = () => {
 
                   {isOpen && (
                     <div className="border-t border-neutral-200 px-4 pb-4 pt-3">
-                      <p className="text-sm leading-7 text-neutral-700">
+                      <p
+                        className={`text-sm leading-7 text-neutral-700 ${
+                          section.id === "warnings" ? "whitespace-pre-line" : ""
+                        }`}
+                      >
                         {section.content}
                       </p>
                     </div>
@@ -367,7 +446,11 @@ const ProductDetail = () => {
                       <h3 className="text-lg font-semibold text-neutral-900">
                         {section.label}
                       </h3>
-                      <p className="mt-3 text-sm leading-7 text-neutral-700">
+                      <p
+                        className={`mt-3 text-sm leading-7 text-neutral-700 ${
+                          section.id === "warnings" ? "whitespace-pre-line" : ""
+                        }`}
+                      >
                         {section.content}
                       </p>
                     </div>

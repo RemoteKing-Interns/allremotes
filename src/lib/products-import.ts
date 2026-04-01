@@ -134,16 +134,23 @@ export function parseCsvText(text: string) {
 export function rowsToRecords(rows: string[][]) {
   if (!rows || rows.length === 0) return { records: [], headers: [], headerRowIndex: 0 };
 
-  const required = ["product_code", "product_description"];
+  // Support both old format (product_code, product_description) and new format (sku, product_name)
+  const oldRequired = ["product_code", "product_description"];
+  const newRequired = ["sku", "product_name"];
   let headerRowIndex = 0;
   const scanLimit = Math.min(rows.length, 25);
+  
   for (let i = 0; i < scanLimit; i += 1) {
     const row = rows[i] || [];
     if (row.length <= 1) continue;
     const normalized = row.map(normalizeHeader);
     const set = new Set(normalized);
-    const hasAll = required.every((r) => set.has(r));
-    if (hasAll) {
+    
+    // Check for either old format or new format
+    const hasOldFormat = oldRequired.every((r) => set.has(r));
+    const hasNewFormat = newRequired.every((r) => set.has(r));
+    
+    if (hasOldFormat || hasNewFormat) {
       headerRowIndex = i;
       break;
     }
@@ -182,31 +189,64 @@ function rowToPublicShape(row: Record<string, string>) {
   };
 }
 
-function mapRowToProduct(row: Record<string, string>) {
-  const sku = String(row.product_code || "").trim();
-  const name = String(row.product_description || "").trim();
+function findColumnValue(row: Record<string, string>, ...possibleKeys: string[]): string {
+  // Try exact matches first, then try flexible matching
+  for (const key of possibleKeys) {
+    if (row[key]) return String(row[key]).trim();
+  }
+  // Try substring matching if no exact match (more forgiving for column name variations)
+  const rowKeysLower = Object.keys(row).map(k => k.toLowerCase());
+  for (const key of possibleKeys) {
+    const matchingKey = rowKeysLower.find(rk => rk.includes(key.toLowerCase()));
+    if (matchingKey && row[matchingKey]) return String(row[matchingKey]).trim();
+  }
+  return "";
+}
 
-  const groupRaw = String(row.product_group || "").trim();
-  let category: string | null = groupRaw || null;
-  if (groupRaw) {
-    const g = groupRaw.toLowerCase();
+function mapRowToProduct(row: Record<string, string>) {
+  // Support both old (product_code) and new (sku) column names
+  const sku = findColumnValue(row, "sku", "product_code");
+  const name = findColumnValue(row, "product_name", "product_description");
+  const brand = findColumnValue(row, "brand") || sku;
+  const condition = findColumnValue(row, "condition") || "Brand New";
+  const description = findColumnValue(row, "description") || name;
+
+  // Category mapping from new structure or legacy
+  const categoryRaw = findColumnValue(row, "category", "product_group");
+  let category: string | null = categoryRaw || null;
+  if (categoryRaw) {
+    const g = categoryRaw.toLowerCase();
     if (g.includes("garage") || g.includes("gate")) category = "garage";
     else if (g.includes("auto") || g.includes("car")) category = "car";
+    else category = categoryRaw;
   }
 
-  const sellPriceRaw = String(row.sell_price || "").trim();
-  const defaultSellPriceRaw = String(row.default_sell_price || "").trim();
-  const sellPrice = sellPriceRaw ? coercePrice(sellPriceRaw) : null;
-  const defaultSellPrice = defaultSellPriceRaw ? coercePrice(defaultSellPriceRaw) : null;
-  const price =
-    Number.isFinite(sellPrice) ? (sellPrice as number) : (Number.isFinite(defaultSellPrice) ? (defaultSellPrice as number) : null);
+  // Price from new or legacy columns
+  const priceRaw = findColumnValue(row, "price_aud", "price", "sell_price", "default_sell_price");
+  const price = priceRaw ? coercePrice(priceRaw) : null;
 
-  const image = String(row.image_url || "").trim();
-  const inStock = null;
-  const description = name || null;
-  const brand = sku || null;
+  // In Stock: "Yes" or ✓ = true, anything else = false
+  const inStockRaw = findColumnValue(row, "in_stock", "instock").toLowerCase();
+  const inStock = inStockRaw === "yes" || inStockRaw === "✓" || inStockRaw === "true" || inStockRaw === "1";
 
-  return { sku, brand, name, category, price, inStock, image, description };
+  // Images: collect up to 3 URLs, filter out empty ones
+  // Support both "Image 1 URL" (normalizes to image_1_url) and variations
+  const images: string[] = [];
+  const img1 = findColumnValue(row, "image_1_url", "image1_url", "image_url_1", "image1url", "image_url");
+  const img2 = findColumnValue(row, "image_2_url", "image2_url", "image_url_2", "image2url");
+  const img3 = findColumnValue(row, "image_3_url", "image3_url", "image_url_3", "image3url");
+  if (img1) images.push(img1);
+  if (img2) images.push(img2);
+  if (img3) images.push(img3);
+
+  // Image index: which image is the primary thumbnail
+  const imgIndexRaw = findColumnValue(row, "img_index", "imgindex", "image_index");
+  const imgIndex = Number.isFinite(Number(imgIndexRaw)) ? Number(imgIndexRaw) : 0;
+
+  // Fallback to single image for backward compatibility
+  const image = images.length > 0 ? images[0] : "";
+
+  return { sku, brand, name, category, price, inStock, description, condition, image, images, imgIndex };
 }
 
 function buildSkuKey(sku: string) {
@@ -249,16 +289,20 @@ export async function upsertProductsFromCsvRecords(params: {
     return { status: 400, body: { error: "CSV contains no data rows" } };
   }
 
-  const requiredCols = ["product_code", "product_description"];
+  // Support both old and new column formats
+  const oldRequiredCols = ["product_code", "product_description"];
+  const newRequiredCols = ["sku", "product_name"];
   const headerSet = new Set(headers);
-  const missingCols = requiredCols.filter((c) => !headerSet.has(c));
-  if (missingCols.length > 0) {
+  
+  const hasOldFormat = oldRequiredCols.every((c) => headerSet.has(c));
+  const hasNewFormat = newRequiredCols.every((c) => headerSet.has(c));
+  
+  if (!hasOldFormat && !hasNewFormat) {
     return {
       status: 400,
       body: {
-        error: "CSV is missing required headers",
-        missingHeaders: missingCols,
-        requiredHeaders: requiredCols,
+        error: "CSV is missing required headers. Provide either: (product_code AND product_description) OR (sku AND product_name)",
+        missingHeaders: oldRequiredCols.some(c => !headerSet.has(c)) ? oldRequiredCols : newRequiredCols,
         foundHeaders: headers,
       },
     };
@@ -331,17 +375,20 @@ export async function upsertProductsFromCsvRecords(params: {
           $set: {
             sku: product.sku,
             skuKey,
+            brand: product.brand || product.sku,
             name: product.name,
             category: product.category,
             price: product.price,
             inStock: product.inStock,
-            image: product.image,
+            image: product.image, // Legacy fallback
+            images: product.images, // New: array of URLs
+            imgIndex: product.imgIndex ?? 0, // New: primary image index
+            condition: product.condition, // New: condition field
             description: product.description,
             updatedAt: nowIso,
           },
           $setOnInsert: {
             id: crypto.randomUUID(),
-            brand: product.brand || product.sku,
             createdAt: nowIso,
           },
         },
@@ -361,7 +408,10 @@ export async function upsertProductsFromCsvRecords(params: {
         category: product.category,
         price: product.price,
         inStock: product.inStock,
-        image: product.image,
+        image: product.image, // Legacy fallback
+        images: product.images, // New: array of URLs
+        imgIndex: product.imgIndex ?? 0, // New: primary image index
+        condition: product.condition, // New: condition field
         description: product.description,
         updatedAt: nowIso,
       });
@@ -375,7 +425,10 @@ export async function upsertProductsFromCsvRecords(params: {
         category: product.category,
         price: product.price,
         inStock: product.inStock,
-        image: product.image,
+        image: product.image, // Legacy fallback
+        images: product.images, // New: array of URLs
+        imgIndex: product.imgIndex ?? 0, // New: primary image index
+        condition: product.condition, // New: condition field
         description: product.description,
         createdAt: nowIso,
         updatedAt: nowIso,
