@@ -3,7 +3,7 @@ import { mongoEnabled, getDb } from "@/lib/mongo";
 import { readProductsJson } from "@/lib/products-json";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
+  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
