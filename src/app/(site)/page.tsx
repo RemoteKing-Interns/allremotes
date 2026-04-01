@@ -79,9 +79,12 @@ const Home = () => {
   const home = getHomeContent();
   const reviews = getReviews() || [];
   const [currentSlide, setCurrentSlide] = useState(0);
-  const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
-    ? home.heroImages
-    : ["/images/hero.jpg", "/images/heroimg.jpg"];
+  const heroImages =
+    home?.heroImages &&
+    Array.isArray(home.heroImages) &&
+    home.heroImages.length > 0
+      ? home.heroImages
+      : ["/images/hero.jpg", "/images/heroimg.jpg"];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -91,12 +94,14 @@ const Home = () => {
   }, [heroImages.length]);
 
   const feedbackReviews = React.useMemo(() => {
-    const normalized = (reviews || []).map((r, idx) => ({
-      rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
-      text: String(r?.text || "").trim(),
-      author: String(r?.author || "").trim() || `Customer ${idx + 1}`,
-      verified: Boolean(r?.verified),
-    })).filter((r) => r.text);
+    const normalized = (reviews || [])
+      .map((r, idx) => ({
+        rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
+        text: String(r?.text || "").trim(),
+        author: String(r?.author || "").trim() || `Customer ${idx + 1}`,
+        verified: Boolean(r?.verified),
+      }))
+      .filter((r) => r.text);
 
     const next = [...normalized];
     const seen = new Set(
@@ -115,7 +120,8 @@ const Home = () => {
   }, [reviews]);
 
   const feedbackMarqueeReviews = React.useMemo(() => {
-    const base = feedbackReviews.length > 0 ? feedbackReviews : DEFAULT_FEEDBACK_REVIEWS;
+    const base =
+      feedbackReviews.length > 0 ? feedbackReviews : DEFAULT_FEEDBACK_REVIEWS;
     return [...base, ...base];
   }, [feedbackReviews]);
 
@@ -144,8 +150,12 @@ const Home = () => {
   const heroReasons = whyBuyCards.slice(0, 3);
   const heroLeadReason = heroReasons[0] || defaultWhyBuy[0];
   const heroSideReasons = heroReasons.slice(1);
-  const carProductsCount = products.filter((product) => product?.category === "car").length;
-  const garageProductsCount = products.filter((product) => product?.category === "garage").length;
+  const carProductsCount = products.filter(
+    (product) => product?.category === "car",
+  ).length;
+  const garageProductsCount = products.filter(
+    (product) => product?.category === "garage",
+  ).length;
   const featureImagesByTitle = {
     "Car Remotes": "/remotes/010_s-l500.webp",
     "Garage Remotes": "/remotes/002_s-l500.webp",
@@ -154,14 +164,18 @@ const Home = () => {
   const defaultHeroHighlights = [
     heroSideReasons[0] || {
       title: "Fast Shipping",
-      description: "Responsive dispatch and practical support for trade and retail buyers.",
+      description:
+        "Responsive dispatch and practical support for trade and retail buyers.",
     },
     heroSideReasons[1] || {
       title: "Support That Knows Remotes",
-      description: "Practical guidance for matching remotes, keys, and compatible accessories.",
+      description:
+        "Practical guidance for matching remotes, keys, and compatible accessories.",
     },
   ];
-  const configuredHeroSlides = Array.isArray(home?.heroSlides) ? home.heroSlides : [];
+  const configuredHeroSlides = Array.isArray(home?.heroSlides)
+    ? home.heroSlides
+    : [];
   const fallbackHeroSlides = [
     {
       subtitle: hero.subtitle || "Quality is Guaranteed",
@@ -197,11 +211,13 @@ const Home = () => {
       highlights: [
         {
           title: "Fitment-first range",
-          description: "Organized for faster browsing across common vehicle remote and smart key styles.",
+          description:
+            "Organized for faster browsing across common vehicle remote and smart key styles.",
         },
         {
           title: "Clearer buying path",
-          description: "Category-led navigation helps retail buyers and workshops locate automotive options quickly.",
+          description:
+            "Category-led navigation helps retail buyers and workshops locate automotive options quickly.",
         },
       ],
     },
@@ -224,11 +240,13 @@ const Home = () => {
       highlights: [
         {
           title: "Home and trade ready",
-          description: "Suitable for homeowners, installers, locksmiths, and repeat trade customers.",
+          description:
+            "Suitable for homeowners, installers, locksmiths, and repeat trade customers.",
         },
         {
           title: "Support beyond checkout",
-          description: "Get help with product identification, reordering, and general remote selection.",
+          description:
+            "Get help with product identification, reordering, and general remote selection.",
         },
       ],
     },
@@ -247,15 +265,23 @@ const Home = () => {
     if (iconByIconKey) return iconByIconKey;
     if (iconByTitleKey) return iconByTitleKey;
 
-    const fallbackIcons = [ShieldCheck, Truck, RotateCcw, Headset, CreditCard, Users];
+    const fallbackIcons = [
+      ShieldCheck,
+      Truck,
+      RotateCcw,
+      Headset,
+      CreditCard,
+      Users,
+    ];
     return fallbackIcons[index % fallbackIcons.length];
   };
   const heroSlides = heroImages.map((image, index) => {
     const fallback = fallbackHeroSlides[index % fallbackHeroSlides.length];
     const configured = configuredHeroSlides[index] || {};
-    const configuredHighlights = Array.isArray(configured.highlights) && configured.highlights.length > 0
-      ? configured.highlights.slice(0, 2)
-      : fallback.highlights;
+    const configuredHighlights =
+      Array.isArray(configured.highlights) && configured.highlights.length > 0
+        ? configured.highlights.slice(0, 2)
+        : fallback.highlights;
 
     return {
       image,
@@ -297,7 +323,15 @@ const Home = () => {
                   }`}
                 >
                   <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/35 bg-accent/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-accent-light backdrop-blur-sm">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                     {slide.subtitle}
@@ -316,7 +350,16 @@ const Home = () => {
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark sm:w-auto"
                     >
                       {slide.primaryCta}
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M5 12h14" />
                         <path d="m12 5 7 7-7 7" />
                       </svg>
@@ -366,20 +409,23 @@ const Home = () => {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f, i) => (
-              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
+              <div
+                key={i}
+                className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
+              >
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
-                  {(f.image || featureImagesByTitle[f.title]) ? (
-                    <img
-                      src={f.image || featureImagesByTitle[f.title]}
-                      alt={f.title || "Feature"}
-                      className="h-10 w-10 object-contain"
-                    />
-                  ) : (
+                    {f.image || featureImagesByTitle[f.title] ? (
+                      <img
+                        src={f.image || featureImagesByTitle[f.title]}
+                        alt={f.title || "Feature"}
+                        className="h-10 w-10 object-contain"
+                      />
+                    ) : (
                       <span className="text-sm font-extrabold text-accent-dark">
                         {String(f.icon || "AR").slice(0, 2)}
                       </span>
-                  )}
+                    )}
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-base font-semibold text-neutral-900">
@@ -391,7 +437,10 @@ const Home = () => {
                   </div>
                 </div>
                 {f.path && f.linkText && (
-                  <Link href={f.path} className="mt-5 inline-flex text-sm font-semibold text-accent-dark hover:text-accent">
+                  <Link
+                    href={f.path}
+                    className="mt-5 inline-flex text-sm font-semibold text-accent-dark hover:text-accent"
+                  >
                     {f.linkText}
                   </Link>
                 )}
@@ -410,26 +459,29 @@ const Home = () => {
             Featured Products
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
-              Browse our most popular remote controls across car, garage, and
-              access-control categories.
+            Browse our most popular remote controls across car, garage, and
+            access-control categories.
           </p>
         </div>
-          {products.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
-              No products available right now.
-            </div>
-          ) : (
-            <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
-              {products.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-          <div className="mt-8">
-            <Link href="/products/all" className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark">
-              View All Products
-            </Link>
+        {products.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
+            No products available right now.
           </div>
+        ) : (
+          <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+            {products.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+        <div className="mt-8">
+          <Link
+            href="/products/all"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+          >
+            View All Products
+          </Link>
+        </div>
       </section>
 
       <section className="container py-10 sm:py-14">
@@ -441,26 +493,33 @@ const Home = () => {
             Built for repeat orders and dependable support
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
-              The store is designed for straightforward product discovery,
-              cleaner reorder flows, and support that understands remote keys.
+            The store is designed for straightforward product discovery, cleaner
+            reorder flows, and support that understands remote keys.
           </p>
         </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {whyBuyCards.map((b, i) => (
-              <div key={i} className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur">
-                {(() => {
-                  const WhyBuyIcon = resolveWhyBuyIcon(b, i);
-                  return (
-                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
-                      <WhyBuyIcon size={22} strokeWidth={2.1} />
-                    </div>
-                  );
-                })()}
-                <h3 className="text-base font-semibold text-neutral-900">{b.title || ""}</h3>
-                <p className="mt-2 text-sm leading-7 text-neutral-600">{b.description || ""}</p>
-              </div>
-            ))}
-          </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {whyBuyCards.map((b, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
+            >
+              {(() => {
+                const WhyBuyIcon = resolveWhyBuyIcon(b, i);
+                return (
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
+                    <WhyBuyIcon size={22} strokeWidth={2.1} />
+                  </div>
+                );
+              })()}
+              <h3 className="text-base font-semibold text-neutral-900">
+                {b.title || ""}
+              </h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">
+                {b.description || ""}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="container py-10 sm:py-14">
@@ -472,37 +531,45 @@ const Home = () => {
             Trusted by homeowners, workshops, and trade buyers
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
-              Real reviews from customers ordering replacement remotes, smart
-              keys, and access-control products.
+            Real reviews from customers ordering replacement remotes, smart
+            keys, and access-control products.
           </p>
         </div>
-          <div className="feedback-marquee mt-8" aria-live="polite">
-            <div className="feedback-marquee-track">
-              {feedbackMarqueeReviews.map((r, i) => (
-                <div
-                  key={`${r.author}-${i}`}
-                  aria-hidden={i >= feedbackMarqueeReviews.length / 2}
-                  className="w-[min(88vw,22rem)] shrink-0 pr-3 sm:w-[20rem] sm:pr-4 lg:w-[22rem]"
-                >
-                  <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-sm backdrop-blur">
-                    <div className="text-sm font-extrabold text-gold">
-                      <span className="text-primary">{'★'.repeat(r.rating || 5)}</span>
-                      <span className="text-neutral-300">{'☆'.repeat(5 - (r.rating || 5))}</span>
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-neutral-700">&quot;{r.text || ""}&quot;</p>
-                    <div className="mt-5 flex items-center justify-between gap-3">
-                      <strong className="text-sm font-semibold text-neutral-900">{r.author || ""}</strong>
-                      {r.verified && (
-                        <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-dark">
-                          Verified Purchase
-                        </span>
-                      )}
-                    </div>
+        <div className="feedback-marquee mt-8" aria-live="polite">
+          <div className="feedback-marquee-track">
+            {feedbackMarqueeReviews.map((r, i) => (
+              <div
+                key={`${r.author}-${i}`}
+                aria-hidden={i >= feedbackMarqueeReviews.length / 2}
+                className="w-[min(88vw,22rem)] shrink-0 pr-3 sm:w-[20rem] sm:pr-4 lg:w-[22rem]"
+              >
+                <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+                  <div className="text-sm font-extrabold text-gold">
+                    <span className="text-primary">
+                      {"★".repeat(r.rating || 5)}
+                    </span>
+                    <span className="text-neutral-300">
+                      {"☆".repeat(5 - (r.rating || 5))}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm leading-7 text-neutral-700">
+                    &quot;{r.text || ""}&quot;
+                  </p>
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <strong className="text-sm font-semibold text-neutral-900">
+                      {r.author || ""}
+                    </strong>
+                    {r.verified && (
+                      <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-dark">
+                        Verified Purchase
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
+        </div>
       </section>
 
       <section className="container py-10 sm:py-14">
@@ -512,7 +579,8 @@ const Home = () => {
               {cta.title || "Ready to Find Your Perfect Remote?"}
             </h2>
             <p className="mt-3 text-sm leading-7 text-neutral-600 sm:text-base">
-              {cta.description || "Browse our collection and find the perfect remote for your needs"}
+              {cta.description ||
+                "Browse our collection and find the perfect remote for your needs"}
             </p>
             <Link
               href={cta.buttonPath || "/products/all"}

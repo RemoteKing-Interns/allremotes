@@ -171,7 +171,9 @@ const ProductCard = ({
                 ? "bg-white text-primary"
                 : "bg-white/90 text-neutral-700 opacity-100 backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
             }`}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-label={
+              isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+            }
             aria-pressed={isWishlisted}
           >
             <Heart
@@ -181,7 +183,6 @@ const ProductCard = ({
             />
           </button>
         )}
-
       </div>
 
       {/* Product Info */}
