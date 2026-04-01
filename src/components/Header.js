@@ -223,7 +223,7 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md">
+    <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md transition-shadow duration-200 ease-in-out">
       <TopInfoBar promotions={promotions} collapsed={topBarCollapsed} />
       <MainHeaderBar
         user={user}
