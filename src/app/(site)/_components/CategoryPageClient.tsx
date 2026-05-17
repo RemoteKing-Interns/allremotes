@@ -83,7 +83,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
 
       {/* Category Sections / Sub-navigation */}
       {visibleColumns.length > 0 && (
-        <div className="border-b border-neutral-100 bg-white/50">
+        <div className="border-b border-neutral-100 bg-white">
           <div className="container mx-auto max-w-6xl px-4 py-12">
             <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
               {visibleColumns.map((column: any, index: number) => (

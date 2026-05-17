@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const TOP_BAR_ICONS = {
   WARRANTY: (
@@ -182,6 +182,8 @@ const mergeTopBarItems = (items) => {
 };
 
 const TopInfoBar = ({ promotions, collapsed = false }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
   const configuredItems =
     promotions?.topInfoBar?.enabled &&
     Array.isArray(promotions?.topInfoBar?.items) &&
@@ -190,28 +192,56 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
       : null;
   const items = mergeTopBarItems(configuredItems || STATIC_TOP_BAR_ITEMS);
 
+  // Auto-rotate carousel on small screens
+  useEffect(() => {
+    if (items.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % items.length);
+    }, 3000); // Change every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [items.length]);
+
   return (
     <div
       className={`overflow-hidden bg-accent-dark transition-all duration-500 ease-in-out ${
         collapsed
           ? "max-h-0 border-b border-transparent opacity-0"
+<<<<<<< Updated upstream
           : "max-h-32 border-b border-accent-dark/50 opacity-100"
+=======
+          : "max-h-24 border-b border-accent-dark opacity-100"
+>>>>>>> Stashed changes
       }`}
       aria-hidden={collapsed}
     >
-      <div className="container">
-        <div className="grid w-full grid-cols-3 items-center gap-x-2 gap-y-1.5 px-2 py-[clamp(0.35rem,1.35vw,0.55rem)] text-[9px] font-semibold uppercase leading-snug tracking-[0.04em] text-white/90 min-[390px]:text-[10px] sm:gap-x-4 sm:gap-y-1.5 sm:px-0 sm:py-2 sm:text-[11px] sm:tracking-wide lg:grid-cols-6">
-          {items.map((text, idx) => (
-            <span
-              key={`${idx}-${text}`}
-              className="inline-flex min-w-0 items-center justify-center gap-1 whitespace-normal py-px text-center sm:w-full sm:gap-1.5 sm:whitespace-nowrap sm:py-0"
-            >
-              <span className="shrink-0 text-accent-light [&_svg]:h-3 [&_svg]:w-3 min-[390px]:[&_svg]:h-3.5 min-[390px]:[&_svg]:w-3.5">
-                {getIconForText(text)}
+      <div className="container relative">
+        <div className="w-full px-2 py-[clamp(0.25rem,1vw,0.4rem)] min-[390px]:px-0 sm:px-0 sm:py-[clamp(0.3rem,1.2vw,0.5rem)]">
+          {/* Mobile/MD: Show one item at a time with carousel effect */}
+          <div className="flex w-full items-center justify-center text-[9px] font-bold uppercase leading-snug tracking-[0.02em] text-white min-[390px]:text-[10px] max-[647px]:text-[8px] md:hidden">
+            <div className="flex items-center justify-center gap-1 transition-all duration-500 ease-in-out min-[390px]:gap-1.5 max-[647px]:gap-0.5">
+              <span className="shrink-0 text-white [&_svg]:h-3 [&_svg]:w-3 min-[390px]:[&_svg]:h-3.5 [&_svg]:w-3.5 max-[647px]:[&_svg]:h-2.5 [&_svg]:w-2.5">
+                {getIconForText(items[currentIndex])}
               </span>
-              {text}
-            </span>
-          ))}
+              <span className="text-center text-white font-extrabold max-[647px]:font-bold truncate px-1">{items[currentIndex]}</span>
+            </div>
+          </div>
+          
+          {/* Desktop: Show all items in grid */}
+          <div className="hidden w-full items-center gap-x-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.03em] text-white/90 md:grid md:grid-cols-6 lg:gap-x-3 lg:text-[11px] lg:tracking-[0.04em]">
+            {items.map((text, idx) => (
+              <span
+                key={`${idx}-${text}`}
+                className="inline-flex min-w-0 items-center justify-center gap-1 whitespace-nowrap py-px text-center w-full"
+              >
+                <span className="shrink-0 text-white [&_svg]:h-3.5 [&_svg]:w-3.5">
+                  {getIconForText(text)}
+                </span>
+                {text}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </div>

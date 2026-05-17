@@ -21,14 +21,14 @@ export const tw = {
   profileName: "truncate text-base font-bold text-neutral-900",
   profileEmail: "max-w-full break-all text-xs text-neutral-600",
   nav:
-    "grid gap-2 rounded-2xl border border-neutral-200/80 bg-white/95 p-2 shadow-sm md:grid-cols-2 xl:grid-cols-1",
+    "grid gap-2 rounded-2xl border border-neutral-200/80 bg-neutral-900 p-2 shadow-sm md:grid-cols-2 xl:grid-cols-1",
   navItem:
-    "flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-neutral-700 transition hover:border-neutral-200 hover:bg-neutral-100",
+    "flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-white/90 transition hover:border-white/20 hover:bg-white/10",
   navItemActive:
-    "border-primary/20 bg-primary/10 text-primary-dark shadow-sm",
+    "border-accent/50 bg-accent text-white shadow-sm",
   navIcon:
-    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-[11px] font-bold",
-  navIconActive: "border-primary/20 text-primary-dark",
+    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-white/20 bg-white/10 text-[11px] font-bold text-white/80",
+  navIconActive: "border-accent/50 bg-accent text-white",
   navLabel: "text-sm font-semibold",
   main: "min-w-0",
 
