@@ -208,11 +208,7 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
       className={`overflow-hidden bg-accent-dark transition-all duration-500 ease-in-out ${
         collapsed
           ? "max-h-0 border-b border-transparent opacity-0"
-<<<<<<< Updated upstream
-          : "max-h-32 border-b border-accent-dark/50 opacity-100"
-=======
           : "max-h-24 border-b border-accent-dark opacity-100"
->>>>>>> Stashed changes
       }`}
       aria-hidden={collapsed}
     >
