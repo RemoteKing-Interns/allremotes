@@ -3,7 +3,7 @@ import { getSiteUrl } from "@/lib/site-url";
 
 const DISALLOWED_PATHS = [
   "/admin",
-  "/api",
+  "/api/admin",
   "/account",
   "/cart",
   "/checkout",
