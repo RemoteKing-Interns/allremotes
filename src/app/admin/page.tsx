@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
@@ -340,7 +340,7 @@ const serializeReviewsForApi = (reviews: any[]) => {
   }));
 };
 
-const Admin = () => {
+const AdminContent = () => {
   // All hooks must be declared before any conditional returns
   const { user, login, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -6422,5 +6422,11 @@ function CategoriesBrandsSection() {
     </div>
   );
 }
+
+const Admin = () => (
+  <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-200 border-t-neutral-600" /></div>}>
+    <AdminContent />
+  </Suspense>
+);
 
 export default Admin;
