@@ -3,7 +3,7 @@ import { getDb } from '../../../../lib/mongo';
 import bcrypt from 'bcryptjs';
 import { sendWelcomeEmail, sendVerificationEmail } from '../../../../lib/email';
 import { validatePassword } from '../../../../lib/password-policy';
-import { generateVerificationToken, hashToken } from '../verify-email/route';
+import { generateVerificationToken, hashToken } from '../../../../lib/email-verification';
 
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 

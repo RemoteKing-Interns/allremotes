@@ -1,23 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
-import crypto from 'crypto';
-
-// Token expiration time (24 hours)
-const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Generate a secure verification token
- */
-export function generateVerificationToken(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
-
-/**
- * Hash token for storage (security best practice)
- */
-export function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
+import { generateVerificationToken, hashToken, getTokenExpiry } from '../../../../lib/email-verification';
 
 /**
  * POST /api/auth/verify-email - Verify email with token
@@ -131,7 +114,7 @@ export async function PUT(request: Request) {
     // Generate new verification token
     const verificationToken = generateVerificationToken();
     const hashedToken = hashToken(verificationToken);
-    const expiryDate = new Date(Date.now() + TOKEN_EXPIRY_MS);
+    const expiryDate = getTokenExpiry();
 
     // Update user with new verification token
     await usersCollection.updateOne(
