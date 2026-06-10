@@ -59,6 +59,20 @@ The feed follows the Google Shopping RSS 2.0 specification with the following st
 - **g:sku**: Product SKU
 - **g:product_category**: Product category
 
+## Return Policy
+
+The feed includes a detailed return policy for Australia:
+
+- **Return Period**: 30 days from receiving the item
+- **Change of Mind**: Accepted within 30 days (subject to conditions)
+- **Condition**: Must be in original, resaleable condition with all tags and packaging
+- **Return Shipping**: Buyer pays return shipping costs
+- **Non-Returnable Items**: Motor parts, control boards, motor lights, motor covers, springs, weather seals
+- **Geographic**: Returns only accepted within Australia
+- **Processing**: Up to 10 business days after receipt
+
+The return policy is automatically included in all product listings.
+
 ## Data Source
 
 The feed is automatically generated from the products stored in `products.json`. When you update products via the admin panel, the feed will reflect those changes.

@@ -30,6 +30,67 @@ const getS3UrlForLocalPath = (localPath) => {
   return `${s3BucketUrl}/images/${filename}`;
 };
 
+// S3 configuration for SKU-based product images
+const S3_BUCKET_URL = 'https://allremotes.s3.ap-southeast-2.amazonaws.com';
+const MAX_IMAGES_PER_PRODUCT = 5;
+
+/**
+ * Generate S3 image URLs for a product based on its SKU
+ * Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-1.png
+ * Supports multiple images: sku-1.png, sku-2.png, ..., sku-5.png
+ */
+function generateS3ImageUrlsFromSku(sku) {
+  if (!sku || typeof sku !== 'string') return [];
+  
+  const normalizedSku = sku.trim();
+  if (!normalizedSku) return [];
+  
+  const imageUrls = [];
+  for (let i = 1; i <= MAX_IMAGES_PER_PRODUCT; i++) {
+    imageUrls.push(`${S3_BUCKET_URL}/images/${normalizedSku}-${i}.png`);
+  }
+  
+  return imageUrls;
+}
+
+/**
+ * Enrich product with S3 image URLs based on SKU
+ * If product already has images from server, preserve them
+ */
+function enrichProductWithS3Images(product) {
+  if (!product || typeof product !== 'object') return product;
+  
+  // Skip if already enriched by server (has _s3ImagesGenerated flag)
+  if (product._s3ImagesGenerated) return product;
+  
+  const sku = product.sku || product.product_code || product.SKU;
+  const s3ImageUrls = generateS3ImageUrlsFromSku(sku);
+  
+  // Get existing images
+  const existingImages = Array.isArray(product.images) 
+    ? product.images.filter((img) => typeof img === 'string' && img.trim())
+    : [];
+  
+  // If product has a single image field that's a URL, add it to the list
+  if (typeof product.image === 'string' && product.image.trim() && !existingImages.includes(product.image)) {
+    existingImages.push(product.image);
+  }
+  
+  // Combine S3 URLs with existing images (S3 URLs come first)
+  const combinedImages = [...s3ImageUrls, ...existingImages];
+  
+  // Remove duplicates while preserving order
+  const uniqueImages = Array.from(new Set(combinedImages));
+  
+  return {
+    ...product,
+    images: uniqueImages,
+    image: product.image || uniqueImages[0] || '',
+    _s3ImagesGenerated: s3ImageUrls.length > 0,
+    _skuUsedForImages: sku,
+  };
+}
+
 const STORAGE_KEYS = {
   products: 'allremotes_products',
   homeContent: 'allremotes_home_content',
@@ -115,13 +176,14 @@ const defaultReviews = [
 
 const defaultSettings = {
   siteName: 'AllRemotes',
-  siteEmail: 'contact@allremotes.com',
+  siteEmail: 'shane@allremotes.com.au',
   maintenanceMode: false,
   enableRegistration: true,
   enableReviews: true,
   itemsPerPage: 12,
   currency: 'AUD',
   timezone: 'Australia/Melbourne',
+  memberDiscountRate: 10,
 };
 
 // Product images: use first 12 from remoteImages for product catalog, converted to S3 URLs
@@ -175,8 +237,11 @@ function loadProducts() {
 function resolveProducts(productsData) {
   if (!productsData || !productsData.length) return [];
   return productsData.map((p) => {
-    const normalizedImages = Array.isArray(p?.images)
-      ? p.images
+    // First, enrich product with S3 images if not already enriched
+    const enriched = p._s3ImagesGenerated ? p : enrichProductWithS3Images(p);
+    
+    const normalizedImages = Array.isArray(enriched?.images)
+      ? enriched.images
           .map((img) => (typeof img === 'string' ? img.trim() : ''))
           .filter(Boolean)
       : [];
@@ -184,25 +249,25 @@ function resolveProducts(productsData) {
     
     // Prefer explicit multi-image gallery if present.
     if (normalizedImages.length > 0) {
-      let preferredIndex = typeof p?.imgIndex === 'number' ? p.imgIndex : 0;
+      let preferredIndex = typeof enriched?.imgIndex === 'number' ? enriched.imgIndex : 0;
       if (!Number.isFinite(preferredIndex) || preferredIndex < 0 || preferredIndex >= normalizedImages.length) {
         preferredIndex = 0;
       }
       imageUrl = normalizedImages[preferredIndex];
     }
     // If product has an image string
-    else if (typeof p.image === 'string' && p.image.trim()) {
+    else if (typeof enriched.image === 'string' && enriched.image.trim()) {
       // If it's already an S3 URL, use it
-      if (p.image.startsWith('http')) {
-        imageUrl = p.image;
+      if (enriched.image.startsWith('http')) {
+        imageUrl = enriched.image;
       } else {
         // Convert local path to S3 URL
-        imageUrl = getS3UrlForLocalPath(p.image);
+        imageUrl = getS3UrlForLocalPath(enriched.image);
       }
     } 
     // Otherwise use imageIndex from pool
-    else if (typeof p.imageIndex === 'number' && productImagePool[p.imageIndex]) {
-      imageUrl = productImagePool[p.imageIndex];
+    else if (typeof enriched.imageIndex === 'number' && productImagePool[enriched.imageIndex]) {
+      imageUrl = productImagePool[enriched.imageIndex];
     } 
     // Fallback to first image in pool
     else {
@@ -210,9 +275,9 @@ function resolveProducts(productsData) {
     }
     
     return {
-      ...p,
+      ...enriched,
       images: normalizedImages,
-      imgIndex: typeof p?.imgIndex === 'number' ? p.imgIndex : (typeof p?.imageIndex === 'number' ? p.imageIndex : 0),
+      imgIndex: typeof enriched?.imgIndex === 'number' ? enriched.imgIndex : (typeof enriched?.imageIndex === 'number' ? enriched.imageIndex : 0),
       image: imageUrl,
     };
   });
@@ -233,11 +298,14 @@ function coerceServerProductsToLocal(productsFromServer) {
       ? p.imgIndex
       : (typeof p?.imageIndex === 'number' ? p.imageIndex : 0);
 
-    return {
+    const product = {
       id: p?.id ?? String(Date.now()),
       name: p?.name ?? '',
-      category: p?.category ?? 'garage',
+      cat1: p?.cat1 ?? '',
+      cat2: p?.cat2 ?? '',
+      category: p?.cat1 ?? p?.category ?? 'garage', // Fallback to cat1 or old category field
       price: p?.price ?? 0,
+      comparePrice: p?.comparePrice ?? 0,
       description: p?.description ?? '',
       inStock: typeof p?.inStock === 'boolean' ? p.inStock : true,
       brand: p?.brand ?? '',
@@ -250,6 +318,9 @@ function coerceServerProductsToLocal(productsFromServer) {
       returns: p?.returns ?? 'No returns accepted',
       seller: p?.seller ?? 'AllRemotes (100% positive)',
     };
+    
+    // Enrich with S3 images based on SKU
+    return enrichProductWithS3Images(product);
   });
 }
 

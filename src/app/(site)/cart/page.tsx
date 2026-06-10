@@ -352,12 +352,17 @@ const Cart = () => {
                   <h3 className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight text-neutral-900">
                     {selectedItem?.name}
                   </h3>
-                  <p className="mt-3 break-words text-sm leading-7 text-neutral-600">
-                    {selectedItem?.description &&
-                    selectedItem.description.trim().toLowerCase() !== String(selectedItem?.name || "").trim().toLowerCase()
-                      ? selectedItem.description
-                      : "Review item details, condition, and category before checkout."}
-                  </p>
+                  {selectedItem?.description &&
+                  selectedItem.description.trim().toLowerCase() !== String(selectedItem?.name || "").trim().toLowerCase() ? (
+                    <div
+                      className="prose prose-sm mt-3 max-w-none break-words text-neutral-600"
+                      dangerouslySetInnerHTML={{ __html: selectedItem.description }}
+                    />
+                  ) : (
+                    <p className="mt-3 break-words text-sm leading-7 text-neutral-600">
+                      Review item details, condition, and category before checkout.
+                    </p>
+                  )}
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">

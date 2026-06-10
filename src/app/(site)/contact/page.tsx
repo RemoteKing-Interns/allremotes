@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -44,8 +45,8 @@ export default function ContactPage() {
                 </svg>
               </div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-500">Email</h3>
-              <a href="mailto:support@allremotes.com" className="mt-1 block text-lg font-semibold text-neutral-900 hover:text-primary transition-colors">
-                support@allremotes.com
+              <a href="mailto:shane@allremotes.com.au" className="mt-1 block text-lg font-semibold text-neutral-900 hover:text-primary transition-colors">
+                shane@allremotes.com.au
               </a>
               <p className="mt-1 text-sm text-neutral-500">We typically respond within 2-4 hours</p>
             </div>
@@ -196,7 +197,7 @@ export default function ContactPage() {
                 <div>
                   <h3 className="text-sm font-bold text-neutral-900">Looking for quick answers?</h3>
                   <p className="mt-1 text-sm text-neutral-600">
-                    Check our support section for FAQs about shipping, returns, warranty, and compatibility guides.
+                    Check our <Link href="/return-policy" className="text-accent-dark hover:underline">Return Policy</Link> or support section for FAQs about shipping, warranty, and compatibility guides.
                   </p>
                 </div>
               </div>

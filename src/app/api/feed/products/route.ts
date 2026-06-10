@@ -11,6 +11,7 @@ interface Product {
   model?: string;
   description?: string;
   price: number;
+  comparePrice?: number; // Maximum Retail Price (strikethrough price)
   sku?: string;
   brand?: string;
   images?: string[];
@@ -62,6 +63,10 @@ function getAvailability(product: Product): string {
   return inStock ? "in stock" : "out of stock";
 }
 
+function getReturnPolicy(): string {
+  return `Returns accepted within 30 days. Must be in original, resaleable condition. Buyer pays return shipping. Returns only accepted within Australia. Certain items (motor parts, control boards, etc.) are non-returnable.`;
+}
+
 function formatPrice(price: number): string {
   return `${price.toFixed(2)} AUD`;
 }
@@ -76,6 +81,7 @@ function generateProductXml(product: Product): string {
   const price = formatPrice(product.price);
   const brand = escapeXml(product.brand?.trim() || "ALLREMOTES");
   const sku = escapeXml(product.sku?.trim() || product.id);
+  const returnPolicy = escapeXml(getReturnPolicy());
 
   return `
   <item>
@@ -90,6 +96,14 @@ function generateProductXml(product: Product): string {
     <g:condition>new</g:condition>
     <g:sku>${sku}</g:sku>
     ${product.category ? `<g:product_category>${escapeXml(product.category)}</g:product_category>` : ""}
+    <g:return_policy>
+      <g:country>AU</g:country>
+      <g:policy_label>all_remotes_policy</g:policy_label>
+      <g:return_method>return</g:return_method>
+      <g:return_time>30</g:return_time>
+      <g:return_shipping_fees>customer</g:return_shipping_fees>
+      <g:return_description>${returnPolicy}</g:return_description>
+    </g:return_policy>
   </item>`;
 }
 

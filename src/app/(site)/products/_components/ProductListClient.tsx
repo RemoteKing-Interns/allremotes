@@ -287,11 +287,23 @@ export default function ProductListClient({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q),
-      );
+      result = result.filter((p) => {
+        const searchableText = [
+          p.name,
+          p.description,
+          p.category,
+          p.brand,
+          p.sku,
+          p.seo_title,
+          p.tags,
+          p.features,
+          p.compatibility,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return searchableText.includes(q);
+      });
     }
 
     if (stockStatus !== "all") {

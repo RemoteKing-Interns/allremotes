@@ -205,7 +205,7 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
 
   return (
     <div
-      className={`overflow-hidden bg-accent-dark transition-all duration-500 ease-in-out ${
+      className={`overflow-hidden bg-accent-dark transition-[max-height,opacity] duration-300 ease-in-out ${
         collapsed
           ? "max-h-0 border-b border-transparent opacity-0"
           : "max-h-24 border-b border-accent-dark opacity-100"
@@ -216,7 +216,7 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
         <div className="w-full px-2 py-[clamp(0.25rem,1vw,0.4rem)] min-[390px]:px-0 sm:px-0 sm:py-[clamp(0.3rem,1.2vw,0.5rem)]">
           {/* Mobile/MD: Show one item at a time with carousel effect */}
           <div className="flex w-full items-center justify-center text-[9px] font-bold uppercase leading-snug tracking-[0.02em] text-white min-[390px]:text-[10px] max-[647px]:text-[8px] md:hidden">
-            <div className="flex items-center justify-center gap-1 transition-all duration-500 ease-in-out min-[390px]:gap-1.5 max-[647px]:gap-0.5">
+            <div className="flex items-center justify-center gap-1 min-[390px]:gap-1.5 max-[647px]:gap-0.5">
               <span className="shrink-0 text-white [&_svg]:h-3 [&_svg]:w-3 min-[390px]:[&_svg]:h-3.5 [&_svg]:w-3.5 max-[647px]:[&_svg]:h-2.5 [&_svg]:w-2.5">
                 {getIconForText(items[currentIndex])}
               </span>

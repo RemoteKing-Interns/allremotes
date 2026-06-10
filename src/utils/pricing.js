@@ -1,4 +1,22 @@
-export const MEMBER_DISCOUNT_RATE = 0.1;
+export const getMemberDiscountRate = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = window.localStorage.getItem('allremotes_settings');
+      if (raw) {
+        const settings = JSON.parse(raw);
+        const rate = Number(settings?.memberDiscountRate);
+        if (Number.isFinite(rate) && rate >= 0 && rate <= 100) {
+          return rate / 100;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 0.1; // default 10%
+};
+
+export const MEMBER_DISCOUNT_RATE = 0.1; // kept for backward compat; use getMemberDiscountRate()
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -65,7 +83,7 @@ export const getDiscountedPrice = (price, userOrEligible, options = {}) => {
       ? userOrEligible
       : isDiscountEligible(userOrEligible);
 
-  const memberRate = eligible ? MEMBER_DISCOUNT_RATE : 0;
+  const memberRate = eligible ? getMemberDiscountRate() : 0;
   const offerRate = getOfferDiscountRate({
     promotions: options?.promotions,
     product: options?.product,
@@ -79,15 +97,19 @@ export const getDiscountedPrice = (price, userOrEligible, options = {}) => {
 };
 
 export const getPriceBreakdown = (price, userOrEligible, options = {}) => {
-  const originalPrice = roundCurrency(price);
-  const finalPrice = getDiscountedPrice(originalPrice, userOrEligible, options);
+  const product = options?.product;
+  const basePrice = roundCurrency(price);
+  // Use comparePrice (Maximum Retail Price) as original price if set
+  const comparePrice = product?.comparePrice ? roundCurrency(product.comparePrice) : null;
+  const originalPrice = comparePrice || basePrice;
+  const finalPrice = getDiscountedPrice(basePrice, userOrEligible, options);
   const discountAmount = roundCurrency(originalPrice - finalPrice);
 
   return {
     originalPrice,
     finalPrice,
     discountAmount,
-    hasDiscount: discountAmount > 0,
+    hasDiscount: originalPrice > finalPrice,
   };
 };
 

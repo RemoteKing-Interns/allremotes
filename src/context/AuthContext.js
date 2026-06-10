@@ -25,8 +25,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (email, password) => {
-    // Admin login (no code change needed: use this email + password)
+  const login = async (email, password) => {
+    // Admin login (hardcoded admin)
     const adminEmail = 'admin@allremotes.com';
     const adminPassword = 'Admin123!';
     if (email === adminEmail && password === adminPassword) {
@@ -35,13 +35,53 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       return { success: true };
     }
-    // Regular user login
+
+    try {
+      // Try API login first
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const userData = result.user;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        return { success: true };
+      }
+
+      // If API fails with server error, fall back to localStorage
+      if (response.status >= 500) {
+        console.warn('API login failed, falling back to localStorage');
+        return loginLocal(email, password);
+      }
+
+      return { 
+        success: false, 
+        error: result.error || 'Invalid email or password',
+        emailNotVerified: result.emailNotVerified,
+        email: result.email
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      // Fallback to localStorage
+      return loginLocal(email, password);
+    }
+  };
+
+  // Local login fallback
+  const loginLocal = (email, password) => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const foundUser = users.find(u => u.email === email && u.password === password);
     
     if (foundUser) {
       const userData = { ...foundUser };
-      delete userData.password; // Don't store password in user state
+      delete userData.password;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       return { success: true };
@@ -49,8 +89,42 @@ export const AuthProvider = ({ children }) => {
     return { success: false, error: 'Invalid email or password' };
   };
 
-  const register = (name, email, password) => {
-    // Simple registration (in production, this would be an API call)
+  const register = async (name, email, password) => {
+    try {
+      // Try API registration first
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const userData = result.user;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        return { success: true };
+      }
+
+      // If API fails, fall back to localStorage for development/offline
+      if (response.status >= 500) {
+        console.warn('API registration failed, falling back to localStorage');
+        return registerLocal(name, email, password);
+      }
+
+      return { success: false, error: result.error || 'Registration failed' };
+    } catch (error) {
+      console.error('Registration error:', error);
+      // Fallback to localStorage
+      return registerLocal(name, email, password);
+    }
+  };
+
+  // Local registration fallback
+  const registerLocal = (name, email, password) => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     
     if (users.find(u => u.email === email)) {
@@ -61,7 +135,9 @@ export const AuthProvider = ({ children }) => {
       id: Date.now().toString(),
       name,
       email,
-      password, // In production, this would be hashed
+      password, // Note: Not hashed in localStorage fallback
+      provider: 'email',
+      role: 'customer',
       createdAt: new Date().toISOString()
     };
 
@@ -140,18 +216,54 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
   };
 
-  const changePassword = (currentPassword, newPassword) => {
+  const changePassword = async (currentPassword, newPassword) => {
     if (!user) return { success: false, error: 'Not signed in' };
 
+    // Admin password cannot be changed through this function
     const adminEmail = 'admin@allremotes.com';
-    const adminPassword = 'Admin123!';
     if (user.email === adminEmail) {
-      if (String(currentPassword) !== adminPassword) {
+      if (String(currentPassword) !== 'Admin123!') {
         return { success: false, error: 'Current password is incorrect' };
       }
       return { success: false, error: 'Admin password is set in code and cannot be changed here' };
     }
 
+    // Try API first
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return { success: true };
+      }
+
+      // If API fails with server error, fall back to localStorage
+      if (response.status >= 500) {
+        console.warn('API change password failed, falling back to localStorage');
+        return changePasswordLocal(currentPassword, newPassword);
+      }
+
+      return { success: false, error: result.error || 'Failed to change password', passwordErrors: result.passwordErrors };
+    } catch (error) {
+      console.error('Change password error:', error);
+      // Fallback to localStorage
+      return changePasswordLocal(currentPassword, newPassword);
+    }
+  };
+
+  // Local change password fallback
+  const changePasswordLocal = (currentPassword, newPassword) => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const idx = users.findIndex(u => u.id === user.id);
     if (idx === -1) return { success: false, error: 'User not found' };

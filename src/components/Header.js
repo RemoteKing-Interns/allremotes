@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useStore } from "../context/StoreContext";
+import { generateNavigationFromProducts } from "../data/navigation";
 import MainHeaderBar from "./header/MainHeaderBar";
 import NavBar from "./header/NavBar";
 import TopInfoBar from "./header/TopInfoBar";
@@ -18,31 +19,51 @@ const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const cartCount = getCartItemCount();
-  const [activeDropdown, setActiveDropdown] = useState(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [topBarCollapsed, setTopBarCollapsed] = useState(false);
-  const dropdownRef = useRef(null);
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
   const hamburgerRef = useRef(null);
-  const dropdownCloseTimeoutRef = useRef(null);
   const accountMenuCloseTimeoutRef = useRef(null);
 
-  const navItems = Object.entries(navigationMenu || {})
+  // Get products for nav generation — prefer store cache, fallback to API fetch
+  const [isClient, setIsClient] = useState(false);
+  const [navProducts, setNavProducts] = useState([]);
+
+  useEffect(() => {
+    setIsClient(true);
+    const stored = getProducts();
+    if (stored && stored.length > 0) {
+      setNavProducts(stored);
+      return;
+    }
+    // Fetch from API if store is empty
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setNavProducts(data); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also sync when store products update (e.g. after store hydration)
+  const storeProducts = useMemo(() => getProducts() || [], [getProducts]);
+  useEffect(() => {
+    if (storeProducts.length > 0 && storeProducts.length !== navProducts.length) {
+      setNavProducts(storeProducts);
+    }
+  }, [storeProducts, navProducts.length]);
+
+  // Generate navigation from product categories (only on client to avoid hydration errors)
+  const dynamicNavigation = useMemo(() => {
+    if (!isClient || !navProducts || navProducts.length === 0) return null;
+    return generateNavigationFromProducts(navProducts);
+  }, [navProducts, isClient]);
+
+  const navItems = Object.entries(dynamicNavigation || {})
     .filter(([, item]) => !item?.hidden)
     .map(([key, item]) => ({ key, ...item }));
-
-  const getVisibleColumns = (section) =>
-    (section?.columns || [])
-      .map((col) => ({
-        ...col,
-        items: (col.items || []).filter((i) => !i?.hidden),
-      }))
-      .filter((col) => (col.items || []).length > 0);
 
   const isRouteActive = (path) => {
     if (!path) return false;
@@ -53,37 +74,6 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     router.push("/");
-  };
-
-  const openDropdown = (key) => {
-    const section = navigationMenu[key];
-    if (!section || section.hidden) return;
-    const visibleColumns = getVisibleColumns(section);
-
-    if (visibleColumns.length > 0) {
-      if (dropdownCloseTimeoutRef.current) {
-        clearTimeout(dropdownCloseTimeoutRef.current);
-        dropdownCloseTimeoutRef.current = null;
-      }
-      setActiveDropdown(key);
-    }
-  };
-
-  const scheduleDropdownClose = () => {
-    if (dropdownCloseTimeoutRef.current) {
-      clearTimeout(dropdownCloseTimeoutRef.current);
-    }
-    dropdownCloseTimeoutRef.current = window.setTimeout(() => {
-      setActiveDropdown(null);
-      dropdownCloseTimeoutRef.current = null;
-    }, 160);
-  };
-
-  const cancelDropdownClose = () => {
-    if (dropdownCloseTimeoutRef.current) {
-      clearTimeout(dropdownCloseTimeoutRef.current);
-      dropdownCloseTimeoutRef.current = null;
-    }
   };
 
   const openAccountMenu = () => {
@@ -123,9 +113,7 @@ const Header = () => {
   };
 
   useEffect(() => {
-    cancelDropdownClose();
     cancelAccountMenuClose();
-    setActiveDropdown(null);
     setShowAccountMenu(false);
     setShowSearchResults(false);
   }, [pathname]);
@@ -133,14 +121,25 @@ const Header = () => {
   useEffect(() => {
     const list = getProducts() || [];
     if (searchQuery.trim().length > 0) {
+      const query = searchQuery.toLowerCase();
       const filtered = list.filter((product) => {
-        const query = searchQuery.toLowerCase();
-        return (
-          (product.name && product.name.toLowerCase().includes(query)) ||
-          (product.description &&
-            product.description.toLowerCase().includes(query)) ||
-          (product.category && product.category.toLowerCase().includes(query))
-        );
+        const searchableText = [
+          product.name,
+          product.description,
+          product.category,
+          product.brand,
+          product.sku,
+          product.seo_title,
+          product.tags,
+          product.features,
+          product.compatibility,
+          product.cat1,
+          product.cat2,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return searchableText.includes(query);
       });
       setSearchResults(filtered.slice(0, 8));
       setShowSearchResults(true);
@@ -183,10 +182,6 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        cancelDropdownClose();
-        setActiveDropdown(null);
-      }
       if (
         accountMenuRef.current &&
         !accountMenuRef.current.contains(event.target)
@@ -201,30 +196,14 @@ const Header = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      cancelDropdownClose();
       cancelAccountMenuClose();
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  useEffect(() => {
-    const collapseThreshold = 24;
-
-    const handleScroll = () => {
-      setTopBarCollapsed(window.scrollY > collapseThreshold);
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
   return (
     <header className="sticky top-0 z-[1200] border-b border-neutral-200 bg-neutral-50/80 backdrop-blur-md transition-shadow duration-200 ease-in-out">
-      <TopInfoBar promotions={promotions} collapsed={topBarCollapsed} />
+      <TopInfoBar promotions={promotions} />
       <MainHeaderBar
         user={user}
         promotions={promotions}
@@ -253,17 +232,10 @@ const Header = () => {
         user={user}
         pathname={pathname}
         navItems={navItems}
-        dropdownRef={dropdownRef}
         hamburgerRef={hamburgerRef}
         mobileDrawerOpen={mobileDrawerOpen}
         setMobileDrawerOpen={setMobileDrawerOpen}
-        activeDropdown={activeDropdown}
-        setActiveDropdown={setActiveDropdown}
-        getVisibleColumns={getVisibleColumns}
         isRouteActive={isRouteActive}
-        openDropdown={openDropdown}
-        scheduleDropdownClose={scheduleDropdownClose}
-        cancelDropdownClose={cancelDropdownClose}
         handleNavLinkClick={handleNavLinkClick}
         handleLogout={handleLogout}
         closeDrawer={closeDrawer}

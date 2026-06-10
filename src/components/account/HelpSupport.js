@@ -187,7 +187,7 @@ const HelpSupport = () => {
                 </div>
                 <h4 className="text-sm font-bold text-neutral-900">Email Support</h4>
               </div>
-              <p className="text-sm text-neutral-700">support@allremotes.com</p>
+              <p className="text-sm text-neutral-700">shane@allremotes.com.au</p>
               <p className="text-xs text-neutral-500">Response within 24 hours</p>
             </div>
             <div className={`${tw.card} flex flex-col items-center text-center`}>

@@ -30,6 +30,7 @@ type ProductRecord = {
   name?: string;
   category?: string | null;
   price?: number;
+  comparePrice?: number; // Maximum Retail Price (strikethrough price)
   inStock?: boolean;
   image?: string; // Legacy single image (backward compat)
   images?: string[]; // New: array of up to 3 image URLs

@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { pushOrderToStarshipit, mapOrderToStarshipit, type StarshipitFailure } from "@/lib/starshipit";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -97,14 +98,25 @@ export async function POST(request: Request) {
       const db = await getDb();
       const col = db.collection("orders");
       await col.insertOne({ ...(order as any) });
-      return NextResponse.json(order, {
-        headers: CORS_HEADERS
+    } else {
+      const orders = readOrdersFile();
+      orders.push(order);
+      writeOrdersFile(orders);
+    }
+
+    // Push to Starshipit (non-blocking — order is already saved above)
+    if (process.env.STARSHIPIT_API_KEY && process.env.STARSHIPIT_SUBSCRIPTION_KEY) {
+      const starshipitPayload = mapOrderToStarshipit(order);
+      pushOrderToStarshipit(starshipitPayload).then((result) => {
+        if (result.success) {
+          console.log(`[Starshipit] Order ${order.id} pushed — Starshipit ID: ${result.order_id}`);
+        } else {
+          const failure = result as StarshipitFailure;
+          console.error(`[Starshipit] Failed to push order ${order.id}:`, failure.error, failure.details);
+        }
       });
     }
 
-    const orders = readOrdersFile();
-    orders.push(order);
-    writeOrdersFile(orders);
     return NextResponse.json(order, {
       headers: CORS_HEADERS
     });

@@ -14,6 +14,7 @@ const STATIC_ROUTES = [
   "/shop-by-brand",
   "/support",
   "/contact",
+  "/return-policy",
   "/products/all",
   "/products/garage",
   "/products/car",

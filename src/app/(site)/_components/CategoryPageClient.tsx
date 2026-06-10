@@ -10,25 +10,38 @@ import {
   toProductsCategoryPath,
 } from "../../../lib/category";
 
+const CATEGORY_SUBTITLES: Record<string, string> = {
+  garage: "Explore our wide range of garage and gate automation products",
+  car: "Find the perfect automotive keys and remotes for your vehicle",
+  home: "Discover home automation solutions and remotes",
+  locksmith: "Professional locksmithing tools and equipment",
+  all: "Browse all products",
+};
+
+const CATEGORY_TITLES: Record<string, string> = {
+  garage: "Garage & Gate",
+  car: "Automotive",
+  home: "For The Home",
+  locksmith: "Locksmithing",
+  all: "All Products",
+};
+
 export default function CategoryPageClient({ category }: { category: string }) {
   const { getNavigation, getProducts } = useStore();
   const navigationMenu = getNavigation();
   const allProducts = getProducts() || [];
 
-  const categoryMap: Record<string, string> = {
-    "garage-gate": "garage-gate",
-    automotive: "automotive",
-    "for-the-home": "for-the-home",
-    locksmithing: "locksmithing",
-    "shop-by-brand": "shop-by-brand",
-    support: "support",
-    contact: "contact",
-  };
-
-  const menuCategoryKey = categoryMap[category] || category;
-  const menuItem = navigationMenu[menuCategoryKey];
+  const menuCategoryKey = category;
   const productsCategory = resolveProductsCategoryFromMenu(menuCategoryKey);
   const productsListingPath = toProductsCategoryPath(menuCategoryKey);
+
+  // Try nav first, then fall back to a synthetic menuItem based on resolved category
+  const navMenuItem = navigationMenu[menuCategoryKey];
+  const resolvedKey = productsCategory === "all" ? "all" : productsCategory;
+  const menuItem = navMenuItem || {
+    title: CATEGORY_TITLES[resolvedKey] || category.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    path: productsListingPath,
+  };
 
   const visibleColumns = (menuItem?.columns || [])
     .map((col: any) => ({
@@ -41,29 +54,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
     matchesProductToCategory(p, productsCategory),
   );
 
-  const subtitleMap: Record<string, string> = {
-    "garage-gate": "Explore our wide range of garage and gate automation products",
-    automotive: "Find the perfect automotive keys and remotes for your vehicle",
-    "for-the-home": "Discover home automation solutions and remotes",
-    locksmithing: "Professional locksmithing tools and equipment",
-    "shop-by-brand": "Shop by your favorite brand",
-    support: "Get help, find manuals, and access support resources",
-    contact: "Get in touch with our team",
-  };
-
-  if (!menuItem || menuItem.hidden) {
-    return (
-      <div className="min-h-screen bg-neutral-50">
-        <div className="container mx-auto max-w-6xl px-4 py-20 text-center">
-          <h1 className="text-3xl font-extrabold text-neutral-900">Page Not Found</h1>
-          <p className="mt-3 text-neutral-500">The page you&apos;re looking for doesn&apos;t exist.</p>
-          <Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark transition">
-            Go Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const subtitle = CATEGORY_SUBTITLES[resolvedKey] || "Browse our products";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
@@ -75,7 +66,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
               {menuItem.title}
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-lg text-neutral-500">
-              {subtitleMap[category] || "Browse our products"}
+              {subtitle}
             </p>
           </div>
         </div>

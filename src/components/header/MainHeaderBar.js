@@ -213,6 +213,14 @@ const MainHeaderBar = ({
                       Orders
                     </Link>
                     <Link
+                      href="/wishlist"
+                      className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
+                      role="menuitem"
+                      onClick={() => setShowAccountMenu(false)}
+                    >
+                      Wishlist
+                    </Link>
+                    <Link
                       href="/account?tab=notifications"
                       className="block px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-100"
                       role="menuitem"

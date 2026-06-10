@@ -225,6 +225,10 @@ function mapRowToProduct(row: Record<string, string>) {
   const priceRaw = findColumnValue(row, "price_aud", "price", "sell_price", "default_sell_price");
   const price = priceRaw ? coercePrice(priceRaw) : null;
 
+  // Compare price / Maximum Retail Price
+  const comparePriceRaw = findColumnValue(row, "compare_price", "compareprice", "retail_price", "msrp", "rrp");
+  const comparePrice = comparePriceRaw ? coercePrice(comparePriceRaw) : null;
+
   // In Stock: "Yes" or ✓ = true, anything else = false
   const inStockRaw = findColumnValue(row, "in_stock", "instock").toLowerCase();
   const inStock = inStockRaw === "yes" || inStockRaw === "✓" || inStockRaw === "true" || inStockRaw === "1";
@@ -246,7 +250,7 @@ function mapRowToProduct(row: Record<string, string>) {
   // Fallback to single image for backward compatibility
   const image = images.length > 0 ? images[0] : "";
 
-  return { sku, brand, name, category, price, inStock, description, condition, image, images, imgIndex };
+  return { sku, brand, name, category, price, comparePrice, inStock, description, condition, image, images, imgIndex };
 }
 
 function buildSkuKey(sku: string) {
@@ -379,6 +383,7 @@ export async function upsertProductsFromCsvRecords(params: {
             name: product.name,
             category: product.category,
             price: product.price,
+            comparePrice: product.comparePrice,
             inStock: product.inStock,
             image: product.image, // Legacy fallback
             images: product.images, // New: array of URLs
@@ -407,6 +412,7 @@ export async function upsertProductsFromCsvRecords(params: {
         name: product.name,
         category: product.category,
         price: product.price,
+        comparePrice: product.comparePrice,
         inStock: product.inStock,
         image: product.image, // Legacy fallback
         images: product.images, // New: array of URLs
@@ -424,6 +430,7 @@ export async function upsertProductsFromCsvRecords(params: {
         name: product.name,
         category: product.category,
         price: product.price,
+        comparePrice: product.comparePrice,
         inStock: product.inStock,
         image: product.image, // Legacy fallback
         images: product.images, // New: array of URLs

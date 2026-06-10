@@ -9,12 +9,33 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { Button } from "../../../components/ui/button";
 
+// Remove border and hover effects from Google Sign-In button
+const googleButtonStyles = `
+  .nsm7Bb-HzV7m-LgbsSe-MJoBVe,
+  .nsm7Bb-HzV7m-LgbsSe {
+    border: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    transition: none !important;
+  }
+  .nsm7Bb-HzV7m-LgbsSe {
+    background-color: transparent !important;
+  }
+  .nsm7Bb-HzV7m-LgbsSe:hover,
+  .nsm7Bb-HzV7m-LgbsSe-MJoBVe:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+`;
+
 const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showAppleLogin] = useState(true);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { login, loginWithOAuth } = useAuth();
   const router = useRouter();
 
@@ -57,15 +78,44 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
     setError("");
     setLoading(true);
 
-    const result = login(email, password);
+    try {
+      const result = await login(email, password);
 
-    if (result.success) {
-      router.push("/");
-    } else {
-      setError(result.error || "Failed to login");
+      if (result.success) {
+        router.push("/");
+      } else {
+        setError(result.error || "Failed to login");
+        // Check if email is not verified
+        if (result.emailNotVerified) {
+          setEmailNotVerified(true);
+        }
+      }
+    } catch (err) {
+      setError("An error occurred during login");
     }
 
     setLoading(false);
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setError("Verification email resent! Please check your inbox.");
+        setEmailNotVerified(false);
+      } else {
+        setError(result.error || "Failed to resend verification email.");
+      }
+    } catch (err) {
+      setError("An error occurred while resending verification email.");
+    }
+    setResendLoading(false);
   };
 
   const handleGoogleLogin = async (credentialResponse: any) => {
@@ -151,15 +201,17 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-container-wide px-container py-10 sm:py-14">
-      <div className="grid items-stretch gap-8 lg:grid-cols-2 lg:gap-12">
-        <motion.div
-          className="rounded-2xl border border-neutral-200 bg-neutral-50/90 p-6 shadow-panel backdrop-blur md:p-8"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-        >
-          <Link href="/" className="inline-flex items-center" aria-label="ALLREMOTES home">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: googleButtonStyles }} />
+      <div className="mx-auto w-full max-w-container-wide px-container py-10 sm:py-14">
+        <div className="grid items-stretch gap-8 lg:grid-cols-2 lg:gap-12">
+          <motion.div
+            className="rounded-2xl border border-neutral-200 bg-neutral-50/90 p-6 shadow-panel backdrop-blur md:p-8"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <Link href="/" className="inline-flex items-center" aria-label="ALLREMOTES home">
             <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto" />
           </Link>
 
@@ -178,6 +230,18 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
           {error && (
             <div className="mt-6 rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm font-semibold text-primary-dark">
               {error}
+              {emailNotVerified && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="text-sm text-emerald-700 hover:text-emerald-800 underline disabled:opacity-50"
+                  >
+                    {resendLoading ? "Sending..." : "Resend verification email"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -215,6 +279,12 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
             <Button type="submit" size="lg" className="mt-2 w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </Button>
+
+            <div className="mt-2 text-center">
+              <Link href="/forgot-password" className="text-sm text-neutral-600 hover:text-neutral-900 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
 
             <div className="relative mt-2 flex items-center py-2">
               <div className="flex-grow border-t border-neutral-200" />
@@ -320,6 +390,7 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
         </motion.aside>
       </div>
     </div>
+    </>
   );
 };
 

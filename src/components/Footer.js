@@ -14,17 +14,21 @@ const categoriesItems = [
 const policyItems = [
   { href: "/support", label: "Privacy Policy" },
   { href: "/support", label: "Shipping & Delivery" },
-  { href: "/support", label: "Returns & Warranty" },
+  { href: "/return-policy", label: "Return Policy" },
   { href: "/support", label: "Safe & Secure Checkout" },
 ];
 
 const supportItems = [
   { href: "/support", label: "Support Center" },
   { href: "/contact", label: "Contact Us" },
-  { href: "mailto:support@allremotes.com", label: "support@allremotes.com" },
+  { href: "mailto:shane@allremotes.com.au", label: "shane@allremotes.com.au" },
 ];
 
-const footerHighlights = ["30 Day Returns", "Trade Support", "Secure Payments"];
+const footerHighlights = [
+  { text: "30 Day Returns", href: "/return-policy" },
+  { text: "Trade Support", href: "/contact" },
+  { text: "Secure Payments", href: "/support" },
+];
 
 function FooterItem({ href, label }) {
   const content = (
@@ -102,12 +106,13 @@ const Footer = () => {
         <div className="mt-10 flex flex-col gap-4 border-t border-white/15 pt-6 lg:mt-12 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-3">
             {footerHighlights.map((item) => (
-              <span
-                key={item}
-                className="inline-flex min-h-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-4 text-[0.94rem] font-medium text-white/75 max-[480px]:w-full"
+              <Link
+                key={item.text}
+                href={item.href}
+                className="inline-flex min-h-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-4 text-[0.94rem] font-medium text-white/75 max-[480px]:w-full hover:bg-white/[0.06] hover:text-white transition"
               >
-                {item}
-              </span>
+                {item.text}
+              </Link>
             ))}
           </div>
 

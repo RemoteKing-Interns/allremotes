@@ -35,6 +35,87 @@ export const remoteImages = [
 // Helper function to get icon for menu item
 const getIcon = (index) => remoteImages[index % remoteImages.length];
 
+/**
+ * Generate navigation items from unique product categories
+ * @param {Array} products - Array of products with category field
+ * @returns {Object} Navigation menu object with dynamic categories
+ */
+export function generateNavigationFromProducts(products = []) {
+  // Extract unique categories and brands from products
+  const categorySet = new Set();
+  const brandSet = new Set();
+
+  products.forEach(product => {
+    if (product.category) categorySet.add(product.category);
+    if (product.cat1) categorySet.add(product.cat1);
+    if (product.brand) brandSet.add(product.brand);
+  });
+
+  const categories = Array.from(categorySet).filter(Boolean).sort();
+  const brands = Array.from(brandSet).filter(Boolean).sort();
+
+  const nav = {};
+
+  // Map raw category values to friendly display names
+  const categoryDisplayNames = {
+    'garage': 'Garage & Gate',
+    'car': 'Automotive',
+    'all': 'General',
+  };
+
+  // --- Products dropdown: categories column + brands column ---
+  const categoryItems = categories
+    .filter(c => c !== 'all')
+    .map((category) => {
+      const count = products.filter(p => p.category === category || p.cat1 === category).length;
+      const label = categoryDisplayNames[category.toLowerCase()] || (category.charAt(0).toUpperCase() + category.slice(1));
+      return {
+        name: label,
+        path: `/products/all?category=${encodeURIComponent(category)}`,
+        count,
+      };
+    });
+
+  if (categoryItems.length > 0) {
+    nav['products'] = {
+      title: "Products",
+      path: "/products/all",
+      columns: [
+        {
+          title: "Categories",
+          items: categoryItems.concat([
+            { name: "All Products", path: "/products/all", isShopAll: true },
+          ]),
+        },
+      ],
+    };
+  }
+
+  // --- Static Support and Contact ---
+  nav['support'] = {
+    title: "Support",
+    path: "/support",
+    columns: [
+      {
+        title: "Help Center",
+        items: [
+          { name: "Contact Us", path: "/contact" },
+          { name: "Return Policy", path: "/return-policy" },
+          { name: "FAQ", path: "/support/faq" },
+        ],
+      },
+    ],
+  };
+
+  nav['contact'] = {
+    title: "Contact",
+    path: "/contact",
+    hasDropdown: false,
+  };
+
+  return nav;
+}
+
 // Navigation menu data structure
 export const navigationMenu = {
   "garage-gate": {

@@ -73,18 +73,24 @@ const WHY_BUY_ICON_MAP = {
   reviews: Star,
 };
 
+const DEFAULT_HERO_IMAGES = ["/images/hero.jpg", "/images/heroimg.jpg"];
+
 const Home = () => {
   const { getProducts, getHomeContent, getReviews } = useStore();
   const products = getProducts() || [];
-  const home = getHomeContent();
   const reviews = getReviews() || [];
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const home = mounted ? getHomeContent() : null;
   const heroImages =
     home?.heroImages &&
     Array.isArray(home.heroImages) &&
     home.heroImages.length > 0
       ? home.heroImages
-      : ["/images/hero.jpg", "/images/heroimg.jpg"];
+      : DEFAULT_HERO_IMAGES;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -157,9 +163,9 @@ const Home = () => {
     (product) => product?.category === "garage",
   ).length;
   const featureImagesByTitle = {
-    "Car Remotes": "/remotes/010_s-l500.webp",
-    "Garage Remotes": "/remotes/002_s-l500.webp",
-    "Quality Guaranteed": "/remotes/011_s-l500.webp",
+    "Car Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
+    "Garage Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
+    "Quality Guaranteed": "/images/mainlogo.webp",
   };
   const defaultHeroHighlights = [
     heroSideReasons[0] || {

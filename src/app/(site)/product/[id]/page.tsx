@@ -19,6 +19,17 @@ import {
 } from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
 
+// Helper to clean HTML description - remove font styles but preserve colors/bold/italic
+const sanitizeDescription = (html: string): string => {
+  if (!html) return '';
+  return html
+    .replace(/font-family:\s*[^;"']+;?/gi, '')
+    .replace(/font-size:\s*[^;"']+;?/gi, '')
+    .replace(/white-space:\s*[^;"']+;?/gi, '')
+    .replace(/style="\s*"/gi, '')
+    .replace(/style='\s*'/gi, '');
+};
+
 const HARD_CODED_WARNINGS = `WARNING: This product may contain a button/coin cell battery. To reduce the risk of SERIOUS INJURY or DEATH:
 
 Keep new and used batteries out of reach of children at all times.
@@ -44,11 +55,31 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const promotions = getPromotions();
   const products = getProducts() || [];
-  const product = products.find((p) => p.id === id);
+  const [product, setProduct] = useState(() => products.find((p) => p.id === id));
+
+  // Fetch fresh product data from API to ensure latest data including instructionsPdf
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch('/api/products', { cache: 'no-store' });
+        const allProducts = await res.json();
+        const freshProduct = allProducts.find((p: any) => p.id === id);
+        if (freshProduct) {
+          setProduct(freshProduct);
+        }
+      } catch (err) {
+        console.error('Failed to fetch product data:', err);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
   const relatedProducts = products
     .filter(
-      (item) => item.category === product?.category && item.id !== product?.id,
+      (item) => (product?.cat1 && item.cat1 === product.cat1) || 
+                (product?.cat2 && item.cat2 === product.cat2)
     )
+    .filter((item) => item.id !== product?.id)
     .slice(0, 4);
   const { addToCart } = useCart();
   const hasDiscount = isDiscountEligible(user);
@@ -61,6 +92,7 @@ const ProductDetail = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState("description");
+  const [validImageIndices, setValidImageIndices] = useState<Set<number>>(new Set());
   
   // Get images array (support both new images[] and legacy image field)
   const images = React.useMemo(() => {
@@ -90,19 +122,137 @@ const ProductDetail = () => {
     {
       id: "description",
       label: "Description",
-      content: product?.description || "No description provided.",
+      content: product?.descriptionPdf ? (
+        <div className="space-y-4">
+          {product?.description && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.description) }} />
+          )}
+          <a
+            href={product.descriptionPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.descriptionPdf.split('/').pop() || 'description.pdf')}
+          </a>
+        </div>
+      ) : (product?.description ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.description) }} />
+      ) : null),
+    },
+    {
+      id: "features",
+      label: "Features",
+      content: product?.featuresPdf ? (
+        <div className="space-y-4">
+          {(product?.features || product?.feature) && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.features || product.feature) }} />
+          )}
+          <a
+            href={product.featuresPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.featuresPdf.split('/').pop() || 'features.pdf')}
+          </a>
+        </div>
+      ) : ((product?.features || product?.feature) ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.features || product.feature) }} />
+      ) : null),
+    },
+    {
+      id: "specification",
+      label: "Specification",
+      content: product?.specificationPdf ? (
+        <div className="space-y-4">
+          {product?.specification && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.specification) }} />
+          )}
+          <a
+            href={product.specificationPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.specificationPdf.split('/').pop() || 'specification.pdf')}
+          </a>
+        </div>
+      ) : (product?.specification ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.specification) }} />
+      ) : null),
+    },
+    {
+      id: "compatibility",
+      label: "Compatibility",
+      content: product?.compatibilityPdf ? (
+        <div className="space-y-4">
+          {product?.compatibility && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.compatibility) }} />
+          )}
+          <a
+            href={product.compatibilityPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.compatibilityPdf.split('/').pop() || 'compatibility.pdf')}
+          </a>
+        </div>
+      ) : (product?.compatibility ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.compatibility) }} />
+      ) : null),
     },
     {
       id: "instructions",
       label: "Instructions",
-      content: product?.instructions || "No instructions provided.",
+      content: product?.instructionsPdf ? (
+        <div className="space-y-4">
+          {product?.instructions && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.instructions) }} />
+          )}
+          <a
+            href={product.instructionsPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.instructionsPdf.split('/').pop() || 'instructions.pdf')}
+          </a>
+        </div>
+      ) : (product?.instructions ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.instructions) }} />
+      ) : null),
     },
     {
       id: "warnings",
       label: "Warnings & Disclaimers",
-      content: HARD_CODED_WARNINGS,
+      content: (
+        <div>
+          <img src="/uploads/images/Warnings.png" alt="Warnings" className="w-full mb-4" />
+          {product?.warnings && <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.warnings) }} />}
+        </div>
+      ),
     },
   ];
+
+  // Filter tabs to only show those with content
+  const visibleTabs = tabSections.filter((section) => {
+    const content = section.content;
+    if (typeof content === 'string' && content) {
+      return (content as string).trim() !== '' && content !== 'No description provided.';
+    }
+    if (React.isValidElement(content)) {
+      // For JSX elements, always show them if they exist
+      return true;
+    }
+    return !!content;
+  });
 
   const userKey = useMemo(() => user?.id || user?.email || "guest", [user]);
   const wishlistKey = useMemo(
@@ -208,16 +358,16 @@ const ProductDetail = () => {
             >
               <img
                 key={selectedImageIndex}
-                src={images[selectedImageIndex] || "/images/mainlogo.png"}
+                src={images[selectedImageIndex] || "/favicon.png"}
                 alt={product.name}
                 className="relative h-full w-full max-h-[28rem] object-contain p-6 transition-transform duration-300 will-change-transform sm:max-h-[34rem]"
                 onError={(e) =>
-                  (e.currentTarget.src = "/images/mainlogo.png")
+                  (e.currentTarget.src = "/favicon.png")
                 }
               />
             </div>
 
-            {/* Thumbnail Row (only show if more than 1 image) */}
+            {/* Thumbnail Row (only show images that loaded successfully) */}
             {images.length > 1 && (
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {images.map((imgUrl, idx) => (
@@ -228,16 +378,19 @@ const ProductDetail = () => {
                       selectedImageIndex === idx
                         ? "border-primary shadow-md"
                         : "border-neutral-200 hover:border-neutral-300"
-                    }`}
+                    } ${validImageIndices.has(idx) ? '' : 'hidden'}`}
                     aria-label={`View image ${idx + 1}`}
                   >
                     <img
                       src={imgUrl}
                       alt={`${product.name} - image ${idx + 1}`}
                       className="h-20 w-20 object-contain p-1"
-                      onError={(e) =>
-                        (e.currentTarget.src = "/images/mainlogo.png")
-                      }
+                      onLoad={() => {
+                        setValidImageIndices(prev => new Set([...prev, idx]));
+                      }}
+                      onError={() => {
+                        // Image failed to load - don't add to valid indices
+                      }}
                     />
                   </button>
                 ))}
@@ -250,6 +403,12 @@ const ProductDetail = () => {
             <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
               {product.brand || "ALLREMOTES"}
             </p>
+
+            {product.sku && (
+              <p className="mt-1 text-xs font-medium text-neutral-500">
+                SKU: <span className="text-neutral-700 font-semibold">{product.sku}</span>
+              </p>
+            )}
 
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
               {product.name}
@@ -282,6 +441,17 @@ const ProductDetail = () => {
                 {product.inStock ? "In Stock" : "Out of Stock"}
               </span>
             </div>
+
+            {/* Discount Applied Badge */}
+            {hasDiscount && (
+              <div className="mt-3">
+                <img
+                  src="/images/discount applied.png"
+                  alt="Trade discount applied"
+                  className="h-10 w-auto object-contain"
+                />
+              </div>
+            )}
 
             {/* Quantity */}
             {product.inStock && (
@@ -351,6 +521,12 @@ const ProductDetail = () => {
                     {product.brand}
                   </li>
                 )}
+                {(product.cat1 || product.cat2) && (
+                  <li>
+                    <span className="font-semibold text-neutral-900">Categories:</span>{" "}
+                    {[product.cat1, product.cat2].filter(Boolean).join(', ')}
+                  </li>
+                )}
                 {product.condition && (
                   <li>
                     <span className="font-semibold text-neutral-900">Condition:</span>{" "}
@@ -371,7 +547,7 @@ const ProductDetail = () => {
         {/* TAB NAVIGATION */}
         <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur">
           <div className="md:hidden">
-            {tabSections.map((section, index) => {
+            {visibleTabs.map((section, index) => {
               const isOpen = activeTab === section.id;
 
               return (
@@ -406,13 +582,13 @@ const ProductDetail = () => {
 
                   {isOpen && (
                     <div className="border-t border-neutral-200 px-4 pb-4 pt-3">
-                      <p
+                      <div
                         className={`text-sm leading-7 text-neutral-700 ${
                           section.id === "warnings" ? "whitespace-pre-line" : ""
                         }`}
                       >
                         {section.content}
-                      </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -422,7 +598,7 @@ const ProductDetail = () => {
 
           <div className="hidden md:block">
             <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
-              {tabSections.map((section) => (
+              {visibleTabs.map((section) => (
                 <button
                   key={section.id}
                   type="button"
@@ -439,22 +615,22 @@ const ProductDetail = () => {
             </div>
 
             <div className="p-4 sm:p-8">
-              {tabSections.map(
+              {visibleTabs.map(
                 (section) =>
                   activeTab === section.id && (
                     <div key={section.id}>
                       <h3 className="text-lg font-semibold text-neutral-900">
                         {section.label}
                       </h3>
-                      <p
-                        className={`mt-3 text-sm leading-7 text-neutral-700 ${
-                          section.id === "warnings" ? "whitespace-pre-line" : ""
-                        }`}
-                      >
-                        {section.content}
-                      </p>
+                      <div className="mt-2 text-sm leading-7 text-neutral-700">
+                        {typeof section.content === "string" ? (
+                          section.content
+                        ) : (
+                          section.content
+                        )}
+                      </div>
                     </div>
-                  ),
+                  )
               )}
             </div>
           </div>
@@ -467,8 +643,7 @@ const ProductDetail = () => {
                 Related Products
               </h2>
               <p className="mt-2 text-sm leading-7 text-neutral-600">
-                More {product.category === "car" ? "car" : "garage"} remotes you
-                might like
+                More remotes you might like
               </p>
             </div>
             <div className="mt-6 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-4">

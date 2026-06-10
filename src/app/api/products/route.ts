@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { readProductsJson } from "@/lib/products-json";
+import { readProductsJson, enrichProductsWithS3Images } from "@/lib/products-json";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -77,10 +77,15 @@ export async function GET() {
       products = await readProductsJson();
     }
 
+    // Enrich products with S3 image URLs based on SKU
+    // Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-N.png
+    products = enrichProductsWithS3Images(products);
+
     return NextResponse.json(products, {
       headers: { 
         "Cache-Control": "no-store",
         "X-Products-Source": source,
+        "X-S3-Images-Enriched": "true",
         ...CORS_HEADERS 
       },
     });

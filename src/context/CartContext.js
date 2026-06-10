@@ -11,7 +11,7 @@ import React, {
 import { useAuth } from "./AuthContext";
 import { useStore } from "./StoreContext";
 import {
-  MEMBER_DISCOUNT_RATE,
+  getMemberDiscountRate,
   getLineTotal,
   getPriceBreakdown,
   isDiscountEligible,
@@ -352,7 +352,7 @@ export const CartProvider = ({ children }) => {
         updateQuantity,
         clearCart,
         hasDiscount,
-        discountRate: MEMBER_DISCOUNT_RATE,
+        discountRate: getMemberDiscountRate(),
         getItemPriceBreakdown,
         getItemUnitPrice,
         getItemLineTotal,

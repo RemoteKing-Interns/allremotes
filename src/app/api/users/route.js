@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../lib/mongo';
+import { sendWelcomeEmail } from '../../../lib/email';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
@@ -31,14 +32,33 @@ export async function POST(request) {
       });
     }
 
-    // Create new user
+    // Create new user with default preferences
     const newUser = {
       ...userData,
+      role: 'customer',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      emailVerified: true, // OAuth emails are already verified
+      notifications: {
+        email: {
+          orderUpdates: true,
+          shippingUpdates: true,
+          promotions: false,
+          newsletters: true,
+          reviews: true
+        }
+      }
     };
 
     const result = await usersCollection.insertOne(newUser);
+    
+    // Send welcome email for new OAuth users
+    sendWelcomeEmail({
+      to: newUser.email,
+      customerName: newUser.name
+    }).catch(err => {
+      console.error('Failed to send welcome email to OAuth user:', err);
+    });
     
     return NextResponse.json({
       success: true,

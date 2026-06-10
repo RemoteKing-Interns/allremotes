@@ -1,160 +1,61 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
+import { ChevronDown } from "lucide-react";
 
-const PANEL_COLUMN_MIN_REM = 15.5;
-const PANEL_GAP_REM = 1;
-const PANEL_PADDING_REM = 2.5;
-const PANEL_MIN_WIDTH_REM = 22;
-
-const splitColumnItems = (column) => {
-  const visibleItems = (column?.items || []).filter((item) => !item?.hidden);
-  return {
-    regularItems: visibleItems.filter((item) => !item?.isShopAll),
-    shopItem: visibleItems.find((item) => item?.isShopAll) || null,
-  };
-};
-
-const getDesktopPanelWidth = (columnCount) => {
-  const safeCount = Math.max(1, columnCount);
-  const columnsWidth =
-    safeCount * PANEL_COLUMN_MIN_REM + Math.max(0, safeCount - 1) * PANEL_GAP_REM;
-  const preferredWidth = Math.max(
-    PANEL_MIN_WIDTH_REM,
-    columnsWidth + PANEL_PADDING_REM,
-  );
-
-  return `min(${preferredWidth}rem, calc(100vw - 2rem))`;
-};
-
-const HeaderMenuItem = ({
-  item,
-  onClick,
-  emphasized = false,
-  compact = false,
-}) => (
-  <Link
-    href={item.path}
-    className={`group flex w-full items-center gap-3 rounded-2xl border transition ${
-      emphasized
-        ? "border-primary/20 bg-[linear-gradient(135deg,rgba(192,57,43,0.10),rgba(231,76,60,0.08))] hover:border-primary/30 hover:bg-[linear-gradient(135deg,rgba(192,57,43,0.14),rgba(231,76,60,0.12))]"
-        : "border-neutral-200 bg-white hover:border-accent/20 hover:bg-neutral-50"
-    } ${compact ? "px-2.5 py-2.5" : "px-3 py-3"}`}
-    onClick={onClick}
-  >
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-xs">
-      <img
-        src={item.icon}
-        alt={item.name}
-        className="h-6 w-6 object-contain"
-        onError={(e) => {
-          e.currentTarget.src = "/images/mainlogo.png";
-        }}
-      />
-    </span>
-    <span className="min-w-0 flex-1 pr-1 text-sm font-semibold leading-snug text-neutral-900">
-      {item.name}
-    </span>
-    <svg
-      className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${
-        emphasized ? "text-primary-dark" : "text-neutral-400 group-hover:text-neutral-700"
-      }`}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="M6 3l5 5-5 5" />
-    </svg>
-  </Link>
-);
-
-const DesktopMenuColumn = ({ column, onItemClick }) => {
-  const { regularItems, shopItem } = splitColumnItems(column);
-
-  return (
-    <section className="flex h-full min-w-0 flex-col rounded-[1.4rem] border border-neutral-200 bg-white/96 p-4 shadow-panel">
-      <h3 className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-neutral-500">
-        {column.title}
-      </h3>
-      <div className="mt-3 grid gap-2">
-        {regularItems.map((item) => (
-          <HeaderMenuItem key={item.path} item={item} onClick={onItemClick} />
-        ))}
-      </div>
-      {shopItem && (
-        <div className="mt-auto pt-3">
-          <HeaderMenuItem item={shopItem} emphasized onClick={onItemClick} />
-        </div>
-      )}
-    </section>
-  );
-};
-
-const MobileMenuColumn = ({ column, onItemClick }) => {
-  const { regularItems, shopItem } = splitColumnItems(column);
-
-  return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-xs">
-      <h3 className="px-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500">
-        {column.title}
-      </h3>
-      <div className="mt-2 grid gap-1.5">
-        {regularItems.map((item) => (
-          <HeaderMenuItem
-            key={item.path}
-            item={item}
-            compact
-            onClick={onItemClick}
-          />
-        ))}
-        {shopItem && (
-          <HeaderMenuItem
-            item={shopItem}
-            compact
-            emphasized
-            onClick={onItemClick}
-          />
-        )}
-      </div>
-    </section>
-  );
+const CATEGORY_DISPLAY_NAMES = {
+  garage: 'Garage & Gate',
+  car: 'Automotive',
+  home: 'For The Home',
+  locksmith: 'Locksmithing',
 };
 
 const NavBar = ({
   user,
   pathname,
   navItems,
-  dropdownRef,
   hamburgerRef,
   mobileDrawerOpen,
   setMobileDrawerOpen,
-  activeDropdown,
-  setActiveDropdown,
-  getVisibleColumns,
   isRouteActive,
-  openDropdown,
-  scheduleDropdownClose,
-  cancelDropdownClose,
   handleNavLinkClick,
   handleLogout,
   closeDrawer,
 }) => {
-  const [mobileExpandedMenu, setMobileExpandedMenu] = useState(null);
-
-  const activeDesktopMenu =
-    navItems.find((menuItem) => menuItem.key === activeDropdown) || null;
-  const activeDesktopColumns = activeDesktopMenu
-    ? getVisibleColumns(activeDesktopMenu)
-    : [];
-
   const handleMobileLinkClick = () => {
-    setMobileExpandedMenu(null);
     handleNavLinkClick();
   };
+
+  // Desktop dropdown state
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const dropdownRef = useRef(null);
+
+  // Fetch categories from dedicated API
+  const [categories, setCategories] = useState([]);
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        setCategories(data.map(c => ({
+          ...c,
+          path: `/products/all?category=${encodeURIComponent(c.key)}`,
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <>
@@ -163,7 +64,6 @@ const NavBar = ({
         onOpenChange={(open) => {
           setMobileDrawerOpen(open);
           if (!open) {
-            setMobileExpandedMenu(null);
             window.requestAnimationFrame(() => {
               if (hamburgerRef.current) hamburgerRef.current.focus();
             });
@@ -180,107 +80,90 @@ const NavBar = ({
 
           <div className="mt-4 grid gap-6">
             <nav className="grid gap-2">
-              {navItems.map((menuItem) => {
-                const visibleColumns = getVisibleColumns(menuItem);
-                const isExpandable = visibleColumns.length > 0;
-                const isExpanded = mobileExpandedMenu === menuItem.key;
-                const isActive = isRouteActive(menuItem.path);
 
-                if (!isExpandable) {
-                  return (
-                    <Link
-                      key={menuItem.key}
-                      href={menuItem.path}
-                      className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                        isActive
-                          ? "bg-accent/10 text-accent-dark"
-                          : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
-                      }`}
-                      aria-current={isActive ? "page" : undefined}
-                      onClick={handleMobileLinkClick}
-                    >
-                      {menuItem.title}
-                    </Link>
-                  );
-                }
-
-                return (
-                  <section
-                    key={menuItem.key}
-                    className={`overflow-hidden rounded-[1.4rem] border transition ${
-                      isExpanded || isActive
-                        ? "border-accent/25 bg-[linear-gradient(180deg,rgba(26,122,110,0.08),rgba(255,255,255,0.96))]"
-                        : "border-neutral-200 bg-white"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between px-4 py-3 text-left"
-                      aria-expanded={isExpanded}
-                      aria-controls={`mobile-menu-${menuItem.key}`}
-                      onClick={() =>
-                        setMobileExpandedMenu((current) =>
-                          current === menuItem.key ? null : menuItem.key,
-                        )
-                      }
-                    >
-                      <span className="text-sm font-semibold text-neutral-900">
-                        {menuItem.title}
-                      </span>
-                      <svg
-                        className={`h-4 w-4 text-neutral-500 transition-transform ${
-                          isExpanded ? "rotate-180" : ""
+              {/* Products section with categories */}
+              <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  Products
+                </div>
+                {categories.length === 0 ? (
+                  <div className="px-4 pb-3 space-y-2">
+                    {[140, 110, 120].map((w, i) => (
+                      <div key={i} className="h-7 rounded bg-neutral-100 animate-pulse" style={{ width: w }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="pb-2">
+                    {categories.map((cat, idx) => (
+                      <Link
+                        key={idx}
+                        href={cat.path}
+                        onClick={handleMobileLinkClick}
+                        className={`flex items-center justify-between px-4 py-2.5 text-sm transition ${
+                          isRouteActive(cat.path) ? "bg-accent/10 text-accent-dark font-semibold" : "text-neutral-700 hover:bg-neutral-50"
                         }`}
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
                       >
-                        <path d="M2 4l4 4 4-4" />
-                      </svg>
-                    </button>
+                        <span>{cat.name}</span>
+                        <span className="text-xs text-neutral-400">{cat.count}</span>
+                      </Link>
+                    ))}
+                    <Link
+                      href="/products/all"
+                      onClick={handleMobileLinkClick}
+                      className="flex items-center px-4 py-2.5 text-sm font-semibold text-primary border-t border-neutral-100 hover:bg-primary/5 transition"
+                    >
+                      All Products
+                    </Link>
+                  </div>
+                )}
+              </div>
 
-                    {isExpanded && (
-                      <div
-                        id={`mobile-menu-${menuItem.key}`}
-                        className="border-t border-neutral-200 px-3 pb-3 pt-3"
-                      >
-                        <div className="mb-3">
-                          <Link
-                            href={menuItem.path}
-                            className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-3.5 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-accent-dark"
-                            onClick={handleMobileLinkClick}
-                          >
-                            Explore {menuItem.title}
-                          </Link>
-                        </div>
-                        <div className="grid gap-3">
-                          {visibleColumns.map((column) => (
-                            <MobileMenuColumn
-                              key={`${menuItem.key}-${column.title}`}
-                              column={column}
-                              onItemClick={handleMobileLinkClick}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
+              {/* Shop By Brand */}
+              <Link
+                href="/shop-by-brand"
+                onClick={handleMobileLinkClick}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  isRouteActive("/shop-by-brand")
+                    ? "bg-accent/10 text-accent-dark"
+                    : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
+              >
+                Shop By Brand
+              </Link>
 
+              {/* Support */}
+              <Link
+                href="/support"
+                onClick={handleMobileLinkClick}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  isRouteActive("/support")
+                    ? "bg-accent/10 text-accent-dark"
+                    : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
+              >
+                Support
+              </Link>
+
+              {/* Contact */}
+              <Link
+                href="/contact"
+                onClick={handleMobileLinkClick}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  isRouteActive("/contact")
+                    ? "bg-accent/10 text-accent-dark"
+                    : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
+              >
+                Contact
+              </Link>
+
+              {/* View All Products CTA */}
               <Link
                 href="/products/all"
-                className={`rounded-2xl px-4 py-3 text-sm font-extrabold transition ${
-                  isRouteActive("/products/all")
-                    ? "bg-primary text-white"
-                    : "bg-primary text-white hover:bg-primary-dark"
-                }`}
-                aria-current={isRouteActive("/products/all") ? "page" : undefined}
+                className="rounded-2xl bg-primary px-4 py-3 text-center text-sm font-extrabold text-white transition hover:bg-primary-dark"
                 onClick={handleMobileLinkClick}
               >
-                View Products
+                View All Products
               </Link>
             </nav>
 
@@ -298,9 +181,19 @@ const NavBar = ({
                   >
                     My Account
                   </Link>
+                  <Link
+                    href="/wishlist"
+                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      pathname === "/wishlist"
+                        ? "bg-accent/10 text-accent-dark"
+                        : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                    }`}
+                    onClick={handleMobileLinkClick}
+                  >
+                    Wishlist
+                  </Link>
                   <button
                     onClick={() => {
-                      setMobileExpandedMenu(null);
                       handleLogout();
                       closeDrawer();
                     }}
@@ -339,134 +232,130 @@ const NavBar = ({
       </Sheet>
 
       <nav className="hidden border-t border-neutral-200 bg-white/70 xl:block" ref={dropdownRef}>
-        <div
-          className="container relative"
-          onMouseEnter={cancelDropdownClose}
-          onMouseLeave={scheduleDropdownClose}
-        >
+        <div className="container">
           <div className="flex items-center justify-center py-2">
             <div className="flex items-center gap-1">
-              {navItems.map((menuItem) => {
-                const visibleColumns = getVisibleColumns(menuItem);
-                const isDropdownOpen = activeDropdown === menuItem.key;
-                const isCurrentRoute = isRouteActive(menuItem.path);
 
-                return (
+              {/* Products dropdown - categories loaded from DB */}
+              <div className="relative">
+                <button
+                  onMouseEnter={() => setOpenDropdown('products')}
+                  onClick={() => setOpenDropdown(openDropdown === 'products' ? null : 'products')}
+                  className={`inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    isRouteActive('/products') ? 'bg-accent/10 text-accent-dark' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                  }`}
+                  aria-expanded={openDropdown === 'products'}
+                  aria-haspopup="true"
+                >
+                  Products
+                  <ChevronDown size={14} className={`transition-transform ${openDropdown === 'products' ? 'rotate-180' : ''}`} />
+                </button>
+                {openDropdown === 'products' && (
                   <div
-                    key={menuItem.key}
-                    className="relative"
-                    onMouseEnter={() => openDropdown(menuItem.key)}
-                    onFocus={() => openDropdown(menuItem.key)}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget)) {
-                        cancelDropdownClose();
-                        setActiveDropdown(null);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        cancelDropdownClose();
-                        setActiveDropdown(null);
-                      }
-                    }}
+                    className="absolute left-0 top-full z-[1200] mt-1 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg"
+                    onMouseLeave={() => setOpenDropdown(null)}
                   >
-                    <Link
-                      href={menuItem.path}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                        isCurrentRoute || isDropdownOpen
-                          ? "bg-accent/10 text-accent-dark"
-                          : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
-                      }`}
-                      aria-current={isCurrentRoute ? "page" : undefined}
-                      aria-haspopup={visibleColumns.length > 0 ? "menu" : undefined}
-                      aria-expanded={visibleColumns.length > 0 ? isDropdownOpen : undefined}
-                      onClick={(e) => {
-                        if (visibleColumns.length > 0 && !isDropdownOpen) {
-                          e.preventDefault();
-                          openDropdown(menuItem.key);
-                        }
-                      }}
-                    >
-                      {menuItem.title}
-                      {visibleColumns.length > 0 && (
-                        <svg
-                          className={`transition ${isDropdownOpen ? "rotate-180" : "rotate-0"}`}
-                          width="12"
-                          height="12"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M2 4l4 4 4-4" />
-                        </svg>
+                    <div className="p-2">
+                      {categories.length === 0 ? (
+                        <div className="space-y-1 p-1">
+                          {[120, 90, 100].map((w, i) => (
+                            <div key={i} className="h-8 rounded bg-neutral-100 animate-pulse" style={{ width: w }} />
+                          ))}
+                        </div>
+                      ) : (
+                        <>
+                          {categories.map((cat, idx) => (
+                            <Link
+                              key={idx}
+                              href={cat.path}
+                              onClick={() => setOpenDropdown(null)}
+                              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
+                            >
+                              <span>{cat.name}</span>
+                              <span className="text-xs text-neutral-400">{cat.count}</span>
+                            </Link>
+                          ))}
+                          <Link
+                            href="/products/all"
+                            onClick={() => setOpenDropdown(null)}
+                            className="mt-1 flex items-center justify-between rounded-lg border-t border-neutral-100 px-3 py-2 pt-2 text-sm font-semibold text-primary transition hover:bg-primary/5"
+                          >
+                            All Products
+                          </Link>
+                        </>
                       )}
-                    </Link>
+                    </div>
                   </div>
-                );
-              })}
+                )}
+              </div>
 
+              {/* Shop By Brand - plain link to brands page */}
+              <Link
+                href="/shop-by-brand"
+                className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  isRouteActive('/shop-by-brand') ? 'bg-accent/10 text-accent-dark' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                }`}
+              >
+                Shop By Brand
+              </Link>
+
+              {/* Support dropdown */}
+              <div className="relative">
+                <button
+                  onMouseEnter={() => setOpenDropdown('support')}
+                  onClick={() => setOpenDropdown(openDropdown === 'support' ? null : 'support')}
+                  className="inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+                  aria-expanded={openDropdown === 'support'}
+                  aria-haspopup="true"
+                >
+                  Support
+                  <ChevronDown size={14} className={`transition-transform ${openDropdown === 'support' ? 'rotate-180' : ''}`} />
+                </button>
+                {openDropdown === 'support' && (
+                  <div
+                    className="absolute left-0 top-full z-[1200] mt-1 w-48 rounded-xl border border-neutral-200 bg-white shadow-lg"
+                    onMouseLeave={() => setOpenDropdown(null)}
+                  >
+                    <div className="p-2">
+                      {[
+                        { name: 'Contact Us', path: '/contact' },
+                        { name: 'Return Policy', path: '/return-policy' },
+                        { name: 'FAQ', path: '/support/faq' },
+                      ].map((item, idx) => (
+                        <Link
+                          key={idx}
+                          href={item.path}
+                          onClick={() => setOpenDropdown(null)}
+                          className="flex items-center rounded-lg px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
+                        >
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Contact - plain link */}
+              <Link
+                href="/contact"
+                className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  isRouteActive('/contact') ? 'bg-accent/10 text-accent-dark' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                }`}
+              >
+                Contact
+              </Link>
+
+              {/* CTA button */}
               <Link
                 href="/products/all"
                 className="ml-2 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-primary-dark"
               >
-                View Products
+                View All Products
               </Link>
+
             </div>
           </div>
-
-          {activeDesktopMenu && activeDesktopColumns.length > 0 && (
-            <div
-              className="absolute left-1/2 top-[calc(100%+0.65rem)] z-[1400] -translate-x-1/2"
-              style={{ maxWidth: "calc(100vw - 2rem)" }}
-              onMouseEnter={cancelDropdownClose}
-              onMouseLeave={scheduleDropdownClose}
-              role="menu"
-            >
-              <div
-                className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,245,0.98))] shadow-strong"
-                style={{ width: getDesktopPanelWidth(activeDesktopColumns.length) }}
-              >
-                <div className="border-b border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.10),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,245,0.96))] px-6 py-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-neutral-500">
-                        {activeDesktopMenu.title}
-                      </div>
-                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-neutral-900">
-                        Browse collections
-                      </h3>
-                    </div>
-                    <Link
-                      href={activeDesktopMenu.path}
-                      className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-accent-dark transition hover:bg-accent/15"
-                      onClick={() => setActiveDropdown(null)}
-                    >
-                      Explore All
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="max-h-[72vh] overflow-y-auto overflow-x-hidden p-4">
-                  <div
-                    className="grid gap-4"
-                    style={{
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(min(100%, 15.5rem), 1fr))",
-                    }}
-                  >
-                    {activeDesktopColumns.map((column) => (
-                      <DesktopMenuColumn
-                        key={`${activeDesktopMenu.key}-${column.title}`}
-                        column={column}
-                        onItemClick={() => setActiveDropdown(null)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </nav>
     </>
