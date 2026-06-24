@@ -232,7 +232,7 @@ export async function sendOrderDeliveredEmail({
     <p>Great news! Your order #${orderId} has been delivered on <strong>${deliveredDate}</strong>.</p>
     
     <div class="info-box">
-      We hope you enjoy your purchase! If you have any issues with your order, please let us know within 30 days.
+      We hope you enjoy your purchase! If you have any issues with your order, please contact us — all products are covered by our 12-month warranty.
     </div>
     
     <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button">
@@ -254,12 +254,14 @@ export async function sendPasswordResetEmail({
   to,
   resetToken,
   customerName,
+  baseUrl,
 }: {
   to: string;
   resetToken: string;
   customerName: string;
+  baseUrl?: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+  const siteUrl = baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
   const resetUrl = `${siteUrl}/reset-password?token=${resetToken}`;
   
   const resetTemplate = `
@@ -704,12 +706,14 @@ export async function sendVerificationEmail({
   to,
   customerName,
   verificationToken,
+  baseUrl,
 }: {
   to: string;
   customerName: string;
   verificationToken: string;
+  baseUrl?: string;
 }) {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/verify-email?token=${verificationToken}`;
+  const verificationUrl = `${baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/verify-email?token=${verificationToken}`;
   
   const content = `
     <h2>Verify Your Email Address</h2>

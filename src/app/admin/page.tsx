@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
+import { activityLogger } from "../../lib/activity-logger";
+import AdminSupportChat from "../../components/admin/AdminSupportChat";
+import ProductSpreadsheet from "../../components/admin/ProductSpreadsheet";
+import AdminUsersManager from "../../components/admin/AdminUsers";
+import AdminLogs from "../../components/admin/AdminLogs";
+import CustomerManagement from "../../components/admin/CustomerManagement";
 import {
   LayoutDashboard,
   BarChart3,
@@ -18,6 +24,7 @@ import {
   Settings,
   Upload,
   Plus,
+  Truck,
   Import,
   Link2,
   Trash2,
@@ -31,7 +38,6 @@ import {
   Image,
   Globe,
   CreditCard,
-  Truck,
   Bell,
   Search,
   Menu,
@@ -342,10 +348,17 @@ const serializeReviewsForApi = (reviews: any[]) => {
 
 const AdminContent = () => {
   // All hooks must be declared before any conditional returns
-  const { user, login, loading: authLoading } = useAuth();
+  const { user, login, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAdmin = user?.role === 'admin' || user?.email === ADMIN_EMAIL;
+
+  // Returns true if the user has full access OR the specific permission key
+  const hasPermission = (key: string) => {
+    if (user?.email === ADMIN_EMAIL) return true; // hardcoded superadmin
+    const perms: string[] = user?.permissions || ['*'];
+    return perms.includes('*') || perms.includes(key);
+  };
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -357,6 +370,162 @@ const AdminContent = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Sync logged-in user into activity logger
+  useEffect(() => {
+    if (user?.email) activityLogger.setUser(user.email, user.id);
+  }, [user]);
+
+  // Log every tab navigation
+  useEffect(() => {
+    if (!isAdmin) return;
+    activityLogger.pageView(activeTab, { tab: activeTab });
+  }, [activeTab, isAdmin]);
+
+  // Flush pending logs when admin closes/navigates away
+  useEffect(() => {
+    const onUnload = () => activityLogger.flushSync();
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const [viewOrderId, setViewOrderId] = useState<string | null>(null);
+  const [viewReturnId, setViewReturnId] = useState<string | null>(null);
+
+  // Fetch unread message count periodically
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const resp = await fetch('/api/admin/support-chats', { cache: 'no-store' });
+        const data = await resp.json().catch(() => []);
+        if (Array.isArray(data)) {
+          const totalUnread = data.reduce((sum, thread) => sum + (thread.unreadCount || 0), 0);
+          setUnreadMessageCount(totalUnread);
+        }
+      } catch (err) {
+        console.error('Failed to fetch unread count:', err);
+      }
+    };
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check localStorage for pending viewOrderId/viewReturnId on mount
+  useEffect(() => {
+    const pendingOrderId = localStorage.getItem('adminViewOrderId');
+    const pendingReturnId = localStorage.getItem('adminViewReturnId');
+    if (pendingOrderId) {
+      setViewOrderId(pendingOrderId);
+      setActiveTab('orders');
+      localStorage.removeItem('adminViewOrderId');
+    }
+    if (pendingReturnId) {
+      setViewReturnId(pendingReturnId);
+      setActiveTab('returns');
+      localStorage.removeItem('adminViewReturnId');
+    }
+  }, []);
+
+  const fetchNotifications = async () => {
+    setNotifLoading(true);
+    try {
+      const [ordersRes, returnsRes, chatRes] = await Promise.all([
+        fetch('/api/orders?limit=50', { cache: 'no-store' }),
+        fetch('/api/returns', { cache: 'no-store' }),
+        fetch('/api/support-chat', { cache: 'no-store' }).catch(() => null),
+      ]);
+      const ordersData = ordersRes.ok ? await ordersRes.json().catch(() => []) : [];
+      const returnsData = returnsRes.ok ? await returnsRes.json().catch(() => []) : [];
+      const chatData = chatRes?.ok ? await chatRes.json().catch(() => []) : [];
+
+      const notifs: any[] = [];
+
+      // New orders in last 24h
+      const orders = Array.isArray(ordersData) ? ordersData : [];
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      orders.forEach((o: any) => {
+        if (new Date(o.createdAt) > cutoff) {
+          notifs.push({
+            id: `order-${o.id}`,
+            type: 'order',
+            title: 'New Order',
+            body: `Order ${o.id?.slice(0, 8)} \u2014 AU$${Number(o?.pricing?.total || 0).toFixed(2)}`,
+            time: o.createdAt,
+            tab: 'orders',
+          });
+        }
+      });
+
+      // Pending return requests
+      const returns = Array.isArray(returnsData) ? returnsData : [];
+      returns.forEach((r: any) => {
+        if (r.status === 'pending') {
+          notifs.push({
+            id: `return-${r.id}`,
+            type: 'return',
+            title: 'Pending Return',
+            body: `${r.customerEmail} \u2014 ${r.id?.slice(0, 12)}`,
+            time: r.createdAt,
+            tab: 'returns',
+          });
+        }
+        if (r.status === 'approved' && r.trackingNumber) {
+          notifs.push({
+            id: `return-tracking-${r.id}`,
+            type: 'return',
+            title: 'Tracking Submitted',
+            body: `${r.customerEmail} sent tracking: ${r.trackingNumber}`,
+            time: r.updatedAt,
+            tab: 'returns',
+          });
+        }
+      });
+
+      // Open support threads with unread customer messages
+      const threads = Array.isArray(chatData) ? chatData : [];
+      threads.forEach((t: any) => {
+        if (t.status === 'open') {
+          notifs.push({
+            id: `chat-${t.id}`,
+            type: 'chat',
+            title: 'Customer Message',
+            body: `${t.customerName || t.customerEmail} \u2014 ${t.orderId ? `Order ${t.orderId.slice(0, 8)}` : `Return ${t.returnId?.slice(0, 8)}`}`,
+            time: t.lastMessageAt,
+            tab: 'orders',
+          });
+        }
+      });
+
+      notifs.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      setNotifications(notifs);
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,6 +542,23 @@ const AdminContent = () => {
   useEffect(() => {
     localStorage.setItem('adminActiveTab', activeTab);
   }, [activeTab]);
+
+  // Listen for tab switch events from child components
+  useEffect(() => {
+    const handleSwitchTab = (e: CustomEvent) => {
+      if (e.detail?.tab) {
+        setActiveTab(e.detail.tab);
+        if (e.detail?.viewOrderId) {
+          setViewOrderId(e.detail.viewOrderId);
+        }
+        if (e.detail?.viewReturnId) {
+          setViewReturnId(e.detail.viewReturnId);
+        }
+      }
+    };
+    window.addEventListener('switchAdminTab', handleSwitchTab as EventListener);
+    return () => window.removeEventListener('switchAdminTab', handleSwitchTab as EventListener);
+  }, []);
 
   if (!user) {
     return (
@@ -477,23 +663,28 @@ const AdminContent = () => {
     );
   }
 
-  const navItems = [
-    { id: 'dashboard', label: 'Home', icon: Home },
-    { id: 'categories', label: 'Categories & Brands', icon: Tags },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'returns', label: 'Returns', icon: RotateCcw },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'inventory', label: 'Inventory', icon: Layers },
-    { id: 'home', label: 'Homepage', icon: FileText },
-    { id: 'navigation', label: 'Navigation', icon: Compass },
-    { id: 'reviews', label: 'Reviews', icon: Star },
-    { id: 'promotions', label: 'Promotions', icon: Megaphone },
-    { id: 'discounts', label: 'Discounts', icon: Percent },
-    { id: 'analytics', label: 'Reports', icon: BarChart3 },
-    { id: 'live_view', label: 'Live View', icon: Eye },
-    { id: 'settings', label: 'Settings', icon: Settings },
+  const allNavItems = [
+    { id: 'dashboard',      label: 'Home',               icon: Home,               perm: 'dashboard' },
+    { id: 'orders',         label: 'Orders',              icon: ShoppingCart,       perm: 'orders' },
+    { id: 'returns',        label: 'Returns',             icon: RotateCcw,          perm: 'orders' },
+    { id: 'abandoned_carts',label: 'Abandoned Carts',     icon: Package,            perm: 'orders' },
+    { id: 'products',       label: 'Products',            icon: Package,            perm: 'products' },
+    { id: 'categories',     label: 'Categories & Brands', icon: Tags,               perm: 'products' },
+    { id: 'inventory',      label: 'Inventory',           icon: Layers,             perm: 'products' },
+    { id: 'customers',      label: 'Customers',           icon: Users,              perm: 'customers' },
+    { id: 'reviews',        label: 'Reviews',             icon: Star,               perm: 'customers' },
+    { id: 'messages',       label: 'Messages/Queries',    icon: MessageSquareText,  perm: 'customers' },
+    { id: 'promotions',     label: 'Promotions',          icon: Megaphone,          perm: 'marketing' },
+    { id: 'discounts',      label: 'Discounts',           icon: Percent,            perm: 'marketing' },
+    { id: 'home',           label: 'Homepage',            icon: FileText,           perm: 'content' },
+    { id: 'navigation',     label: 'Navigation',          icon: Compass,            perm: 'content' },
+    { id: 'analytics',      label: 'Reports',             icon: BarChart3,          perm: 'analytics' },
+    { id: 'live_view',      label: 'Live View',           icon: Eye,                perm: 'analytics' },
+    { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'admin_users' },
+    { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
+    { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
   ];
+  const navItems = allNavItems.filter(item => hasPermission(item.perm));
 
   return (
     <div className="flex h-screen bg-[#f6f6f7]">
@@ -537,18 +728,26 @@ const AdminContent = () => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const showBadge = item.id === 'messages' && unreadMessageCount > 0;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive 
-                      ? 'bg-white/10 text-white' 
+                    isActive
+                      ? 'bg-white/10 text-white'
                       : 'text-neutral-400 hover:bg-white/5 hover:text-white'
                   }`}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
-                  <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
+                  <div className="relative">
+                    <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
+                    {showBadge && !sidebarCollapsed && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                        {unreadMessageCount}
+                      </span>
+                    )}
+                  </div>
                   {!sidebarCollapsed && <span>{item.label}</span>}
                 </button>
               );
@@ -593,12 +792,84 @@ const AdminContent = () => {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setNotifOpen(o => !o); if (!notifOpen) fetchNotifications(); }}
+                className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors relative"
+              >
+                <Bell size={20} />
+                {notifications.length > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {notifications.length > 9 ? '9+' : notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-96 rounded-xl border border-neutral-200 bg-white shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
+                    <span className="text-xs text-neutral-500">{notifications.length} items</span>
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <span className="text-sm text-neutral-500">Loading…</span>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <Bell size={28} className="mb-2 text-neutral-300" />
+                        <p className="text-sm font-medium text-neutral-600">All clear!</p>
+                        <p className="text-xs text-neutral-400 mt-1">No pending notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => { setActiveTab(n.tab); setNotifOpen(false); }}
+                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-neutral-50 border-b border-neutral-100 last:border-0 text-left transition-colors"
+                        >
+                          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            n.type === 'order' ? 'bg-blue-100 text-blue-600' :
+                            n.type === 'return' ? 'bg-amber-100 text-amber-600' :
+                            n.type === 'chat' ? 'bg-emerald-100 text-emerald-600' :
+                            'bg-neutral-100 text-neutral-500'
+                          }`}>
+                            {n.type === 'order' ? '🛒' : n.type === 'return' ? '↩' : n.type === 'chat' ? '💬' : '🔔'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-neutral-900">{n.title}</p>
+                            <p className="text-xs text-neutral-600 truncate mt-0.5">{n.body}</p>
+                            <p className="text-xs text-neutral-400 mt-1">
+                              {new Date(n.time).toLocaleString('en-AU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="border-t border-neutral-200 px-4 py-2">
+                    <button
+                      onClick={() => { fetchNotifications(); }}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      {notifLoading ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <button className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors">
               <HelpCircle size={20} />
+            </button>
+            <button
+              onClick={() => { logout(); router.push("/admin"); }}
+              className="p-2 rounded-lg hover:bg-red-50 text-neutral-500 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <LogOut size={20} />
             </button>
           </div>
         </header>
@@ -608,17 +879,21 @@ const AdminContent = () => {
           {activeTab === 'dashboard' && <ShopifyDashboard onNavigateTab={setActiveTab} />}
           {activeTab === 'analytics' && <AdminAnalytics />}
           {activeTab === 'live_view' && <LiveViewSection />}
-          {activeTab === 'customers' && <CustomersSection />}
+          {activeTab === 'customers' && <CustomerManagement />}
+          {activeTab === 'admin_users' && <AdminUsersManager />}
+          {activeTab === 'admin_logs' && <AdminLogs />}
           {activeTab === 'products' && <AdminProducts />}
           {activeTab === 'categories' && <CategoriesBrandsSection />}
           {activeTab === 'inventory' && <InventorySection />}
-          {activeTab === 'orders' && <AdminOrders />}
-          {activeTab === 'returns' && <AdminReturns />}
+          {activeTab === 'orders' && <AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} />}
+          {activeTab === 'returns' && <AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} />}
+          {activeTab === 'abandoned_carts' && <AdminAbandonedCarts />}
           {activeTab === 'home' && <AdminHome />}
           {activeTab === 'promotions' && <AdminPromotions />}
           {activeTab === 'discounts' && <DiscountsSection />}
           {activeTab === 'navigation' && <AdminNavigation />}
           {activeTab === 'reviews' && <AdminReviews />}
+          {activeTab === 'messages' && <AdminMessages />}
           {activeTab === 'settings' && <AdminSettings />}
         </main>
       </div>
@@ -626,11 +901,23 @@ const AdminContent = () => {
   );
 };
 
-function AdminOrders() {
+function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void }) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
+  // Auto-open order modal when viewOrderId is set
+  useEffect(() => {
+    if (viewOrderId && orders.length > 0) {
+      const order = orders.find((o) => o.id === viewOrderId);
+      if (order) {
+        setSelectedOrder(order);
+        setViewOrderId(null);
+      }
+    }
+  }, [viewOrderId, orders, setViewOrderId]);
 
   const load = async () => {
     setLoading(true);
@@ -652,6 +939,58 @@ function AdminOrders() {
     load();
   }, []);
 
+  const getDateGroup = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+
+    // Set cutoff to 12PM (noon)
+    const getCutoffDate = (d: Date) => {
+      const cutoff = new Date(d);
+      cutoff.setHours(12, 0, 0, 0);
+      return cutoff;
+    };
+
+    const nowCutoff = getCutoffDate(now);
+    const todayCutoff = getCutoffDate(now);
+    const yesterdayCutoff = new Date(todayCutoff);
+    yesterdayCutoff.setDate(yesterdayCutoff.getDate() - 1);
+
+    // If current time is before 12PM, "today" is from yesterday 12PM to today 12PM
+    // If current time is after 12PM, "today" is from today 12PM to tomorrow 12PM
+    const isBeforeNoon = now.getHours() < 12;
+    const todayStart = isBeforeNoon ? yesterdayCutoff : todayCutoff;
+    const todayEnd = isBeforeNoon ? todayCutoff : new Date(todayCutoff.getTime() + 24 * 60 * 60 * 1000);
+
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEnd = todayStart;
+
+    if (date >= todayStart && date < todayEnd) {
+      return { label: "Today", date: todayStart };
+    } else if (date >= yesterdayStart && date < yesterdayEnd) {
+      return { label: "Yesterday", date: yesterdayStart };
+    } else {
+      const daysAgo = Math.floor((todayStart.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysAgo < 7) {
+        return { label: `${daysAgo} days ago`, date: date };
+      } else {
+        return { label: date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), date: date };
+      }
+    }
+  };
+
+  const groupOrdersByDate = (orders: any[]) => {
+    const groups: Record<string, any[]> = {};
+    orders.forEach((order) => {
+      const group = getDateGroup(order.createdAt || Date.now());
+      const key = group.label;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(order);
+    });
+    return groups;
+  };
+
   const updateStatus = async (id: string, status: string) => {
     setSavingId(id);
     setError("");
@@ -664,7 +1003,9 @@ function AdminOrders() {
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to update order");
       setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...(data || {}), status } : o)));
+      activityLogger.action("order_status_updated", { orderId: id, status });
     } catch (err: any) {
+      activityLogger.error("order_status_update_failed", { orderId: id, status, error: err?.message });
       setError(err?.message || "Failed to update order");
     } finally {
       setSavingId(null);
@@ -686,6 +1027,10 @@ function AdminOrders() {
         >
           <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
         </button>
+      </div>
+
+      <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">
+        <strong>Grouping:</strong> Orders are grouped from 12PM to 12PM (noon to noon)
       </div>
 
       {error && (
@@ -710,79 +1055,226 @@ function AdminOrders() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="border-b border-neutral-200 bg-neutral-50/50 text-neutral-500">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Order ID</th>
-                  <th className="px-6 py-4 font-semibold">Date</th>
-                  <th className="px-6 py-4 font-semibold">Customer</th>
-                  <th className="px-6 py-4 font-semibold text-center">Items</th>
-                  <th className="px-6 py-4 font-semibold text-right">Total</th>
-                  <th className="px-6 py-4 font-semibold text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {orders.map((o) => (
-                  <tr key={o.id} className="transition-colors hover:bg-neutral-50/50">
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
-                        #{o.id.slice(0, 8)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-neutral-600">
-                      {new Date(o.createdAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
-                    </td>
-                    <td className="px-6 py-4 text-center font-medium text-neutral-600">
-                      {Array.isArray(o.items) ? o.items.length : 0}
-                    </td>
-                    <td className="px-6 py-4 text-right font-extrabold text-neutral-900">
-                      AU${Number(o?.pricing?.total || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="relative inline-flex items-center">
-                        <select
-                          className={`appearance-none rounded-full border border-transparent py-1.5 pl-4 pr-8 text-xs font-bold font-semibold uppercase tracking-wider outline-none ring-1 ring-inset ring-black/5 transition-all focus:ring-2 focus:ring-primary ${
-                            o.status === "delivered"
-                              ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20"
-                              : o.status === "shipped"
-                              ? "bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-600/20"
-                              : o.status === "cancelled"
-                              ? "bg-rose-50 text-rose-700 hover:bg-rose-100 ring-rose-600/20"
-                              : "bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20"
-                          }`}
-                          value={o.status || "processing"}
-                          onChange={(e) => updateStatus(o.id, e.target.value)}
-                          disabled={savingId === o.id}
-                        >
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        <div className="pointer-events-none absolute right-3 opacity-50">▾</div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {Object.entries(groupOrdersByDate(orders)).map(([groupLabel, groupOrders]) => (
+              <div key={groupLabel} className="mb-6">
+                <div className="sticky top-0 z-10 bg-neutral-100/80 backdrop-blur-sm border-b border-neutral-200 px-6 py-3">
+                  <h3 className="text-sm font-bold text-neutral-700">{groupLabel}</h3>
+                </div>
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="border-b border-neutral-200 bg-neutral-50/50 text-neutral-500">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">Order ID</th>
+                      <th className="px-6 py-4 font-semibold">Time</th>
+                      <th className="px-6 py-4 font-semibold">Customer</th>
+                      <th className="px-6 py-4 font-semibold text-center">Items</th>
+                      <th className="px-6 py-4 font-semibold text-right">Total</th>
+                      <th className="px-6 py-4 font-semibold text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {groupOrders.map((o) => (
+                      <tr
+                        key={o.id}
+                        className="transition-colors hover:bg-neutral-50/50 cursor-pointer"
+                        onClick={() => setSelectedOrder(o)}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
+                            #{o.id}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-neutral-600">
+                          {new Date(o.createdAt || Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
+                        </td>
+                        <td className="px-6 py-4 text-center font-medium text-neutral-600">
+                          {Array.isArray(o.items) ? o.items.length : 0}
+                        </td>
+                        <td className="px-6 py-4 text-right font-extrabold text-neutral-900">
+                          AU${Number(o?.pricing?.total || 0).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="relative inline-flex items-center">
+                            <select
+                              className={`appearance-none rounded-full border border-transparent py-1.5 pl-4 pr-8 text-xs font-bold font-semibold uppercase tracking-wider outline-none ring-1 ring-inset ring-black/5 transition-all focus:ring-2 focus:ring-primary ${
+                                o.status === "delivered" || o.status === "customer_received"
+                                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20"
+                                  : o.status === "shipped"
+                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-600/20"
+                                  : o.status === "cancelled"
+                                  ? "bg-rose-50 text-rose-700 hover:bg-rose-100 ring-rose-600/20"
+                                  : "bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20"
+                              }`}
+                              value={o.status || "processing"}
+                              onChange={(e) => updateStatus(o.id, e.target.value)}
+                              disabled={savingId === o.id}
+                            >
+                              <option value="processing">Processing</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="customer_received">Received by Customer</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                            <div className="pointer-events-none absolute right-3 opacity-50">▾</div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedOrder(null)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between border-b border-neutral-200 pb-4">
+              <h2 className="text-xl font-bold text-neutral-900">Order Details</h2>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-full p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Order Info */}
+              <div className="grid grid-cols-2 gap-4 rounded-lg bg-neutral-50 p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Order ID</p>
+                  <p className="font-mono text-sm font-medium">#{selectedOrder.id}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Date</p>
+                  <p className="text-sm">{new Date(selectedOrder.createdAt || Date.now()).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Status</p>
+                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                    selectedOrder.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                    selectedOrder.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                    selectedOrder.status === 'cancelled' ? 'bg-rose-100 text-rose-700' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {selectedOrder.status || 'Processing'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total</p>
+                  <p className="text-sm font-bold">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Customer</h3>
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <p className="font-medium text-neutral-900">{selectedOrder?.customer?.fullName || 'N/A'}</p>
+                  <p className="text-sm text-neutral-600">{selectedOrder?.customer?.email}</p>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Shipping Address</h3>
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <p className="font-medium text-neutral-900">{selectedOrder?.shipping?.address}</p>
+                  <p className="text-sm text-neutral-600">
+                    {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
+                  </p>
+                  <p className="text-sm text-neutral-600">{selectedOrder?.shipping?.country}</p>
+                  {selectedOrder?.shipping?.phone && (
+                    <p className="mt-2 text-sm text-neutral-600">📞 {selectedOrder.shipping.phone}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Items</h3>
+                <div className="rounded-lg border border-neutral-200">
+                  {(selectedOrder?.items || []).map((item: any, idx: number) => (
+                    <div key={idx} className={`flex items-center justify-between p-4 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
+                      <div>
+                        <p className="font-medium text-neutral-900">{item.name}</p>
+                        <p className="text-sm text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
+                      </div>
+                      <p className="font-semibold text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pricing Summary */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Pricing</h3>
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <div className="flex justify-between py-1">
+                    <span className="text-neutral-600">Subtotal</span>
+                    <span>AU${Number(selectedOrder?.pricing?.subtotal || 0).toFixed(2)}</span>
+                  </div>
+                  {selectedOrder?.pricing?.discountTotal > 0 && (
+                    <div className="flex justify-between py-1 text-emerald-600">
+                      <span>Member Discount</span>
+                      <span>-AU${Number(selectedOrder.pricing.discountTotal).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 flex justify-between border-t border-neutral-200 pt-2">
+                    <span className="font-bold text-neutral-900">Total</span>
+                    <span className="font-bold text-neutral-900">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <AdminSupportChat
+              orderId={selectedOrder.id}
+              customerEmail={selectedOrder.customer?.email}
+              customerName={selectedOrder.customer?.fullName}
+            />
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function AdminReturns() {
+function AdminReturns({ viewReturnId, setViewReturnId }: { viewReturnId: string | null; setViewReturnId: (id: string | null) => void }) {
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Auto-open return modal when viewReturnId is set
+  useEffect(() => {
+    if (viewReturnId && returns.length > 0) {
+      const ret = returns.find((r) => r.id === viewReturnId);
+      if (ret) {
+        setSelectedReturn(ret);
+        setViewReturnId(null);
+      }
+    }
+  }, [viewReturnId, returns, setViewReturnId]);
 
   const load = async () => {
     setLoading(true);
@@ -820,7 +1312,9 @@ function AdminReturns() {
       if (selectedReturn?.id === id) {
         setSelectedReturn({ ...selectedReturn, ...data });
       }
+      activityLogger.action("return_updated", { returnId: id, updates: Object.keys(updates) });
     } catch (err: any) {
+      activityLogger.error("return_update_failed", { returnId: id, error: err?.message });
       setError(err?.message || "Failed to update return");
     } finally {
       setSavingId(null);
@@ -847,6 +1341,7 @@ function AdminReturns() {
   const getReasonLabel = (reason: string) => {
     const reasons: Record<string, string> = {
       faulty: "Faulty / Defective",
+      stopped_working: "Stopped Working (No Physical Damage)",
       wrong_item: "Wrong Item",
       not_as_described: "Not As Described",
       changed_mind: "Changed Mind",
@@ -892,7 +1387,9 @@ function AdminReturns() {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
-            <option value="completed">Completed</option>
+            <option value="shipped">Shipped (by customer)</option>
+            <option value="received">Received (by us)</option>
+            <option value="refunded">Refunded</option>
             <option value="cancelled">Cancelled</option>
           </select>
           <button
@@ -946,14 +1443,14 @@ function AdminReturns() {
                   <tr key={r.id} className="transition-colors hover:bg-neutral-50/50">
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
-                        #{r.id.slice(0, 12)}
+                        #{r.id}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-medium text-neutral-600">
                       {new Date(r.createdAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-mono text-neutral-500">#{r.orderId?.slice(0, 12)}</span>
+                      <span className="text-xs font-mono text-neutral-500">#{r.orderId}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-medium text-neutral-900">{r.customerEmail || "Unknown"}</div>
@@ -1019,9 +1516,10 @@ function ReturnDetailModal({
   getConditionLabel: (condition: string) => string;
   getStatusBadgeClass: (status: string) => string;
 }) {
-  const [adminNotes, setAdminNotes] = useState(returnRequest.adminNotes || "");
   const [resolution, setResolution] = useState(returnRequest.resolution || "");
   const [refundAmount, setRefundAmount] = useState(returnRequest.refundAmount || 0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const photos: string[] = Array.isArray(returnRequest.photos) ? returnRequest.photos : [];
 
   const totalItemValue = (returnRequest.items || []).reduce(
     (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
@@ -1032,14 +1530,10 @@ function ReturnDetailModal({
     await onUpdate(returnRequest.id, { status: newStatus });
   };
 
-  const handleSaveNotes = async () => {
-    await onUpdate(returnRequest.id, { adminNotes, resolution, refundAmount: Number(refundAmount) });
-  };
-
   const isExpiredRequest = returnRequest.reasonDetails?.includes("[RETURN WINDOW EXPIRED");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
       <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl my-8">
         <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
           <div>
@@ -1058,15 +1552,19 @@ function ReturnDetailModal({
                 <p><strong>Order Date:</strong> {new Date(returnRequest.orderDate).toLocaleDateString()}</p>
                 <p><strong>Customer:</strong> {returnRequest.customerEmail}</p>
                 {returnRequest.customerName && <p><strong>Name:</strong> {returnRequest.customerName}</p>}
-                {returnRequest.shippedDate && <p><strong>Shipped:</strong> {new Date(returnRequest.shippedDate).toLocaleDateString()}</p>}
-                {returnRequest.deliveredDate && <p><strong>Delivered:</strong> {new Date(returnRequest.deliveredDate).toLocaleDateString()}</p>}
+                {returnRequest.trackingNumber && <p><strong>Tracking:</strong> {returnRequest.trackingNumber}</p>}
+                {returnRequest.approvedAt && <p><strong>Approved:</strong> {new Date(returnRequest.approvedAt).toLocaleDateString()}</p>}
+                {returnRequest.receivedAt && <p><strong>Received:</strong> {new Date(returnRequest.receivedAt).toLocaleDateString()}</p>}
+                {returnRequest.refundedAt && <p><strong>Refunded:</strong> {new Date(returnRequest.refundedAt).toLocaleDateString()}</p>}
               </div>
             </div>
 
             <div className="rounded-xl bg-neutral-50 p-4">
               <h4 className="text-sm font-bold text-neutral-700 mb-2">Return Reason</h4>
               <p className="text-sm font-medium text-neutral-900">{getReasonLabel(returnRequest.reason)}</p>
-              <p className="text-sm text-neutral-600 mt-1"><strong>Condition:</strong> {getConditionLabel(returnRequest.condition)}</p>
+              {returnRequest.condition && (
+                <p className="text-sm text-neutral-600 mt-1"><strong>Condition:</strong> {getConditionLabel(returnRequest.condition)}</p>
+              )}
               {returnRequest.reasonDetails && (
                 <div className={`mt-2 rounded-lg p-3 text-sm ${isExpiredRequest ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-neutral-200'}`}>
                   {isExpiredRequest && (
@@ -1103,7 +1601,7 @@ function ReturnDetailModal({
             <div className="rounded-xl border border-neutral-200 bg-white p-4">
               <h4 className="text-sm font-bold text-neutral-700 mb-3">Update Status</h4>
               <div className="flex flex-wrap gap-2">
-                {["pending", "approved", "rejected", "completed", "cancelled"].map((status) => (
+                {["pending", "approved", "rejected", "shipped", "received", "refunded", "cancelled"].map((status) => (
                   <button
                     key={status}
                     type="button"
@@ -1129,9 +1627,8 @@ function ReturnDetailModal({
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
               >
                 <option value="">Select resolution...</option>
-                <option value="refund">Full Refund</option>
-                <option value="replacement">Replacement</option>
-                <option value="store_credit">Store Credit</option>
+                <option value="replacement">Exchange / Replacement</option>
+                <option value="refund">Refund</option>
                 <option value="rejected">Rejected - No Action</option>
               </select>
 
@@ -1151,19 +1648,9 @@ function ReturnDetailModal({
               )}
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <h4 className="text-sm font-bold text-neutral-700 mb-3">Admin Notes</h4>
-              <textarea
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Add internal notes about this return..."
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm min-h-[100px]"
-              />
-            </div>
-
             <button
               type="button"
-              onClick={handleSaveNotes}
+              onClick={() => onUpdate(returnRequest.id, { resolution, refundAmount: Number(refundAmount) })}
               disabled={savingId === returnRequest.id}
               className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-primary-dark disabled:opacity-50"
             >
@@ -1171,6 +1658,100 @@ function ReturnDetailModal({
             </button>
           </div>
         </div>
+
+        {photos.length > 0 && (
+          <div className="mt-4 rounded-xl bg-neutral-50 border border-neutral-200 p-4">
+            <h4 className="text-sm font-bold text-neutral-700 mb-3">Photos ({photos.length}) — click to enlarge</h4>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+              {photos.map((src: string, i: number) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setLightboxIndex(i)}
+                  className="group relative aspect-square rounded-lg overflow-hidden border border-neutral-200 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                >
+                  <img src={src} alt={`photo ${i + 1}`} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition">
+                    <svg className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0zM11 8v6M8 11h6" /></svg>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lightboxIndex !== null && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
+            onClick={() => setLightboxIndex(null)}
+          >
+            <div className="relative flex flex-col items-center max-w-5xl w-full px-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex w-full items-center justify-between mb-3">
+                <span className="text-white/70 text-sm">{lightboxIndex + 1} / {photos.length}</span>
+                <div className="flex gap-2">
+                  <a
+                    href={photos[lightboxIndex]}
+                    download={`photo-${lightboxIndex + 1}`}
+                    className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-sm font-semibold text-white flex items-center gap-1.5 transition"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                    Download
+                  </a>
+                  <button
+                    onClick={() => setLightboxIndex(null)}
+                    className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-sm font-semibold text-white transition"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+              </div>
+              <div className="relative w-full flex items-center justify-center">
+                {photos.length > 1 && (
+                  <button
+                    onClick={() => setLightboxIndex((lightboxIndex - 1 + photos.length) % photos.length)}
+                    className="absolute left-0 z-10 rounded-full bg-white/10 hover:bg-white/25 p-2 text-white transition -translate-x-2"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                )}
+                <img
+                  src={photos[lightboxIndex]}
+                  alt={`photo ${lightboxIndex + 1}`}
+                  className="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain"
+                />
+                {photos.length > 1 && (
+                  <button
+                    onClick={() => setLightboxIndex((lightboxIndex + 1) % photos.length)}
+                    className="absolute right-0 z-10 rounded-full bg-white/10 hover:bg-white/25 p-2 text-white transition translate-x-2"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1 max-w-full">
+                {photos.map((src: string, i: number) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightboxIndex(i)}
+                    className={`flex-shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition ${
+                      i === lightboxIndex ? "border-blue-400" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={src} alt={`thumb ${i + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <AdminSupportChat
+          orderId={undefined}
+          returnId={returnRequest.id}
+          customerEmail={returnRequest.customerEmail}
+          customerName={returnRequest.customerName}
+        />
 
         <div className="mt-6 pt-4 border-t border-neutral-200 flex justify-between items-center text-xs text-neutral-500">
           <span>Created: {new Date(returnRequest.createdAt).toLocaleString()}</span>
@@ -1313,18 +1894,18 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
                     </div>
                     <div>
                       <p className="text-sm font-medium text-neutral-900">{order?.customer?.email || 'Guest'}</p>
-                      <p className="text-xs text-neutral-500">#{order.id?.slice(0, 8)}</p>
+                      <p className="text-xs text-neutral-500">#{order.id}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-neutral-900">AU${(order?.pricing?.total || 0).toFixed(2)}</p>
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                      order.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                      order.status === 'delivered' || order.status === 'customer_received' ? 'bg-emerald-100 text-emerald-700' :
                       order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
                       order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                       'bg-amber-100 text-amber-700'
                     }`}>
-                      {order.status || 'processing'}
+                      {order.status === 'customer_received' ? 'Received' : (order.status || 'processing')}
                     </span>
                   </div>
                 </div>
@@ -1383,6 +1964,248 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminAbandonedCarts() {
+  const [carts, setCarts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [emailModal, setEmailModal] = useState<{ cart: any; discountPercent: number } | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const resp = await fetch("/api/abandoned-carts?hours=24", { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to load abandoned carts");
+      setCarts(Array.isArray(data?.carts) ? data.carts : []);
+    } catch (err: any) {
+      setCarts([]);
+      setError(err?.message || "Failed to load abandoned carts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const sendDiscountEmail = async (cart: any, discountPercent: number) => {
+    setSendingEmail(cart.userId || cart.email);
+    setError("");
+    try {
+      // Generate unique coupon code
+      const couponCode = `SAVE${discountPercent}${Date.now().toString(36).toUpperCase()}`;
+
+      // Create coupon
+      const couponResp = await fetch("/api/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode,
+          discountPercent,
+          validDays: 7,
+          customerEmail: cart.email,
+          customerUserId: cart.userId,
+        }),
+      });
+
+      if (!couponResp.ok) throw new Error("Failed to create coupon");
+
+      // Send email
+      const emailResp = await fetch("/api/abandoned-cart-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: cart.email,
+          couponCode,
+          discountPercent,
+          items: cart.items,
+        }),
+      });
+
+      if (!emailResp.ok) throw new Error("Failed to send email");
+
+      // Mark cart as contacted
+      await fetch("/api/cart", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: cart.userId,
+          email: cart.email,
+          action: "mark_contacted",
+        }),
+      });
+
+      // Reload carts
+      await load();
+      setEmailModal(null);
+    } catch (err: any) {
+      setError(err?.message || "Failed to send discount email");
+    } finally {
+      setSendingEmail(null);
+    }
+  };
+
+  const getCartTotal = (items: any[]) => {
+    return items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+  };
+
+  const getTimeSinceActivity = (lastActivity: string) => {
+    const diff = Date.now() - new Date(lastActivity).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return "Just now";
+  };
+
+  return (
+    <div className="animate-in fade-in duration-300">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
+            Abandoned Carts
+          </h1>
+          <p className="mt-2 text-sm text-neutral-600">
+            Carts with items that haven't been updated in 24+ hours
+          </p>
+        </div>
+        <button
+          onClick={load}
+          className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-neutral-500">Loading abandoned carts...</div>
+        </div>
+      ) : carts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-12 text-center">
+          <Package size={48} className="mx-auto mb-4 text-neutral-400" />
+          <h3 className="text-lg font-semibold text-neutral-900">No abandoned carts</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Carts that haven't been updated in 24+ hours will appear here
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-neutral-50 border-b border-neutral-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Items</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Total</th>
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Last Activity</th>
+                <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-neutral-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200">
+              {carts.map((cart) => (
+                <tr key={cart._id} className="hover:bg-neutral-50">
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-neutral-900">{cart.email || cart.userId}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-neutral-600">{cart.items?.length || 0} items</div>
+                    <div className="text-xs text-neutral-400 max-w-xs truncate">
+                      {cart.items?.slice(0, 2).map((item: any) => item.name).join(", ")}
+                      {cart.items?.length > 2 && "..."}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-semibold text-neutral-900">AU${getCartTotal(cart.items).toFixed(2)}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-neutral-600">{getTimeSinceActivity(cart.lastActivity)}</div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => setEmailModal({ cart, discountPercent: 10 })}
+                      disabled={sendingEmail === (cart.userId || cart.email)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {sendingEmail === (cart.userId || cart.email) ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={14} />
+                          Send Discount
+                        </>
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {emailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-neutral-900">Send Discount Email</h3>
+              <button onClick={() => setEmailModal(null)} className="text-neutral-400 hover:text-neutral-600 text-2xl">×</button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-lg bg-neutral-50 p-4">
+                <p className="text-sm text-neutral-600">
+                  Send a discount email to <strong>{emailModal.cart.email}</strong> for their abandoned cart (AU${getCartTotal(emailModal.cart.items).toFixed(2)})
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">Discount Percentage</label>
+                <select
+                  value={emailModal.discountPercent}
+                  onChange={(e) => setEmailModal({ ...emailModal, discountPercent: parseInt(e.target.value) })}
+                  className="w-full rounded-lg border border-neutral-300 px-4 py-2 text-sm"
+                >
+                  <option value={5}>5% off</option>
+                  <option value={10}>10% off</option>
+                  <option value={15}>15% off</option>
+                  <option value={20}>20% off</option>
+                  <option value={25}>25% off</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setEmailModal(null)}
+                  className="flex-1 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => sendDiscountEmail(emailModal.cart, emailModal.discountPercent)}
+                  disabled={sendingEmail === (emailModal.cart.userId || emailModal.cart.email)}
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {sendingEmail === (emailModal.cart.userId || emailModal.cart.email) ? "Sending..." : "Send Email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1867,6 +2690,11 @@ function AdminDashboard({
       onClick: () => onNavigateTab?.("settings"),
     },
     {
+      label: "Shipping Settings",
+      icon: Truck,
+      onClick: () => router.push("/admin/shipping"),
+    },
+    {
       label: "Import Products",
       icon: Import,
       onClick: () => router.push("/admin/upload-products"),
@@ -2137,7 +2965,7 @@ const RichTextEditor = ({ value, onChange, placeholder, onPdfUpload }: { value: 
 };
 
 function AdminProducts() {
-  const { getProducts, setProducts, productImagePool } = useStore();
+  const { getProducts, setProducts, productImagePool, getSettings } = useStore();
   const router = useRouter();
   const [products, setProductsState] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -2153,6 +2981,11 @@ function AdminProducts() {
   const [validImageIndices, setValidImageIndices] = useState<Set<number>>(new Set());
   // Toggle to show all images including broken ones (for cleanup)
   const [showAllImages, setShowAllImages] = useState(false);
+  // Track which RK fields are editable
+  const [editableRkSku, setEditableRkSku] = useState(false);
+  const [editableRkUrl, setEditableRkUrl] = useState(false);
+  // Spreadsheet view toggle
+  const [spreadsheetView, setSpreadsheetView] = useState(false);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -2163,10 +2996,16 @@ function AdminProducts() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(25);
+  const [settings, setSettings] = useState<any>({});
 
   // Sorting states
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Load settings for calculations
+  useEffect(() => {
+    setSettings(getSettings() || {});
+  }, [getSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2184,7 +3023,16 @@ function AdminProducts() {
           setLoadError(err?.message || "Failed to load products");
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          // Check if there's a pending edit product ID after loading
+          const pendingEditId = localStorage.getItem('adminEditProductId');
+          if (pendingEditId) {
+            setEditingId(pendingEditId);
+            setIsNewProduct(false);
+            localStorage.removeItem('adminEditProductId');
+          }
+        }
       }
     };
     load();
@@ -2198,6 +3046,20 @@ function AdminProducts() {
     setValidImageIndices(new Set());
     setShowAllImages(false);
   }, [editingId]);
+
+  // Listen for edit product requests from other admin sections
+  useEffect(() => {
+    const handleEditProduct = (e: CustomEvent) => {
+      if (e.detail?.editProductId) {
+        setEditingId(e.detail.editProductId);
+        setIsNewProduct(false);
+        // Clear from localStorage after using it
+        localStorage.removeItem('adminEditProductId');
+      }
+    };
+    window.addEventListener('switchAdminTab', handleEditProduct as EventListener);
+    return () => window.removeEventListener('switchAdminTab', handleEditProduct as EventListener);
+  }, []);
 
   const save = () => {
     const currentProducts = [...products];
@@ -2236,10 +3098,21 @@ function AdminProducts() {
       setProducts(updatedProducts);
     }, 0);
 
+    activityLogger.action("product_saved", { productId: editingId, name: updatedProduct.name });
     setPendingImageDeletions(new Set());
     setSaved(true);
     setIsNewProduct(false);
     setEditingId(null);
+    
+    // Check if we should return to Categories & Brands
+    const returnToCategories = localStorage.getItem('adminReturnToCategories');
+    const returnTab = localStorage.getItem('adminReturnTab');
+    if (returnToCategories === 'true') {
+      localStorage.removeItem('adminReturnToCategories');
+      // Keep the return tab info for the CategoriesBrandsSection to restore
+      window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'categories' } }));
+    }
+    
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -2444,6 +3317,16 @@ function AdminProducts() {
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50"
+              onClick={() => setSpreadsheetView(!spreadsheetView)}
+            >
+              <span>{spreadsheetView ? "📋" : "📊"}</span>
+              {spreadsheetView ? "Table View" : "Spreadsheet View"}
+            </button>
+          )}
+          {!editingId && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50"
               onClick={addNew}
             >
               <span>➕</span> Add Product
@@ -2522,7 +3405,7 @@ function AdminProducts() {
                 >
                   <option value="all">All Categories</option>
                   {categoryOptions.map((cat: string) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat}</option>
                   ))}
                 </select>
               </div>
@@ -2610,6 +3493,16 @@ function AdminProducts() {
                   setDragOverIndex(null);
                   setPreviewImage(null);
                   setIsNewProduct(false);
+                  setEditableRkSku(false);
+                  setEditableRkUrl(false);
+                  
+                  // Check if we should return to Categories & Brands
+                  const returnToCategories = localStorage.getItem('adminReturnToCategories');
+                  if (returnToCategories === 'true') {
+                    localStorage.removeItem('adminReturnToCategories');
+                    // Keep adminReturnTab and selected brand/category for restoration
+                    window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'categories' } }));
+                  }
                 }}
                 className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors"
               >
@@ -2636,9 +3529,20 @@ function AdminProducts() {
                   setEditingId(null);
                   setPendingImageDeletions(new Set());
                   setDraggedIndex(null);
+                  setDraggedIndex(null);
                   setDragOverIndex(null);
                   setPreviewImage(null);
                   setIsNewProduct(false);
+                  setEditableRkSku(false);
+                  setEditableRkUrl(false);
+                  
+                  // Check if we should return to Categories & Brands
+                  const returnToCategories = localStorage.getItem('adminReturnToCategories');
+                  if (returnToCategories === 'true') {
+                    localStorage.removeItem('adminReturnToCategories');
+                    // Keep adminReturnTab and selected brand/category for restoration
+                    window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'categories' } }));
+                  }
                 }}
                 className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
               >
@@ -2660,13 +3564,128 @@ function AdminProducts() {
               {/* Basic Info Card */}
               <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
                 <div className="p-6 space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Title</label>
+                      <input
+                        type="text"
+                        value={productForEdit.name || productForEdit.title || ''}
+                        onChange={(e) => update(productForEdit.id, "name", e.target.value)}
+                        placeholder="Short sleeve t-shirt"
+                        className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">SKU</label>
+                      <input
+                        type="text"
+                        value={productForEdit.sku || ''}
+                        onChange={(e) => update(productForEdit.id, "sku", e.target.value)}
+                        placeholder="SKU-123"
+                        className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">RK_SKU</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={productForEdit.rk_sku || ''}
+                          onChange={(e) => update(productForEdit.id, "rk_sku", e.target.value)}
+                          placeholder="Remote King SKU"
+                          readOnly={!editableRkSku}
+                          className={`w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-10 ${!editableRkSku ? 'bg-neutral-50 text-neutral-600' : ''}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditableRkSku(!editableRkSku)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                          title={editableRkSku ? 'Lock' : 'Edit'}
+                        >
+                          <Edit size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">RK_URL</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={productForEdit.rk_url || ''}
+                          onChange={(e) => update(productForEdit.id, "rk_url", e.target.value)}
+                          placeholder="https://..."
+                          readOnly={!editableRkUrl}
+                          className={`w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-10 ${!editableRkUrl ? 'bg-neutral-50 text-neutral-600' : ''}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditableRkUrl(!editableRkUrl)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                          title={editableRkUrl ? 'Lock' : 'Edit'}
+                        >
+                          <Edit size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Frequency MHz</label>
+                      <input
+                        type="text"
+                        value={productForEdit.frequency_mhz || ''}
+                        onChange={(e) => update(productForEdit.id, "frequency_mhz", e.target.value)}
+                        placeholder="433.92"
+                        className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Buttons</label>
+                      <input
+                        type="text"
+                        value={productForEdit.buttons || ''}
+                        onChange={(e) => update(productForEdit.id, "buttons", e.target.value)}
+                        placeholder="2, 4"
+                        className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Title</label>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Compatibility</label>
                     <input
                       type="text"
-                      value={productForEdit.name || productForEdit.title || ''}
-                      onChange={(e) => update(productForEdit.id, "name", e.target.value)}
-                      placeholder="Short sleeve t-shirt"
+                      value={productForEdit.compatibility || ''}
+                      onChange={(e) => update(productForEdit.id, "compatibility", e.target.value)}
+                      placeholder="Compatible with..."
+                      className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Condition</label>
+                    <select
+                      value={productForEdit.condition || 'Brand New'}
+                      onChange={(e) => update(productForEdit.id, "condition", e.target.value)}
+                      className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    >
+                      <option value="Brand New">Brand New</option>
+                      <option value="Refurbished">Refurbished</option>
+                      <option value="Used">Used</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-2">SEO Title</label>
+                    <input
+                      type="text"
+                      value={productForEdit.seo_title || ''}
+                      onChange={(e) => update(productForEdit.id, "seo_title", e.target.value)}
+                      placeholder="SEO optimized title"
                       className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                     />
                   </div>
@@ -3075,29 +4094,44 @@ function AdminProducts() {
                           type="number"
                           step="0.01"
                           value={productForEdit.price || ''}
-                          onChange={(e) => update(productForEdit.id, "price", parseFloat(e.target.value) || 0)}
+                          onChange={(e) => {
+                            const price = parseFloat(e.target.value) || 0;
+                            update(productForEdit.id, "price", price);
+                            // Auto-calculate comparePrice based on member discount
+                            const discount = (settings.memberDiscountRate ?? 10) / 100;
+                            const comparePrice = price * (1 - discount);
+                            update(productForEdit.id, "comparePrice", parseFloat(comparePrice.toFixed(2)));
+                          }}
                           placeholder="0.00"
                           className="w-full pl-8 pr-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Maximum Retail Price (strikethrough)</label>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                        After Trade Discount Price
+                        <span className="text-xs font-normal text-neutral-500 ml-1">
+                          ({settings.memberDiscountRate ?? 10}% off)
+                        </span>
+                      </label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
                         <input
                           type="number"
                           step="0.01"
-                          value={productForEdit.comparePrice !== undefined && productForEdit.comparePrice !== null ? productForEdit.comparePrice : ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const parsed = val === '' ? 0 : parseFloat(val);
-                            update(productForEdit.id, "comparePrice", parsed || 0);
-                          }}
-                          placeholder="0.00"
-                          className="w-full pl-8 pr-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          value={(() => {
+                            const price = productForEdit.price || 0;
+                            const discount = (settings.memberDiscountRate ?? 10) / 100;
+                            const discountedPrice = price * (1 - discount);
+                            return discountedPrice > 0 ? discountedPrice.toFixed(2) : '';
+                          })()}
+                          readOnly
+                          className="w-full pl-8 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm bg-neutral-50 text-neutral-600 cursor-not-allowed"
                         />
                       </div>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Auto-calculated: Price - {(settings.memberDiscountRate ?? 10)}% member discount
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -3184,7 +4218,7 @@ function AdminProducts() {
                       >
                         <option value="">Select category</option>
                         {categoryOptions.map((cat: string) => (
-                          <option key={cat} value={cat}>{cat}</option>
+                          <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat}</option>
                         ))}
                       </select>
                       <button
@@ -3271,6 +4305,8 @@ function AdminProducts() {
             </div>
           </div>
         </div>
+      ) : spreadsheetView ? (
+        <ProductSpreadsheet onBack={() => setSpreadsheetView(false)} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="px-6 py-5 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between">
@@ -3384,6 +4420,8 @@ function AdminProducts() {
                           )}
                         </div>
                       </th>
+                      <th className="w-24 px-6 py-4 font-semibold">SKU</th>
+                      <th className="w-24 px-6 py-4 font-semibold">RK_SKU</th>
                       <th 
                         className="w-28 px-6 py-4 font-semibold cursor-pointer hover:text-neutral-700 select-none"
                         onClick={() => handleSort('price')}
@@ -3422,18 +4460,42 @@ function AdminProducts() {
                             {p.name}
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-700">
-                            <span className="font-semibold tracking-wide text-accent-dark">
-                              {(p.sku || p.brand || "Model Unset").toString()}
-                            </span>
-                            <span className="text-neutral-400">•</span>
                             <span className="font-medium text-neutral-700">ID:</span>
                             <span className="font-mono text-[11px] uppercase text-neutral-800">{p.id.slice(-6)}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 align-top">
                           <span className="inline-block max-w-[120px] rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600 leading-tight line-clamp-2">
-                            {p.category || '-'}
+                            {p.category ? (p.category === 'garage' ? 'Garage & Gate' : p.category) : '-'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 align-top">
+                          {p.id ? (
+                            <a
+                              href={`/product/${p.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {p.sku || p.id}
+                            </a>
+                          ) : (
+                            <span className="font-mono text-xs text-neutral-700">{p.sku || '-'}</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 align-top">
+                          {p.rk_sku && p.rk_url ? (
+                            <a
+                              href={p.rk_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {p.rk_sku}
+                            </a>
+                          ) : (
+                            <span className="font-mono text-xs text-neutral-700">{p.rk_sku || '-'}</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 align-top font-extrabold text-neutral-900">
                           AU${Number(p.price).toFixed(2)}
@@ -3541,17 +4603,6 @@ function AdminHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState("");
   const [saveError, setSaveError] = useState("");
-  const [s3ModalOpen, setS3ModalOpen] = useState(false);
-  const [s3Tab, setS3Tab] = useState<"browse" | "upload">("browse");
-  const [s3Images, setS3Images] = useState<any[]>([]);
-  const [s3Loading, setS3Loading] = useState(false);
-  const [s3Error, setS3Error] = useState("");
-  const [s3Selected, setS3Selected] = useState<any | null>(null);
-  const [s3TargetIndex, setS3TargetIndex] = useState<number | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState("");
-  const [heroImageErrors, setHeroImageErrors] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -3575,107 +4626,6 @@ function AdminHome() {
     };
   }, [getHomeContent]);
 
-  const formatBytes = (bytes: number) => {
-    if (!bytes || bytes <= 0) return "0 B";
-    const units = ["B", "KB", "MB", "GB"];
-    const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-    const value = bytes / Math.pow(1024, index);
-    return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
-  };
-
-  const loadS3Images = async () => {
-    setS3Loading(true);
-    setS3Error("");
-    try {
-      const resp = await fetch("/api/admin/s3", { cache: "no-store" });
-      const data = await resp.json().catch(() => null);
-      if (data?.error === "S3 not configured") {
-        setS3Images([]);
-        setS3Error("S3 is not configured. Add AWS credentials to your .env.local file.");
-        return;
-      }
-      if (!resp.ok) throw new Error(data?.error || "Failed to load S3 images");
-      setS3Images(Array.isArray(data?.images) ? data.images : []);
-    } catch (err: any) {
-      setS3Images([]);
-      setS3Error(err?.message || "Failed to load S3 images");
-    } finally {
-      setS3Loading(false);
-    }
-  };
-
-  const openS3Modal = (index: number) => {
-    setS3TargetIndex(index);
-    setS3Selected(null);
-    setS3Tab("browse");
-    setUploadStatus("idle");
-    setUploadProgress(0);
-    setUploadError("");
-    setS3ModalOpen(true);
-    loadS3Images();
-  };
-
-  const closeS3Modal = () => {
-    setS3ModalOpen(false);
-    setS3Selected(null);
-    setS3TargetIndex(null);
-    setUploadStatus("idle");
-    setUploadProgress(0);
-    setUploadError("");
-  };
-
-  const uploadToPresignedUrl = (presignedUrl: string, file: File) => {
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", presignedUrl, true);
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setUploadProgress(Math.round((event.loaded / event.total) * 100));
-        }
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("Upload failed"));
-      };
-      xhr.onerror = () => reject(new Error("Upload failed"));
-      xhr.send(file);
-    });
-  };
-
-  const handleUploadFile = async (file: File) => {
-    if (!file) return;
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (file.type && !allowedTypes.includes(file.type)) {
-      setUploadStatus("error");
-      setUploadError("Unsupported file type. Use .jpg, .jpeg, .png, or .webp.");
-      return;
-    }
-    setUploadStatus("uploading");
-    setUploadProgress(0);
-    setUploadError("");
-    try {
-      const resp = await fetch("/api/admin/s3/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type || "application/octet-stream" }),
-      });
-      const data = await resp.json().catch(() => null);
-      if (data?.error === "S3 not configured") {
-        throw new Error("S3 is not configured. Add AWS credentials to your .env.local file.");
-      }
-      if (!resp.ok) throw new Error(data?.error || "Failed to start upload");
-      await uploadToPresignedUrl(data.presignedUrl, file);
-      setUploadStatus("done");
-      await loadS3Images();
-      if (data?.publicUrl) {
-        setS3Selected({ key: data.key, url: data.publicUrl, name: file.name, size: file.size });
-      }
-    } catch (err: any) {
-      setUploadStatus("error");
-      setUploadError(err?.message || "Upload failed");
-    }
-  };
 
   const update = (path: string, value: any) => {
     const [section, key] = path.split('.');
@@ -3734,7 +4684,6 @@ function AdminHome() {
   };
 
   const updateHeroImage = (index: number, value: string) => {
-    setHeroImageErrors((prev) => ({ ...prev, [index]: false }));
     setContent((prev) => ({
       ...prev,
       heroImages: (prev.heroImages || []).map((img, i) => (i === index ? value : img)),
@@ -3749,7 +4698,6 @@ function AdminHome() {
   };
 
   const removeHeroImage = (index: number) => {
-    setHeroImageErrors({});
     setContent((prev) => ({
       ...prev,
       heroImages: (prev.heroImages || []).filter((_, i) => i !== index),
@@ -3769,15 +4717,11 @@ function AdminHome() {
       if (!resp.ok) throw new Error(data?.error || "Failed to save home content");
       localStorage.setItem(STORAGE_KEYS.home, JSON.stringify(content));
       setSaveSuccess("Home content saved.");
+      activityLogger.action("home_content_saved");
     } catch (err: any) {
+      activityLogger.error("home_content_save_failed", { error: err?.message });
       setSaveError(err?.message || "Failed to save home content");
     }
-  };
-
-  const applySelectedImage = () => {
-    if (!s3Selected || s3TargetIndex == null) return;
-    updateHeroImage(s3TargetIndex, s3Selected.url);
-    closeS3Modal();
   };
 
   if (isLoading) {
@@ -3793,15 +4737,61 @@ function AdminHome() {
           <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">Home Content</h1>
           <p className="mt-1 text-sm text-neutral-500">Manage the hero section, features, and promotions on the homepage.</p>
         </div>
-        <button 
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          onClick={save}
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.open('/', '_blank')}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Reset all home content to default values? This cannot be undone.')) {
+                setContent({
+                  heroImages: ["/images/3.jpg", "/images/1.jpg", "/images/5.png", "/images/2.jpg", "/images/6.png", "/images/4.png", "/images/7.png", "/images/8.png", "/images/9.png", "/images/10.png"],
+                  hero: {
+                    title: "Garage Door & Gate Remotes",
+                    subtitle: "Quality is Guaranteed",
+                    description: "Your trusted source for premium car and garage remotes. Browse reliable replacements, accessories, and business-ready service support.",
+                    primaryCta: "Shop Car Remotes",
+                    primaryCtaPath: "/products/car",
+                    secondaryCta: "Shop Garage Remotes",
+                    secondaryCtaPath: "/products/garage",
+                  },
+                  features: [],
+                  whyBuy: [],
+                  ctaSection: {
+                    title: "Ready to upgrade your remote?",
+                    description: "Browse our complete catalog of automotive and garage remotes.",
+                    buttonText: "Shop All Products",
+                    buttonPath: "/products/all",
+                  },
+                });
+              }
+            }}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200 focus:outline-none focus:ring-2 focus:ring-red-200"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset
+          </button>
+          <button 
+            className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            onClick={save}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Save Changes
+          </button>
+        </div>
       </div>
       {saveSuccess && (
         <div className="mb-8 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -3824,134 +4814,169 @@ function AdminHome() {
           <p className="text-xs text-neutral-500">The main banner at the top of the homepage.</p>
         </div>
 
-        <div className="p-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="grid gap-2 lg:col-span-2">
-              <label className="text-sm font-semibold text-neutral-800">Title</label>
+        <div className="p-6 space-y-8">
+          {/* TEXT CONTENT SECTION */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-400">Text Content</h4>
+            <div className="grid gap-4">
               <input
-                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 value={content.hero?.title || ""}
                 onChange={(e) => update("hero.title", e.target.value)}
+                placeholder="Main headline..."
               />
-            </div>
-
-            <div className="grid gap-2 lg:col-span-2">
-              <label className="text-sm font-semibold text-neutral-800">Subtitle</label>
-              <textarea
-                className="min-h-[100px] w-full resize-y rounded-lg border border-neutral-300 bg-white p-4 text-sm leading-relaxed text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 value={content.hero?.subtitle || ""}
                 onChange={(e) => update("hero.subtitle", e.target.value)}
+                placeholder="Subtitle..."
               />
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-semibold text-neutral-800">Primary Button Text</label>
-              <input
-                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                value={content.hero?.primaryCta || ""}
-                onChange={(e) => update("hero.primaryCta", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-semibold text-neutral-800">Primary Button Path (URL)</label>
-              <input
-                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                value={content.hero?.primaryCtaPath || ""}
-                onChange={(e) => update("hero.primaryCtaPath", e.target.value)}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-semibold text-neutral-800">Secondary Button Text</label>
-              <input
-                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                value={content.hero?.secondaryCta || ""}
-                onChange={(e) => update("hero.secondaryCta", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-semibold text-neutral-800">Secondary Button Path (URL)</label>
-              <input
-                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                value={content.hero?.secondaryCtaPath || ""}
-                onChange={(e) => update("hero.secondaryCtaPath", e.target.value)}
+              <textarea
+                className="min-h-[80px] w-full resize-y rounded-lg border border-neutral-300 bg-white p-3 text-sm leading-relaxed text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={content.hero?.description || ""}
+                onChange={(e) => update("hero.description", e.target.value)}
+                placeholder="Description shown below subtitle..."
               />
             </div>
           </div>
 
-          <div className="mt-8">
+          {/* PRIMARY BUTTON SECTION */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-400">Primary Button</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={content.hero?.primaryCta || ""}
+                onChange={(e) => update("hero.primaryCta", e.target.value)}
+                placeholder="Button text..."
+              />
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-500 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={content.hero?.primaryCtaPath || ""}
+                onChange={(e) => update("hero.primaryCtaPath", e.target.value)}
+                placeholder="/products/path"
+              />
+            </div>
+          </div>
+
+          {/* SECONDARY BUTTON SECTION */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-400">Secondary Button</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-900 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={content.hero?.secondaryCta || ""}
+                onChange={(e) => update("hero.secondaryCta", e.target.value)}
+                placeholder="Button text..."
+              />
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm tracking-wide text-neutral-500 shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={content.hero?.secondaryCtaPath || ""}
+                onChange={(e) => update("hero.secondaryCtaPath", e.target.value)}
+                placeholder="/products/path"
+              />
+            </div>
+          </div>
+
+          {/* CAROUSEL IMAGES - SIMPLIFIED */}
+          <div className="mt-8 rounded-xl border border-neutral-200 bg-neutral-50/50 p-5">
             <div className="mb-4 flex items-center justify-between">
-              <label className="text-sm font-semibold text-neutral-800">Hero Images</label>
+              <div>
+                <label className="text-sm font-bold text-neutral-900">Carousel Images</label>
+                <p className="text-xs text-neutral-500">Images rotate every 6 seconds</p>
+              </div>
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-200"
                 onClick={addHeroImage}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-dark"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Image
+                Add
               </button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(content.heroImages || []).map((img: string, i: number) => (
-                <div key={i} className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Image {i + 1}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg border border-neutral-200 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50"
-                        onClick={() => openS3Modal(i)}
-                      >
-                        Browse S3
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg p-1 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                        onClick={() => removeHeroImage(i)}
-                        aria-label={`Remove image ${i + 1}`}
-                        title="Remove image"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-                    {img && !heroImageErrors[i] ? (
-                      <img
-                        src={img}
-                        alt={`Hero image ${i + 1} preview`}
-                        className="h-28 w-full object-cover"
-                        onError={() => setHeroImageErrors((prev) => ({ ...prev, [i]: true }))}
-                        onLoad={() => setHeroImageErrors((prev) => ({ ...prev, [i]: false }))}
-                      />
+            <div className="space-y-3">
+              {(content.heroImages || []).map((img: string, i: number) => (
+                <div key={i} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
+                    {img ? (
+                      <img src={img} alt={`Slide ${i + 1}`} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-28 items-center justify-center text-xs font-medium text-neutral-400">
-                        No preview
-                      </div>
+                      <span className="text-xs text-neutral-400">{i + 1}</span>
                     )}
                   </div>
-
-                  <input
-                    className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={img || ""}
-                    onChange={(e) => updateHeroImage(i, e.target.value)}
-                    placeholder="/images/example.jpg"
-                  />
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={img || ""}
+                      onChange={(e) => updateHeroImage(i, e.target.value)}
+                      placeholder="/images/photo.jpg or https://..."
+                      className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (i > 0) {
+                          const newImages = [...(content.heroImages || [])];
+                          [newImages[i], newImages[i - 1]] = [newImages[i - 1], newImages[i]];
+                          setContent((prev) => ({ ...prev, heroImages: newImages }));
+                        }
+                      }}
+                      disabled={i === 0}
+                      className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                      title="Move up"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (i < (content.heroImages || []).length - 1) {
+                          const newImages = [...(content.heroImages || [])];
+                          [newImages[i], newImages[i + 1]] = [newImages[i + 1], newImages[i]];
+                          setContent((prev) => ({ ...prev, heroImages: newImages }));
+                        }
+                      }}
+                      disabled={i === (content.heroImages || []).length - 1}
+                      className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                      title="Move down"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeHeroImage(i)}
+                      className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                      title="Remove"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               ))}
+
               {(!content.heroImages || content.heroImages.length === 0) && (
-                <div className="col-span-1 border-2 border-dashed border-neutral-200 rounded-lg p-8 flex flex-col items-center justify-center text-neutral-500">
-                  <svg className="h-8 w-8 text-neutral-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-sm font-medium">No hero images added</p>
+                <div className="rounded-lg border-2 border-dashed border-neutral-200 p-6 text-center">
+                  <p className="text-sm text-neutral-500">No carousel images. Click "Add" to start.</p>
                 </div>
               )}
+            </div>
+
+            <div className="mt-4 rounded-md bg-amber-50 border border-amber-200 p-3">
+              <p className="text-xs text-amber-800">
+                <strong>Tip:</strong> Use local paths like <code className="bg-amber-100 px-1 rounded">/images/1.jpg</code> or full S3 URLs. 
+                Images should be 16:9 ratio (1920×1080) for best results.
+              </p>
             </div>
           </div>
         </div>
@@ -3980,16 +5005,50 @@ function AdminHome() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(content.features || []).map((f: any, i: number) => (
               <div key={i} className="group relative flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-                <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button 
-                    type="button" 
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
+                    onClick={() => {
+                      if (i > 0) {
+                        const newFeatures = [...(content.features || [])];
+                        [newFeatures[i], newFeatures[i - 1]] = [newFeatures[i - 1], newFeatures[i]];
+                        setContent((prev) => ({ ...prev, features: newFeatures }));
+                      }
+                    }}
+                    disabled={i === 0}
+                    title="Move up"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
+                    onClick={() => {
+                      if (i < (content.features || []).length - 1) {
+                        const newFeatures = [...(content.features || [])];
+                        [newFeatures[i], newFeatures[i + 1]] = [newFeatures[i + 1], newFeatures[i]];
+                        setContent((prev) => ({ ...prev, features: newFeatures }));
+                      }
+                    }}
+                    disabled={i === (content.features || []).length - 1}
+                    title="Move down"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
                     onClick={() => removeFeature(i)}
                     aria-label={`Remove feature ${i + 1}`}
                     title="Remove feature"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
@@ -4060,16 +5119,50 @@ function AdminHome() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(content.whyBuy || []).map((w: any, i: number) => (
               <div key={i} className="group relative flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-                <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button 
-                    type="button" 
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
+                    onClick={() => {
+                      if (i > 0) {
+                        const newWhyBuy = [...(content.whyBuy || [])];
+                        [newWhyBuy[i], newWhyBuy[i - 1]] = [newWhyBuy[i - 1], newWhyBuy[i]];
+                        setContent((prev) => ({ ...prev, whyBuy: newWhyBuy }));
+                      }
+                    }}
+                    disabled={i === 0}
+                    title="Move up"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
+                    onClick={() => {
+                      if (i < (content.whyBuy || []).length - 1) {
+                        const newWhyBuy = [...(content.whyBuy || [])];
+                        [newWhyBuy[i], newWhyBuy[i + 1]] = [newWhyBuy[i + 1], newWhyBuy[i]];
+                        setContent((prev) => ({ ...prev, whyBuy: newWhyBuy }));
+                      }
+                    }}
+                    disabled={i === (content.whyBuy || []).length - 1}
+                    title="Move down"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
                     onClick={() => removeWhyBuy(i)}
                     aria-label={`Remove reason ${i + 1}`}
                     title="Remove reason"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
@@ -4161,96 +5254,6 @@ function AdminHome() {
           </div>
         </div>
       </div>
-      {s3ModalOpen && (
-        <div className="s3-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="s3-modal">
-            <div className="s3-modal-header">
-              <h3 style={{ margin: 0 }}>S3 Image Browser</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={closeS3Modal}>
-                Close
-              </button>
-            </div>
-            <div className="s3-modal-tabs">
-              <button
-                type="button"
-                className={`s3-modal-tab ${s3Tab === "browse" ? "active" : ""}`}
-                onClick={() => setS3Tab("browse")}
-              >
-                Browse S3 Images
-              </button>
-              <button
-                type="button"
-                className={`s3-modal-tab ${s3Tab === "upload" ? "active" : ""}`}
-                onClick={() => setS3Tab("upload")}
-              >
-                Upload new image
-              </button>
-            </div>
-            <div className="s3-modal-body">
-              {s3Tab === "browse" ? (
-                s3Loading ? (
-                  <div className="loading"><div className="spinner"></div></div>
-                ) : s3Error ? (
-                  <div className="error-message">{s3Error}</div>
-                ) : s3Images.length === 0 ? (
-                  <p>No images found in the bucket.</p>
-                ) : (
-                  <div className="s3-image-grid">
-                    {s3Images.map((image: any) => (
-                      <button
-                        type="button"
-                        key={image.key}
-                        className={`s3-image-card ${s3Selected?.key === image.key ? "selected" : ""}`}
-                        onClick={() => setS3Selected(image)}
-                      >
-                        <img className="s3-image-thumb" src={image.url} alt={image.name || image.key} />
-                        <div className="s3-image-meta">
-                          <span>{image.name || image.key}</span>
-                          <span>{formatBytes(Number(image.size || 0))}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )
-              ) : (
-                <div style={{ display: "grid", gap: 12 }}>
-                  {s3Error && <div className="error-message">{s3Error}</div>}
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUploadFile(file);
-                    }}
-                  />
-                  {uploadStatus === "uploading" && (
-                    <div className="s3-upload-status">Uploading... {uploadProgress}%</div>
-                  )}
-                  {uploadStatus === "done" && (
-                    <div className="s3-upload-status">Upload complete.</div>
-                  )}
-                  {uploadStatus === "error" && (
-                    <div className="error-message">{uploadError || "Upload failed."}</div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="s3-modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={closeS3Modal}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={applySelectedImage}
-                disabled={!s3Selected}
-              >
-                Use this image
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -4301,7 +5304,9 @@ function AdminNavigation() {
       if (!resp.ok) throw new Error(data?.error || "Failed to save navigation");
       localStorage.setItem(STORAGE_KEYS.navigation, JSON.stringify(nav));
       setSaveSuccess("Navigation saved.");
+      activityLogger.action("navigation_saved");
     } catch (err: any) {
+      activityLogger.error("navigation_save_failed", { error: err?.message });
       setSaveError(err?.message || "Failed to save navigation");
     }
   };
@@ -4530,7 +5535,9 @@ function AdminReviews() {
         const next = (reviews || []).filter((_: any, i: number) => i !== index);
         setReviewsState(next);
         localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(next));
+        activityLogger.action("review_deleted", { reviewId: id });
       } catch (err: any) {
+        activityLogger.error("review_delete_failed", { error: err?.message });
         setSaveError(err?.message || "Failed to delete review");
       }
     }
@@ -4549,7 +5556,9 @@ function AdminReviews() {
       if (!resp.ok) throw new Error(data?.error || "Failed to save reviews");
       localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(reviews));
       setSaveSuccess("Reviews saved.");
+      activityLogger.action("reviews_saved", { count: reviews?.length });
     } catch (err: any) {
+      activityLogger.error("reviews_save_failed", { error: err?.message });
       setSaveError(err?.message || "Failed to save reviews");
     }
   };
@@ -4734,7 +5743,9 @@ function AdminPromotions() {
       if (!resp.ok) throw new Error(data?.error || "Failed to save promotions");
       localStorage.setItem(STORAGE_KEYS.promotions, JSON.stringify(promotions));
       setSaveSuccess("Promotions saved.");
+      activityLogger.action("promotions_saved");
     } catch (err: any) {
+      activityLogger.error("promotions_save_failed", { error: err?.message });
       setSaveError(err?.message || "Failed to save promotions");
     }
   };
@@ -5181,58 +6192,45 @@ function AdminAnalytics() {
 
 function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'customer' });
 
-  const persistUsersToLocalStorage = (list) => {
-    try {
-      const toSave = (list || [])
-        .filter((u) => u && u.id !== 'admin')
-        .map((u) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          password: u.password,
-          role: u.role || 'customer',
-          status: u.status || 'active',
-          createdAt: u.createdAt || new Date().toISOString(),
-        }));
-      localStorage.setItem('users', JSON.stringify(toSave));
-    } catch {}
-  };
-
+  // Fetch users from API
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('users') || '[]';
-      const list = JSON.parse(raw);
-      const normalized = Array.isArray(list) ? list : [];
-      const adminRow = {
-        id: 'admin',
-        name: 'Admin',
-        email: 'admin@allremotes.com',
-        role: 'admin',
-        status: 'active',
-        joined: '—',
-      };
-      setUsers([
-        adminRow,
-        ...normalized.map((u: any) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          password: u.password,
-          role: u.role || 'customer',
-          status: u.status || 'active',
-          createdAt: u.createdAt || '',
-          joined: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : '—',
-        })),
-      ]);
-    } catch {
-      setUsers([
-        { id: 'admin', name: 'Admin', email: 'admin@allremotes.com', role: 'admin', status: 'active', joined: '—' },
-      ]);
-    }
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/users');
+        const result = await response.json();
+
+        if (result.success && result.users) {
+          const normalizedUsers = result.users.map((u: any) => ({
+            id: u._id || u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role || 'customer',
+            status: u.status || 'active',
+            provider: u.provider || 'email',
+            emailVerified: u.emailVerified || false,
+            createdAt: u.createdAt || '',
+            joined: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : '—',
+          }));
+          setUsers(normalizedUsers);
+        } else {
+          setError('Failed to load users');
+        }
+      } catch (err) {
+        setError('Error fetching users');
+        console.error('Fetch users error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const addUser = () => {
@@ -5245,31 +6243,26 @@ function AdminUsers() {
         createdAt,
         joined: createdAt.split('T')[0],
       };
-      const next = [...users, row];
-      setUsers(next);
-      persistUsersToLocalStorage(next);
+      setUsers([...users, row]);
       setNewUser({ name: '', email: '', password: '', role: 'customer' });
       setShowAddUser(false);
     }
   };
 
   const toggleUserStatus = (userId) => {
-    if (userId === 'admin') return;
+    // TODO: Add API endpoint to update user status
     const next = users.map(user =>
       user.id === userId
         ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
         : user
     );
     setUsers(next);
-    persistUsersToLocalStorage(next);
   };
 
   const deleteUser = (userId) => {
-    if (userId === 'admin') return;
+    // TODO: Add API endpoint to delete user
     if (window.confirm('Are you sure you want to delete this user?')) {
-      const next = users.filter(user => user.id !== userId);
-      setUsers(next);
-      persistUsersToLocalStorage(next);
+      setUsers(users.filter(user => user.id !== userId));
     }
   };
 
@@ -5282,12 +6275,24 @@ function AdminUsers() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
-        <p className="admin-muted-copy">
-          Users are stored in this browser's <code>localStorage</code> (demo auth). To make users global + secure,
-          replace client-side auth with a backend auth/session system.
-        </p>
-      </div>
+      {loading && (
+        <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm mb-6 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-neutral-600">Loading users from database...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm mb-6">
+          <p className="text-red-700 font-medium">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && users.length === 0 && (
+        <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm mb-6 text-center">
+          <p className="text-neutral-600">No users found in database.</p>
+        </div>
+      )}
 
       {showAddUser && (
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -5369,59 +6374,61 @@ function AdminUsers() {
         </div>
       )}
 
-      <div className="rounded-xl border border-neutral-200 bg-white shadow-sm mb-6 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-neutral-50/80 text-neutral-500 border-b border-neutral-200">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Name</th>
-                <th className="px-6 py-4 font-semibold">Email</th>
-                <th className="px-6 py-4 font-semibold">Role</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold">Joined</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-neutral-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-neutral-900">{user.name}</td>
-                  <td className="px-6 py-4 text-neutral-500">{user.email}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'}`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-neutral-500">{user.joined}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => toggleUserStatus(user.id)}
-                        disabled={user.id === 'admin'}
-                      >
-                        {user.status === 'active' ? 'Disable' : 'Enable'}
-                      </button>
-                      <button
-                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => deleteUser(user.id)}
-                        disabled={user.id === 'admin'}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+      {!loading && users.length > 0 && (
+        <div className="rounded-xl border border-neutral-200 bg-white shadow-sm mb-6 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-neutral-50/80 text-neutral-500 border-b border-neutral-200">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Name</th>
+                  <th className="px-6 py-4 font-semibold">Email</th>
+                  <th className="px-6 py-4 font-semibold">Role</th>
+                  <th className="px-6 py-4 font-semibold">Provider</th>
+                  <th className="px-6 py-4 font-semibold">Joined</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-neutral-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-neutral-900">{user.name}</td>
+                    <td className="px-6 py-4 text-neutral-500">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.provider === 'google' ? 'bg-orange-100 text-orange-800' : user.provider === 'apple' ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'}`}>
+                        {user.provider || 'email'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-500">{user.joined}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => toggleUserStatus(user.id)}
+                          disabled={user.role === 'admin'}
+                        >
+                          {user.status === 'active' ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => deleteUser(user.id)}
+                          disabled={user.role === 'admin'}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3 mb-8">
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -5522,7 +6529,9 @@ function AdminSettings() {
       if (!resp.ok) throw new Error(data?.error || "Failed to save settings");
       localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
       setSaveSuccess("Settings saved successfully!");
+      activityLogger.action("settings_saved");
     } catch (err: any) {
+      activityLogger.error("settings_save_failed", { error: err?.message });
       setSaveError(err?.message || "Failed to save settings");
     }
   };
@@ -5569,8 +6578,10 @@ function AdminSettings() {
           });
       } catch {}
 
+      activityLogger.action("admin_data_reset");
       window.location.href = "/";
     } catch (err: any) {
+      activityLogger.error("admin_data_reset_failed", { error: err?.message });
       setResetError(err?.message || "Reset failed");
     } finally {
       setResetting(false);
@@ -5852,6 +6863,18 @@ function AdminSettings() {
 }
 
 // Categories & Brands Management Section
+// Helper to format category display names
+const getCategoryDisplayName = (category: string): string => {
+  const displayNames: Record<string, string> = {
+    'garage': 'Garage & Gate',
+    'car': 'Car Remotes',
+    'home': 'For The Home',
+    'locksmith': 'Locksmithing',
+    'Uncategorized': 'Uncategorized',
+  };
+  return displayNames[category] || category;
+};
+
 function CategoriesBrandsSection() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -5867,6 +6890,11 @@ function CategoriesBrandsSection() {
   const [newBrandName, setNewBrandName] = useState('');
   const [editBrandName, setEditBrandName] = useState('');
   const [brandImageUploading, setBrandImageUploading] = useState<string | null>(null);
+  
+  // Product viewing state
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [showProductsPanel, setShowProductsPanel] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -5883,6 +6911,31 @@ function CategoriesBrandsSection() {
       console.error('Failed to fetch products:', err);
     } finally {
       setLoading(false);
+      
+      // Restore state if returning from product edit
+      const returnTab = localStorage.getItem('adminReturnTab');
+      const returnBrand = localStorage.getItem('adminReturnSelectedBrand');
+      const returnCategory = localStorage.getItem('adminReturnSelectedCategory');
+      
+      if (returnTab) {
+        // Small delay to ensure products are loaded
+        setTimeout(() => {
+          setActiveTab(returnTab as 'categories' | 'brands');
+          
+          if (returnBrand) {
+            setSelectedBrand(returnBrand);
+            setShowProductsPanel(true);
+          } else if (returnCategory) {
+            setSelectedCategory(returnCategory);
+            setShowProductsPanel(true);
+          }
+          
+          // Clear the stored values
+          localStorage.removeItem('adminReturnTab');
+          localStorage.removeItem('adminReturnSelectedBrand');
+          localStorage.removeItem('adminReturnSelectedCategory');
+        }, 100);
+      }
     }
   };
 
@@ -5908,6 +6961,39 @@ function CategoriesBrandsSection() {
     });
     return Object.entries(stats).sort((a, b) => a[0].localeCompare(b[0]));
   }, [products]);
+  
+  // Get products for selected category
+  const categoryProducts = useMemo(() => {
+    if (!selectedCategory) return [];
+    return products.filter(p => p.category === selectedCategory);
+  }, [products, selectedCategory]);
+  
+  // Get products for selected brand
+  const brandProducts = useMemo(() => {
+    if (!selectedBrand) return [];
+    return products.filter(p => p.brand === selectedBrand);
+  }, [products, selectedBrand]);
+  
+  // Handle viewing category products
+  const handleViewCategoryProducts = (categoryName: string) => {
+    setSelectedCategory(categoryName);
+    setSelectedBrand(null);
+    setShowProductsPanel(true);
+  };
+  
+  // Handle viewing brand products
+  const handleViewBrandProducts = (brandName: string) => {
+    setSelectedBrand(brandName);
+    setSelectedCategory(null);
+    setShowProductsPanel(true);
+  };
+  
+  // Close products panel
+  const handleCloseProductsPanel = () => {
+    setShowProductsPanel(false);
+    setSelectedCategory(null);
+    setSelectedBrand(null);
+  };
 
   // Category operations
   const handleAddCategory = async () => {
@@ -5929,7 +7015,9 @@ function CategoriesBrandsSection() {
       });
       setNewCategoryName('');
       fetchProducts();
+      activityLogger.action('category_added', { name: newCategoryName.trim() });
     } catch (err) {
+      activityLogger.error('category_add_failed', { name: newCategoryName.trim() });
       alert('Failed to add category');
     }
   };
@@ -5954,7 +7042,9 @@ function CategoriesBrandsSection() {
       });
       setEditingCategory(null);
       fetchProducts();
+      activityLogger.action('category_renamed', { from: oldName, to: newName.trim() });
     } catch (err) {
+      activityLogger.error('category_rename_failed', { from: oldName, to: newName.trim() });
       alert('Failed to update category');
     }
   };
@@ -5971,7 +7061,9 @@ function CategoriesBrandsSection() {
       try {
         await fetch(`/api/admin/products?id=${placeholder.id}`, { method: 'DELETE' });
         fetchProducts();
+        activityLogger.action('category_deleted', { name: categoryName });
       } catch (err) {
+        activityLogger.error('category_delete_failed', { name: categoryName });
         alert('Failed to delete category');
       }
     }
@@ -5997,7 +7089,9 @@ function CategoriesBrandsSection() {
       });
       setNewBrandName('');
       fetchProducts();
+      activityLogger.action('brand_added', { name: newBrandName.trim() });
     } catch (err) {
+      activityLogger.error('brand_add_failed', { name: newBrandName.trim() });
       alert('Failed to add brand');
     }
   };
@@ -6021,7 +7115,9 @@ function CategoriesBrandsSection() {
       });
       setEditingBrand(null);
       fetchProducts();
+      activityLogger.action('brand_renamed', { from: oldName, to: newName.trim() });
     } catch (err) {
+      activityLogger.error('brand_rename_failed', { from: oldName, to: newName.trim() });
       alert('Failed to update brand');
     }
   };
@@ -6037,7 +7133,9 @@ function CategoriesBrandsSection() {
       try {
         await fetch(`/api/admin/products?id=${placeholder.id}`, { method: 'DELETE' });
         fetchProducts();
+        activityLogger.action('brand_deleted', { name: brandName });
       } catch (err) {
+        activityLogger.error('brand_delete_failed', { name: brandName });
         alert('Failed to delete brand');
       }
     }
@@ -6166,7 +7264,11 @@ function CategoriesBrandsSection() {
                 </div>
               ) : (
                 categoryStats.map(([name, count]) => (
-                  <div key={name} className="px-6 py-4 flex items-center justify-between hover:bg-neutral-50">
+                  <div 
+                    key={name} 
+                    onClick={() => handleViewCategoryProducts(name)}
+                    className="px-6 py-4 flex items-center justify-between hover:bg-neutral-50 cursor-pointer"
+                  >
                     {editingCategory === name ? (
                       <div className="flex items-center gap-3 flex-1">
                         <input
@@ -6177,17 +7279,18 @@ function CategoriesBrandsSection() {
                             if (e.key === 'Enter') handleEditCategory(name, editCategoryName);
                             if (e.key === 'Escape') setEditingCategory(null);
                           }}
+                          onClick={(e) => e.stopPropagation()}
                           autoFocus
                           className="flex-1 px-3 py-1.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                         />
                         <button
-                          onClick={() => handleEditCategory(name, editCategoryName)}
+                          onClick={(e) => { e.stopPropagation(); handleEditCategory(name, editCategoryName); }}
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"
                         >
                           <CheckCircle size={18} />
                         </button>
                         <button
-                          onClick={() => setEditingCategory(null)}
+                          onClick={(e) => { e.stopPropagation(); setEditingCategory(null); }}
                           className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-lg"
                         >
                           <X size={18} />
@@ -6196,16 +7299,19 @@ function CategoriesBrandsSection() {
                     ) : (
                       <>
                         <div className="flex items-center gap-3">
-                          <span className="font-medium text-neutral-900">{name}</span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
-                          }`}>
+                          <span className="font-medium text-neutral-900">{getCategoryDisplayName(name)}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleViewCategoryProducts(name); }}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                              count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
+                            }`}>
                             {count} {count === 1 ? 'product' : 'products'}
-                          </span>
+                          </button>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingCategory(name);
                               setEditCategoryName(name);
                             }}
@@ -6215,7 +7321,7 @@ function CategoriesBrandsSection() {
                             <Edit size={16} />
                           </button>
                           <button
-                            onClick={() => handleDeleteCategory(name)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteCategory(name); }}
                             disabled={count > 0}
                             className={`p-2 rounded-lg transition-colors ${
                               count > 0
@@ -6307,7 +7413,8 @@ function CategoriesBrandsSection() {
                   {brandStats.map(([name, stats]) => (
                     <div
                       key={name}
-                      className="group relative bg-neutral-50 rounded-xl border border-neutral-200 hover:border-emerald-300 hover:shadow-md transition-all overflow-hidden"
+                      onClick={() => handleViewBrandProducts(name)}
+                      className="group relative bg-neutral-50 rounded-xl border border-neutral-200 hover:border-emerald-300 hover:shadow-md transition-all overflow-hidden cursor-pointer"
                     >
                       {/* Brand Image */}
                       <div className="relative aspect-square bg-white flex items-center justify-center p-4">
@@ -6323,13 +7430,17 @@ function CategoriesBrandsSection() {
                             <span className="text-xs mt-2">No image</span>
                           </div>
                         )}
-                        {/* Upload overlay */}
-                        <label className={`absolute inset-0 flex items-center justify-center bg-black/60 cursor-pointer transition-opacity ${brandImageUploading === name ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        {/* Upload overlay - only show when editing */}
+                        <label 
+                          onClick={(e) => e.stopPropagation()}
+                          className={`absolute inset-0 flex items-center justify-center bg-black/60 cursor-pointer transition-opacity ${brandImageUploading === name ? 'opacity-100' : editingBrand === name ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'}`}>
                           <input
                             type="file"
                             accept="image/*"
                             className="hidden"
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => {
+                              e.stopPropagation();
                               const file = e.target.files?.[0];
                               if (file) handleBrandImageUpload(name, file);
                             }}
@@ -6380,13 +7491,16 @@ function CategoriesBrandsSection() {
                             <div className="font-semibold text-neutral-900 text-sm truncate" title={name}>
                               {name}
                             </div>
-                            <div className={`text-xs mt-1 ${stats.count > 0 ? 'text-emerald-600 font-medium' : 'text-neutral-500'}`}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleViewBrandProducts(name); }}
+                              className={`text-xs mt-1 text-left cursor-pointer hover:underline ${stats.count > 0 ? 'text-emerald-600 font-medium' : 'text-neutral-500'}`}>
                               {stats.count} {stats.count === 1 ? 'product' : 'products'}
-                            </div>
+                            </button>
                             {/* Actions */}
                             <div className="flex items-center gap-1 mt-2 pt-2 border-t border-neutral-200">
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setEditingBrand(name);
                                   setEditBrandName(name);
                                 }}
@@ -6396,7 +7510,7 @@ function CategoriesBrandsSection() {
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDeleteBrand(name)}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteBrand(name); }}
                                 disabled={stats.count > 0}
                                 className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
                                   stats.count > 0
@@ -6419,6 +7533,324 @@ function CategoriesBrandsSection() {
           </div>
         </div>
       )}
+      
+      {/* Products Panel for Selected Category/Brand */}
+      {showProductsPanel && (selectedCategory || selectedBrand) && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">
+                  {selectedCategory ? `Category: ${getCategoryDisplayName(selectedCategory)}` : `Brand: ${selectedBrand}`}
+                </h2>
+                <p className="text-sm text-neutral-500 mt-1">
+                  {selectedCategory 
+                    ? `${categoryProducts.length} product${categoryProducts.length === 1 ? '' : 's'} in this category`
+                    : `${brandProducts.length} product${brandProducts.length === 1 ? '' : 's'} for this brand`
+                  }
+                </p>
+              </div>
+              <button
+                onClick={handleCloseProductsPanel}
+                className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            {/* Products List */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {(selectedCategory ? categoryProducts : brandProducts).length === 0 ? (
+                <div className="text-center py-12 text-neutral-500">
+                  <Package size={48} className="mx-auto mb-4 text-neutral-300" />
+                  <p className="text-lg font-medium">No products found</p>
+                  <p className="text-sm mt-1">
+                    {selectedCategory 
+                      ? `There are no products in the "${selectedCategory}" category.`
+                      : `There are no products for the "${selectedBrand}" brand.`
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(selectedCategory ? categoryProducts : brandProducts).map((product: any) => (
+                    <div 
+                      key={product.id} 
+                      onClick={() => window.open(`/product/${product.id}`, '_blank')}
+                      className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                    >
+                      {/* Product Image */}
+                      <div className="aspect-video bg-neutral-100 flex items-center justify-center relative">
+                        {product.image ? (
+                          <img 
+                            src={product.image} 
+                            alt={product.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="text-neutral-400 flex flex-col items-center">
+                            <Package size={40} />
+                            <span className="text-xs mt-1">No image</span>
+                          </div>
+                        )}
+                        {product.inStock ? (
+                          <span className="absolute top-2 right-2 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                            In Stock
+                          </span>
+                        ) : (
+                          <span className="absolute top-2 right-2 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                            Out of Stock
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Product Info */}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-neutral-900 text-sm line-clamp-2" title={product.name}>
+                          {product.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-emerald-600 font-bold">${product.price?.toFixed?.(2) || product.price}</span>
+                          {product.comparePrice > product.price && (
+                            <span className="text-neutral-400 line-through text-sm">${product.comparePrice?.toFixed?.(2) || product.comparePrice}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-neutral-500">
+                          <span className="bg-neutral-100 px-2 py-0.5 rounded">{getCategoryDisplayName(product.category)}</span>
+                          <span className="bg-neutral-100 px-2 py-0.5 rounded">{product.brand}</span>
+                        </div>
+                        {/* Actions */}
+                        <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCloseProductsPanel();
+                              window.open(`/product/${product.id}`, '_blank');
+                            }}
+                            className="flex-1 py-1.5 text-xs font-medium text-neutral-600 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCloseProductsPanel();
+                              // Store the product ID to be edited and switch to products tab
+                              localStorage.setItem('adminEditProductId', product.id);
+                              // Store flag to return to categories/brands after edit
+                              localStorage.setItem('adminReturnToCategories', 'true');
+                              // Store which brand/category tab was active and which item was selected
+                              if (selectedBrand) {
+                                localStorage.setItem('adminReturnTab', 'brands');
+                                localStorage.setItem('adminReturnSelectedBrand', selectedBrand);
+                              } else if (selectedCategory) {
+                                localStorage.setItem('adminReturnTab', 'categories');
+                                localStorage.setItem('adminReturnSelectedCategory', selectedCategory);
+                              }
+                              // Dispatch custom event to notify parent to switch tabs
+                              window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'products', editProductId: product.id } }));
+                            }}
+                            className="flex-1 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
+              <span className="text-sm text-neutral-500">
+                Showing {(selectedCategory ? categoryProducts : brandProducts).length} product{(selectedCategory ? categoryProducts : brandProducts).length === 1 ? '' : 's'}
+              </span>
+              <button
+                onClick={handleCloseProductsPanel}
+                className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminMessages() {
+  const [threads, setThreads] = useState<any[]>([]);
+  const [selectedThread, setSelectedThread] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadThreads();
+    const interval = setInterval(loadThreads, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadThreads = async () => {
+    try {
+      const resp = await fetch('/api/admin/support-chats', { cache: 'no-store' });
+      const data = await resp.json().catch(() => []);
+      if (Array.isArray(data)) {
+        setThreads(data);
+      }
+    } catch (err) {
+      console.error('Failed to load threads:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-neutral-500">Loading messages...</div>
+      </div>
+    );
+  }
+
+  if (threads.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <MessageSquareText size={48} className="mx-auto text-neutral-300 mb-4" />
+          <p className="text-neutral-500">No messages yet</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[calc(100vh-8rem)] flex gap-4">
+      {/* Thread List */}
+      <div className="w-96 flex-shrink-0 border border-neutral-200 rounded-xl bg-white overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-neutral-200 bg-neutral-50">
+          <h2 className="text-lg font-semibold text-neutral-900">Messages</h2>
+          <p className="text-sm text-neutral-500">{threads.length} conversation{threads.length === 1 ? '' : 's'}</p>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {threads.map((thread) => (
+            <button
+              key={thread.id}
+              onClick={() => setSelectedThread(thread)}
+              className={`w-full p-4 text-left border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
+                selectedThread?.id === thread.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-neutral-900 truncate">
+                    {thread.customerName || thread.customerEmail}
+                  </div>
+                  <div className="text-xs text-neutral-500 mt-0.5">
+                    {thread.orderId && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          localStorage.setItem('adminViewOrderId', thread.orderId);
+                          window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'orders', viewOrderId: thread.orderId } }));
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Order: #{thread.orderId}
+                      </button>
+                    )}
+                    {thread.returnId && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          localStorage.setItem('adminViewReturnId', thread.returnId);
+                          window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'returns', viewReturnId: thread.returnId } }));
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:underline ml-2"
+                      >
+                        Return: #{thread.returnId}
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-sm text-neutral-600 truncate mt-1">
+                    {thread.latestMessage || 'No messages'}
+                  </div>
+                </div>
+                {thread.unreadCount > 0 && (
+                  <span className="flex-shrink-0 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {thread.unreadCount}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-neutral-400 mt-1">
+                {new Date(thread.lastMessageAt).toLocaleDateString()} at {new Date(thread.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Panel */}
+      <div className="flex-1 bg-white border border-neutral-200 rounded-xl overflow-hidden">
+        {selectedThread ? (
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b border-neutral-200 bg-neutral-50 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-neutral-900">
+                  {selectedThread.customerName || selectedThread.customerEmail}
+                </h3>
+                <div className="text-sm text-neutral-500">
+                  {selectedThread.orderId && (
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('adminViewOrderId', selectedThread.orderId);
+                        window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'orders', viewOrderId: selectedThread.orderId } }));
+                      }}
+                      className="text-blue-600 hover:text-blue-800 hover:underline mr-3"
+                    >
+                      Order: #{selectedThread.orderId}
+                    </button>
+                  )}
+                  {selectedThread.returnId && (
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('adminViewReturnId', selectedThread.returnId);
+                        window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'returns', viewReturnId: selectedThread.returnId } }));
+                      }}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      Return: #{selectedThread.returnId}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedThread(null)}
+                className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <AdminSupportChat
+                orderId={selectedThread.orderId}
+                returnId={selectedThread.returnId}
+                customerEmail={selectedThread.customerEmail}
+                customerName={selectedThread.customerName}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-neutral-500">
+              <MessageSquareText size={48} className="mx-auto text-neutral-300 mb-4" />
+              <p>Select a conversation to view messages</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

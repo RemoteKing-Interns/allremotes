@@ -27,6 +27,94 @@ import {
 
 const PAGE_SIZE = 15;
 
+// Price Range Slider Component
+function PriceRangeSlider({
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+}) {
+  const [minVal, maxVal] = value;
+  const minRef = React.useRef<HTMLInputElement>(null);
+  const maxRef = React.useRef<HTMLInputElement>(null);
+  const rangeRef = React.useRef<HTMLDivElement>(null);
+  
+  const getPercent = (val: number) => Math.round(((val - min) / (max - min)) * 100);
+  
+  React.useEffect(() => {
+    const minPercent = getPercent(minVal);
+    const maxPercent = getPercent(maxVal);
+    
+    if (rangeRef.current) {
+      rangeRef.current.style.left = `${minPercent}%`;
+      rangeRef.current.style.width = `${maxPercent - minPercent}%`;
+    }
+  }, [minVal, maxVal, min, max]);
+  
+  return (
+    <div className="w-full px-1">
+      <div className="relative h-8">
+        {/* Track background */}
+        <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 rounded-full bg-neutral-200" />
+        
+        {/* Active range track */}
+        <div 
+          ref={rangeRef}
+          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-emerald-500"
+          style={{ left: '0%', width: '100%' }}
+        />
+        
+        {/* Min thumb input */}
+        <input
+          ref={minRef}
+          type="range"
+          min={min}
+          max={max}
+          value={minVal}
+          onChange={(e) => {
+            const val = Math.min(Number(e.target.value), maxVal - 5);
+            onChange([val, maxVal]);
+          }}
+          className="absolute top-0 w-full h-full appearance-none bg-transparent cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-emerald-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-emerald-500 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing"
+          style={{ zIndex: minVal > max - 50 ? 5 : 3 }}
+        />
+        
+        {/* Max thumb input */}
+        <input
+          ref={maxRef}
+          type="range"
+          min={min}
+          max={max}
+          value={maxVal}
+          onChange={(e) => {
+            const val = Math.max(Number(e.target.value), minVal + 5);
+            onChange([minVal, val]);
+          }}
+          className="absolute top-0 w-full h-full appearance-none bg-transparent cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-emerald-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-emerald-500 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing"
+          style={{ zIndex: 4 }}
+        />
+      </div>
+      
+      {/* Value labels */}
+      <div className="flex justify-between mt-1">
+        <div className="text-sm">
+          <span className="text-neutral-400">Min: </span>
+          <span className="font-semibold text-neutral-700">${minVal}</span>
+        </div>
+        <div className="text-sm">
+          <span className="text-neutral-400">Max: </span>
+          <span className="font-semibold text-neutral-700">${maxVal}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function applyParam(
   searchParams: URLSearchParams,
   key: string,
@@ -99,23 +187,33 @@ function FiltersPanel({
   brands,
   searchQuery,
   selectedCategory,
-  selectedBrand,
+  selectedBrands,
   stockStatus,
+  priceMin,
+  priceMax,
+  sortBy,
   onSearchQueryChange,
   onSelectedCategoryChange,
-  onSelectedBrandChange,
+  onSelectedBrandsChange,
   onStockStatusChange,
+  onPriceChange,
+  onSortChange,
   onClear,
 }: {
   brands: string[];
   searchQuery: string;
   selectedCategory: string;
-  selectedBrand: string;
+  selectedBrands: string[];
   stockStatus: string;
+  priceMin: number;
+  priceMax: number;
+  sortBy: string;
   onSearchQueryChange: (next: string) => void;
   onSelectedCategoryChange: (next: string) => void;
-  onSelectedBrandChange: (next: string) => void;
+  onSelectedBrandsChange: (brands: string[]) => void;
   onStockStatusChange: (next: string) => void;
+  onPriceChange: (min: number, max: number) => void;
+  onSortChange: (next: string) => void;
   onClear: () => void;
 }) {
   return (
@@ -152,20 +250,46 @@ function FiltersPanel({
 
       <div className="grid gap-2">
         <label className="text-sm font-semibold text-neutral-700">Brand</label>
-        <select
-          value={selectedBrand}
-          onChange={(e) => onSelectedBrandChange(e.target.value)}
-          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
-        >
-          {brands.map((brand) => {
+        <div className="max-h-40 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-2">
+          <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-neutral-50 rounded cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedBrands.length === 0}
+              onChange={() => onSelectedBrandsChange([])}
+              className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="text-sm text-neutral-700">All Brands</span>
+          </label>
+          {brands.filter(b => b !== "all").map((brand) => {
             const b = String(brand);
+            const isSelected = selectedBrands.includes(b);
             return (
-              <option key={b} value={b}>
-                {b === "all" ? "All Brands" : b}
-              </option>
+              <label key={b} className="flex items-center gap-2 px-2 py-1.5 hover:bg-neutral-50 rounded cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      onSelectedBrandsChange([...selectedBrands, b]);
+                    } else {
+                      onSelectedBrandsChange(selectedBrands.filter(sb => sb !== b));
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-neutral-700">{b}</span>
+              </label>
             );
           })}
-        </select>
+        </div>
+        {selectedBrands.length > 0 && (
+          <button
+            onClick={() => onSelectedBrandsChange([])}
+            className="text-xs text-emerald-600 hover:text-emerald-700 text-left"
+          >
+            Clear {selectedBrands.length} selected
+          </button>
+        )}
       </div>
 
       <div className="grid gap-2">
@@ -178,6 +302,29 @@ function FiltersPanel({
           <option value="all">All</option>
           <option value="in">In Stock</option>
           <option value="out">Out of Stock</option>
+        </select>
+      </div>
+
+      <div className="grid gap-3">
+        <label className="text-sm font-semibold text-neutral-700">Price Range: ${priceMin} - ${priceMax}</label>
+        <PriceRangeSlider
+          min={0}
+          max={500}
+          value={[priceMin, priceMax]}
+          onChange={([min, max]) => onPriceChange(min, max)}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm font-semibold text-neutral-700">Sort By</label>
+        <select
+          value={sortBy}
+          onChange={(e) => onSortChange(e.target.value)}
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm focus:border-primary focus:ring-1 focus:outline-none transition"
+        >
+          <option value="name">Name (A-Z)</option>
+          <option value="price-asc">Price (Low to High)</option>
+          <option value="price-desc">Price (High to Low)</option>
         </select>
       </div>
 
@@ -207,7 +354,6 @@ export default function ProductListClient({
   const searchParams = useSearchParams();
 
   const products = getProducts() || [];
-  const initialBrand = searchParams.get("brand") || "all";
   const initialSearch = searchParams.get("search") || "";
   const initialCategoryFromUrl = resolveProductCategory(
     searchParams.get("category") || "all",
@@ -222,8 +368,11 @@ export default function ProductListClient({
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState("all");
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(500);
+  const [sortBy, setSortBy] = useState("name");
   const [addedItem, setAddedItem] = useState<any>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const isModalOpen = Boolean(addedItem);
@@ -235,15 +384,25 @@ export default function ProductListClient({
 
   // Keep state in sync when navigating via back/forward or external links.
   useEffect(() => {
-    const urlBrand = searchParams.get("brand") || "all";
+    const urlBrands = searchParams.get("brands");
     const urlSearch = searchParams.get("search") || "";
     const urlCategory = resolveProductCategory(
       searchParams.get("category") || "all",
     );
     const urlPage = Number(searchParams.get("page") || "1");
+    const urlPriceMin = Number(searchParams.get("priceMin") || "0");
+    const urlPriceMax = Number(searchParams.get("priceMax") || "500");
+    const urlSort = searchParams.get("sort") || "name";
 
-    setSelectedBrand(urlBrand);
+    if (urlBrands) {
+      setSelectedBrands(urlBrands.split(",").filter(Boolean));
+    } else {
+      setSelectedBrands([]);
+    }
     setSearchQuery(urlSearch);
+    setPriceMin(urlPriceMin);
+    setPriceMax(urlPriceMax);
+    setSortBy(urlSort);
     if (routeCategoryKey === "all") setSelectedCategory(urlCategory);
     else setSelectedCategory(routeCategoryKey);
     setCurrentPage(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
@@ -259,30 +418,23 @@ export default function ProductListClient({
   }, [products]);
 
   const brandsWithSelected = useMemo(() => {
-    if (!selectedBrand || selectedBrand === "all") return brands;
-    const selectedKey = normalizeBrand(selectedBrand);
-    const hasSelected = brands.some((b) => normalizeBrand(b) === selectedKey);
-    if (hasSelected) return brands;
-    return ["all", selectedBrand, ...brands.filter((b) => b !== "all")];
-  }, [brands, selectedBrand]);
-
-  // Keep brand query param case-insensitive while still selecting a visible option value.
-  useEffect(() => {
-    if (!selectedBrand || selectedBrand === "all") return;
-    const selectedKey = normalizeBrand(selectedBrand);
-    const matched = brands.find((b) => normalizeBrand(b) === selectedKey);
-    if (matched && matched !== selectedBrand) {
-      setSelectedBrand(matched);
-    }
-  }, [brands, selectedBrand]);
+    if (selectedBrands.length === 0) return brands;
+    const missingBrands = selectedBrands.filter(
+      sb => !brands.some(b => normalizeBrand(b) === normalizeBrand(sb))
+    );
+    if (missingBrands.length > 0) return [...brands, ...missingBrands];
+    return brands;
+  }, [brands, selectedBrands]);
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((p) =>
       matchesProductToCategory(p, selectedCategory),
     );
 
-    if (selectedBrand !== "all") {
-      result = result.filter((p) => matchesBrandFilter(p, selectedBrand));
+    if (selectedBrands.length > 0) {
+      result = result.filter((p) => 
+        selectedBrands.some(brand => matchesBrandFilter(p, brand))
+      );
     }
 
     if (searchQuery.trim()) {
@@ -311,8 +463,27 @@ export default function ProductListClient({
       result = result.filter((p) => Boolean(p.inStock) === wantInStock);
     }
 
+    // Price filter
+    result = result.filter((p) => {
+      const price = Number(p.price) || 0;
+      return price >= priceMin && price <= priceMax;
+    });
+
+    // Sorting
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return (Number(a.price) || 0) - (Number(b.price) || 0);
+        case "price-desc":
+          return (Number(b.price) || 0) - (Number(a.price) || 0);
+        case "name":
+        default:
+          return String(a.name || "").localeCompare(String(b.name || ""));
+      }
+    });
+
     return result;
-  }, [products, selectedCategory, selectedBrand, searchQuery, stockStatus]);
+  }, [products, selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
@@ -334,7 +505,7 @@ export default function ProductListClient({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedBrand, searchQuery, stockStatus]);
+  }, [selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -358,9 +529,12 @@ export default function ProductListClient({
     if (typeof window === "undefined") return;
 
     const next = new URLSearchParams(window.location.search);
-    applyParam(next, "brand", selectedBrand);
+    applyParam(next, "brands", selectedBrands.length > 0 ? selectedBrands.join(",") : null);
     applyParam(next, "search", searchQuery || null);
     applyParam(next, "page", String(clampedPage));
+    applyParam(next, "priceMin", priceMin === 0 ? null : String(priceMin));
+    applyParam(next, "priceMax", priceMax === 500 ? null : String(priceMax));
+    applyParam(next, "sort", sortBy === "name" ? null : sortBy);
 
     if (routeCategoryKey === "all") {
       applyParam(
@@ -376,11 +550,14 @@ export default function ProductListClient({
     if (nextUrl !== currentUrl) window.history.replaceState(null, "", nextUrl);
   }, [
     pathname,
-    selectedBrand,
+    selectedBrands,
     searchQuery,
     selectedCategory,
     clampedPage,
     routeCategoryKey,
+    priceMin,
+    priceMax,
+    sortBy,
   ]);
 
   const visiblePages = useMemo(() => {
@@ -431,13 +608,18 @@ export default function ProductListClient({
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedCategory(routeCategoryKey !== "all" ? routeCategoryKey : "all");
-    setSelectedBrand("all");
+    setSelectedBrands([]);
     setStockStatus("all");
+    setPriceMin(0);
+    setPriceMax(500);
+    setSortBy("name");
   };
 
   const pageTitle = (() => {
-    const brandTitle = String(selectedBrand || "").trim();
-    if (brandTitle && selectedBrand !== "all") return brandTitle;
+    if (selectedBrands.length > 0) {
+      if (selectedBrands.length === 1) return selectedBrands[0];
+      return `${selectedBrands.length} Brands Selected`;
+    }
     if (routeCategoryKey !== "all")
       return getCategoryPageTitle(routeCategory || selectedCategory);
     if (selectedCategory !== "all")
@@ -472,12 +654,17 @@ export default function ProductListClient({
               brands={brandsWithSelected}
               searchQuery={searchQuery}
               selectedCategory={selectedCategory}
-              selectedBrand={selectedBrand}
+              selectedBrands={selectedBrands}
               stockStatus={stockStatus}
+              priceMin={priceMin}
+              priceMax={priceMax}
+              sortBy={sortBy}
               onSearchQueryChange={(next) => setSearchQuery(next)}
               onSelectedCategoryChange={handleCategorySelectChange}
-              onSelectedBrandChange={(next) => setSelectedBrand(next)}
+              onSelectedBrandsChange={(brands) => setSelectedBrands(brands)}
               onStockStatusChange={(next) => setStockStatus(next)}
+              onPriceChange={(min, max) => { setPriceMin(min); setPriceMax(max); }}
+              onSortChange={(next) => setSortBy(next)}
               onClear={resetFilters}
             />
           </aside>
@@ -495,12 +682,17 @@ export default function ProductListClient({
                   brands={brandsWithSelected}
                   searchQuery={searchQuery}
                   selectedCategory={selectedCategory}
-                  selectedBrand={selectedBrand}
+                  selectedBrands={selectedBrands}
                   stockStatus={stockStatus}
+                  priceMin={priceMin}
+                  priceMax={priceMax}
+                  sortBy={sortBy}
                   onSearchQueryChange={(next) => setSearchQuery(next)}
                   onSelectedCategoryChange={handleCategorySelectChange}
-                  onSelectedBrandChange={(next) => setSelectedBrand(next)}
+                  onSelectedBrandsChange={(brands) => setSelectedBrands(brands)}
                   onStockStatusChange={(next) => setStockStatus(next)}
+                  onPriceChange={(min, max) => { setPriceMin(min); setPriceMax(max); }}
+                  onSortChange={(next) => setSortBy(next)}
                   onClear={resetFilters}
                 />
               </div>
@@ -529,6 +721,67 @@ export default function ProductListClient({
               </Button>
             </div>
 
+            {/* Active Filters - Mobile View */}
+            <div className="xl:hidden mt-3">
+              <div className="flex flex-wrap gap-2">
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Search: {searchQuery}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                )}
+                {selectedBrands.map((brand) => (
+                  <button
+                    key={brand}
+                    onClick={() => setSelectedBrands(selectedBrands.filter(b => b !== brand))}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Brand: {brand}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                ))}
+                {selectedCategory !== "all" && (
+                  <button
+                    onClick={() => setSelectedCategory("all")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Category: {selectedCategory}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                )}
+                {stockStatus !== "all" && (
+                  <button
+                    onClick={() => setStockStatus("all")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Stock: {stockStatus === "in" ? "In Stock" : "Out of Stock"}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                )}
+                {(priceMin !== 0 || priceMax !== 500) && (
+                  <button
+                    onClick={() => { setPriceMin(0); setPriceMax(500); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Price: ${priceMin} - ${priceMax}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                )}
+                {sortBy !== "name" && (
+                  <button
+                    onClick={() => setSortBy("name")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <span>Sort: {sortBy === "price-asc" ? "Price ↑" : sortBy === "price-desc" ? "Price ↓" : sortBy}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
             {filteredProducts.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
                 No products found.
@@ -542,7 +795,7 @@ export default function ProductListClient({
                       product={product}
                       onAddToCart={(nextProduct) => {
                         addToCart(nextProduct);
-                        setAddedItem(nextProduct);
+                        // Modal removed - just add to cart silently
                       }}
                     />
                   ))}

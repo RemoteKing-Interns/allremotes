@@ -26,6 +26,9 @@ function hashToken(token: string): string {
 export async function POST(request: Request) {
   try {
     const { email } = await request.json();
+    
+    // Get the origin from request headers for dynamic base URL
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
 
     if (!email) {
       return NextResponse.json(
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
       to: user.email,
       customerName: user.name,
       resetToken,
+      baseUrl: origin,
     });
 
     return NextResponse.json({

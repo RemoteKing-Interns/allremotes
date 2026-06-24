@@ -29,7 +29,7 @@ const MENU_CATEGORY_TO_PRODUCTS_CATEGORY: Record<string, string> = {
 
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   all: "Shop All Products",
-  garage: "Garage Door Remotes",
+  garage: "Garage & Gate",
   car: "Car Remotes",
   home: "For The Home",
   locksmith: "Locksmithing",

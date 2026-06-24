@@ -127,8 +127,7 @@ const TOP_BAR_ICONS = {
 };
 
 const STATIC_TOP_BAR_ITEMS = [
-  "12 MONTHS WARRANTY",
-  "30 DAY RETURNS",
+  "12 MONTH WARRANTY",
   "SAFE & SECURE",
   "TRADE PRICING",
   "NO MINIMUM ORDER",
@@ -205,10 +204,8 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
 
   return (
     <div
-      className={`overflow-hidden bg-accent-dark transition-[max-height,opacity] duration-300 ease-in-out ${
-        collapsed
-          ? "max-h-0 border-b border-transparent opacity-0"
-          : "max-h-24 border-b border-accent-dark opacity-100"
+      className={`overflow-hidden bg-accent-dark border-b border-accent-dark ${
+        collapsed ? "hidden" : ""
       }`}
       aria-hidden={collapsed}
     >
@@ -225,7 +222,7 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
           </div>
           
           {/* Desktop: Show all items in grid */}
-          <div className="hidden w-full items-center gap-x-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.03em] text-white/90 md:grid md:grid-cols-6 lg:gap-x-3 lg:text-[11px] lg:tracking-[0.04em]">
+          <div className="hidden w-full items-center gap-x-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.03em] text-white/90 md:flex md:justify-between lg:gap-x-3 lg:text-[11px] lg:tracking-[0.04em]">
             {items.map((text, idx) => (
               <span
                 key={`${idx}-${text}`}

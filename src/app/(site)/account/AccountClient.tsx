@@ -11,6 +11,7 @@ import PreferencesSaved from "../../../components/account/PreferencesSaved";
 import ReviewsInteractions from "../../../components/account/ReviewsInteractions";
 import NotificationsSettings from "../../../components/account/NotificationsSettings";
 import HelpSupport from "../../../components/account/HelpSupport";
+import ReturnsTracking from "../../../components/account/ReturnsTracking";
 import { tw } from "../../../components/account/tw";
 import { cn } from "../../../lib/utils";
 import {
@@ -22,6 +23,7 @@ import {
   Star,
   Bell,
   LifeBuoy,
+  RotateCcw,
 } from "lucide-react";
 
 const Account = () => {
@@ -34,6 +36,7 @@ const Account = () => {
     () => [
       { id: "basics", label: "Account Basics", icon: User },
       { id: "orders", label: "Orders & Shopping", icon: ShoppingBag },
+      { id: "returns", label: "Returns & Refunds", icon: RotateCcw },
       { id: "payments", label: "Payments & Billing", icon: CreditCard },
       { id: "addresses", label: "Addresses", icon: MapPin },
       { id: "preferences", label: "Preferences & Saved", icon: Bookmark },
@@ -109,13 +112,8 @@ const Account = () => {
   return (
     <div className={tw.page}>
       <div className="mx-auto w-full max-w-[1328px] px-4 sm:px-6 lg:px-12">
-        <div className={tw.header}>
-          <div className={tw.headerCopy}>
-            <h1 className={tw.headerTitle}>My Account</h1>
-            <p className={tw.headerSubtitle}>
-              Manage your account settings and preferences
-            </p>
-          </div>
+        <div className="mb-4 border-b border-neutral-200 pb-4">
+          <h6 className="text-lg font-semibold text-neutral-900">My Account</h6>
         </div>
 
         <div className={tw.content}>
@@ -181,6 +179,7 @@ const Account = () => {
           <div className={tw.main}>
             {activeTab === "basics" && <AccountBasics />}
             {activeTab === "orders" && <OrdersActivity />}
+            {activeTab === "returns" && <ReturnsTracking />}
             {activeTab === "payments" && <PaymentsBilling />}
             {activeTab === "addresses" && <Addresses />}
             {activeTab === "preferences" && <PreferencesSaved />}

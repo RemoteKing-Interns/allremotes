@@ -113,6 +113,50 @@ export const CartProvider = ({ children }) => {
     [removeCookie],
   );
 
+  const loadCartFromDatabase = useCallback(async (userKey) => {
+    try {
+      const userId = user?.id;
+      const email = user?.email;
+      if (!userId && !email) return null;
+
+      const params = new URLSearchParams();
+      if (userId) params.append('userId', userId);
+      if (email) params.append('email', email);
+
+      const resp = await fetch(`/api/cart?${params.toString()}`, { cache: 'no-store' });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) return null;
+
+      return data?.cart || null;
+    } catch (err) {
+      console.error('Failed to load cart from database:', err);
+      return null;
+    }
+  }, [user]);
+
+  const saveCartToDatabase = useCallback(async (cartItems) => {
+    try {
+      const userId = user?.id;
+      const email = user?.email;
+      if (!userId && !email) return false;
+
+      const resp = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email,
+          items: cartItems,
+        }),
+      });
+
+      return resp.ok;
+    } catch (err) {
+      console.error('Failed to save cart to database:', err);
+      return false;
+    }
+  }, [user]);
+
   const normalizeCart = useCallback((items) => {
     return (items || [])
       .filter((item) => item && item.id)
@@ -175,14 +219,19 @@ export const CartProvider = ({ children }) => {
       const savedUserCart = readCartFromStorage(userCartKey);
       const guestCart = readCartFromStorage(guestKey);
       const currentCart = cartRef.current || [];
-      const merged = mergeCarts(savedUserCart, currentCart, guestCart);
-      if (!areCartsEqual(merged, currentCart)) {
-        setCart(merged);
-      }
-      writeCartToStorage(userCartKey, merged);
-      if (guestCart.length) {
-        removeCartFromStorage(guestKey);
-      }
+
+      // Load cart from database and merge
+      loadCartFromDatabase(userKey).then(dbCart => {
+        const merged = mergeCarts(savedUserCart, currentCart, guestCart, dbCart);
+        if (!areCartsEqual(merged, currentCart)) {
+          setCart(merged);
+        }
+        writeCartToStorage(userCartKey, merged);
+        saveCartToDatabase(merged);
+        if (guestCart.length) {
+          removeCartFromStorage(guestKey);
+        }
+      });
     }
 
     if (!userKey) {
@@ -204,6 +253,8 @@ export const CartProvider = ({ children }) => {
     writeCartToStorage,
     removeCartFromStorage,
     guestKey,
+    loadCartFromDatabase,
+    saveCartToDatabase,
   ]);
 
   useEffect(() => {
@@ -211,6 +262,7 @@ export const CartProvider = ({ children }) => {
     const userKey = getUserKey(user);
     if (userKey) {
       writeCartToStorage(makeUserCartKey(userKey), cart);
+      saveCartToDatabase(cart);
       return;
     }
     writeCartToStorage(guestKey, cart);
@@ -222,6 +274,7 @@ export const CartProvider = ({ children }) => {
     makeUserCartKey,
     writeCartToStorage,
     guestKey,
+    saveCartToDatabase,
   ]);
 
   const addToCart = (product, quantity = 1) => {

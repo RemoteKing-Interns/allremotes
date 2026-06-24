@@ -119,9 +119,9 @@ const defaultHomeContent = {
   whyBuy: [
     { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products are genuine and come with quality assurance. We stand behind every product we sell.' },
     { icon: 'FS', title: 'Free Shipping Australia Wide', description: 'We offer free shipping on all non-bulky items across Australia. Fast and reliable delivery.' },
-    { icon: 'WR', title: '30 Day Returns & 12 Month Warranty', description: 'All purchases include a 30-day return option and 12-month warranty for your peace of mind.' },
+    { icon: 'WR', title: '12 Month Warranty', description: 'All purchases include a 12-month warranty for your peace of mind. We stand behind every product we sell.' },
     { icon: 'CS', title: 'Unbeatable Support', description: 'Friendly, reliable support you can trust. Our experienced team is ready to help via phone, email, or live chat.' },
-    { icon: 'PM', title: 'Secure Payments', description: 'Mastercard, VISA, AMEX, Bank Deposit, Afterpay - All payment options are surcharge-free and secure.' },
+    { icon: 'PM', title: 'Secure Payments', description: 'Mastercard, VISA, AMEX - All payment options are surcharge-free and secure.' },
     { icon: 'TR', title: 'Trusted by Thousands', description: 'Over 1,500 five-star reviews and trusted by homeowners, tradespeople, and businesses across Australia.' },
   ],
   ctaSection: {
@@ -137,7 +137,6 @@ const defaultPromotions = {
     enabled: true,
     items: [
       "12 MONTH WARRANTY",
-      "30 DAY RETURNS",
       "SAFE & SECURE",
       "TRADE PRICING",
       "NO MINIMUM ORDER",
@@ -458,7 +457,21 @@ export const StoreProvider = ({ children }) => {
       if (typeof window === 'undefined') return defaultHomeContent;
       const raw = localStorage.getItem(STORAGE_KEYS.homeContent);
       if (!raw) return defaultHomeContent;
-      return normalizeHomeContent(JSON.parse(raw));
+      const parsed = normalizeHomeContent(JSON.parse(raw));
+      const filteredWhyBuy = Array.isArray(parsed?.whyBuy)
+        ? parsed.whyBuy
+            .filter(w => !String(w?.title || "").toUpperCase().includes("30 DAY RETURNS"))
+            .map(w => ({
+              ...w,
+              description: String(w?.description || "")
+                .replace(/Bank Deposit,?/gi, "")
+                .replace(/Afterpay,?/gi, "")
+                .replace(/,\s*,/g, ",")
+                .replace(/^,\s*/, "")
+                .trim(),
+            }))
+        : [];
+      return { ...parsed, whyBuy: filteredWhyBuy };
     } catch {
       return defaultHomeContent;
     }
@@ -622,7 +635,16 @@ export const StoreProvider = ({ children }) => {
       const raw = localStorage.getItem(STORAGE_KEYS.promotions);
       if (!raw) return defaultPromotions;
       const parsed = JSON.parse(raw);
-      return { ...defaultPromotions, ...parsed };
+      const items = Array.isArray(parsed?.topInfoBar?.items)
+        ? parsed.topInfoBar.items.filter(item => !String(item).toUpperCase().includes("30 DAY RETURNS"))
+        : defaultPromotions.topInfoBar.items;
+      const topInfoBar = {
+        ...defaultPromotions.topInfoBar,
+        ...(parsed?.topInfoBar || {}),
+        enabled: parsed?.topInfoBar?.enabled !== false,
+        items: items.length > 0 ? items : defaultPromotions.topInfoBar.items,
+      };
+      return { ...defaultPromotions, ...parsed, topInfoBar };
     } catch {
       return defaultPromotions;
     }

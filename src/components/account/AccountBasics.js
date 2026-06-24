@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { btn, tw } from './tw';
+import { Check, Smartphone, Loader2 } from 'lucide-react';
 
 const AccountBasics = () => {
   const { user, updateUser, changePassword } = useAuth();
@@ -21,6 +22,34 @@ const AccountBasics = () => {
   const [saved, setSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  
+  // Phone verification state
+  const [phoneVerification, setPhoneVerification] = useState({
+    isVerifying: false,
+    otpSent: false,
+    otp: '',
+    tempPhone: '',
+    loading: false,
+    error: '',
+    verified: user?.phoneVerified || false,
+  });
+
+  // Update form when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        profilePhoto: user.profilePhoto || '',
+      }));
+      setPhoneVerification(prev => ({
+        ...prev,
+        verified: user.phoneVerified || false,
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +58,108 @@ const AccountBasics = () => {
       [name]: value,
     });
     setSaved(false);
+    
+    // Reset phone verification when phone changes
+    if (name === 'phone') {
+      setPhoneVerification(prev => ({
+        ...prev,
+        verified: value === user?.phone ? user?.phoneVerified : false,
+        otpSent: false,
+        error: '',
+      }));
+    }
+  };
+  
+  const sendPhoneOTP = async () => {
+    if (!formData.phone) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Please enter a phone number' }));
+      return;
+    }
+    
+    setPhoneVerification(prev => ({ ...prev, loading: true, error: '' }));
+    
+    try {
+      const response = await fetch('/api/auth/verify-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: formData.phone,
+          email: user?.email,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setPhoneVerification(prev => ({
+          ...prev,
+          otpSent: true,
+          tempPhone: result.phone,
+          loading: false,
+        }));
+      } else {
+        setPhoneVerification(prev => ({
+          ...prev,
+          error: result.error || 'Failed to send verification code',
+          loading: false,
+        }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({
+        ...prev,
+        error: 'Failed to send verification code',
+        loading: false,
+      }));
+    }
+  };
+  
+  const verifyPhoneOTP = async () => {
+    if (!phoneVerification.otp) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Please enter the verification code' }));
+      return;
+    }
+    
+    setPhoneVerification(prev => ({ ...prev, loading: true, error: '' }));
+    
+    try {
+      const response = await fetch('/api/auth/verify-phone', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phoneVerification.tempPhone || formData.phone,
+          otp: phoneVerification.otp,
+          email: user?.email,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setPhoneVerification(prev => ({
+          ...prev,
+          verified: true,
+          isVerifying: false,
+          otpSent: false,
+          otp: '',
+          loading: false,
+          error: '',
+        }));
+        // Update form with verified phone
+        setFormData(prev => ({ ...prev, phone: result.phone }));
+      } else {
+        setPhoneVerification(prev => ({
+          ...prev,
+          error: result.error || 'Invalid verification code',
+          loading: false,
+        }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({
+        ...prev,
+        error: 'Failed to verify code',
+        loading: false,
+      }));
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -38,14 +169,41 @@ const AccountBasics = () => {
     });
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateUser(formData);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    
+    // Check if phone has been changed and not verified
+    const phoneChanged = formData.phone !== user?.phone;
+    const phoneNeedsVerification = phoneChanged && formData.phone && !phoneVerification.verified;
+    
+    if (phoneNeedsVerification) {
+      setPhoneVerification(prev => ({
+        ...prev,
+        error: 'Please verify your phone number before saving',
+      }));
+      return;
+    }
+    
+    // Only save verified fields
+    const dataToSave = {
+      name: formData.name,
+      email: formData.email,
+      profilePhoto: formData.profilePhoto,
+    };
+    
+    // Only include phone if it's verified or unchanged
+    if (phoneVerification.verified || !phoneChanged) {
+      dataToSave.phone = formData.phone;
+    }
+    
+    const result = await updateUser(dataToSave);
+    if (result?.success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
   };
 
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSaved(false);
@@ -57,7 +215,7 @@ const AccountBasics = () => {
       setPasswordError('Password must be at least 6 characters');
       return;
     }
-    const result = changePassword(passwordData.currentPassword, passwordData.newPassword);
+    const result = await changePassword(passwordData.currentPassword, passwordData.newPassword);
     if (!result?.success) {
       setPasswordError(result?.error || 'Failed to update password');
       return;
@@ -155,19 +313,93 @@ const AccountBasics = () => {
               </div>
 
               <div className={tw.formGroup}>
-                <label htmlFor="phone" className={tw.label}>Phone Number</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="+61"
-                  maxLength={15}
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className={tw.input}
-                />
+                <label htmlFor="phone" className={tw.label}>
+                  Phone Number
+                  {phoneVerification.verified && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-600">
+                      <Check size={14} /> Verified
+                    </span>
+                  )}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="04XX XXX XXX"
+                    maxLength={15}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    className={`${tw.input} flex-1`}
+                    disabled={phoneVerification.isVerifying}
+                  />
+                  {!phoneVerification.verified && formData.phone && (
+                    <button
+                      type="button"
+                      onClick={sendPhoneOTP}
+                      disabled={phoneVerification.loading}
+                      className={`${btn.outline} whitespace-nowrap px-3`}
+                    >
+                      {phoneVerification.loading ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : phoneVerification.otpSent ? (
+                        'Resend'
+                      ) : (
+                        <>
+                          <Smartphone size={16} className="mr-1" />
+                          Verify
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {/* OTP Input */}
+                {phoneVerification.otpSent && !phoneVerification.verified && (
+                  <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <p className="mb-2 text-sm text-neutral-700">
+                      Enter the 6-digit code sent to your phone
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={phoneVerification.otp}
+                        onChange={(e) => setPhoneVerification(prev => ({ 
+                          ...prev, 
+                          otp: e.target.value.replace(/\D/g, '').slice(0, 6)
+                        }))}
+                        className={`${tw.input} w-32 text-center font-mono text-lg tracking-wider`}
+                      />
+                      <button
+                        type="button"
+                        onClick={verifyPhoneOTP}
+                        disabled={phoneVerification.loading || phoneVerification.otp.length !== 6}
+                        className={`${btn.gradient} px-4`}
+                      >
+                        {phoneVerification.loading ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          'Confirm'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {phoneVerification.error && (
+                  <p className="mt-2 text-sm text-red-600">{phoneVerification.error}</p>
+                )}
+                
+                {phoneVerification.verified && (
+                  <p className="mt-2 text-sm text-green-600">
+                    ✓ Phone number verified. You can now receive SMS notifications.
+                  </p>
+                )}
               </div>
 
               {saved && <div className={tw.success}>Profile updated successfully!</div>}

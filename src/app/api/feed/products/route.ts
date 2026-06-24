@@ -64,7 +64,7 @@ function getAvailability(product: Product): string {
 }
 
 function getReturnPolicy(): string {
-  return `Returns accepted within 30 days. Must be in original, resaleable condition. Buyer pays return shipping. Returns only accepted within Australia. Certain items (motor parts, control boards, etc.) are non-returnable.`;
+  return `12-month warranty on all products for faulty or stopped-working items. No change of mind returns. Buyer pays return shipping. Returns only accepted within Australia.`;
 }
 
 function formatPrice(price: number): string {
@@ -100,7 +100,7 @@ function generateProductXml(product: Product): string {
       <g:country>AU</g:country>
       <g:policy_label>all_remotes_policy</g:policy_label>
       <g:return_method>return</g:return_method>
-      <g:return_time>30</g:return_time>
+      <g:return_time>365</g:return_time>
       <g:return_shipping_fees>customer</g:return_shipping_fees>
       <g:return_description>${returnPolicy}</g:return_description>
     </g:return_policy>

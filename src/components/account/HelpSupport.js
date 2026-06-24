@@ -26,7 +26,7 @@ const HelpSupport = () => {
     },
     {
       question: 'What is your return policy?',
-      answer: 'We offer a 30-day return policy on all products. Items must be in original condition.'
+      answer: 'We offer a 12-month warranty on all products for faulty or stopped-working items. Resolution is by exchange or refund at our discretion. Change of mind returns are not accepted.'
     },
     {
       question: 'Do you ship internationally?',

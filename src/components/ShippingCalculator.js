@@ -29,39 +29,48 @@ const ShippingCalculator = ({ address, onShippingSelect, selectedShipping }) => 
       if (data.success) {
         setRates(data.rates);
         
-        // Auto-select standard shipping if available
-        const standardRate = data.rates.find(rate => 
-          rate.id.toLowerCase().includes('standard') || rate.price === Math.min(...data.rates.map(r => r.price))
+        // Auto-select free shipping if available, otherwise cheapest
+        const freeRate = data.rates.find(rate => 
+          rate.id.toLowerCase().includes('free') || rate.price === 0
         );
+        const cheapestRate = data.rates.reduce((min, r) => r.price < min.price ? r : min, data.rates[0]);
+        const defaultRate = freeRate || cheapestRate;
         
-        if (standardRate && !selectedShipping) {
-          onShippingSelect(standardRate);
+        if (defaultRate && !selectedShipping) {
+          onShippingSelect(defaultRate);
         }
       } else {
-        setError('Using fallback shipping rates');
         setRates(data.rates);
       }
     } catch (error) {
       console.error('Shipping rates error:', error);
-      setError('Failed to load shipping rates');
       
       // Set fallback rates
       setRates([
         {
-          id: 'standard',
-          name: 'Standard Shipping',
-          description: '3-5 business days',
+          id: 'free',
+          name: 'Free Untracked Shipping',
+          description: '2-10 business days',
+          price: 0.00,
+          estimatedDays: '2-10',
+          tracking: false,
+          icon: '📮',
+        },
+        {
+          id: 'tracked',
+          name: 'Tracked Shipping',
+          description: '2-6 business days',
           price: 12.00,
-          estimatedDays: '3-5',
+          estimatedDays: '2-6',
           tracking: true,
           icon: '📦',
         },
         {
           id: 'express',
           name: 'Express Shipping',
-          description: '1-2 business days',
+          description: '1-3 business days',
           price: 18.00,
-          estimatedDays: '1-2',
+          estimatedDays: '1-3',
           tracking: true,
           icon: '🚀',
         },
@@ -85,17 +94,10 @@ const ShippingCalculator = ({ address, onShippingSelect, selectedShipping }) => 
 
   return (
     <div className="shipping-calculator">
-      <h3>Shipping Options</h3>
       
       {loading && (
         <div className="loading">
           <span>🚚</span> Calculating shipping rates...
-        </div>
-      )}
-
-      {error && (
-        <div className="error-message">
-          ⚠️ {error}
         </div>
       )}
 

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const ALLOWED = new Set(["home", "navigation", "reviews", "promotions", "settings"]);
+const ALLOWED = new Set(["home", "navigation", "reviews", "promotions", "settings", "shipping"]);
 
 const isRecord = (value: any): value is Record<string, any> => {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -67,7 +67,19 @@ const normalizeHome = (data: any) => {
           linkText: f?.linkText ?? (f?.link ? "Explore ->" : ""),
         }))
       : [],
-    whyBuy: Array.isArray(data.whyBuy) ? data.whyBuy : [],
+    whyBuy: Array.isArray(data.whyBuy)
+      ? data.whyBuy
+          .filter((w: any) => !String(w?.title || "").toUpperCase().includes("30 DAY RETURNS"))
+          .map((w: any) => ({
+            ...w,
+            description: String(w?.description || "")
+              .replace(/Bank Deposit,?/gi, "")
+              .replace(/Afterpay,?/gi, "")
+              .replace(/,\s*,/g, ",")
+              .replace(/^,\s*/, "")
+              .trim(),
+          }))
+      : [],
     ctaSection: data.ctaSection ?? {
       title: data.cta?.title ?? "",
       description: data.cta?.description ?? "",
@@ -77,9 +89,29 @@ const normalizeHome = (data: any) => {
   };
 };
 
+const DEFAULT_TOP_BAR_ITEMS = [
+  "12 MONTH WARRANTY",
+  "SAFE & SECURE",
+  "TRADE PRICING",
+  "NO MINIMUM ORDER",
+  "FREE SHIPPING",
+];
+
 const normalizePromotions = (data: any) => {
   if (!isRecord(data)) return data;
-  if (data.topInfoBar || data.offers?.categories) return data;
+  if (data.topInfoBar || data.offers?.categories) {
+    // Deep-normalize topInfoBar to ensure enabled defaults to true and items are never empty
+    const tb = isRecord(data.topInfoBar) ? data.topInfoBar : {};
+    const items = Array.isArray(tb.items) ? tb.items.filter((item: string) => !item.toUpperCase().includes("30 DAY RETURNS")) : [];
+    return {
+      ...data,
+      topInfoBar: {
+        ...tb,
+        enabled: tb.enabled !== false,
+        items: items.length > 0 ? items : DEFAULT_TOP_BAR_ITEMS,
+      },
+    };
+  }
 
   const infoBar = Array.isArray(data.infoBar) ? data.infoBar : [];
   const offerGroups = Array.isArray(data.offers) ? data.offers : [];
@@ -111,8 +143,8 @@ const normalizePromotions = (data: any) => {
 
   return {
     topInfoBar: {
-      enabled: infoBar.length > 0,
-      items: infoBar,
+      enabled: true,
+      items: infoBar.length > 0 ? infoBar : DEFAULT_TOP_BAR_ITEMS,
     },
     offers: {
       categories,
@@ -128,6 +160,31 @@ const normalizeSettings = (data: any) => {
   return { ...data, siteEmail: data.contactEmail };
 };
 
+const normalizeShipping = (data: any) => {
+  if (!isRecord(data)) {
+    // Return default shipping options if no data
+    return {
+      options: [
+        { id: "free", name: "Free Untracked Shipping", price: 0, duration: "2-10 business days", enabled: true },
+        { id: "tracked", name: "Tracked Shipping", price: 12, duration: "2-6 business days", enabled: true },
+        { id: "express", name: "Express Shipping", price: 18, duration: "1-3 business days", enabled: true },
+      ]
+    };
+  }
+  // Ensure all options have defaults
+  const defaults = [
+    { id: "free", name: "Free Untracked Shipping", price: 0, duration: "2-10 business days", enabled: true },
+    { id: "tracked", name: "Tracked Shipping", price: 12, duration: "2-6 business days", enabled: true },
+    { id: "express", name: "Express Shipping", price: 18, duration: "1-3 business days", enabled: true },
+  ];
+  const existing = Array.isArray(data.options) ? data.options : [];
+  const merged = defaults.map(def => {
+    const found = existing.find((o: any) => o?.id === def.id);
+    return found ? { ...def, ...found, price: Number(found.price ?? def.price) } : def;
+  });
+  return { options: merged };
+};
+
 const normalizeContent = (key: string, data: any) => {
   switch (key) {
     case "navigation":
@@ -138,6 +195,8 @@ const normalizeContent = (key: string, data: any) => {
       return normalizePromotions(data);
     case "settings":
       return normalizeSettings(data);
+    case "shipping":
+      return normalizeShipping(data);
     default:
       return data;
   }
@@ -256,6 +315,19 @@ const serializeSettings = (data: any) => {
   };
 };
 
+const serializeShipping = (data: any) => {
+  if (!isRecord(data)) return data;
+  return {
+    options: Array.isArray(data.options) ? data.options.map((o: any) => ({
+      id: o?.id ?? "",
+      name: o?.name ?? "",
+      price: Number(o?.price ?? 0),
+      duration: o?.duration ?? "",
+      enabled: Boolean(o?.enabled),
+    })) : []
+  };
+};
+
 const serializeContent = (key: string, data: any) => {
   switch (key) {
     case "navigation":
@@ -266,6 +338,8 @@ const serializeContent = (key: string, data: any) => {
       return serializePromotions(data);
     case "settings":
       return serializeSettings(data);
+    case "shipping":
+      return serializeShipping(data);
     default:
       return data;
   }

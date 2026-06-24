@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import bcrypt from 'bcryptjs';
+import { serverLogger } from '../../../../lib/server-logger';
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,31 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
+
+    // Check admin_users first (invited admins have hashed passwords, no provider field)
+    const adminUser = await db.collection('admin_users').findOne({ email: email.toLowerCase() });
+    if (adminUser && adminUser.password) {
+      const isValid = await bcrypt.compare(password, adminUser.password);
+      if (!isValid) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid email or password' },
+          { status: 401 }
+        );
+      }
+      const userResponse = {
+        id: adminUser._id.toString(),
+        name: adminUser.name,
+        email: adminUser.email,
+        role: 'admin',
+        permissions: adminUser.permissions || ['*'],
+        twoFactorEnabled: !!adminUser.twoFactorEnabled,
+        createdAt: adminUser.createdAt,
+      };
+      await serverLogger.info('admin_login', { email, name: adminUser.name }, { userEmail: email, ip: (request as any).headers?.get?.('x-forwarded-for') || 'unknown' });
+      return NextResponse.json({ success: true, user: userResponse, message: 'Login successful' });
+    }
+
+    // Fall through to customer users
     const usersCollection = db.collection('users');
 
     // Find user by email (email/password provider)
@@ -34,6 +60,7 @@ export async function POST(request: Request) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      await serverLogger.warn('login_failed', { email, reason: 'invalid_password' }, { userEmail: email });
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
         { status: 401 }
@@ -72,6 +99,7 @@ export async function POST(request: Request) {
       }
     };
 
+    await serverLogger.info('customer_login', { email, name: user.name }, { userEmail: email });
     return NextResponse.json({
       success: true,
       user: userResponse,

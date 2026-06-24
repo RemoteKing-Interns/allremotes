@@ -462,16 +462,31 @@ const Cart = () => {
             <div className="p-6">
               <h3 className="text-xl font-semibold tracking-tight text-neutral-900">Continue to Checkout</h3>
               <p className="mt-2 text-sm leading-7 text-neutral-600">Select how you want to checkout.</p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+
+              {/* Member savings callout */}
+              <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-800">
+                  💰 Members save{" "}
+                  <span className="text-emerald-700 font-extrabold">
+                    AU${(originalTotal * (discountRate || 0.1)).toFixed(2)}
+                  </span>{" "}
+                  on this order ({Math.round((discountRate || 0.1) * 100)}% off)
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-700">
+                  Create a free account or log in to unlock member pricing instantly.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  className="rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-100"
+                  className="rounded-full border-2 border-emerald-500 bg-white px-6 py-3 text-sm font-extrabold text-emerald-700 shadow-xs hover:bg-emerald-50 transition"
                   onClick={() => {
                     setShowCheckoutModal(false);
                     router.push("/login");
                   }}
                 >
-                  Login & Checkout
+                  Login & Save
                 </button>
                 <button
                   type="button"
@@ -484,6 +499,16 @@ const Cart = () => {
                   Guest Checkout
                 </button>
               </div>
+              <p className="mt-3 text-center text-xs text-neutral-400">
+                No account?{" "}
+                <button
+                  type="button"
+                  className="text-accent-dark hover:underline font-semibold"
+                  onClick={() => { setShowCheckoutModal(false); router.push("/login?signup=1"); }}
+                >
+                  Create one free — it only takes a minute
+                </button>
+              </p>
             </div>
           </div>
         </div>

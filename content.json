@@ -12,9 +12,10 @@
     "data": {
       "infoBar": [
         "12 MONTH WARRANTY",
-        "30 DAY RETURNS",
         "SAFE & SECURE",
-        "FAST SHIPPING"
+        "TRADE PRICING",
+        "NO MINIMUM ORDER",
+        "FREE SHIPPING"
       ],
       "offers": [
         {
@@ -29,7 +30,7 @@
     "data": [
       {
         "id": "garage",
-        "label": "Garage Remotes",
+        "label": "Garage & Gate",
         "link": "/products/garage",
         "iconIndex": 0,
         "visible": true,
@@ -107,7 +108,7 @@
         "description": "Shop premium garage and car remotes with fast shipping and expert support.",
         "buttons": [
           {
-            "label": "Shop Garage Remotes",
+            "label": "Shop Garage & Gate",
             "link": "/products/garage"
           },
           {
@@ -125,7 +126,7 @@
         },
         {
           "icon": "🚪",
-          "title": "Garage Remotes",
+          "title": "Garage & Gate",
           "description": "Reliable garage door and gate remotes.",
           "link": "/products/garage"
         },

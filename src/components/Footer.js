@@ -25,7 +25,7 @@ const supportItems = [
 ];
 
 const footerHighlights = [
-  { text: "30 Day Returns", href: "/return-policy" },
+  { text: "12 Month Warranty", href: "/return-policy" },
   { text: "Trade Support", href: "/contact" },
   { text: "Secure Payments", href: "/support" },
 ];

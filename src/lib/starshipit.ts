@@ -57,6 +57,7 @@ export type StarshipitOrderPayload = {
     width?: number;
     height?: number;
   }>;
+  delivery_instructions?: string;
 };
 
 export type StarshipitSuccess = { success: true; order_id: number | string };
@@ -96,10 +97,19 @@ export async function pushOrderToStarshipit(
 
 /**
  * Map an internal order (from /api/orders) to the Starshipit payload shape.
+ * Supports address data from stored addresses (with street/address field mapping)
  */
 export function mapOrderToStarshipit(order: Record<string, any>): StarshipitOrderPayload {
   const shipping = order.shipping ?? {};
   const customer = order.customer ?? {};
+  
+  // Get shipping address - check multiple possible field names
+  const shippingAddress = shipping.address || shipping.street || "";
+  const city = shipping.city || shipping.suburb || "";
+  const state = shipping.state || "";
+  const postcode = shipping.postcode || shipping.zipCode || shipping.zip || shipping.postCode || "";
+  const country = shipping.country || "AU";
+  
   const items: StarshipitItem[] = (order.items ?? []).map((item: any) => ({
     sku: item.id ?? item.sku ?? "UNKNOWN",
     description: item.name ?? "Product",
@@ -114,12 +124,14 @@ export function mapOrderToStarshipit(order: Record<string, any>): StarshipitOrde
     destination: {
       name: customer.fullName ?? customer.name ?? "Customer",
       email: customer.email,
-      street: shipping.address ?? "",
-      city: shipping.city ?? "",
-      state: shipping.state ?? "",
-      post_code: shipping.zipCode ?? shipping.postCode ?? "",
-      country: shipping.country ?? "AU",
+      street: shippingAddress,
+      suburb: shipping.suburb || city, // Starshipit supports suburb field
+      city: city,
+      state: state,
+      post_code: postcode,
+      country: country,
     },
     items,
+    delivery_instructions: order.deliveryInstructions || shipping.deliveryInstructions || undefined,
   };
 }

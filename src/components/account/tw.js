@@ -1,12 +1,12 @@
 export const tw = {
   page: "py-6 md:py-10",
   header:
-    "mb-6 grid justify-items-center border-y border-neutral-200/80 bg-transparent py-14 md:py-20",
+    "mb-4 grid justify-items-center border-y border-neutral-200/80 bg-transparent py-8 md:py-12",
   headerCopy: "w-full max-w-4xl text-center",
   headerTitle:
-    "m-0 text-[clamp(2.2rem,5.2vw,4.6rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-neutral-900",
+    "m-0 text-2xl md:text-3xl font-bold leading-tight text-neutral-900",
   headerSubtitle:
-    "mx-auto mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] leading-relaxed text-neutral-600",
+    "mx-auto mt-2 max-w-2xl text-sm md:text-base text-neutral-600",
   content:
     "grid items-start gap-4 lg:gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]",
   sidebar: "grid gap-4 xl:sticky xl:top-[6.2rem]",

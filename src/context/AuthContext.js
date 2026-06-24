@@ -76,6 +76,17 @@ export const AuthProvider = ({ children }) => {
 
   // Local login fallback
   const loginLocal = (email, password) => {
+    // Check admin_users first (localStorage fallback for dev)
+    const adminUsers = JSON.parse(localStorage.getItem('admin_users') || '[]');
+    const foundAdmin = adminUsers.find(u => u.email === email && u.password === password);
+    if (foundAdmin) {
+      const userData = { ...foundAdmin, role: 'admin' };
+      delete userData.password;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return { success: true };
+    }
+
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const foundUser = users.find(u => u.email === email && u.password === password);
     
@@ -104,9 +115,16 @@ export const AuthProvider = ({ children }) => {
 
       if (result.success) {
         const userData = result.user;
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        return { success: true };
+        // Only auto-login if email is verified, otherwise require verification
+        if (!result.verificationRequired) {
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+        return { 
+          success: true, 
+          verificationRequired: result.verificationRequired,
+          message: result.message 
+        };
       }
 
       // If API fails, fall back to localStorage for development/offline
@@ -275,7 +293,42 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
-  const updateUser = (updatedData) => {
+  const updateUser = async (updatedData) => {
+    if (!user?.email) return { success: false, error: 'Not signed in' };
+    
+    try {
+      // Update via API
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          updates: updatedData
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state
+        const updatedUser = { ...user, ...updatedData };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        return { success: true };
+      }
+      
+      // API failed - fallback to localStorage
+      console.warn('API update failed, falling back to localStorage');
+      return updateUserLocal(updatedData);
+    } catch (error) {
+      console.error('Update user error:', error);
+      // Fallback to localStorage
+      return updateUserLocal(updatedData);
+    }
+  };
+  
+  // Local fallback for updateUser
+  const updateUserLocal = (updatedData) => {
     const updatedUser = { ...user, ...updatedData };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -287,6 +340,7 @@ export const AuthProvider = ({ children }) => {
       users[userIndex] = { ...users[userIndex], ...updatedData };
       localStorage.setItem('users', JSON.stringify(users));
     }
+    return { success: true };
   };
 
   return (

@@ -100,7 +100,7 @@ function excelRowToProduct(row, index) {
     features,
     compatibility,
     condition: 'Brand New',
-    returns: 'Returns accepted within 30 days. Must be in original, resaleable condition. Buyer pays return shipping.',
+    returns: 'Covered by 12-month warranty. Contact us to lodge a warranty claim.',
     seller: 'AllRemotes (100% positive)',
     frequency_mhz,
     buttons,

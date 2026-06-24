@@ -23,11 +23,35 @@ import ProductCard from "../../../../components/ProductCard";
 const sanitizeDescription = (html: string): string => {
   if (!html) return '';
   return html
+    // Remove font-family and font-size styles
     .replace(/font-family:\s*[^;"']+;?/gi, '')
     .replace(/font-size:\s*[^;"']+;?/gi, '')
     .replace(/white-space:\s*[^;"']+;?/gi, '')
     .replace(/style="\s*"/gi, '')
-    .replace(/style='\s*'/gi, '');
+    .replace(/style='\s*'/gi, '')
+    // Remove old font tags with face/size attributes
+    .replace(/<span[^>]*face="[^"]*"[^>]*>/gi, '<span>')
+    .replace(/<font[^>]*>/gi, '')
+    .replace(/<\/font>/gi, '')
+    // Bold text ending with colon (Features:, Compatibility:, etc.)
+    // Match complete words/phrases: start with uppercase, min 3 chars before colon
+    .replace(/(<[^>]+>)?\b([A-Z][a-zA-Z]{2,}[a-zA-Z\s]*:)\s*(<\/[^>]+>)?/g, (match, openTag, text, closeTag) => {
+      // Don't modify if already in a bold tag
+      if (openTag && /<b>|<strong>/i.test(openTag)) return match;
+      return `<strong>${text}</strong>${closeTag || ' '}`;
+    });
+};
+
+// Helper to format category display names
+const getCategoryDisplayName = (category: string): string => {
+  const displayNames: Record<string, string> = {
+    'garage': 'Garage & Gate',
+    'car': 'Car Remotes',
+    'home': 'For The Home',
+    'locksmith': 'Locksmithing',
+    'all': 'All Products',
+  };
+  return displayNames[category] || category;
 };
 
 const HARD_CODED_WARNINGS = `WARNING: This product may contain a button/coin cell battery. To reduce the risk of SERIOUS INJURY or DEATH:
@@ -524,7 +548,7 @@ const ProductDetail = () => {
                 {(product.cat1 || product.cat2) && (
                   <li>
                     <span className="font-semibold text-neutral-900">Categories:</span>{" "}
-                    {[product.cat1, product.cat2].filter(Boolean).join(', ')}
+                    {[product.cat1, product.cat2].filter(Boolean).map(getCategoryDisplayName).join(', ')}
                   </li>
                 )}
                 {product.condition && (

@@ -67,12 +67,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
-      const res = await col.findOneAndUpdate(
+      const rawRes = await col.findOneAndUpdate(
         { id },
-        { $set: { status, updatedAt } }
+        { $set: { status, updatedAt } },
+        { returnDocument: 'after' }
       );
-      if (!res.value) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-      return NextResponse.json(res.value);
+      // Driver v4: rawRes.value; driver v5: rawRes directly
+      const updated = (rawRes as any)?.value !== undefined ? (rawRes as any).value : rawRes;
+      if (!updated) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(updated);
     }
 
     const orders = readOrdersFile();

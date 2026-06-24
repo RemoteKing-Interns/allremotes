@@ -1,0 +1,11 @@
+{
+  "owner": "satnamra",
+  "slug": "google-trends",
+  "displayName": "google-trends",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1778735867460,
+    "commit": "https://github.com/spooky-may/chaleaclawskill/tree/main/public/skills/satnamra/google-trends"
+  },
+  "history": []
+}

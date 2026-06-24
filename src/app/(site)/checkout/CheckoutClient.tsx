@@ -6,6 +6,7 @@ import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
 import ShippingCalculator from "../../../components/ShippingCalculator";
+import OrderSuccessAnimation from "../../../components/checkout/OrderSuccessAnimation";
 
 const Checkout = () => {
   const {
@@ -31,10 +32,15 @@ const Checkout = () => {
     address: '',
     city: '',
     state: '',
-    zipCode: ''
+    zipCode: '',
+    phone: ''
   });
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [showAddressSelector, setShowAddressSelector] = useState(false);
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string>("");
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -45,6 +51,10 @@ const Checkout = () => {
   const [stripePaymentComplete, setStripePaymentComplete] = useState(false);
   const [selectedShipping, setSelectedShipping] = useState(null);
   const [shippingCost, setShippingCost] = useState(0);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
   const blurTimeoutRef = useRef(null);
   const originalTotal = getCartOriginalTotal();
   const discountTotal = getCartDiscountTotal();
@@ -60,6 +70,46 @@ const Checkout = () => {
   }, []);
 
   const normalizedAddressQuery = useMemo(() => formData.address.trim(), [formData.address]);
+
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    setValidatingCoupon(true);
+    setCouponError('');
+
+    try {
+      const params = new URLSearchParams();
+      params.append('code', couponCode.trim());
+      if (user?.email) params.append('customerEmail', user.email);
+      if (user?.id) params.append('customerUserId', user.id);
+
+      const resp = await fetch(`/api/coupons?${params.toString()}`, { cache: 'no-store' });
+      const data = await resp.json().catch(() => null);
+
+      if (!resp.ok || !data?.valid) {
+        setCouponError(data?.error || 'Invalid coupon code');
+        setCouponDiscount(0);
+        return;
+      }
+
+      const coupon = data.coupon;
+      if (coupon.discountPercent) {
+        setCouponDiscount((discountedTotal * coupon.discountPercent) / 100);
+      } else if (coupon.discountAmount) {
+        setCouponDiscount(coupon.discountAmount);
+      }
+    } catch (err) {
+      setCouponError('Failed to validate coupon');
+      setCouponDiscount(0);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const finalTotal = discountedTotal + shippingCost - couponDiscount;
 
   useEffect(() => {
     if (!geoapifyApiKey) return;
@@ -130,6 +180,24 @@ const Checkout = () => {
     if (shouldRedirectToCart) router.replace("/cart");
   }, [router, shouldRedirectToCart]);
 
+  // Auto-select default address on mount
+  useEffect(() => {
+    if (user?.addresses && user.addresses.length > 0 && !selectedAddressId) {
+      const defaultAddr = user.addresses.find(a => a.isDefault) || user.addresses[0];
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.id);
+        setFormData({
+          ...formData,
+          address: defaultAddr.street,
+          city: defaultAddr.city,
+          state: defaultAddr.state,
+          zipCode: defaultAddr.zip,
+          phone: defaultAddr.phone || ''
+        });
+      }
+    }
+  }, [user]);
+
   if (shouldRedirectToLogin || shouldRedirectToCart) return null;
 
   const handleChange = (e) => {
@@ -147,9 +215,6 @@ const Checkout = () => {
     setSelectedShipping(shippingOption);
     setShippingCost(shippingOption.price);
   };
-
-  // Calculate total with shipping
-  const finalTotal = discountedTotal + shippingCost;
 
   const applyAddressSuggestion = (suggestion) => {
     setFormData((prev) => ({
@@ -227,12 +292,13 @@ const Checkout = () => {
         state: formData.state,
         zipCode: formData.zipCode,
         country: "AU",
+        phone: formData.phone,
       };
 
       const orderData = {
-        customer, 
-        items, 
-        pricing, 
+        customer,
+        items,
+        pricing,
         shipping,
         payment: {
           method: 'stripe',
@@ -252,7 +318,7 @@ const Checkout = () => {
       }
 
       setPlacedOrderId(data?.id || null);
-      setOrderPlaced(true);
+      setShowAnimation(true);
       clearCart();
     } catch (err: any) {
       setPlaceError(err?.message || "Failed to place order");
@@ -283,6 +349,7 @@ const Checkout = () => {
         total: discountedTotal,
         hasMemberDiscount: Boolean(hasDiscount),
         memberDiscountRate: Number(discountRate || 0),
+        couponDiscount: couponDiscount,
       };
 
       const items = cart.map((item) => {
@@ -304,17 +371,19 @@ const Checkout = () => {
         state: formData.state,
         zipCode: formData.zipCode,
         country: "AU",
+        phone: formData.phone,
       };
 
       const orderData = {
-        customer, 
-        items, 
-        pricing, 
+        customer,
+        items,
+        pricing,
         shipping,
         payment: {
-          method: paymentMethod,
-          status: paymentMethod === 'cod' ? 'pending' : 'pending'
-        }
+          method: 'direct',
+          status: 'confirmed'
+        },
+        couponCode: couponDiscount > 0 ? couponCode.trim() : null,
       };
 
       const resp = await fetch("/api/orders", {
@@ -327,8 +396,11 @@ const Checkout = () => {
         throw new Error(data?.error || "Failed to place order");
       }
 
+      // Send confirmation emails
+      await sendOrderEmails(data?.id, orderData);
+
       setPlacedOrderId(data?.id || null);
-      setOrderPlaced(true);
+      setShowAnimation(true);
       clearCart();
     } catch (err: any) {
       setPlaceError(err?.message || "Failed to place order");
@@ -336,6 +408,35 @@ const Checkout = () => {
       setLoading(false);
     }
   };
+
+  const sendOrderEmails = async (orderId: string, orderData: any) => {
+    try {
+      await fetch("/api/orders/send-emails", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          customerEmail: orderData.customer.email,
+          orderDetails: orderData
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to send order emails:", e);
+    }
+  };
+
+  if (showAnimation) {
+    return (
+      <div className="checkout-page">
+        <div className="container">
+          <OrderSuccessAnimation 
+            orderId={placedOrderId || undefined}
+            onComplete={() => setOrderPlaced(true)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (orderPlaced) {
     return (
@@ -387,6 +488,136 @@ const Checkout = () => {
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="form-section">
               <h2>Shipping Information</h2>
+              
+              {/* Saved Address Selection - Shows Default/Selected with options to change */}
+              {user?.addresses && user.addresses.length > 0 && !showNewAddressForm && (
+                <div className="selected-address-display">
+                  <div className="selected-address-card">
+                    <div className="selected-address-header">
+                      <span className="deliver-to-label">Deliver to:</span>
+                      {(() => {
+                        const selectedAddr = user.addresses.find(a => a.id === selectedAddressId);
+                        return selectedAddr ? (
+                          <div className="selected-address-details">
+                            <p className="address-line">{selectedAddr.street}</p>
+                            <p className="address-line">{selectedAddr.city}, {selectedAddr.state} {selectedAddr.zip}</p>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="address-actions">
+                      <button 
+                        type="button"
+                        className="btn-link"
+                        onClick={() => setShowAddressSelector(!showAddressSelector)}
+                      >
+                        {showAddressSelector ? 'Hide options' : 'Select a different address'}
+                      </button>
+                      <span className="divider">|</span>
+                      <button
+                        type="button"
+                        className="btn-link"
+                        onClick={() => {
+                          setShowNewAddressForm(true);
+                          setSelectedAddressId(null);
+                          setFormData({
+                            ...formData,
+                            address: '',
+                            city: '',
+                            state: '',
+                            zipCode: '',
+                            phone: ''
+                          });
+                        }}
+                      >
+                        Enter address manually
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Address Selector Dropdown */}
+                  {showAddressSelector && (
+                    <div className="address-selector-dropdown">
+                      <p className="selector-label">Select an address:</p>
+                      {user.addresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          className={`address-option ${selectedAddressId === addr.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedAddressId(addr.id);
+                            setFormData({
+                              ...formData,
+                              address: addr.street,
+                              city: addr.city,
+                              state: addr.state,
+                              zipCode: addr.zip,
+                              phone: addr.phone || ''
+                            });
+                            setShowAddressSelector(false);
+                          }}
+                        >
+                          <div className="address-option-header">
+                            <span className="address-label">{addr.label || 'Address'}</span>
+                            {addr.isDefault && <span className="default-badge">Default</span>}
+                          </div>
+                          <p className="address-option-details">
+                            {addr.street}, {addr.city}, {addr.state} {addr.zip}
+                          </p>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="enter-manually-btn"
+                        onClick={() => {
+                          setShowNewAddressForm(true);
+                          setSelectedAddressId(null);
+                          setShowAddressSelector(false);
+                          setFormData({
+                            ...formData,
+                            address: '',
+                            city: '',
+                            state: '',
+                            zipCode: '',
+                            phone: ''
+                          });
+                        }}
+                      >
+                        + Enter a new address manually
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Manual Address Form */}
+              {(showNewAddressForm || !user?.addresses?.length) && (
+                <div className="manual-address-section">
+                  {user?.addresses?.length > 0 && (
+                    <div className="back-to-saved">
+                      <button 
+                        type="button"
+                        className="btn-link"
+                        onClick={() => {
+                          setShowNewAddressForm(false);
+                          const defaultAddr = user.addresses.find(a => a.isDefault) || user.addresses[0];
+                          if (defaultAddr) {
+                            setSelectedAddressId(defaultAddr.id);
+                            setFormData({
+                              ...formData,
+                              address: defaultAddr.street,
+                              city: defaultAddr.city,
+                              state: defaultAddr.state,
+                              zipCode: defaultAddr.zip,
+                              phone: defaultAddr.phone || ''
+                            });
+                          }
+                        }}
+                      >
+                        ← Back to saved addresses
+                      </button>
+                    </div>
+                  )}
+              
               <div className="form-group">
                 <label>Full Name</label>
                 <input
@@ -503,10 +734,25 @@ const Checkout = () => {
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="form-section">
-              <h2>Shipping Options</h2>
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="04XX XXX XXX"
+                  autoComplete="tel"
+                />
+              </div>
+
+            </div>
+          )}
+          </div>
+
+          <div className="form-section">
+            <h2>Shipping Options</h2>
               <ShippingCalculator
                 address={formData}
                 onShippingSelect={handleShippingSelect}
@@ -515,67 +761,28 @@ const Checkout = () => {
             </div>
 
             <div className="form-section">
-              <h2>Payment Method</h2>
-              <div className="payment-methods">
-                <label className="payment-method-option">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="stripe"
-                    checked={paymentMethod === 'stripe'}
-                    onChange={(e) => setPaymentMethod(e.target.value as 'stripe' | 'cod')}
-                  />
-                  <span className="payment-method-label">
-                    <span className="payment-method-name">Credit/Debit Card</span>
-                    <span className="payment-method-desc">Secure payment via Stripe</span>
-                  </span>
-                </label>
-                <label className="payment-method-option">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value as 'stripe' | 'cod')}
-                  />
-                  <span className="payment-method-label">
-                    <span className="payment-method-name">Cash on Delivery</span>
-                    <span className="payment-method-desc">Pay when you receive</span>
-                  </span>
-                </label>
-              </div>
-
-              {paymentMethod === 'stripe' && (
-                <div className="stripe-payment-section">
-                  <h3>Secure Payment via Stripe</h3>
-                  <p>Click the button below to be redirected to Stripe's secure payment page.</p>
-                  <StripeCheckoutButton
-                    amount={finalTotal}
-                    items={cart.map(item => ({
-                      id: item.id,
-                      name: item.name,
-                      category: item.category,
-                      price: getItemPriceBreakdown(item).finalPrice,
-                      quantity: item.quantity
-                    }))}
-                    customerEmail={user?.email || formData.email}
-                    onSuccess={handleStripePaymentSuccess}
-                    onError={handleStripePaymentError}
-                  />
+              <h2>Place Order</h2>
+              <div className="order-summary">
+                <p>Review your order and click below to confirm.</p>
+                <div className="order-total-line">
+                  <span>Total Amount:</span>
+                  <strong>${discountedTotal.toFixed(2)} AUD</strong>
                 </div>
-              )}
-
-              {paymentMethod === 'cod' && (
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-large"
-                  disabled={loading || stripePaymentComplete}
-                >
-                  {loading
-                    ? "Processing..."
-                    : `Place Order - AU$${finalTotal.toFixed(2)}`}
-                </button>
-              )}
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary btn-large place-order-btn"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Processing...
+                  </>
+                ) : (
+                  <>Place Order - ${discountedTotal.toFixed(2)}</>
+                )}
+              </button>
             </div>
           </form>
 
@@ -614,6 +821,41 @@ const Checkout = () => {
               <div className="summary-discount">
                 <span>Member Discount ({Math.round(discountRate * 100)}%)</span>
                 <span>-AU${discountTotal.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="summary-coupon">
+              <div className="coupon-input-wrapper">
+                <input
+                  type="text"
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  className="coupon-input"
+                />
+                <button
+                  type="button"
+                  onClick={validateCoupon}
+                  disabled={validatingCoupon || !couponCode.trim()}
+                  className="coupon-apply-btn"
+                >
+                  {validatingCoupon ? '...' : 'Apply'}
+                </button>
+              </div>
+              {couponError && (
+                <div className="coupon-error">{couponError}</div>
+              )}
+              {couponDiscount > 0 && (
+                <div className="coupon-success">
+                  Coupon applied! -AU${couponDiscount.toFixed(2)}
+                </div>
+              )}
+            </div>
+
+            {couponDiscount > 0 && (
+              <div className="summary-discount">
+                <span>Coupon Discount</span>
+                <span>-AU${couponDiscount.toFixed(2)}</span>
               </div>
             )}
             

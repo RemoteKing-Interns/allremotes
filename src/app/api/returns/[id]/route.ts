@@ -65,10 +65,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const updatedAt = new Date().toISOString();
     const updates: Partial<ReturnRequest> = { updatedAt };
 
-    if (body.status) updates.status = body.status as ReturnStatus;
+    if (body.status) {
+      updates.status = body.status as ReturnStatus;
+      if (body.status === 'approved') updates.approvedAt = updatedAt;
+      if (body.status === 'received') updates.receivedAt = updatedAt;
+      if (body.status === 'refunded') updates.refundedAt = updatedAt;
+    }
     if (body.adminNotes !== undefined) updates.adminNotes = body.adminNotes;
     if (body.resolution) updates.resolution = body.resolution;
     if (body.refundAmount !== undefined) updates.refundAmount = Number(body.refundAmount);
+    if (body.trackingNumber) updates.trackingNumber = body.trackingNumber;
+    if (body.returnImages) updates.returnImages = body.returnImages;
 
     if (mongoEnabled()) {
       const db = await getDb();

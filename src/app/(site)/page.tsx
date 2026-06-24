@@ -73,7 +73,7 @@ const WHY_BUY_ICON_MAP = {
   reviews: Star,
 };
 
-const DEFAULT_HERO_IMAGES = ["/images/hero.jpg", "/images/heroimg.jpg"];
+const DEFAULT_HERO_IMAGES = ["/images/3.jpg", "/images/1.jpg", "/images/5.png", "/images/2.jpg", "/images/6.png", "/images/4.png", "/images/7.png", "/images/8.png", "/images/9.png", "/images/10.png"];
 
 const Home = () => {
   const { getProducts, getHomeContent, getReviews } = useStore();
@@ -85,12 +85,10 @@ const Home = () => {
   useEffect(() => { setMounted(true); }, []);
 
   const home = mounted ? getHomeContent() : null;
-  const heroImages =
-    home?.heroImages &&
-    Array.isArray(home.heroImages) &&
-    home.heroImages.length > 0
-      ? home.heroImages
-      : DEFAULT_HERO_IMAGES;
+  // Use CMS hero images if available, otherwise fallback to defaults
+  const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
+    ? home.heroImages
+    : DEFAULT_HERO_IMAGES;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -281,6 +279,7 @@ const Home = () => {
     ];
     return fallbackIcons[index % fallbackIcons.length];
   };
+
   const heroSlides = heroImages.map((image, index) => {
     const fallback = fallbackHeroSlides[index % fallbackHeroSlides.length];
     const configured = configuredHeroSlides[index] || {};
@@ -308,27 +307,31 @@ const Home = () => {
                 alt=""
                 className={`hero-slide-image absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${
                   index === currentSlide
-                    ? "hero-slide-image--active opacity-100"
-                    : "opacity-0"
+                    ? "hero-slide-image--active z-10 opacity-100"
+                    : "z-0 opacity-0"
                 }`}
+                onError={(e) => {
+                  console.error(`Failed to load hero image: ${slide.image}`);
+                  (e.target as HTMLImageElement).src = '/images/mainlogo.png';
+                }}
               />
             ))}
-            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/92 via-neutral-900/72 to-neutral-900/46" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.18),transparent_42%)]" />
+            <div className="absolute inset-0 z-[15] bg-gradient-to-br from-teal-900/60 via-teal-900/50 to-teal-800/40" />
+            <div className="absolute inset-0 z-[15] bg-[conic-gradient(from_225deg_at_0%_100%,rgba(192,57,43,0.85)_0deg,rgba(26,122,110,0.65)_60deg,transparent_120deg)]" />
           </div>
 
-          <div className="container relative z-10 flex h-full items-center py-8 sm:py-10">
+          <div className="container relative z-30 flex h-full items-center py-8 sm:py-10">
             <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px]">
               {heroSlides.map((slide, index) => (
                 <div
                   key={`hero-content-${index}`}
                   className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                     index === currentSlide
-                      ? "hero-slide-content translate-y-0 opacity-100"
-                      : "pointer-events-none translate-y-3 opacity-0"
+                      ? "hero-slide-content z-30 translate-y-0 opacity-100"
+                      : "pointer-events-none z-0 translate-y-3 opacity-0"
                   }`}
                 >
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/35 bg-accent/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-accent-light backdrop-blur-sm">
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary-light backdrop-blur-sm">
                     <svg
                       width="12"
                       height="12"

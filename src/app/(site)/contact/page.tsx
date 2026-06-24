@@ -4,14 +4,30 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
-    setForm({ name: "", email: "", message: "" });
+    setError("");
+    setSubmitting(true);
+    try {
+      const resp = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to send message");
+      setSubmitted(true);
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err: any) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -51,20 +67,6 @@ export default function ContactPage() {
               <p className="mt-1 text-sm text-neutral-500">We typically respond within 2-4 hours</p>
             </div>
 
-            {/* Phone Card */}
-            <div className="group rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
-              </div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-500">Phone</h3>
-              <a href="tel:1800REMOTES" className="mt-1 block text-lg font-semibold text-neutral-900 hover:text-primary transition-colors">
-                1-800-REMOTES
-              </a>
-              <p className="mt-1 text-sm text-neutral-500">Call us during business hours</p>
-            </div>
-
             {/* Business Hours Card */}
             <div className="group rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-600 group-hover:text-white">
@@ -77,17 +79,14 @@ export default function ContactPage() {
               <div className="mt-2 space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-neutral-600">Monday – Friday</span>
-                  <span className="font-semibold text-neutral-900">9:00 AM – 5:00 PM</span>
+                  <span className="font-semibold text-neutral-900">9:00 AM – 4:00 PM</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Saturday</span>
-                  <span className="font-semibold text-neutral-900">10:00 AM – 2:00 PM</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Sunday</span>
+                  <span className="text-neutral-600">Saturday – Sunday</span>
                   <span className="font-semibold text-neutral-500">Closed</span>
                 </div>
               </div>
+              <p className="mt-3 text-xs text-neutral-400">Orders placed on weekends or public holidays will be processed on the next business day.</p>
             </div>
 
             {/* Location Card */}
@@ -158,6 +157,8 @@ export default function ContactPage() {
                   <input
                     id="subject"
                     type="text"
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
                     className="h-12 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                     placeholder="How can we help?"
                   />
@@ -178,12 +179,16 @@ export default function ContactPage() {
                   />
                 </div>
 
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+                )}
                 <button
                   type="submit"
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:w-auto"
+                  disabled={submitting}
+                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 sm:w-auto"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                  Send Message
+                  {submitting ? "Sending…" : "Send Message"}
                 </button>
               </form>
             </div>

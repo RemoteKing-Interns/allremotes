@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
 import { btn, tw } from './tw';
 
 const NotificationsSettings = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { getSettings } = useStore();
   const siteSettings = getSettings?.() || {};
-  const userKey = useMemo(() => user?.id || user?.email || null, [user]);
-  const storageKey = useMemo(() => (userKey ? `allremotes_notifications_${userKey}` : null), [userKey]);
 
   const [notifications, setNotifications] = useState({
     email: {
@@ -34,16 +32,18 @@ const NotificationsSettings = () => {
   });
 
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Load from user data on mount
   useEffect(() => {
-    if (!storageKey) return;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed?.notifications) setNotifications(parsed.notifications);
-      if (parsed?.preferences) setPreferences((p) => ({ ...p, ...parsed.preferences }));
-    } catch {}
-  }, [storageKey]);
+    if (user?.notifications) {
+      setNotifications(prev => ({ ...prev, ...user.notifications }));
+    }
+    if (user?.preferences) {
+      setPreferences(prev => ({ ...prev, ...user.preferences }));
+    }
+    setLoading(false);
+  }, [user]);
 
   const handleNotificationChange = (type, key) => {
     setNotifications({
@@ -53,6 +53,7 @@ const NotificationsSettings = () => {
         [key]: !notifications[type][key]
       }
     });
+    setSaved(false);
   };
 
   const handlePreferenceChange = (key, value) => {
@@ -63,14 +64,27 @@ const NotificationsSettings = () => {
     setSaved(false);
   };
 
-  const save = () => {
-    if (!storageKey) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify({ notifications, preferences }));
-    } catch {}
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const save = async () => {
+    if (!user?.email) return;
+    
+    const result = await updateUser({ notifications, preferences });
+    if (result?.success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className={tw.section}>
+        <h2 className={tw.sectionTitle}>Notifications & Settings</h2>
+        <div className="p-8 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-neutral-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={tw.section}>

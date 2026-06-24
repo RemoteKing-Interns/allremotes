@@ -336,16 +336,6 @@ const NavBar = ({
                 )}
               </div>
 
-              {/* Contact - plain link */}
-              <Link
-                href="/contact"
-                className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  isRouteActive('/contact') ? 'bg-accent/10 text-accent-dark' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
-                }`}
-              >
-                Contact
-              </Link>
-
               {/* CTA button */}
               <Link
                 href="/products/all"

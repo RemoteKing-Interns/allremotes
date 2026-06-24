@@ -12,6 +12,9 @@ const SALT_ROUNDS = 10;
 export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json();
+    
+    // Get the origin from request headers for dynamic base URL
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
 
     // Validation
     if (!name || !email || !password) {
@@ -106,6 +109,7 @@ export async function POST(request: Request) {
       to: newUser.email,
       customerName: newUser.name,
       verificationToken,
+      baseUrl: origin,
     }).catch(err => {
       console.error('Failed to send verification email:', err);
     });
