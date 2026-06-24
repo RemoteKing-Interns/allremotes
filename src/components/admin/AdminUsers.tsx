@@ -28,6 +28,7 @@ export default function AdminUsers() {
   const [invitesLoading, setInvitesLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [resetSending, setResetSending] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -39,6 +40,27 @@ export default function AdminUsers() {
     fetchUsers();
     fetchInvites();
   }, []);
+
+  const sendResetLink = async (user: AdminUser) => {
+    const id = user._id || user.id;
+    if (!id) return;
+    setResetSending(id);
+    try {
+      const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
+      const resp = await fetch("/api/admin/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-email": storedUser.email || "" },
+        body: JSON.stringify({ targetUserId: id }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Failed to send reset email");
+      toast.success(`Reset link sent to ${user.email}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset link");
+    } finally {
+      setResetSending(null);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -345,18 +367,31 @@ export default function AdminUsers() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => openEditModal(user)}
-                      className="text-neutral-600 hover:text-neutral-900 mr-3"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user._id || user.id!)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => sendResetLink(user)}
+                        disabled={resetSending === (user._id || user.id)}
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-neutral-200 text-neutral-600 hover:text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                        title="Send password reset link"
+                      >
+                        {resetSending === (user._id || user.id)
+                          ? <RefreshCw size={11} className="animate-spin" />
+                          : <Key size={11} />}
+                        Reset
+                      </button>
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="text-neutral-600 hover:text-neutral-900"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user._id || user.id!)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -91,11 +91,10 @@ const Addresses = () => {
   };
 
   // Select an address from suggestions
-  // Maps Geoapify format to Starshipit-compatible format
   const selectAddress = (feature) => {
     const props = feature.properties;
     
-    // Format street address (Starshipit expects: street number + street name)
+    // Format street address: street number + street name
     let street = '';
     if (props.housenumber && props.street) {
       street = `${props.housenumber} ${props.street}`.trim();
@@ -109,7 +108,7 @@ const Addresses = () => {
       street = parts[0]?.trim() || '';
     }
     
-    // Australian address format for Starshipit:
+    // Australian address format:
     // - suburb: the suburb/locality (e.g., "Surry Hills")
     // - city: often same as suburb in AU, or larger city name
     // - state: state code (NSW, VIC, QLD, etc.)
@@ -120,7 +119,6 @@ const Addresses = () => {
     const postcode = props.postcode || '';
     const country = props.country_code?.toUpperCase() === 'AU' ? 'AU' : (props.country || 'AU');
     
-    // Store full address data for Starshipit compatibility
     // Preserve deliveryInstructions when selecting from autocomplete
     setFormData({
       ...formData,
@@ -130,7 +128,6 @@ const Addresses = () => {
       state: state,
       zip: postcode,
       country: country,
-      // Store extra data for Starshipit
       suburb: suburb,
       fullAddress: props.formatted || '',
       // Keep existing deliveryInstructions

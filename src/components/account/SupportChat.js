@@ -101,7 +101,8 @@ export default function SupportChat({ orderId, returnId }) {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const resp = await fetch('/api/presence?email=admin@allremotes.com', { cache: 'no-store' });
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || '';
+        const resp = await fetch(`/api/presence?email=${encodeURIComponent(adminEmail)}`, { cache: 'no-store' });
         const data = await resp.json().catch(() => null);
         setAdminOnline(resp.ok && data?.online === true);
       } catch { setAdminOnline(false); }

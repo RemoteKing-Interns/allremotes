@@ -202,7 +202,7 @@ export default function AdminShippingPage() {
               </svg>
               <p>
                 <span className="font-medium text-neutral-700">Note:</span> These are fixed rates that will be shown to all customers during checkout. 
-                They do not depend on the delivery address or integration with Starshipit. 
+                They do not depend on the delivery address. 
                 To disable a shipping option, uncheck the "Enabled" checkbox.
               </p>
             </div>

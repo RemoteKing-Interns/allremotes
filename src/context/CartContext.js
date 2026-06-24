@@ -20,6 +20,8 @@ import toast from "react-hot-toast";
 
 const CartContext = createContext();
 const MAX_CART_COOKIE_CHARS = 3500;
+const MAX_CART_ITEMS = 50;
+const MAX_ITEM_QTY = 99;
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -281,16 +283,21 @@ export const CartProvider = ({ children }) => {
     const qtyToAdd = Math.max(1, Math.floor(Number(quantity) || 1));
     const existingItem = cartRef.current.find((item) => item.id === product.id);
 
+    if (!existingItem && cartRef.current.length >= MAX_CART_ITEMS) {
+      toast.error(`Cart limit reached (max ${MAX_CART_ITEMS} products).`, { duration: 4000 });
+      return;
+    }
+
     setCart((prevCart) => {
       const exists = prevCart.find((item) => item.id === product.id);
       if (exists) {
         return prevCart.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + qtyToAdd }
+            ? { ...item, quantity: Math.min(item.quantity + qtyToAdd, MAX_ITEM_QTY) }
             : item,
         );
       }
-      return [...prevCart, { ...product, quantity: qtyToAdd }];
+      return [...prevCart, { ...product, quantity: Math.min(qtyToAdd, MAX_ITEM_QTY) }];
     });
 
     // Show toast after state update
@@ -307,32 +314,6 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // const addToCart = (product, quantity = 1) => {
-  //   const qtyToAdd = Math.max(1, Math.floor(Number(quantity) || 1));
-  //   setCart((prevCart) => {
-  //     const existingItem = prevCart.find((item) => item.id === product.id);
-  //     if (existingItem) {
-  //       return prevCart.map((item) =>
-  //         item.id === product.id
-  //           ? { ...item, quantity: item.quantity + qtyToAdd }
-  //           : item,
-  //       );
-  //     }
-  //     return [...prevCart, { ...product, quantity: qtyToAdd }];
-  //   });
-  //   if (existingItem) {
-  //     toast.success("Updated quantity in cart!", {
-  //       duration: 3000,
-  //       icon: "🛒",
-  //     });
-  //   } else {
-  //     toast.success("Added to cart successfully!", {
-  //       duration: 3000,
-  //       icon: "🛒",
-  //     });
-  //   }
-  // };
-
   const removeFromCart = (productId) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
@@ -342,9 +323,10 @@ export const CartProvider = ({ children }) => {
       removeFromCart(productId);
       return;
     }
+    const capped = Math.min(quantity, MAX_ITEM_QTY);
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.id === productId ? { ...item, quantity } : item,
+        item.id === productId ? { ...item, quantity: capped } : item,
       ),
     );
   };

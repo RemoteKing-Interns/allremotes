@@ -4,6 +4,9 @@ import { getDb, mongoEnabled } from "@/lib/mongo";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAX_CART_ITEMS = 50;
+const MAX_ITEM_QTY = 99;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -50,8 +53,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid items array" }, { status: 400 });
     }
 
+    // Enforce limits
+    const uniqueItems = items.slice(0, MAX_CART_ITEMS).map((item: any) => ({
+      ...item,
+      quantity: Math.min(Math.max(1, Number(item.quantity) || 1), MAX_ITEM_QTY),
+    }));
+
     if (!mongoEnabled()) {
-      return NextResponse.json({ success: true, cart: items });
+      return NextResponse.json({ success: true, cart: uniqueItems });
     }
 
     const db = await getDb();
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
       query,
       { 
         $set: { 
-          items, 
+          items: uniqueItems, 
           updatedAt,
           lastActivity: updatedAt,
           abandoned: false,
@@ -77,7 +86,7 @@ export async function POST(request: Request) {
       { upsert: true }
     );
 
-    return NextResponse.json({ success: true, cart: items });
+    return NextResponse.json({ success: true, cart: uniqueItems });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to save cart", details: err?.message || String(err) },
@@ -128,9 +137,11 @@ export async function PATCH(request: Request) {
     if (action === "add") {
       const existingIndex = items.findIndex((item: any) => item.id === productId);
       if (existingIndex >= 0) {
-        items[existingIndex].quantity += quantity || 1;
+        items[existingIndex].quantity = Math.min(items[existingIndex].quantity + (quantity || 1), MAX_ITEM_QTY);
+      } else if (items.length < MAX_CART_ITEMS) {
+        items.push({ id: productId, quantity: Math.min(quantity || 1, MAX_ITEM_QTY) });
       } else {
-        items.push({ id: productId, quantity: quantity || 1 });
+        return NextResponse.json({ error: `Cart limit reached (max ${MAX_CART_ITEMS} products)` }, { status: 400 });
       }
     } else if (action === "remove") {
       items = items.filter((item: any) => item.id !== productId);

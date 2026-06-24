@@ -20,22 +20,22 @@ export const AuthProvider = ({ children }) => {
     // Check if user is logged in from localStorage
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsed = JSON.parse(savedUser);
+        // Never trust admin role from localStorage — must be verified by server
+        if (parsed?.role === 'admin') {
+          localStorage.removeItem('user');
+        } else {
+          setUser(parsed);
+        }
+      } catch {
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    // Admin login (hardcoded admin)
-    const adminEmail = 'admin@allremotes.com';
-    const adminPassword = 'Admin123!';
-    if (email === adminEmail && password === adminPassword) {
-      const userData = { id: 'admin', name: 'Admin', email: adminEmail, role: 'admin' };
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return { success: true };
-    }
-
     try {
       // Try API login first
       const response = await fetch('/api/auth/login', {
@@ -55,12 +55,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
 
-      // If API fails with server error, fall back to localStorage
-      if (response.status >= 500) {
-        console.warn('API login failed, falling back to localStorage');
-        return loginLocal(email, password);
-      }
-
       return { 
         success: false, 
         error: result.error || 'Invalid email or password',
@@ -69,24 +63,12 @@ export const AuthProvider = ({ children }) => {
       };
     } catch (error) {
       console.error('Login error:', error);
-      // Fallback to localStorage
-      return loginLocal(email, password);
+      return { success: false, error: 'Unable to connect. Please try again.' };
     }
   };
 
-  // Local login fallback
+  // Local login fallback (customer accounts only — admin must use server API)
   const loginLocal = (email, password) => {
-    // Check admin_users first (localStorage fallback for dev)
-    const adminUsers = JSON.parse(localStorage.getItem('admin_users') || '[]');
-    const foundAdmin = adminUsers.find(u => u.email === email && u.password === password);
-    if (foundAdmin) {
-      const userData = { ...foundAdmin, role: 'admin' };
-      delete userData.password;
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return { success: true };
-    }
-
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const foundUser = users.find(u => u.email === email && u.password === password);
     
@@ -236,15 +218,6 @@ export const AuthProvider = ({ children }) => {
 
   const changePassword = async (currentPassword, newPassword) => {
     if (!user) return { success: false, error: 'Not signed in' };
-
-    // Admin password cannot be changed through this function
-    const adminEmail = 'admin@allremotes.com';
-    if (user.email === adminEmail) {
-      if (String(currentPassword) !== 'Admin123!') {
-        return { success: false, error: 'Current password is incorrect' };
-      }
-      return { success: false, error: 'Admin password is set in code and cannot be changed here' };
-    }
 
     // Try API first
     try {

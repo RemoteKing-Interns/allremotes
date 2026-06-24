@@ -45,6 +45,7 @@ import {
   TrendingUp,
   DollarSign,
   Eye,
+  EyeOff,
   ArrowUpRight,
   ArrowDownRight,
   MoreHorizontal,
@@ -83,8 +84,6 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
-
-const ADMIN_EMAIL = 'admin@allremotes.com';
 
 const STORAGE_KEYS = {
   home: "allremotes_home_content",
@@ -351,18 +350,19 @@ const AdminContent = () => {
   const { user, login, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isAdmin = user?.role === 'admin' || user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.role === 'admin';
 
   // Returns true if the user has full access OR the specific permission key
   const hasPermission = (key: string) => {
-    if (user?.email === ADMIN_EMAIL) return true; // hardcoded superadmin
+    if (user?.role === 'admin') return true;
     const perms: string[] = user?.permissions || ['*'];
     return perms.includes('*') || perms.includes(key);
   };
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('adminActiveTab') || 'dashboard';
+      const p = new URLSearchParams(window.location.search);
+      return p.get('tab') || localStorage.getItem('adminActiveTab') || 'dashboard';
     }
     return 'dashboard';
   });
@@ -393,8 +393,15 @@ const AdminContent = () => {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
-  const [viewOrderId, setViewOrderId] = useState<string | null>(null);
-  const [viewReturnId, setViewReturnId] = useState<string | null>(null);
+  const [viewOrderId, setViewOrderId] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('order') : null
+  );
+  const [viewReturnId, setViewReturnId] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('return') : null
+  );
+  const [openThreadId, setOpenThreadId] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('thread') : null
+  );
 
   // Fetch unread message count periodically
   useEffect(() => {
@@ -415,21 +422,17 @@ const AdminContent = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Check localStorage for pending viewOrderId/viewReturnId on mount
+  // Sync URL params when tab/id state changes
   useEffect(() => {
-    const pendingOrderId = localStorage.getItem('adminViewOrderId');
-    const pendingReturnId = localStorage.getItem('adminViewReturnId');
-    if (pendingOrderId) {
-      setViewOrderId(pendingOrderId);
-      setActiveTab('orders');
-      localStorage.removeItem('adminViewOrderId');
-    }
-    if (pendingReturnId) {
-      setViewReturnId(pendingReturnId);
-      setActiveTab('returns');
-      localStorage.removeItem('adminViewReturnId');
-    }
-  }, []);
+    const p = new URLSearchParams(window.location.search);
+    p.set('tab', activeTab);
+    if (viewOrderId) p.set('order', viewOrderId); else p.delete('order');
+    if (viewReturnId) p.set('return', viewReturnId); else p.delete('return');
+    if (openThreadId) p.set('thread', openThreadId); else p.delete('thread');
+    const newUrl = `${window.location.pathname}?${p.toString()}`;
+    window.history.replaceState(null, '', newUrl);
+    localStorage.setItem('adminActiveTab', activeTab);
+  }, [activeTab, viewOrderId, viewReturnId, openThreadId]);
 
   const fetchNotifications = async () => {
     setNotifLoading(true);
@@ -496,7 +499,8 @@ const AdminContent = () => {
             title: 'Customer Message',
             body: `${t.customerName || t.customerEmail} \u2014 ${t.orderId ? `Order ${t.orderId.slice(0, 8)}` : `Return ${t.returnId?.slice(0, 8)}`}`,
             time: t.lastMessageAt,
-            tab: 'orders',
+            tab: 'messages',
+            threadId: t.id,
           });
         }
       });
@@ -527,10 +531,10 @@ const AdminContent = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const result = login(loginEmail, loginPassword);
+    const result = await login(loginEmail, loginPassword);
     if (result.success) return;
     setLoginError(result.error || 'Invalid credentials');
   };
@@ -538,10 +542,6 @@ const AdminContent = () => {
   // Removed auth check redirect to prevent refresh issues
   // The access denied UI will handle non-admin users
 
-  // Save activeTab to localStorage
-  useEffect(() => {
-    localStorage.setItem('adminActiveTab', activeTab);
-  }, [activeTab]);
 
   // Listen for tab switch events from child components
   useEffect(() => {
@@ -568,9 +568,6 @@ const AdminContent = () => {
             <div className="rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-panel backdrop-blur sm:p-8">
               <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto" />
               <div className="mt-6">
-                <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
-                  Staff only
-                </span>
                 <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">
                   Admin
                 </h1>
@@ -591,7 +588,7 @@ const AdminContent = () => {
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="admin@allremotes.com"
+                    placeholder="Enter your email"
                     required
                     className="h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/40"
                   />
@@ -684,7 +681,10 @@ const AdminContent = () => {
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
     { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
   ];
-  const navItems = allNavItems.filter(item => hasPermission(item.perm));
+  const navItems = [
+    ...allNavItems.filter(item => hasPermission(item.perm)),
+    { id: 'profile', label: 'My Profile', icon: User, perm: '*' },
+  ];
 
   return (
     <div className="flex h-screen bg-[#f6f6f7]">
@@ -757,17 +757,17 @@ const AdminContent = () => {
 
         {/* User Section */}
         <div className="border-t border-white/10 p-3">
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-              {user?.email?.charAt(0).toUpperCase() || 'A'}
+          <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} rounded-lg p-1 hover:bg-white/10 transition-colors`}>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'A'}
             </div>
             {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium text-white truncate">{user?.name || 'Admin'}</p>
                 <p className="text-xs text-neutral-400 truncate">{user?.email}</p>
               </div>
             )}
-          </div>
+          </button>
           {!sidebarCollapsed && (
             <div className="mt-3 flex gap-2">
               <Link 
@@ -827,7 +827,11 @@ const AdminContent = () => {
                       notifications.map((n) => (
                         <button
                           key={n.id}
-                          onClick={() => { setActiveTab(n.tab); setNotifOpen(false); }}
+                          onClick={() => {
+                            setNotifOpen(false);
+                            if (n.threadId) setOpenThreadId(n.threadId);
+                            setActiveTab(n.tab);
+                          }}
                           className="w-full flex items-start gap-3 px-4 py-3 hover:bg-neutral-50 border-b border-neutral-100 last:border-0 text-left transition-colors"
                         >
                           <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
@@ -893,8 +897,10 @@ const AdminContent = () => {
           {activeTab === 'discounts' && <DiscountsSection />}
           {activeTab === 'navigation' && <AdminNavigation />}
           {activeTab === 'reviews' && <AdminReviews />}
-          {activeTab === 'messages' && <AdminMessages />}
+          {activeTab === 'messages' && <AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} />}
+
           {activeTab === 'settings' && <AdminSettings />}
+          {activeTab === 'profile' && <AdminProfile />}
         </main>
       </div>
     </div>
@@ -7682,16 +7688,32 @@ function CategoriesBrandsSection() {
   );
 }
 
-function AdminMessages() {
+function AdminMessages({ openThreadId, onThreadOpened }: { openThreadId?: string; onThreadOpened?: () => void }) {
   const [threads, setThreads] = useState<any[]>([]);
   const [selectedThread, setSelectedThread] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingThreadId, setPendingThreadId] = useState<string | undefined>(openThreadId);
 
   useEffect(() => {
     loadThreads();
     const interval = setInterval(loadThreads, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (openThreadId) setPendingThreadId(openThreadId);
+  }, [openThreadId]);
+
+  useEffect(() => {
+    if (pendingThreadId && threads.length > 0) {
+      const thread = threads.find(t => t.id === pendingThreadId);
+      if (thread) {
+        setSelectedThread(thread);
+        setPendingThreadId(undefined);
+        onThreadOpened?.();
+      }
+    }
+  }, [pendingThreadId, threads]);
 
   const loadThreads = async () => {
     try {
@@ -7850,6 +7872,160 @@ function AdminMessages() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AdminProfile() {
+  const { user, login } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+  const [nameSuccess, setNameSuccess] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwErrors, setPwErrors] = useState<string[]>([]);
+  const [error, setError] = useState('');
+
+  const getHeader = () => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}').email || ''; } catch { return ''; }
+  };
+
+  const saveName = async () => {
+    if (!name.trim() || name.trim() === user?.name) return;
+    setSaving(true); setError(''); setNameSuccess(false);
+    try {
+      const resp = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': getHeader() },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { setError(data.error || 'Failed to update name'); return; }
+      setNameSuccess(true);
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...stored, name: name.trim() }));
+      setTimeout(() => setNameSuccess(false), 3000);
+    } catch { setError('Connection error'); } finally { setSaving(false); }
+  };
+
+  const savePassword = async () => {
+    setPwErrors([]); setError(''); setPwSuccess(false);
+    if (newPassword !== confirmPassword) { setPwErrors(['Passwords do not match']); return; }
+    setSavingPw(true);
+    try {
+      const resp = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': getHeader() },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { setPwErrors(data.passwordErrors || [data.error || 'Failed']); return; }
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      setPwSuccess(true);
+      setTimeout(() => setPwSuccess(false), 3000);
+    } catch { setError('Connection error'); } finally { setSavingPw(false); }
+  };
+
+  return (
+    <div className="max-w-xl space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-neutral-900">My Profile</h2>
+        <p className="text-sm text-neutral-500 mt-1">Manage your admin account details and password.</p>
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+          <AlertCircle size={15} /> {error}
+        </div>
+      )}
+
+      {/* Name */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-6 space-y-4">
+        <h3 className="text-sm font-semibold text-neutral-800">Account Info</h3>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Email</label>
+          <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-200">{user?.email}</p>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Display Name</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="Your name"
+            />
+            <button
+              onClick={saveName}
+              disabled={saving || !name.trim() || name.trim() === user?.name}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {saving ? <RefreshCw size={14} className="animate-spin" /> : nameSuccess ? <CheckCircle size={14} /> : null}
+              {nameSuccess ? 'Saved!' : 'Save'}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Role</label>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+            <User size={11} /> {user?.role || 'admin'}
+          </span>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-6 space-y-4">
+        <h3 className="text-sm font-semibold text-neutral-800">Change Password</h3>
+        {pwErrors.length > 0 && (
+          <ul className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 space-y-1 list-disc list-inside">
+            {pwErrors.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+        )}
+        {pwSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 flex items-center gap-2">
+            <CheckCircle size={14} /> Password updated successfully.
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Current Password</label>
+          <div className="relative">
+            <input type={showCurrent ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-2 pr-9 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="••••••••" />
+            <button type="button" onClick={() => setShowCurrent(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+              {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">New Password</label>
+          <div className="relative">
+            <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)}
+              className="w-full px-3 py-2 pr-9 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="••••••••" />
+            <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+              {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Confirm New Password</label>
+          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="••••••••" />
+        </div>
+        <button
+          onClick={savePassword}
+          disabled={savingPw || !currentPassword || !newPassword || !confirmPassword}
+          className="w-full py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {savingPw && <RefreshCw size={14} className="animate-spin" />}
+          {savingPw ? 'Updating…' : 'Update Password'}
+        </button>
       </div>
     </div>
   );

@@ -7,14 +7,12 @@ import { ArrowLeft, Upload } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
 
-const ADMIN_EMAIL = 'admin@allremotes.com';
-
 export default function AdminUploadProducts() {
   const { user } = useAuth();
   const router = useRouter();
   const { refreshProductsFromServer } = useStore();
 
-  const isAdmin = user?.role === 'admin' || user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.role === 'admin';
 
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);

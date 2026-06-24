@@ -39,12 +39,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user info from request
-    const userEmail = request.headers.get("x-user-email") || "unknown";
+    const userEmail = request.headers.get("x-user-email") || "";
+    const userName = request.headers.get("x-user-name") || "";
     
     // Generate token and create link
     const token = generateToken();
     const createdAt = new Date();
     const expiresAt = new Date(createdAt.getTime() + expiresInHours * 60 * 60 * 1000);
+
+    // Resolve display name: use provided name, or look up from admin_users
+    let resolvedName = userName;
+    if (!resolvedName && userEmail && mongoEnabled()) {
+      try {
+        const db0 = await getDb();
+        const adminUser = await db0.collection("admin_users").findOne({ email: userEmail });
+        if (adminUser?.name) resolvedName = adminUser.name;
+      } catch { /* ignore */ }
+    }
+    if (!resolvedName) resolvedName = userEmail || "AllRemotes";
 
     // Store in database if available, otherwise fallback to memory
     if (mongoEnabled()) {
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
           permission,
           createdAt,
           expiresAt,
-          createdBy: userEmail,
+          createdBy: resolvedName,
           columns: columns || [],
           shareMode: shareMode || "all",
         });
@@ -68,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = new URL(request.url).origin;
-    const shareUrl = `${baseUrl}/admin/spreadsheet/shared/${token}`;
+    const shareUrl = `${baseUrl}/s/${token}`;
 
     return NextResponse.json({
       shareUrl,
@@ -88,10 +100,57 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get("token");
+    if (!token) return NextResponse.json({ error: "Token required" }, { status: 400 });
+    if (!mongoEnabled()) return NextResponse.json({ success: true });
+    const db = await getDb();
+    await db.collection("share_links").deleteOne({ token });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Failed to delete" }, { status: 500 });
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
+    const list = searchParams.get("list");
+
+    // List all active share links
+    if (list === "1") {
+      if (!mongoEnabled()) return NextResponse.json({ links: [] });
+      const db = await getDb();
+      await cleanExpiredLinks();
+      const links = await db.collection("share_links")
+        .find({}, { projection: { token: 1, permission: 1, createdBy: 1, createdAt: 1, expiresAt: 1, shareMode: 1, columns: 1 } })
+        .sort({ createdAt: -1 })
+        .toArray();
+      // Resolve names
+      const resolved = await Promise.all(links.map(async (l: any) => {
+        let createdBy = l.createdBy || "";
+        if (createdBy && createdBy !== "unknown" && createdBy.includes("@")) {
+          try {
+            const db2 = await getDb();
+            const adminUser = await db2.collection("admin_users").findOne({ email: createdBy });
+            if (adminUser?.name) createdBy = adminUser.name;
+          } catch { /* ignore */ }
+        }
+        return {
+          token: l.token,
+          permission: l.permission,
+          createdBy,
+          createdAt: l.createdAt,
+          expiresAt: l.expiresAt,
+          shareMode: l.shareMode || "all",
+          columnCount: (l.columns || []).length,
+        };
+      }));
+      return NextResponse.json({ links: resolved });
+    }
 
     if (!token) {
       return NextResponse.json(
@@ -128,10 +187,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Resolve createdBy email to display name
+    let createdBy = link.createdBy || "";
+    if (mongoEnabled() && createdBy && createdBy !== "unknown" && createdBy.includes("@")) {
+      try {
+        const db2 = await getDb();
+        const adminUser = await db2.collection("admin_users").findOne({ email: createdBy });
+        if (adminUser?.name) createdBy = adminUser.name;
+      } catch { /* ignore */ }
+    }
+
     return NextResponse.json({
       permission: link.permission,
       expiresAt: link.expiresAt.toISOString(),
-      createdBy: link.createdBy,
+      createdBy,
       columns: link.columns || [],
       shareMode: link.shareMode || "all",
     });

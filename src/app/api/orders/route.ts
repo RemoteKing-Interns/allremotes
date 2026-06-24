@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
-import { pushOrderToStarshipit, mapOrderToStarshipit, type StarshipitFailure } from "../../../lib/starshipit";
 import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
 
 const CORS_HEADERS = {
@@ -149,19 +148,6 @@ export async function POST(request: Request) {
       } catch (err) {
         console.error("Failed to increment coupon usage:", err);
       }
-    }
-
-    // Push to Starshipit (non-blocking — order is already saved above)
-    if (process.env.STARSHIPIT_API_KEY && process.env.STARSHIPIT_SUBSCRIPTION_KEY) {
-      const starshipitPayload = mapOrderToStarshipit(order);
-      pushOrderToStarshipit(starshipitPayload).then((result) => {
-        if (result.success) {
-          console.log(`[Starshipit] Order ${order.id} pushed — Starshipit ID: ${result.order_id}`);
-        } else {
-          const failure = result as StarshipitFailure;
-          console.error(`[Starshipit] Failed to push order ${order.id}:`, failure.error, failure.details);
-        }
-      });
     }
 
     // Send SMS confirmation if phone number provided (non-blocking)

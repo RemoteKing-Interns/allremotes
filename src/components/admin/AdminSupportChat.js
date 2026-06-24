@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-const ADMIN_EMAIL = 'admin@allremotes.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || '';
 
 export default function AdminSupportChat({ orderId, returnId = null, customerEmail, customerName }) {
   const [messages, setMessages] = useState([]);

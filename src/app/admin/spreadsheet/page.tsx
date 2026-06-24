@@ -60,15 +60,15 @@ export default function AdminSpreadsheet() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 relative">
+    <div className="h-screen w-screen flex flex-col bg-neutral-50 overflow-hidden">
       {/* Floating Controls */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white rounded-lg shadow-lg border border-neutral-200 p-2">
+      <div className="fixed top-3 right-3 z-50 flex items-center gap-1 bg-white rounded-lg shadow-lg border border-neutral-200 p-1.5">
         <button
           onClick={handleZoomOut}
-          className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+          className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
           title="Zoom Out"
         >
-          <ZoomOut size={16} />
+          <ZoomOut size={15} />
         </button>
         <button
           onClick={handleZoomReset}
@@ -78,42 +78,27 @@ export default function AdminSpreadsheet() {
         </button>
         <button
           onClick={handleZoomIn}
-          className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+          className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
           title="Zoom In"
         >
-          <ZoomIn size={16} />
+          <ZoomIn size={15} />
         </button>
-        <div className="w-px h-6 bg-neutral-300 mx-1" />
+        <div className="w-px h-5 bg-neutral-300 mx-1" />
         <button
           onClick={toggleFullscreen}
-          className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+          className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
           title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
-          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
       </div>
 
-      {/* Main Content */}
-      <div 
-        className={`${isFullscreen ? 'h-screen overflow-auto' : 'min-h-screen'}`}
-        style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}
+      {/* Spreadsheet fills full viewport */}
+      <div
+        className="flex-1 overflow-auto p-3"
+        style={{ zoom: `${zoomLevel}%` }}
       >
-        {isFullscreen ? (
-          <div className="p-4">
-            <ProductSpreadsheet onBack={() => router.push("/admin")} />
-          </div>
-        ) : (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-neutral-900">Product Spreadsheet</h1>
-              <p className="text-sm text-neutral-600 mt-1">
-                Excel-like product editor. Share this URL: {typeof window !== 'undefined' ? window.location.href : ''}
-              </p>
-            </div>
-            
-            <ProductSpreadsheet onBack={() => router.push("/admin")} />
-          </div>
-        )}
+        <ProductSpreadsheet onBack={() => router.push("/admin")} fullHeight />
       </div>
     </div>
   );
