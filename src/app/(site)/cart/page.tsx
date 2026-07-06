@@ -51,22 +51,19 @@ const Cart = () => {
     return (
       <div className="animate-fadeIn">
         <div className="container py-10 sm:py-12">
-          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-8 shadow-panel backdrop-blur sm:p-12">
-            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-              Checkout ready
-            </span>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 p-8 shadow-panel sm:p-12">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Shopping Cart
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-300 sm:text-base">
               Your cart is empty. Browse the catalog and add a remote to get started.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <span className="inline-flex items-center rounded-full bg-neutral-100 px-4 py-2 text-xs font-extrabold text-neutral-700">
+              <span className="inline-flex items-center rounded-full bg-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300">
                 0 items
               </span>
-              <span className="inline-flex items-center rounded-full bg-accent/10 px-4 py-2 text-xs font-extrabold text-accent-dark">
+              <span className="inline-flex items-center rounded-full bg-primary/20 px-4 py-2 text-xs font-semibold text-primary-light">
                 Free standard shipping
               </span>
             </div>
@@ -117,17 +114,14 @@ const Cart = () => {
       <div className="container py-8 sm:py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-              Checkout ready
-            </span>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
               Shopping Cart
             </h1>
           </div>
           <div className="flex flex-wrap gap-3">
             <div className="rounded-2xl border border-neutral-200 bg-white/80 px-5 py-4 shadow-xs">
               <strong className="block text-2xl font-extrabold tracking-tight text-neutral-900">{totalItems}</strong>
-              <span className="mt-1 block text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+              <span className="mt-1 block text-xs font-semibold text-neutral-500">
                 {totalItems === 1 ? "item selected" : "items selected"}
               </span>
             </div>
@@ -135,7 +129,7 @@ const Cart = () => {
               <strong className="block text-2xl font-extrabold tracking-tight text-neutral-900">
                 {hasDiscount ? `${Math.round(discountRate * 100)}%` : "Free"}
               </strong>
-              <span className="mt-1 block text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+              <span className="mt-1 block text-xs font-semibold text-neutral-500">
                 {hasDiscount ? "member pricing active" : "standard shipping"}
               </span>
             </div>
@@ -171,7 +165,7 @@ const Cart = () => {
                         {item.name}
                       </h3>
                     </Link>
-                    <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
+                    <p className="mt-1 text-xs font-semibold text-neutral-500">
                       {item.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}
                     </p>
 
@@ -196,14 +190,14 @@ const Cart = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedItem(item)}
-                          className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
+                          className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-semibold text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
                         >
                           View
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.id)}
-                          className="flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark hover:bg-primary/15 sm:flex-none"
+                          className="flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-semibold text-primary-dark hover:bg-primary/15 sm:flex-none"
                         >
                           Remove
                         </button>
@@ -213,7 +207,7 @@ const Cart = () => {
                     <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-3 sm:border-0 sm:bg-transparent sm:p-0">
                       <div className="grid gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                         <div className="flex items-center justify-between gap-3 sm:block">
-                          <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                          <span className="text-xs font-semibold text-neutral-500 sm:hidden">
                             Quantity
                           </span>
                           <div className="inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
@@ -244,7 +238,7 @@ const Cart = () => {
                           const lineTotal = getItemLineTotal(item);
                           return (
                             <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
-                              <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 sm:hidden">
+                              <span className="text-xs font-semibold text-neutral-500 sm:hidden">
                                 Total
                               </span>
                               <div className="flex items-baseline justify-end gap-2 sm:mt-1">
@@ -346,7 +340,7 @@ const Cart = () => {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  <p className="text-xs font-semibold text-neutral-500">
                     {selectedItem?.sku || selectedItem?.brand || "ALLREMOTES"}
                   </p>
                   <h3 className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight text-neutral-900">
@@ -366,13 +360,13 @@ const Cart = () => {
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Category</div>
+                      <div className="text-xs font-semibold text-neutral-500">Category</div>
                       <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
                         {getCategoryLabel(selectedItem?.category)}
                       </strong>
                     </div>
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Condition</div>
+                      <div className="text-xs font-semibold text-neutral-500">Condition</div>
                       <strong className="mt-2 block break-words text-[1.35rem] font-extrabold leading-tight text-accent-dark">
                         {getConditionLabel(selectedItem)}
                       </strong>
@@ -381,7 +375,7 @@ const Cart = () => {
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Price</div>
+                      <div className="text-xs font-semibold text-neutral-500">Price</div>
                       <div className="mt-2">
                         {(() => {
                           const pricing = getItemPriceBreakdown(selectedItem || {});
@@ -398,12 +392,12 @@ const Cart = () => {
                     </div>
 
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Quantity</div>
+                      <div className="text-xs font-semibold text-neutral-500">Quantity</div>
                       <strong className="mt-2 block text-[1.6rem] font-extrabold leading-none tracking-tight text-accent-dark sm:text-[2rem]">{selectedItem?.quantity}</strong>
                     </div>
 
                     <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                      <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">Total</div>
+                      <div className="text-xs font-semibold text-neutral-500">Total</div>
                       <div className="mt-2">
                         {(() => {
                           const lineTotal = getItemLineTotal(selectedItem || {});
@@ -454,7 +448,7 @@ const Cart = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-4">
-              <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">Checkout</div>
+              <div className="text-sm font-semibold text-neutral-600">Checkout</div>
               <button type="button" className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200" onClick={() => setShowCheckoutModal(false)}>
                 Close
               </button>
@@ -466,7 +460,7 @@ const Cart = () => {
               {/* Member savings callout */}
               <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-800">
-                  💰 Members save{" "}
+                  Members save{" "}
                   <span className="text-emerald-700 font-extrabold">
                     AU${(originalTotal * (discountRate || 0.1)).toFixed(2)}
                   </span>{" "}

@@ -158,7 +158,7 @@ export default function ProductSpreadsheet({ onBack, readOnly = false, shareConf
 const colHeaders = useMemo(() => filteredColumns.map((c) => c.title), [filteredColumns]);
 const columns = useMemo(() => filteredColumns.map(col => ({
     ...col,
-    readOnly: readOnly ? true : col.readOnly
+    readOnly: readOnly ? true : (col.readOnly || false)
   })), [filteredColumns, readOnly]);
 
   const handleShare = async (permission: "read" | "edit") => {
@@ -217,7 +217,7 @@ const columns = useMemo(() => filteredColumns.map(col => ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!readOnly && (
+          {!shareConfig && (
             <button
               type="button"
               onClick={onBack}
@@ -238,7 +238,7 @@ const columns = useMemo(() => filteredColumns.map(col => ({
               Save {changedRows.size > 0 ? `(${changedRows.size})` : ""}
             </button>
           )}
-          {!readOnly && (
+          {!shareConfig && (
             <button
               type="button"
               onClick={() => { setShareModalOpen(true); loadActiveLinks(); }}

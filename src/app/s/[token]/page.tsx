@@ -99,7 +99,7 @@ export default function SharedSpreadsheet({ params }: { params: Promise<{ token:
       <div className="flex-1 overflow-auto p-2">
         <ProductSpreadsheet
           onBack={() => {}}
-          readOnly={true}
+          readOnly={permission === "read"}
           shareConfig={shareConfig}
           fullHeight
         />

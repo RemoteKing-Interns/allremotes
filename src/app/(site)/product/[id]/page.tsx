@@ -424,9 +424,11 @@ const ProductDetail = () => {
 
           {/* RIGHT: INFO */}
           <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur sm:p-8">
-            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-              {product.brand || "ALLREMOTES"}
-            </p>
+            {product.brand && (
+              <p className="text-sm font-semibold text-neutral-600">
+                {product.brand}
+              </p>
+            )}
 
             {product.sku && (
               <p className="mt-1 text-xs font-medium text-neutral-500">
@@ -535,7 +537,7 @@ const ProductDetail = () => {
 
             {/* Specs */}
             <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-5">
-              <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-700">
+              <h3 className="text-base font-semibold text-neutral-900">
                 Product Details
               </h3>
               <ul className="mt-4 grid gap-2 text-sm text-neutral-700">
@@ -633,7 +635,7 @@ const ProductDetail = () => {
                   }`}
                   onClick={() => setActiveTab(section.id)}
                 >
-                  {section.label.toUpperCase()}
+                  {section.label}
                 </button>
               ))}
             </div>

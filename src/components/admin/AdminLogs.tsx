@@ -1,9 +1,142 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText, Search, Filter, Trash2, Download, Calendar, User, Activity, AlertTriangle, Info, CheckCircle } from "lucide-react";
-import { logger, LogEntry } from "../../lib/logger";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Search, Trash2, Download, RefreshCw, ChevronDown, ChevronRight, User, AlertTriangle, Info, CheckCircle, Bug, ArrowRight, Eye, ShoppingCart, Package, Settings, LogIn, LogOut, Zap } from "lucide-react";
+import { LogEntry } from "../../lib/logger";
 import toast from "react-hot-toast";
+
+// ── Human-readable action labels ──────────────────────────────────────────────
+function prettifyAction(action: string): string {
+  const map: Record<string, string> = {
+    page_view: "Viewed page",
+    // orders
+    "action:order_status_updated": "Updated order status",
+    "error:order_status_update_failed": "Failed to update order status",
+    "action:orders_pushed": "Pushed orders",
+    "error:orders_push_failed": "Failed to push orders",
+    // returns
+    "action:return_updated": "Updated return",
+    "error:return_update_failed": "Failed to update return",
+    // products
+    "action:product_saved": "Saved product",
+    "action:spreadsheet_bulk_save": "Bulk-saved products (spreadsheet)",
+    "error:spreadsheet_save_failed": "Spreadsheet save failed",
+    // categories & brands
+    "action:category_added": "Added category",
+    "action:category_renamed": "Renamed category",
+    "action:category_deleted": "Deleted category",
+    "action:brand_added": "Added brand",
+    "action:brand_renamed": "Renamed brand",
+    "action:brand_deleted": "Deleted brand",
+    // content
+    "action:home_content_saved": "Saved homepage content",
+    "action:navigation_saved": "Saved navigation",
+    "action:reviews_saved": "Saved reviews",
+    "action:review_deleted": "Deleted review",
+    "action:promotions_saved": "Saved promotions",
+    "action:settings_saved": "Saved settings",
+    // abandoned carts
+    "action:abandoned_cart_email_sent": "Sent abandoned cart email",
+    "action:abandoned_cart_marked_contacted": "Marked cart as contacted",
+    "action:abandoned_cart_deleted": "Deleted abandoned cart",
+    "action:abandoned_carts_exported": "Exported abandoned carts",
+    // admin
+    "action:admin_data_reset": "Reset all admin data",
+    "error:admin_data_reset_failed": "Admin data reset failed",
+  };
+  if (map[action]) return map[action];
+  return action
+    .replace(/^action:/, "")
+    .replace(/^error:/, "Error: ")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── Inline detail summary shown on the log row itself ─────────────────────────
+function summarizeLine(action: string, details: any): string | null {
+  if (!details || typeof details !== "object") return null;
+  const d = details as Record<string, any>;
+
+  if (action === "action:order_status_updated")
+    return `#${d.orderId} · ${d.customer ?? ""} · ${d.previousStatus} → ${d.newStatus}`;
+
+  if (action === "error:order_status_update_failed")
+    return `#${d.orderId} · tried → ${d.attemptedStatus} · ${d.error ?? ""}`;
+
+  if (action === "action:orders_pushed")
+    return `${d.orderCount} order${d.orderCount !== 1 ? "s" : ""} → ${d.targets} · group: ${d.groupLabel}${d.unleashedOrderNumber ? ` · UNL #${d.unleashedOrderNumber}` : ""}`;
+
+  if (action === "error:orders_push_failed")
+    return `${d.targets} · group: ${d.groupLabel} · ${d.error ?? ""}`;
+
+  if (action === "action:return_updated")
+    return `#${d.returnId} · fields: ${(d.fields ?? []).join(", ")}`;
+
+  if (action === "action:product_saved")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""} · $${d.price ?? ""}${d.inStock ? "" : " · out of stock"}`;
+
+  if (action === "action:spreadsheet_bulk_save")
+    return `${d.count ?? d.modifiedCount ?? "?"} products updated`;
+
+  if (action === "action:category_renamed")
+    return `"${d.from}" → "${d.to}"`;
+
+  if (action === "action:brand_renamed")
+    return `"${d.from}" → "${d.to}"`;
+
+  if (action === "action:category_added" || action === "action:category_deleted")
+    return `"${d.name}"`;
+
+  if (action === "action:brand_added" || action === "action:brand_deleted")
+    return `"${d.name}"`;
+
+  if (action === "action:abandoned_cart_email_sent")
+    return `${d.email} · ${d.discountPercent}% off`;
+
+  if (action === "action:abandoned_cart_marked_contacted" || action === "action:abandoned_cart_deleted")
+    return d.email ?? "";
+
+  if (action === "action:abandoned_carts_exported")
+    return `${d.count ?? "?"} carts`;
+
+  if (action === "action:reviews_saved")
+    return `${d.count ?? "?"} reviews`;
+
+  if (action === "page_view")
+    return d.page ?? d.tab ?? null;
+
+  return null;
+}
+
+function getActionIcon(action: string) {
+  if (action.startsWith("error:")) return <AlertTriangle className="h-4 w-4 text-red-500" />;
+  if (action === "page_view") return <Eye className="h-4 w-4 text-neutral-400" />;
+  if (action.includes("login")) return <LogIn className="h-4 w-4 text-emerald-500" />;
+  if (action.includes("logout")) return <LogOut className="h-4 w-4 text-neutral-500" />;
+  if (action.includes("order")) return <ShoppingCart className="h-4 w-4 text-blue-500" />;
+  if (action.includes("product")) return <Package className="h-4 w-4 text-violet-500" />;
+  if (action.includes("setting")) return <Settings className="h-4 w-4 text-neutral-500" />;
+  if (action.includes("unleashed") || action.includes("pickops")) return <Zap className="h-4 w-4 text-amber-500" />;
+  return <ArrowRight className="h-4 w-4 text-neutral-400" />;
+}
+
+const LEVEL_STYLES: Record<string, { pill: string; dot: string; label: string }> = {
+  error: { pill: "bg-red-100 text-red-700 ring-red-200",    dot: "bg-red-500",    label: "Error" },
+  warn:  { pill: "bg-amber-100 text-amber-700 ring-amber-200", dot: "bg-amber-400", label: "Warn"  },
+  info:  { pill: "bg-blue-100 text-blue-700 ring-blue-200",   dot: "bg-blue-400",   label: "Info"  },
+  debug: { pill: "bg-neutral-100 text-neutral-600 ring-neutral-200", dot: "bg-neutral-400", label: "Debug" },
+};
+
+function relativeTime(ts: Date | string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
 
 export default function AdminLogs() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -11,393 +144,281 @@ export default function AdminLogs() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
-  const [filters, setFilters] = useState({
-    level: "",
-    action: "",
-    startDate: "",
-    endDate: "",
-    userId: "",
-  });
-  const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // fetch whenever page / level / date filters change
+  useEffect(() => { fetchLogs(); }, [page, levelFilter, startDate, endDate]);
+
+  // auto-refresh
   useEffect(() => {
-    fetchLogs();
-  }, [page, filters]);
+    if (autoRefresh) {
+      refreshRef.current = setInterval(fetchLogs, 10000);
+    } else {
+      if (refreshRef.current) clearInterval(refreshRef.current);
+    }
+    return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
+  }, [autoRefresh, levelFilter, startDate, endDate, page]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      
-      if (filters.level) queryParams.append('level', filters.level);
-      if (filters.action) queryParams.append('action', filters.action);
-      if (filters.userId) queryParams.append('userId', filters.userId);
-      if (filters.startDate) queryParams.append('startDate', new Date(filters.startDate).toISOString());
-      if (filters.endDate) queryParams.append('endDate', new Date(filters.endDate).toISOString());
-      queryParams.append('limit', pageSize.toString());
-      queryParams.append('offset', ((page - 1) * pageSize).toString());
-
-      const response = await fetch(`/api/admin/logs?${queryParams}`);
-      const data = await response.json();
-      
-      if (response.ok) {
-        setLogs(data.logs);
-        setTotal(data.total);
-      } else {
-        toast.error(data.error || "Failed to fetch logs");
-      }
-    } catch (error) {
-      toast.error("Failed to fetch logs");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPage(1); // Reset to first page when filters change
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      level: "",
-      action: "",
-      startDate: "",
-      endDate: "",
-      userId: "",
-    });
-    setPage(1);
+      const q = new URLSearchParams();
+      if (levelFilter) q.append("level", levelFilter);
+      if (startDate) q.append("startDate", new Date(startDate).toISOString());
+      if (endDate) q.append("endDate", new Date(endDate).toISOString());
+      q.append("limit", pageSize.toString());
+      q.append("offset", ((page - 1) * pageSize).toString());
+      const res = await fetch(`/api/admin/logs?${q}`);
+      const data = await res.json();
+      if (res.ok) { setLogs(data.logs ?? []); setTotal(data.total ?? 0); }
+      else toast.error(data.error || "Failed to fetch logs");
+    } catch { toast.error("Failed to fetch logs"); }
+    finally { setLoading(false); }
   };
 
   const clearLogs = async () => {
-    if (!confirm("Are you sure you want to clear all logs? This action cannot be undone.")) return;
-    
+    if (!confirm("Clear all logs? This cannot be undone.")) return;
     try {
-      const response = await fetch("/api/admin/logs", { method: "DELETE" });
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success("Logs cleared successfully");
-        fetchLogs();
-      } else {
-        toast.error(data.error || "Failed to clear logs");
-      }
-    } catch (error) {
-      toast.error("Failed to clear logs");
-    }
+      const res = await fetch("/api/admin/logs", { method: "DELETE" });
+      if (res.ok) { toast.success("Logs cleared"); fetchLogs(); }
+      else toast.error("Failed to clear logs");
+    } catch { toast.error("Failed to clear logs"); }
   };
 
   const exportLogs = async () => {
     try {
-      const queryParams = new URLSearchParams();
-      
-      if (filters.level) queryParams.append('level', filters.level);
-      if (filters.action) queryParams.append('action', filters.action);
-      if (filters.userId) queryParams.append('userId', filters.userId);
-      if (filters.startDate) queryParams.append('startDate', new Date(filters.startDate).toISOString());
-      if (filters.endDate) queryParams.append('endDate', new Date(filters.endDate).toISOString());
-      queryParams.append('export', 'true');
-
-      const response = await fetch(`/api/admin/logs?${queryParams}`);
-      const blob = await response.blob();
-      
-      if (response.ok) {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `admin-logs-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success("Logs exported successfully");
-      } else {
-        toast.error("Failed to export logs");
-      }
-    } catch (error) {
-      toast.error("Failed to export logs");
-    }
+      const q = new URLSearchParams();
+      if (levelFilter) q.append("level", levelFilter);
+      if (startDate) q.append("startDate", new Date(startDate).toISOString());
+      if (endDate) q.append("endDate", new Date(endDate).toISOString());
+      q.append("export", "true");
+      const res = await fetch(`/api/admin/logs?${q}`);
+      if (!res.ok) { toast.error("Export failed"); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `admin-logs-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a); a.click();
+      URL.revokeObjectURL(url); document.body.removeChild(a);
+      toast.success("Exported");
+    } catch { toast.error("Export failed"); }
   };
 
-  const getLevelIcon = (level: string) => {
-    switch (level) {
-      case 'error': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'warn': return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case 'info': return <Info className="h-4 w-4 text-blue-500" />;
-      case 'debug': return <CheckCircle className="h-4 w-4 text-neutral-500" />;
-      default: return <FileText className="h-4 w-4 text-neutral-500" />;
-    }
-  };
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'error': return 'bg-red-100 text-red-800';
-      case 'warn': return 'bg-amber-100 text-amber-800';
-      case 'info': return 'bg-blue-100 text-blue-800';
-      case 'debug': return 'bg-neutral-100 text-neutral-800';
-      default: return 'bg-neutral-100 text-neutral-800';
-    }
-  };
+  // client-side search filter (action + user + details)
+  const visible = logs.filter(log => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      log.action?.toLowerCase().includes(q) ||
+      log.userEmail?.toLowerCase().includes(q) ||
+      (typeof log.details === "string" ? log.details : JSON.stringify(log.details ?? "")).toLowerCase().includes(q) ||
+      log.route?.toLowerCase().includes(q)
+    );
+  });
 
   const totalPages = Math.ceil(total / pageSize);
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-      </div>
-    );
-  }
+  const LEVELS = ["", "error", "warn", "info", "debug"] as const;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+
+      {/* ── Header ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Admin Logs</h1>
-          <p className="text-neutral-600">Monitor and track all admin panel activities</p>
+          <h1 className="text-xl font-bold text-neutral-900">Activity Log</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">{total} entries · showing page {page} of {Math.max(1, totalPages)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={exportLogs}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+            onClick={() => { setAutoRefresh(v => !v); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${autoRefresh ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
           >
-            <Download size={16} />
-            Export
+            <RefreshCw size={13} className={autoRefresh ? "animate-spin" : ""} />
+            {autoRefresh ? "Live" : "Auto-refresh"}
           </button>
-          <button
-            onClick={clearLogs}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-          >
-            <Trash2 size={16} />
-            Clear Logs
+          <button onClick={fetchLogs} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-600 hover:bg-neutral-200">
+            <RefreshCw size={13} /> Refresh
+          </button>
+          <button onClick={exportLogs} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-600 hover:bg-neutral-200">
+            <Download size={13} /> Export CSV
+          </button>
+          <button onClick={clearLogs} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100">
+            <Trash2 size={13} /> Clear
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
-            >
-              <Filter size={16} />
-              Filters
-              {(filters.level || filters.action || filters.startDate || filters.endDate || filters.userId) && (
-                <span className="bg-emerald-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {Object.values(filters).filter(Boolean).length}
-                </span>
-              )}
-            </button>
-            {(filters.level || filters.action || filters.startDate || filters.endDate || filters.userId) && (
+      {/* ── Filter bar ── */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-3 flex flex-wrap gap-3 items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-48">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input
+            type="text"
+            placeholder="Search action, user, route…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+          />
+        </div>
+
+        {/* Level pills */}
+        <div className="flex gap-1">
+          {LEVELS.map(l => {
+            const style = l ? LEVEL_STYLES[l] : null;
+            const active = levelFilter === l;
+            return (
               <button
-                onClick={clearFilters}
-                className="text-sm text-neutral-500 hover:text-neutral-700"
+                key={l || "all"}
+                onClick={() => { setLevelFilter(l); setPage(1); }}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors border ${active
+                  ? l ? `${LEVEL_STYLES[l].pill} ring-1 ring-inset` : "bg-neutral-800 text-white border-neutral-800"
+                  : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:bg-neutral-100"}`}
               >
-                Clear all
+                {l ? LEVEL_STYLES[l].label : "All"}
               </button>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Search logs..."
-              value={filters.action}
-              onChange={(e) => handleFilterChange('action', e.target.value)}
-              className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-            />
-            <div className="text-sm text-neutral-500">
-              {total} logs found
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t border-neutral-200">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Level</label>
-              <select
-                value={filters.level}
-                onChange={(e) => handleFilterChange('level', e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-              >
-                <option value="">All Levels</option>
-                <option value="error">Error</option>
-                <option value="warn">Warning</option>
-                <option value="info">Info</option>
-                <option value="debug">Debug</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">End Date</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">User ID</label>
-              <input
-                type="text"
-                placeholder="User ID"
-                value={filters.userId}
-                onChange={(e) => handleFilterChange('userId', e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-              />
-            </div>
-          </div>
-        )}
+        {/* Date range */}
+        <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+          <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(1); }}
+            className="px-2 py-1.5 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-violet-400" />
+          <span>–</span>
+          <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(1); }}
+            className="px-2 py-1.5 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-violet-400" />
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(""); setEndDate(""); setPage(1); }} className="text-neutral-400 hover:text-neutral-600 ml-1">✕</button>
+          )}
+        </div>
       </div>
 
-      {/* Logs Table */}
+      {/* ── Timeline feed ── */}
       <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Timestamp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Level
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  IP
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Details
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200">
-              {logs.map((log) => (
-                <tr key={log._id || log.id} className="hover:bg-neutral-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-neutral-400" />
-                      {new Date(log.timestamp).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getLevelIcon(log.level)}
-                      <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(log.level)}`}>
-                        {log.level.toUpperCase()}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-neutral-900 font-medium">
-                    {log.action}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                    {log.userEmail ? (
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-1 text-neutral-400" />
-                        {log.userEmail}
-                      </div>
-                    ) : (
-                      <span className="text-neutral-400">System</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                    {log.ip || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-neutral-500">
-                    {log.details && (
-                      <div className="max-w-xs truncate">
-                        {typeof log.details === 'string' 
-                          ? log.details 
-                          : JSON.stringify(log.details, null, 2)
-                        }
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {logs.length === 0 && (
-          <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No logs found</h3>
-            <p className="text-neutral-500">No logs match your current filters</p>
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-7 h-7 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
           </div>
+        ) : visible.length === 0 ? (
+          <div className="text-center py-16">
+            <FileText className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+            <p className="text-sm font-medium text-neutral-500">No logs match your filters</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-neutral-100">
+            {visible.map(log => {
+              const id = String(log._id || log.id);
+              const expanded = expandedId === id;
+              const ls = LEVEL_STYLES[log.level] ?? LEVEL_STYLES.debug;
+              const hasDetails = log.details || log.route || log.method || log.statusCode || log.ip || log.error || log.metadata;
+
+              return (
+                <li key={id}>
+                  <button
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${hasDetails ? "cursor-pointer hover:bg-neutral-50" : "cursor-default"} ${expanded ? "bg-neutral-50" : ""}`}
+                    onClick={() => hasDetails && setExpandedId(expanded ? null : id)}
+                  >
+                    {/* level dot */}
+                    <span className={`mt-1.5 shrink-0 w-2 h-2 rounded-full ${ls.dot}`} />
+
+                    {/* action icon */}
+                    <span className="shrink-0 mt-0.5">{getActionIcon(log.action)}</span>
+
+                    {/* main content */}
+                    <span className="flex-1 min-w-0">
+                      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-sm font-semibold text-neutral-900">{prettifyAction(log.action)}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-1 ring-inset ${ls.pill}`}>{ls.label}</span>
+                        {log.route && (
+                          <span className="text-xs text-neutral-400 font-mono truncate max-w-xs">
+                            {log.method && <span className="text-violet-500 font-bold">{log.method} </span>}{log.route}
+                            {log.statusCode && <span className={`ml-1 font-bold ${log.statusCode >= 400 ? "text-red-500" : "text-emerald-600"}`}>{log.statusCode}</span>}
+                          </span>
+                        )}
+                      </span>
+                      {summarizeLine(log.action, log.details) && (
+                        <span className="block text-xs text-neutral-600 mt-0.5 truncate">
+                          {summarizeLine(log.action, log.details)}
+                        </span>
+                      )}
+                      <span className="flex flex-wrap items-center gap-x-3 mt-0.5 text-xs text-neutral-400">
+                        {log.userEmail && <span className="flex items-center gap-1"><User size={11} />{log.userEmail}</span>}
+                        {log.ip && <span>{log.ip}</span>}
+                        {log.duration != null && <span>{log.duration}ms</span>}
+                        <span title={new Date(log.timestamp).toLocaleString()}>{relativeTime(log.timestamp)}</span>
+                      </span>
+                    </span>
+
+                    {/* expand chevron */}
+                    {hasDetails && (
+                      <span className="shrink-0 mt-1 text-neutral-300">
+                        {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* ── Expanded detail panel ── */}
+                  {expanded && (
+                    <div className="px-4 pb-4 pt-1 bg-neutral-50 border-t border-neutral-100">
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+                        <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">Timestamp</dt><dd className="text-neutral-800 mt-0.5">{new Date(log.timestamp).toLocaleString()}</dd></div>
+                        {log.action && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">Raw action</dt><dd className="font-mono text-neutral-700 mt-0.5">{log.action}</dd></div>}
+                        {log.userEmail && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">User</dt><dd className="text-neutral-800 mt-0.5">{log.userEmail}{log.userId && <span className="ml-1 text-neutral-400">({log.userId})</span>}</dd></div>}
+                        {log.ip && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">IP</dt><dd className="text-neutral-800 mt-0.5">{log.ip}</dd></div>}
+                        {log.route && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">Route</dt><dd className="font-mono text-neutral-700 mt-0.5">{log.method} {log.route}</dd></div>}
+                        {log.statusCode && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">Status</dt><dd className={`font-bold mt-0.5 ${log.statusCode >= 400 ? "text-red-600" : "text-emerald-600"}`}>{log.statusCode}</dd></div>}
+                        {log.duration != null && <div><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">Duration</dt><dd className="text-neutral-800 mt-0.5">{log.duration}ms</dd></div>}
+                        {log.userAgent && <div className="sm:col-span-2"><dt className="font-semibold text-neutral-500 uppercase tracking-wide text-[10px]">User Agent</dt><dd className="font-mono text-neutral-500 mt-0.5 break-all">{log.userAgent}</dd></div>}
+                      </dl>
+                      {log.error && (
+                        <div className="mt-3 p-2.5 rounded-lg bg-red-50 border border-red-200">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-red-500 mb-1">Error</p>
+                          <p className="text-xs font-mono text-red-700">{log.error}</p>
+                        </div>
+                      )}
+                      {log.details && (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mb-1">Details</p>
+                          <pre className="text-xs bg-neutral-900 text-emerald-300 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">
+                            {typeof log.details === "string" ? log.details : JSON.stringify(log.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {log.metadata && Object.keys(log.metadata).length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mb-1">Metadata</p>
+                          <pre className="text-xs bg-neutral-900 text-sky-300 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
 
-      {/* Pagination */}
+      {/* ── Pagination ── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-neutral-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-neutral-700">
-                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
-                <span className="font-medium">{total}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <span className="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-700">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
-                  disabled={page === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
-            </div>
+        <div className="flex items-center justify-between text-sm text-neutral-500">
+          <span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 disabled:opacity-40 text-xs font-medium">← Prev</button>
+            <span className="px-3 py-1.5 text-xs font-semibold">{page} / {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 disabled:opacity-40 text-xs font-medium">Next →</button>
           </div>
         </div>
       )}

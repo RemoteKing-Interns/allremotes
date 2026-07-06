@@ -11,6 +11,7 @@ import ProductSpreadsheet from "../../components/admin/ProductSpreadsheet";
 import AdminUsersManager from "../../components/admin/AdminUsers";
 import AdminLogs from "../../components/admin/AdminLogs";
 import CustomerManagement from "../../components/admin/CustomerManagement";
+import AdminAbandonedCarts from "../../components/admin/AdminAbandonedCarts";
 import {
   LayoutDashboard,
   BarChart3,
@@ -371,15 +372,25 @@ const AdminContent = () => {
   const [loginError, setLoginError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // ── Global command palette (⌘K / Ctrl+K)
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [cmdkQuery, setCmdkQuery] = useState("");
+  const [cmdkResults, setCmdkResults] = useState<{ type: string; label: string; sub?: string; action: () => void }[]>([]);
+  const [cmdkIndex, setCmdkIndex] = useState(0);
+  const cmdkInputRef = useRef<HTMLInputElement>(null);
+
   // Sync logged-in user into activity logger
   useEffect(() => {
     if (user?.email) activityLogger.setUser(user.email, user.id);
   }, [user]);
 
-  // Log every tab navigation
+  // Log tab navigation only for meaningful sections (not every click)
   useEffect(() => {
     if (!isAdmin) return;
-    activityLogger.pageView(activeTab, { tab: activeTab });
+    const skip = ['dashboard'];
+    if (!skip.includes(activeTab)) {
+      activityLogger.pageView(activeTab, { tab: activeTab });
+    }
   }, [activeTab, isAdmin]);
 
   // Flush pending logs when admin closes/navigates away
@@ -530,6 +541,107 @@ const AdminContent = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // ── ⌘K / Ctrl+K global keyboard shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdkOpen((v) => !v);
+        setCmdkQuery("");
+        setCmdkIndex(0);
+      }
+      if (e.key === 'Escape') setCmdkOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Focus input when palette opens
+  useEffect(() => {
+    if (cmdkOpen) setTimeout(() => cmdkInputRef.current?.focus(), 50);
+  }, [cmdkOpen]);
+
+  // Build results whenever query changes
+  useEffect(() => {
+    if (!cmdkOpen) return;
+    const q = cmdkQuery.toLowerCase().trim();
+
+    const results: { type: string; label: string; sub?: string; action: () => void }[] = [];
+
+    // Nav items
+    const navDefs = [
+      { id: 'dashboard', label: 'Home' },
+      { id: 'orders', label: 'Orders' },
+      { id: 'returns', label: 'Returns' },
+      { id: 'abandoned_carts', label: 'Abandoned Carts' },
+      { id: 'products', label: 'Products' },
+      { id: 'categories', label: 'Categories & Brands' },
+      { id: 'inventory', label: 'Inventory' },
+      { id: 'customers', label: 'Customers' },
+      { id: 'reviews', label: 'Reviews' },
+      { id: 'messages', label: 'Messages/Queries' },
+      { id: 'promotions', label: 'Promotions' },
+      { id: 'discounts', label: 'Discounts' },
+      { id: 'home', label: 'Homepage' },
+      { id: 'navigation', label: 'Navigation' },
+      { id: 'analytics', label: 'Reports' },
+      { id: 'live_view', label: 'Live View' },
+      { id: 'admin_users', label: 'Admin Users' },
+      { id: 'admin_logs', label: 'Logs' },
+      { id: 'settings', label: 'Settings' },
+    ];
+
+    navDefs.forEach(({ id, label }) => {
+      if (q === "" || label.toLowerCase().includes(q) || id.includes(q)) {
+        results.push({ type: 'nav', label, sub: 'Go to page', action: () => { setActiveTab(id); setCmdkOpen(false); } });
+      }
+    });
+
+    // Fetch-based search (orders + products) — only when there's a query
+    if (q.length >= 2) {
+      fetch(`/api/orders?limit=200`, { cache: 'no-store' })
+        .then(r => r.json()).then((data: any[]) => {
+          if (!Array.isArray(data)) return;
+          const matches = data.filter((o: any) => {
+            const txt = [o.id, o.customer?.email, o.customer?.fullName, o.status].filter(Boolean).join(' ').toLowerCase();
+            return txt.includes(q);
+          }).slice(0, 5);
+          if (matches.length === 0) return;
+          setCmdkResults(prev => [
+            ...prev.filter(r => r.type !== 'order'),
+            ...matches.map((o: any) => ({
+              type: 'order',
+              label: `Order #${o.id}`,
+              sub: `${o.customer?.email || 'Guest'} · ${o.status}`,
+              action: () => { setActiveTab('orders'); setViewOrderId(o.id); setCmdkOpen(false); },
+            })),
+          ]);
+        }).catch(() => null);
+
+      fetch(`/api/products`, { cache: 'no-store' })
+        .then(r => r.json()).then((data: any[]) => {
+          if (!Array.isArray(data)) return;
+          const matches = data.filter((p: any) => {
+            const txt = [p.name, p.sku, p.rk_sku, p.brand, p.category].filter(Boolean).join(' ').toLowerCase();
+            return txt.includes(q);
+          }).slice(0, 5);
+          if (matches.length === 0) return;
+          setCmdkResults(prev => [
+            ...prev.filter(r => r.type !== 'product'),
+            ...matches.map((p: any) => ({
+              type: 'product',
+              label: p.name,
+              sub: `${p.sku || p.rk_sku || ''} · ${p.category || ''}`,
+              action: () => { setActiveTab('products'); setCmdkOpen(false); },
+            })),
+          ]);
+        }).catch(() => null);
+    }
+
+    setCmdkResults(results);
+    setCmdkIndex(0);
+  }, [cmdkQuery, cmdkOpen]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -714,11 +826,14 @@ const AdminContent = () => {
         {/* Search */}
         {!sidebarCollapsed && (
           <div className="px-3 py-3">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-neutral-400 text-sm">
+            <button
+              onClick={() => { setCmdkOpen(true); setCmdkQuery(""); setCmdkIndex(0); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-neutral-400 text-sm hover:bg-white/10 hover:text-neutral-200 transition-colors cursor-pointer"
+            >
               <Search size={16} />
               <span>Search</span>
               <span className="ml-auto text-xs bg-white/10 px-1.5 py-0.5 rounded">⌘K</span>
-            </div>
+            </button>
           </div>
         )}
 
@@ -903,8 +1018,110 @@ const AdminContent = () => {
           {activeTab === 'profile' && <AdminProfile />}
         </main>
       </div>
+
+      {/* ── Global Command Palette ─────────────────────────────────── */}
+      {cmdkOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
+          onClick={() => setCmdkOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl mx-4 rounded-xl bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setCmdkIndex(i => Math.min(i + 1, cmdkResults.length - 1)); }
+              if (e.key === 'ArrowUp') { e.preventDefault(); setCmdkIndex(i => Math.max(i - 1, 0)); }
+              if (e.key === 'Enter' && cmdkResults[cmdkIndex]) { cmdkResults[cmdkIndex].action(); }
+              if (e.key === 'Escape') setCmdkOpen(false);
+            }}
+          >
+            {/* Input */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100">
+              <Search size={18} className="text-neutral-400 shrink-0" />
+              <input
+                ref={cmdkInputRef}
+                type="text"
+                placeholder="Search orders, products, pages…"
+                value={cmdkQuery}
+                onChange={(e) => setCmdkQuery(e.target.value)}
+                className="flex-1 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none bg-transparent"
+              />
+              {cmdkQuery && (
+                <button onClick={() => setCmdkQuery("")} className="text-neutral-400 hover:text-neutral-600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+              <kbd className="text-[11px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">ESC</kbd>
+            </div>
+
+            {/* Results */}
+            <div className="max-h-[50vh] overflow-y-auto py-2">
+              {cmdkResults.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-neutral-400">No results found</p>
+              ) : (
+                (() => {
+                  const typeOrder = ['nav', 'order', 'product'];
+                  const typeLabel: Record<string, string> = { nav: 'Pages', order: 'Orders', product: 'Products' };
+                  let lastType = '';
+                  return cmdkResults.map((r, i) => {
+                    const showHeading = r.type !== lastType;
+                    lastType = r.type;
+                    return (
+                      <div key={i}>
+                        {showHeading && (
+                          <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                            {typeLabel[r.type] || r.type}
+                          </p>
+                        )}
+                        <button
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${i === cmdkIndex ? 'bg-violet-50 text-violet-900' : 'hover:bg-neutral-50 text-neutral-800'}`}
+                          onClick={r.action}
+                          onMouseEnter={() => setCmdkIndex(i)}
+                        >
+                          <span className={`shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
+                            r.type === 'order' ? 'bg-blue-100 text-blue-700' :
+                            r.type === 'product' ? 'bg-emerald-100 text-emerald-700' :
+                            'bg-neutral-100 text-neutral-500'
+                          }`}>
+                            {r.type === 'order' ? '#' : r.type === 'product' ? 'P' : '→'}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-sm font-medium truncate">{r.label}</span>
+                            {r.sub && <span className="block text-xs text-neutral-400 truncate">{r.sub}</span>}
+                          </span>
+                          {i === cmdkIndex && (
+                            <kbd className="text-[10px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded font-mono shrink-0">↵</kbd>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center gap-3 px-4 py-2 border-t border-neutral-100 text-[11px] text-neutral-400">
+              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">↑↓</kbd> navigate</span>
+              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">↵</kbd> select</span>
+              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">ESC</kbd> close</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// ─── Types for Unleashed push state ────────────────────────────────────────
+type UnleashedPushState = {
+  // orderIds that have been pushed for this group label
+  pushedOrderIds: string[];
+  // Push targets per order ID
+  pushTargets: Record<string, { unleashed: boolean; pickops: boolean }>;
+  // Unleashed order number returned after push (populated later)
+  unleashedOrderNumber?: string;
+  unleashedOrderUrl?: string;
 };
 
 function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void }) {
@@ -913,6 +1130,34 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
+  // ── Unleashed: per-group selected order IDs (for checkboxes)
+  const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
+
+  // ── Unleashed: push state per group label (persists pushed badge + order number)
+  const [unleashedPushState, setUnleashedPushState] = useState<Record<string, UnleashedPushState>>({});
+
+  // ── PickOps: status per order ID (fetched from PickOps MongoDB)
+  const [pickopsStatus, setPickopsStatus] = useState<Record<string, { status: string; lastUpdatedAt: string | null }>>({});
+
+  // ── Unleashed modal state
+  const [unleashedModal, setUnleashedModal] = useState<{
+    groupLabel: string;
+    selectedOrderIds: string[];
+    aggregatedItems: { id: string; name: string; sku: string; quantity: number }[];
+  } | null>(null);
+
+  // ── Unleashed modal: editable items
+  const [modalItems, setModalItems] = useState<{ id: string; name: string; sku: string; quantity: number }[]>([]);
+
+  // ── Unleashed modal: pushing state
+  const [pushingToUnleashed, setPushingToUnleashed] = useState(false);
+
+  // ── Unleashed modal: stock data fetched from Unleashed, cached per group label
+  // allGroupStock: { [groupLabel]: { [productKey]: { unleashedQty, newStock } } }
+  const [allGroupStock, setAllGroupStock] = useState<Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>>>({});
+  const [modalStock, setModalStock] = useState<Record<string, { unleashedQty: number | null; newStock: number | null }>>({});
+  const [loadingStock, setLoadingStock] = useState(false);
 
   // Auto-open order modal when viewOrderId is set
   useEffect(() => {
@@ -932,7 +1177,69 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
       const resp = await fetch("/api/orders", { cache: "no-store" });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to load orders");
-      setOrders(Array.isArray(data) ? data : []);
+      const loaded: any[] = Array.isArray(data) ? data : [];
+      setOrders(loaded);
+
+      // Rebuild unleashedPushState and allGroupStock from persisted order data
+      const rebuilt: Record<string, UnleashedPushState> = {};
+      const rebuiltStock: Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>> = {};
+      loaded.forEach((order) => {
+        const groupResult = getDateGroup(order.createdAt || order.updatedAt || "");
+        const groupLabel = typeof groupResult === "string" ? groupResult : (groupResult as any)?.label ?? String(groupResult);
+
+        if (order.unleashedOrderNumber) {
+          if (!rebuilt[groupLabel] || !rebuilt[groupLabel].unleashedOrderNumber) {
+            rebuilt[groupLabel] = {
+              pushedOrderIds: [],
+              pushTargets: {},
+              unleashedOrderNumber: order.unleashedOrderNumber,
+              unleashedOrderUrl: order.unleashedOrderUrl || "",
+            };
+          }
+          rebuilt[groupLabel].pushedOrderIds = [
+            ...new Set([...rebuilt[groupLabel].pushedOrderIds, order.id]),
+          ];
+          // Store push targets for this order
+          rebuilt[groupLabel].pushTargets[order.id] = {
+            unleashed: order.unleashedOrderNumber ? true : false,
+            pickops: order.pickopsPushedAt ? true : false,
+          };
+        }
+
+        // Rebuild stock cache from stockSnapshot saved on any order in the group
+        if (order.stockSnapshot && !rebuiltStock[groupLabel]) {
+          const snap = order.stockSnapshot as Record<string, number | null>;
+          const map: Record<string, { unleashedQty: number | null; newStock: number | null }> = {};
+          Object.entries(snap).forEach(([key, qty]) => {
+            map[key] = { unleashedQty: qty, newStock: qty };
+          });
+          rebuiltStock[groupLabel] = map;
+        }
+      });
+      if (Object.keys(rebuilt).length > 0) {
+        setUnleashedPushState((prev) => ({ ...rebuilt, ...prev }));
+      }
+      if (Object.keys(rebuiltStock).length > 0) {
+        setAllGroupStock((prev) => ({ ...rebuiltStock, ...prev }));
+      }
+
+      // Fetch PickOps status for all orders
+      const orderIds = loaded.map((o) => o.id);
+      if (orderIds.length > 0) {
+        try {
+          const pickopsResp = await fetch("/api/admin/pickops-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderIds }),
+          });
+          if (pickopsResp.ok) {
+            const pickopsData = await pickopsResp.json();
+            setPickopsStatus(pickopsData.statusMap || {});
+          }
+        } catch {
+          // Non-fatal — PickOps status is optional
+        }
+      }
     } catch (err: any) {
       setOrders([]);
       setError(err?.message || "Failed to load orders");
@@ -1009,14 +1316,235 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to update order");
       setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...(data || {}), status } : o)));
-      activityLogger.action("order_status_updated", { orderId: id, status });
+      const prevOrder = orders.find((o: any) => o.id === id);
+      activityLogger.action("order_status_updated", {
+        orderId: id,
+        previousStatus: prevOrder?.status ?? 'unknown',
+        newStatus: status,
+        customer: prevOrder?.customerName || prevOrder?.customer?.email || 'unknown',
+      });
     } catch (err: any) {
-      activityLogger.error("order_status_update_failed", { orderId: id, status, error: err?.message });
+      activityLogger.error("order_status_update_failed", { orderId: id, attemptedStatus: status, error: err?.message });
       setError(err?.message || "Failed to update order");
     } finally {
       setSavingId(null);
     }
   };
+
+  // ── Unleashed helpers ──────────────────────────────────────────────────────
+
+  const getGroupSelection = (groupLabel: string, groupOrders: any[]): Set<string> => {
+    if (groupSelections[groupLabel]) return groupSelections[groupLabel];
+    // Default: select all orders that have NOT already been pushed in this group
+    const pushedIds = new Set(unleashedPushState[groupLabel]?.pushedOrderIds || []);
+    const defaultSelected = new Set(
+      groupOrders.filter((o) => !pushedIds.has(o.id)).map((o) => o.id)
+    );
+    return defaultSelected;
+  };
+
+  const setGroupSelection = (groupLabel: string, ids: Set<string>) => {
+    setGroupSelections((prev) => ({ ...prev, [groupLabel]: ids }));
+  };
+
+  const toggleOrderInGroup = (groupLabel: string, orderId: string, groupOrders: any[]) => {
+    const current = new Set(getGroupSelection(groupLabel, groupOrders));
+    if (current.has(orderId)) {
+      current.delete(orderId);
+    } else {
+      current.add(orderId);
+    }
+    setGroupSelection(groupLabel, current);
+  };
+
+  const toggleAllInGroup = (groupLabel: string, groupOrders: any[]) => {
+    const current = getGroupSelection(groupLabel, groupOrders);
+    const allIds = groupOrders.map((o) => o.id);
+    if (current.size === allIds.length) {
+      setGroupSelection(groupLabel, new Set());
+    } else {
+      setGroupSelection(groupLabel, new Set(allIds));
+    }
+  };
+
+  const openUnleashedModal = (groupLabel: string, groupOrders: any[]) => {
+    const selection = getGroupSelection(groupLabel, groupOrders);
+    const selectedOrderIds = Array.from(selection);
+    const selectedOrders = groupOrders.filter((o) => selectedOrderIds.includes(o.id));
+
+    // Aggregate items: merge by product id, summing quantities
+    const itemMap: Record<string, { id: string; name: string; sku: string; rk_sku: string; quantity: number }> = {};
+    selectedOrders.forEach((order) => {
+      (order.items || []).forEach((item: any) => {
+        // Group by rk_sku first (stable Unleashed product code), then sku, then id, then name
+        const key = item.rk_sku || item.sku || item.id || item.name;
+        if (itemMap[key]) {
+          itemMap[key].quantity += Number(item.quantity || 1);
+        } else {
+          itemMap[key] = {
+            id: item.id || key,
+            name: item.name || "Unknown",
+            sku: item.sku || "",
+            rk_sku: item.rk_sku || "",
+            quantity: Number(item.quantity || 1),
+          };
+        }
+      });
+    });
+
+    const aggregatedItems = Object.values(itemMap);
+    setUnleashedModal({ groupLabel, selectedOrderIds, aggregatedItems });
+    setModalItems(aggregatedItems.map((i) => ({ ...i })));
+
+    // Fetch stock from Unleashed on first open for this group; restore from cache on subsequent opens
+    setAllGroupStock((prev) => {
+      if (prev[groupLabel]) {
+        // Already fetched — restore cached stock immediately
+        setModalStock(prev[groupLabel]);
+        setLoadingStock(false);
+        return prev;
+      }
+      // First open — fetch from Unleashed
+      setLoadingStock(true);
+      setModalStock({});
+      const stockItems = aggregatedItems.map((i) => ({
+        rk_sku: i.rk_sku || "",
+        sku: i.sku || "",
+        name: i.name || "",
+        sellingQty: i.quantity,
+      }));
+      fetch("/api/unleashed/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: stockItems, orderIds: selectedOrderIds }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const map: Record<string, { unleashedQty: number | null; newStock: number | null }> = {};
+          (data.results || []).forEach((r: any) => {
+            [r.productCode, r.rk_sku, r.sku, r.name].filter(Boolean).forEach((k: string) => {
+              if (!map[k]) map[k] = { unleashedQty: r.unleashedQty, newStock: r.newStock };
+            });
+          });
+          setModalStock(map);
+          setAllGroupStock((s) => ({ ...s, [groupLabel]: map }));
+        })
+        .catch(() => {})
+        .finally(() => setLoadingStock(false));
+      return { ...prev, [groupLabel]: {} }; // reserve slot so parallel opens don't double-fetch
+    });
+  };
+
+  const handleModalItemQtyChange = (idx: number, value: string) => {
+    const qty = Math.max(0, parseInt(value) || 0);
+    setModalItems((prev) => prev.map((item, i) => (i === idx ? { ...item, quantity: qty } : item)));
+  };
+
+  const [unleashedError, setUnleashedError] = useState<string>("");
+  const [pushTargets, setPushTargets] = useState<{ unleashed: boolean; pickops: boolean }>({ unleashed: true, pickops: true });
+
+  const handlePushToUnleashed = async () => {
+    if (!unleashedModal) return;
+    if (!pushTargets.unleashed && !pushTargets.pickops) return;
+    setPushingToUnleashed(true);
+    setUnleashedError("");
+
+    const { groupLabel, selectedOrderIds } = unleashedModal;
+
+    // Build per-order breakdown for PickOps (individual docs per order)
+    const selectedOrders = orders.filter((o: any) => selectedOrderIds.includes(o.id));
+    const perOrder = selectedOrders.map((o: any) => ({
+      orderId: o.id,
+      customerName: o.customerName || o.customer?.name || "",
+      items: (o.items || []).map((item: any) => ({
+        name: item.name || "",
+        sku: item.sku || "",
+        rk_sku: item.rk_sku || "",
+        quantity: Number(item.quantity || 1),
+        unitPrice: Number(item.unitPrice || item.price || 0),
+      })),
+    }));
+
+    try {
+      const resp = await fetch("/api/unleashed/sales-order", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          groupLabel,
+          selectedOrderIds,
+          items: modalItems,
+          perOrder,
+          pushTargets,
+        }),
+      });
+      const data = await resp.json().catch(() => null);
+
+      if (!resp.ok) {
+        setUnleashedError(data?.error || `Push failed (${resp.status})`);
+        setPushingToUnleashed(false);
+        return;
+      }
+
+      // Mark these specific orders as pushed and store the Unleashed order number
+      setUnleashedPushState((prev) => {
+        const existing = prev[groupLabel] || { pushedOrderIds: [], pushTargets: {} };
+        const merged = Array.from(new Set([...existing.pushedOrderIds, ...selectedOrderIds]));
+        
+        // Build push targets for each selected order
+        const newPushTargets: Record<string, { unleashed: boolean; pickops: boolean }> = {};
+        selectedOrderIds.forEach(orderId => {
+          newPushTargets[orderId] = {
+            unleashed: pushTargets.unleashed,
+            pickops: pushTargets.pickops,
+          };
+        });
+        
+        return {
+          ...prev,
+          [groupLabel]: {
+            pushedOrderIds: merged,
+            pushTargets: { ...existing.pushTargets, ...newPushTargets },
+            unleashedOrderNumber: data?.orderNumber || existing.unleashedOrderNumber,
+            unleashedOrderUrl: data?.orderUrl || existing.unleashedOrderUrl,
+          },
+        };
+      });
+
+      // After push: deselect pushed orders from checkboxes so next push defaults exclude them
+      setGroupSelections((prev) => {
+        const remaining = new Set(
+          (prev[groupLabel] ? Array.from(prev[groupLabel]) : []).filter(
+            (id) => !selectedOrderIds.includes(id)
+          )
+        );
+        return { ...prev, [groupLabel]: remaining };
+      });
+
+      activityLogger.action("orders_pushed", {
+        orderIds: selectedOrderIds,
+        orderCount: selectedOrderIds.length,
+        groupLabel,
+        targets: [pushTargets.unleashed && 'Unleashed', pushTargets.pickops && 'PickOps'].filter(Boolean).join(' + '),
+        unleashedOrderNumber: data?.orderNumber || null,
+      });
+      setUnleashedModal(null);
+    } catch (err: any) {
+      activityLogger.error("orders_push_failed", {
+        orderIds: selectedOrderIds,
+        groupLabel,
+        targets: [pushTargets.unleashed && 'Unleashed', pushTargets.pickops && 'PickOps'].filter(Boolean).join(' + '),
+        error: err?.message,
+      });
+      setUnleashedError(err?.message || "Unexpected error pushing to Unleashed");
+    } finally {
+      setPushingToUnleashed(false);
+    }
+  };
+
+  const isPushedToUnleashed = (groupLabel: string, orderId: string) =>
+    unleashedPushState[groupLabel]?.pushedOrderIds?.includes(orderId) ?? false;
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -1061,80 +1589,369 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
           </div>
         ) : (
           <div className="overflow-x-auto">
-            {Object.entries(groupOrdersByDate(orders)).map(([groupLabel, groupOrders]) => (
-              <div key={groupLabel} className="mb-6">
-                <div className="sticky top-0 z-10 bg-neutral-100/80 backdrop-blur-sm border-b border-neutral-200 px-6 py-3">
-                  <h3 className="text-sm font-bold text-neutral-700">{groupLabel}</h3>
-                </div>
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="border-b border-neutral-200 bg-neutral-50/50 text-neutral-500">
-                    <tr>
-                      <th className="px-6 py-4 font-semibold">Order ID</th>
-                      <th className="px-6 py-4 font-semibold">Time</th>
-                      <th className="px-6 py-4 font-semibold">Customer</th>
-                      <th className="px-6 py-4 font-semibold text-center">Items</th>
-                      <th className="px-6 py-4 font-semibold text-right">Total</th>
-                      <th className="px-6 py-4 font-semibold text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {groupOrders.map((o) => (
-                      <tr
-                        key={o.id}
-                        className="transition-colors hover:bg-neutral-50/50 cursor-pointer"
-                        onClick={() => setSelectedOrder(o)}
-                      >
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
-                            #{o.id}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-neutral-600">
-                          {new Date(o.createdAt || Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
-                        </td>
-                        <td className="px-6 py-4 text-center font-medium text-neutral-600">
-                          {Array.isArray(o.items) ? o.items.length : 0}
-                        </td>
-                        <td className="px-6 py-4 text-right font-extrabold text-neutral-900">
-                          AU${Number(o?.pricing?.total || 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="relative inline-flex items-center">
-                            <select
-                              className={`appearance-none rounded-full border border-transparent py-1.5 pl-4 pr-8 text-xs font-bold font-semibold uppercase tracking-wider outline-none ring-1 ring-inset ring-black/5 transition-all focus:ring-2 focus:ring-primary ${
-                                o.status === "delivered" || o.status === "customer_received"
-                                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20"
-                                  : o.status === "shipped"
-                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-600/20"
-                                  : o.status === "cancelled"
-                                  ? "bg-rose-50 text-rose-700 hover:bg-rose-100 ring-rose-600/20"
-                                  : "bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20"
-                              }`}
-                              value={o.status || "processing"}
-                              onChange={(e) => updateStatus(o.id, e.target.value)}
-                              disabled={savingId === o.id}
-                            >
-                              <option value="processing">Processing</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="customer_received">Received by Customer</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                            <div className="pointer-events-none absolute right-3 opacity-50">▾</div>
-                          </div>
-                        </td>
+            {Object.entries(groupOrdersByDate(orders)).map(([groupLabel, groupOrders]) => {
+              const selection = getGroupSelection(groupLabel, groupOrders);
+              const allSelected = selection.size === groupOrders.length;
+              const someSelected = selection.size > 0 && !allSelected;
+              const pushState = unleashedPushState[groupLabel];
+
+              return (
+                <div key={groupLabel} className="mb-6">
+                  {/* ── Group header ── */}
+                  <div className="sticky top-0 z-10 bg-neutral-100/80 backdrop-blur-sm border-b border-neutral-200 px-6 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <h3 className="text-sm font-bold text-neutral-700 shrink-0">{groupLabel}</h3>
+                      {/* Unleashed order number badge — shown once available */}
+                      {pushState?.unleashedOrderNumber && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                          Unleashed #{pushState.unleashedOrderNumber}
+                        </span>
+                      )}
+                    </div>
+                    {/* Push to Unleashed button */}
+                    <button
+                      type="button"
+                      disabled={selection.size === 0}
+                      onClick={() => openUnleashedModal(groupLabel, groupOrders)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition-all hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                      Push to Unleashed
+                      {selection.size > 0 && (
+                        <span className="ml-0.5 rounded-full bg-violet-200 px-1.5 py-0.5 text-[10px] font-bold text-violet-800">
+                          {selection.size}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="border-b border-neutral-200 bg-neutral-50/50 text-neutral-500">
+                      <tr>
+                        {/* Select-all checkbox */}
+                        <th className="px-4 py-4 w-10">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                            onChange={() => toggleAllInGroup(groupLabel, groupOrders)}
+                            className="h-4 w-4 rounded border-neutral-300 accent-violet-600 cursor-pointer"
+                            title="Select all in group"
+                          />
+                        </th>
+                        <th className="px-4 py-4 font-semibold">Order ID</th>
+                        <th className="px-4 py-4 font-semibold">Time</th>
+                        <th className="px-4 py-4 font-semibold">Customer</th>
+                        <th className="px-4 py-4 font-semibold text-center">Items</th>
+                        <th className="px-4 py-4 font-semibold text-right">Total</th>
+                        <th className="px-4 py-4 font-semibold text-center">Pushed</th>
+                        <th className="px-4 py-4 font-semibold text-center">PickOps</th>
+                        <th className="px-4 py-4 font-semibold text-center">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {groupOrders.map((o) => {
+                        const pushed = isPushedToUnleashed(groupLabel, o.id);
+                        const checked = selection.has(o.id);
+                        return (
+                          <tr
+                            key={o.id}
+                            className={`transition-colors hover:bg-neutral-50/50 cursor-pointer ${pushed ? "bg-violet-50/30" : ""}`}
+                            onClick={() => setSelectedOrder(o)}
+                          >
+                            {/* Per-order checkbox */}
+                            <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleOrderInGroup(groupLabel, o.id, groupOrders)}
+                                className="h-4 w-4 rounded border-neutral-300 accent-violet-600 cursor-pointer"
+                              />
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
+                                #{o.id}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 font-medium text-neutral-600">
+                              {new Date(o.createdAt || Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
+                            </td>
+                            <td className="px-4 py-4 text-center font-medium text-neutral-600">
+                              {Array.isArray(o.items) ? o.items.length : 0}
+                            </td>
+                            <td className="px-4 py-4 text-right font-extrabold text-neutral-900">
+                              AU${Number(o?.pricing?.total || 0).toFixed(2)}
+                            </td>
+                            {/* Pushed badge */}
+                            <td className="px-4 py-4 text-center">
+                              {(() => {
+                                const targets = unleashedPushState[groupLabel]?.pushTargets?.[o.id];
+                                if (!targets) {
+                                  return <span className="text-xs text-neutral-300">—</span>;
+                                }
+                                
+                                let text = "";
+                                if (targets.unleashed && targets.pickops) {
+                                  text = "PickOps + Unleashed";
+                                } else if (targets.unleashed) {
+                                  text = "Unleashed";
+                                } else if (targets.pickops) {
+                                  text = "PickOps";
+                                } else {
+                                  return <span className="text-xs text-neutral-300">—</span>;
+                                }
+                                
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    {text}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            {/* PickOps status */}
+                            <td className="px-4 py-4 text-center">
+                              {(() => {
+                                const pickops = pickopsStatus[o.id];
+                                if (!pickops) {
+                                  return <span className="text-xs text-neutral-300">—</span>;
+                                }
+                                const statusColor = {
+                                  pending: "bg-amber-100 text-amber-700",
+                                  picked: "bg-blue-100 text-blue-700",
+                                  packed: "bg-indigo-100 text-indigo-700",
+                                  shipped: "bg-purple-100 text-purple-700",
+                                  completed: "bg-emerald-100 text-emerald-700",
+                                  cancelled: "bg-rose-100 text-rose-700",
+                                  backordered: "bg-orange-100 text-orange-700",
+                                  "Release to Pick": "bg-cyan-100 text-cyan-700",
+                                  "Backordered": "bg-orange-100 text-orange-700",
+                                }[pickops.status] || "bg-neutral-100 text-neutral-700";
+                                return (
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColor}`}>
+                                    {pickops.status}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="relative inline-flex items-center">
+                                <select
+                                  className={`appearance-none rounded-full border border-transparent py-1.5 pl-4 pr-8 text-xs font-bold font-semibold uppercase tracking-wider outline-none ring-1 ring-inset ring-black/5 transition-all focus:ring-2 focus:ring-primary ${
+                                    o.status === "delivered" || o.status === "customer_received"
+                                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20"
+                                      : o.status === "shipped"
+                                      ? "bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-600/20"
+                                      : o.status === "cancelled"
+                                      ? "bg-rose-50 text-rose-700 hover:bg-rose-100 ring-rose-600/20"
+                                      : "bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20"
+                                  }`}
+                                  value={o.status || "processing"}
+                                  onChange={(e) => updateStatus(o.id, e.target.value)}
+                                  disabled={savingId === o.id}
+                                >
+                                  <option value="processing">Processing</option>
+                                  <option value="shipped">Shipped</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="customer_received">Received by Customer</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                                <div className="pointer-events-none absolute right-3 opacity-50">▾</div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* ── Unleashed Push Modal ── */}
+      {unleashedModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !pushingToUnleashed && setUnleashedModal(null)}
+        >
+          <div
+            className="w-full max-w-xl rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-200 bg-violet-50 px-6 py-4">
+              <div>
+                <h2 className="text-base font-bold text-neutral-900">Push to Unleashed</h2>
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  {unleashedModal.groupLabel} · {unleashedModal.selectedOrderIds.length} order{unleashedModal.selectedOrderIds.length !== 1 ? "s" : ""} selected
+                </p>
+              </div>
+              <button
+                onClick={() => !pushingToUnleashed && setUnleashedModal(null)}
+                disabled={pushingToUnleashed}
+                className="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 disabled:opacity-40"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body: aggregated items table */}
+            <div className="px-6 py-4">
+              <p className="mb-3 text-xs text-neutral-500">
+                Review and adjust quantities before pushing. Items are aggregated across all selected orders.
+              </p>
+              {(() => {
+                const hasRkSku = modalItems.some((i) => i.rk_sku);
+                return (
+                  <div className="rounded-lg border border-neutral-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left font-semibold">Product</th>
+                          {hasRkSku && <th className="px-4 py-2.5 text-left font-semibold">RK_SKU</th>}
+                          <th className="px-4 py-2.5 text-right font-semibold w-28">Quantity</th>
+                          <th className="px-4 py-2.5 text-right font-semibold w-28">
+                            {loadingStock ? (
+                              <span className="inline-flex items-center gap-1 text-neutral-400">
+                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500" />
+                                Stock
+                              </span>
+                            ) : "Stock"}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {modalItems.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-neutral-50/60">
+                            <td className="px-4 py-3 font-medium text-neutral-900 max-w-[200px] truncate" title={item.name}>
+                              {item.name}
+                            </td>
+                            {hasRkSku && (
+                              <td className="px-4 py-3 font-mono text-xs text-neutral-500">
+                                {item.rk_sku || "—"}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-right">
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.quantity}
+                                onChange={(e) => handleModalItemQtyChange(idx, e.target.value)}
+                                className="w-20 rounded-lg border border-neutral-200 px-2 py-1 text-right text-sm font-semibold text-neutral-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {(() => {
+                                const key = item.rk_sku || item.sku || item.name;
+                                const s = modalStock[key];
+                                if (loadingStock) return <span className="text-neutral-300">...</span>;
+                                if (!s || s.newStock === null) return <span className="text-neutral-400">—</span>;
+                                return (
+                                  <div className="flex flex-col items-end">
+                                    <span className={`text-base font-bold tabular-nums ${
+                                      s.newStock < 1 ? "text-red-600" : s.newStock <= 3 ? "text-amber-500" : "text-emerald-600"
+                                    }`}>
+                                      {s.newStock}
+                                    </span>
+                                    <span className="text-[10px] text-neutral-400">of {s.unleashedQty} in UL</span>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                          </tr>
+                        ))}
+                        {modalItems.length === 0 && (
+                          <tr>
+                            <td colSpan={hasRkSku ? 4 : 3} className="px-4 py-6 text-center text-sm text-neutral-400">
+                              No items in selected orders.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col gap-2 border-t border-neutral-200 px-6 py-4">
+              {unleashedError && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700">
+                  {unleashedError}
+                </div>
+              )}
+              {/* Push targets */}
+              <div className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Push to:</span>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={pushTargets.unleashed}
+                    onChange={(e) => {
+                      const next = { ...pushTargets, unleashed: e.target.checked };
+                      if (!next.unleashed && !next.pickops) return; // at least one must stay checked
+                      setPushTargets(next);
+                    }}
+                    className="h-4 w-4 rounded border-neutral-300 accent-violet-600"
+                  />
+                  <span className="text-sm font-semibold text-neutral-700">Unleashed</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={pushTargets.pickops}
+                    onChange={(e) => {
+                      const next = { ...pushTargets, pickops: e.target.checked };
+                      if (!next.unleashed && !next.pickops) return; // at least one must stay checked
+                      setPushTargets(next);
+                    }}
+                    className="h-4 w-4 rounded border-neutral-300 accent-violet-600"
+                  />
+                  <span className="text-sm font-semibold text-neutral-700">PickOps</span>
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => { if (!pushingToUnleashed) { setUnleashedModal(null); setUnleashedError(""); } }}
+                disabled={pushingToUnleashed}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePushToUnleashed}
+                disabled={pushingToUnleashed || modalItems.length === 0 || (!pushTargets.unleashed && !pushTargets.pickops)}
+                className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pushingToUnleashed ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Pushing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    Push{pushTargets.unleashed && pushTargets.pickops ? " to Unleashed + PickOps" : pushTargets.unleashed ? " to Unleashed" : " to PickOps"}
+                  </>
+                )}
+              </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Detail Modal */}
       {selectedOrder && (
@@ -1178,6 +1995,59 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total</p>
                   <p className="text-sm font-bold">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</p>
                 </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Unleashed</p>
+                  {selectedOrder.unleashedOrderNumber ? (
+                    <div className="flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-xs font-semibold text-violet-700">
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Pushed
+                      </span>
+                      {selectedOrder.unleashedOrderUrl && (
+                        <a
+                          href={selectedOrder.unleashedOrderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-violet-600 hover:text-violet-800 underline"
+                          title="View in Unleashed"
+                        >
+                          {selectedOrder.unleashedOrderNumber}
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-neutral-400">Not pushed</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">PickOps</p>
+                  {(() => {
+                    const pickops = pickopsStatus[selectedOrder.id];
+                    if (!pickops) {
+                      return <span className="text-xs text-neutral-400">Not in PickOps</span>;
+                    }
+                    const statusColor = {
+                      pending: "bg-amber-100 text-amber-700",
+                      picked: "bg-blue-100 text-blue-700",
+                      packed: "bg-indigo-100 text-indigo-700",
+                      shipped: "bg-purple-100 text-purple-700",
+                      completed: "bg-emerald-100 text-emerald-700",
+                      cancelled: "bg-rose-100 text-rose-700",
+                    }[pickops.status] || "bg-neutral-100 text-neutral-700";
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${statusColor}`}>
+                          {pickops.status}
+                        </span>
+                        {pickops.lastUpdatedAt && (
+                          <span className="text-[10px] text-neutral-400">
+                            Updated {new Date(pickops.lastUpdatedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Customer Info */}
@@ -1212,6 +2082,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                     <div key={idx} className={`flex items-center justify-between p-4 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
                         <p className="font-medium text-neutral-900">{item.name}</p>
+                        {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
                         <p className="text-sm text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
                       </div>
                       <p className="font-semibold text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
@@ -1318,7 +2189,7 @@ function AdminReturns({ viewReturnId, setViewReturnId }: { viewReturnId: string 
       if (selectedReturn?.id === id) {
         setSelectedReturn({ ...selectedReturn, ...data });
       }
-      activityLogger.action("return_updated", { returnId: id, updates: Object.keys(updates) });
+      activityLogger.action("return_updated", { returnId: id, fields: Object.keys(updates), values: updates });
     } catch (err: any) {
       activityLogger.error("return_update_failed", { returnId: id, error: err?.message });
       setError(err?.message || "Failed to update return");
@@ -1974,247 +2845,6 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
   );
 }
 
-function AdminAbandonedCarts() {
-  const [carts, setCarts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
-  const [emailModal, setEmailModal] = useState<{ cart: any; discountPercent: number } | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const resp = await fetch("/api/abandoned-carts?hours=24", { cache: "no-store" });
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok) throw new Error(data?.error || "Failed to load abandoned carts");
-      setCarts(Array.isArray(data?.carts) ? data.carts : []);
-    } catch (err: any) {
-      setCarts([]);
-      setError(err?.message || "Failed to load abandoned carts");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const sendDiscountEmail = async (cart: any, discountPercent: number) => {
-    setSendingEmail(cart.userId || cart.email);
-    setError("");
-    try {
-      // Generate unique coupon code
-      const couponCode = `SAVE${discountPercent}${Date.now().toString(36).toUpperCase()}`;
-
-      // Create coupon
-      const couponResp = await fetch("/api/coupons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: couponCode,
-          discountPercent,
-          validDays: 7,
-          customerEmail: cart.email,
-          customerUserId: cart.userId,
-        }),
-      });
-
-      if (!couponResp.ok) throw new Error("Failed to create coupon");
-
-      // Send email
-      const emailResp = await fetch("/api/abandoned-cart-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: cart.email,
-          couponCode,
-          discountPercent,
-          items: cart.items,
-        }),
-      });
-
-      if (!emailResp.ok) throw new Error("Failed to send email");
-
-      // Mark cart as contacted
-      await fetch("/api/cart", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: cart.userId,
-          email: cart.email,
-          action: "mark_contacted",
-        }),
-      });
-
-      // Reload carts
-      await load();
-      setEmailModal(null);
-    } catch (err: any) {
-      setError(err?.message || "Failed to send discount email");
-    } finally {
-      setSendingEmail(null);
-    }
-  };
-
-  const getCartTotal = (items: any[]) => {
-    return items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  };
-
-  const getTimeSinceActivity = (lastActivity: string) => {
-    const diff = Date.now() - new Date(lastActivity).getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    return "Just now";
-  };
-
-  return (
-    <div className="animate-in fade-in duration-300">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
-            Abandoned Carts
-          </h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Carts with items that haven't been updated in 24+ hours
-          </p>
-        </div>
-        <button
-          onClick={load}
-          className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
-        >
-          <RefreshCw size={16} />
-          Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-neutral-500">Loading abandoned carts...</div>
-        </div>
-      ) : carts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-12 text-center">
-          <Package size={48} className="mx-auto mb-4 text-neutral-400" />
-          <h3 className="text-lg font-semibold text-neutral-900">No abandoned carts</h3>
-          <p className="mt-2 text-sm text-neutral-600">
-            Carts that haven't been updated in 24+ hours will appear here
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-neutral-500">Last Activity</th>
-                <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-neutral-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200">
-              {carts.map((cart) => (
-                <tr key={cart._id} className="hover:bg-neutral-50">
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-neutral-900">{cart.email || cart.userId}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-neutral-600">{cart.items?.length || 0} items</div>
-                    <div className="text-xs text-neutral-400 max-w-xs truncate">
-                      {cart.items?.slice(0, 2).map((item: any) => item.name).join(", ")}
-                      {cart.items?.length > 2 && "..."}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-neutral-900">AU${getCartTotal(cart.items).toFixed(2)}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-neutral-600">{getTimeSinceActivity(cart.lastActivity)}</div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => setEmailModal({ cart, discountPercent: 10 })}
-                      disabled={sendingEmail === (cart.userId || cart.email)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      {sendingEmail === (cart.userId || cart.email) ? (
-                        <>
-                          <RefreshCw size={14} className="animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Mail size={14} />
-                          Send Discount
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {emailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-neutral-900">Send Discount Email</h3>
-              <button onClick={() => setEmailModal(null)} className="text-neutral-400 hover:text-neutral-600 text-2xl">×</button>
-            </div>
-            <div className="space-y-4">
-              <div className="rounded-lg bg-neutral-50 p-4">
-                <p className="text-sm text-neutral-600">
-                  Send a discount email to <strong>{emailModal.cart.email}</strong> for their abandoned cart (AU${getCartTotal(emailModal.cart.items).toFixed(2)})
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Discount Percentage</label>
-                <select
-                  value={emailModal.discountPercent}
-                  onChange={(e) => setEmailModal({ ...emailModal, discountPercent: parseInt(e.target.value) })}
-                  className="w-full rounded-lg border border-neutral-300 px-4 py-2 text-sm"
-                >
-                  <option value={5}>5% off</option>
-                  <option value={10}>10% off</option>
-                  <option value={15}>15% off</option>
-                  <option value={20}>20% off</option>
-                  <option value={25}>25% off</option>
-                </select>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setEmailModal(null)}
-                  className="flex-1 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => sendDiscountEmail(emailModal.cart, emailModal.discountPercent)}
-                  disabled={sendingEmail === (emailModal.cart.userId || emailModal.cart.email)}
-                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {sendingEmail === (emailModal.cart.userId || emailModal.cart.email) ? "Sending..." : "Send Email"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function CustomersSection() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -3104,7 +3734,14 @@ function AdminProducts() {
       setProducts(updatedProducts);
     }, 0);
 
-    activityLogger.action("product_saved", { productId: editingId, name: updatedProduct.name });
+    activityLogger.action("product_saved", {
+      productId: editingId,
+      name: updatedProduct.name,
+      sku: updatedProduct.sku || updatedProduct.rk_sku || '',
+      category: updatedProduct.category || '',
+      price: updatedProduct.price,
+      inStock: updatedProduct.inStock,
+    });
     setPendingImageDeletions(new Set());
     setSaved(true);
     setIsNewProduct(false);
@@ -4312,7 +4949,7 @@ function AdminProducts() {
           </div>
         </div>
       ) : spreadsheetView ? (
-        <ProductSpreadsheet onBack={() => setSpreadsheetView(false)} />
+        <ProductSpreadsheet onBack={() => setSpreadsheetView(false)} readOnly={false} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="px-6 py-5 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between">
@@ -6822,6 +7459,29 @@ function AdminSettings() {
               <div className="flex flex-col text-sm">
                 <span className="font-semibold text-neutral-900">Enable Reviews</span>
                 <span className="text-neutral-500">Allow customers to submit new product reviews.</span>
+              </div>
+            </label>
+
+            <label className="group flex cursor-pointer items-start gap-4 rounded-lg border border-neutral-200 p-4 transition-colors hover:bg-neutral-50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <div className="pt-1">
+                <div className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={settings.emailsEnabled !== false}
+                    onChange={(e) => updateSetting('emailsEnabled', e.target.checked)}
+                  />
+                  <span className={`pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out ${settings.emailsEnabled !== false ? 'bg-primary' : 'bg-neutral-200'}`} />
+                  <span className={`pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-neutral-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out ${settings.emailsEnabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                </div>
+              </div>
+              <div className="flex flex-col text-sm">
+                <span className="font-semibold text-neutral-900">Enable Email Sending</span>
+                <span className="text-neutral-500">
+                  {settings.emailsEnabled !== false
+                    ? "Emails are currently being sent (order confirmations, abandoned carts, etc)."
+                    : "⚠️ All outgoing emails are disabled. No order confirmations or notifications will be sent."}
+                </span>
               </div>
             </label>
           </div>

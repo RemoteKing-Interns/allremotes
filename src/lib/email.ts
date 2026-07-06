@@ -65,6 +65,21 @@ const baseTemplate = (content: string, title: string) => `
 </html>
 `;
 
+// Check if emails are enabled via the content/settings store
+async function areEmailsEnabled(): Promise<boolean> {
+  try {
+    const { mongoEnabled, getDb } = await import('./mongo');
+    if (mongoEnabled()) {
+      const db = await getDb();
+      const doc = await db.collection('content').findOne({ _id: 'settings' } as any);
+      if (doc && (doc as any).data?.emailsEnabled === false) return false;
+    }
+  } catch {
+    // If we can't check, default to enabled
+  }
+  return true;
+}
+
 // Send email function
 export async function sendEmail({
   to,
@@ -77,6 +92,12 @@ export async function sendEmail({
   html: string;
   text?: string;
 }) {
+  const enabled = await areEmailsEnabled();
+  if (!enabled) {
+    console.log(`[Email] Sending disabled via settings. Skipping email to ${to}: "${subject}"`);
+    return { success: false, error: 'Email sending is disabled in admin settings' };
+  }
+
   const transporter = createTransporter();
   
   if (!transporter) {

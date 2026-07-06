@@ -279,6 +279,8 @@ const Checkout = () => {
         return {
           id: item.id,
           name: item.name,
+          sku: item.sku || "",
+          rk_sku: item.rk_sku || "",
           category: item.category,
           quantity: item.quantity,
           unitPrice: unit,
@@ -358,6 +360,8 @@ const Checkout = () => {
         return {
           id: item.id,
           name: item.name,
+          sku: item.sku || "",
+          rk_sku: item.rk_sku || "",
           category: item.category,
           quantity: item.quantity,
           unitPrice: unit,
@@ -469,7 +473,6 @@ const Checkout = () => {
       <div className="container">
         <div className="checkout-header">
           <div className="checkout-header-copy">
-            <span className="checkout-kicker">Secure checkout</span>
             <h1>Checkout</h1>
           </div>
           <div className="checkout-highlights">

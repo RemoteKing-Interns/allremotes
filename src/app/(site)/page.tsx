@@ -186,7 +186,7 @@ const Home = () => {
       title: hero.title || "Garage Door & Gate Remotes",
       description:
         hero.description ||
-        "Your trusted source for premium car and garage remotes. Browse reliable replacements, accessories, and business-ready service support.",
+        "Your trusted source for car and garage remotes. Browse reliable replacements and accessories.",
       primaryCta: hero.primaryCta || "Shop Car Remotes",
       primaryCtaPath: hero.primaryCtaPath || "/products/car",
       secondaryCta: hero.secondaryCta || "Shop Garage Remotes",
@@ -203,7 +203,7 @@ const Home = () => {
         (carProductsCount > 0
           ? `Browse ${carProductsCount}+ automotive remote options across smart keys, shells, and replacement key solutions.`
           : "Browse automotive remote options across smart keys, shells, and replacement key solutions.") +
-        " Built for clean fitment, dependable day-to-day use, and fast reordering.",
+        " Built for fitment and fast reordering.",
       primaryCta: "Shop Automotive",
       primaryCtaPath: "/products/car",
       secondaryCta: "View All Products",
@@ -232,7 +232,7 @@ const Home = () => {
         (garageProductsCount > 0
           ? `Explore ${garageProductsCount}+ garage and gate remote options for home, building, and access automation needs.`
           : "Explore garage and gate remote options for home, building, and access automation needs.") +
-        " A practical range backed by responsive support and reliable fulfilment.",
+        " A practical range backed by responsive support.",
       primaryCta: "Shop Garage & Gate",
       primaryCtaPath: "/products/garage",
       secondaryCta: "Browse Best Sellers",
@@ -316,12 +316,11 @@ const Home = () => {
                 }}
               />
             ))}
-            <div className="absolute inset-0 z-[15] bg-gradient-to-br from-teal-900/60 via-teal-900/50 to-teal-800/40" />
-            <div className="absolute inset-0 z-[15] bg-[conic-gradient(from_225deg_at_0%_100%,rgba(192,57,43,0.85)_0deg,rgba(26,122,110,0.65)_60deg,transparent_120deg)]" />
+            <div className="absolute inset-0 z-[15] bg-gradient-to-br from-neutral-900/70 via-neutral-900/60 to-neutral-800/50" />
           </div>
 
           <div className="container relative z-30 flex h-full items-center py-8 sm:py-10">
-            <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px]">
+            <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px] text-left">
               {heroSlides.map((slide, index) => (
                 <div
                   key={`hero-content-${index}`}
@@ -405,10 +404,7 @@ const Home = () => {
       <section className="container py-10 sm:py-14">
         <div className="grid gap-10">
           <div className="max-w-2xl">
-            <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-              Browse By Category
-            </span>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
               Start with the remote type you need
             </h2>
             <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
@@ -461,16 +457,13 @@ const Home = () => {
 
       <section className="container py-10 sm:py-14">
         <div className="max-w-2xl">
-          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
-            Best Sellers
-          </span>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
             Featured Products
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
             Browse our most popular remote controls across car, garage, and
             access-control categories.
-          </p>
+            </p>
         </div>
         {products.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
@@ -495,10 +488,7 @@ const Home = () => {
 
       <section className="container py-10 sm:py-14">
         <div className="max-w-2xl">
-          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-            Why ALLREMOTES
-          </span>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
             Built for repeat orders and dependable support
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
@@ -533,10 +523,7 @@ const Home = () => {
 
       <section className="container py-10 sm:py-14">
         <div className="max-w-2xl">
-          <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-dark">
-            Customer Feedback
-          </span>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
             Trusted by homeowners, workshops, and trade buyers
           </h2>
           <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
@@ -582,12 +569,12 @@ const Home = () => {
       </section>
 
       <section className="container py-10 sm:py-14">
-        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(130%_120%_at_2%_0%,rgba(26,122,110,0.30)_0%,rgba(26,122,110,0.10)_40%,transparent_68%),radial-gradient(110%_120%_at_100%_4%,rgba(192,57,43,0.24)_0%,rgba(192,57,43,0.08)_46%,transparent_74%),linear-gradient(102deg,rgba(26,122,110,0.14)_0%,rgba(60,150,151,0.12)_52%,rgba(192,57,43,0.14)_100%)] p-8 shadow-panel backdrop-blur sm:p-12">
+        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 p-8 shadow-panel sm:p-12">
           <div className="max-w-2xl">
-            <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {cta.title || "Ready to Find Your Perfect Remote?"}
             </h2>
-            <p className="mt-3 text-sm leading-7 text-neutral-600 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-neutral-300 sm:text-base">
               {cta.description ||
                 "Browse our collection and find the perfect remote for your needs"}
             </p>

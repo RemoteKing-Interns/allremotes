@@ -59,20 +59,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
     const body = await request.json().catch(() => null);
-    const status = String(body?.status || "").trim();
-    if (!status) return NextResponse.json({ error: "Missing status" }, { status: 400 });
+    if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
+    // Strip internal mongo fields and id from the patch fields
+    const { _id, id: _id2, ...patchFields } = body;
     const updatedAt = new Date().toISOString();
+    const fields = { ...patchFields, updatedAt };
 
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
       const rawRes = await col.findOneAndUpdate(
         { id },
-        { $set: { status, updatedAt } },
+        { $set: fields },
         { returnDocument: 'after' }
       );
-      // Driver v4: rawRes.value; driver v5: rawRes directly
       const updated = (rawRes as any)?.value !== undefined ? (rawRes as any).value : rawRes;
       if (!updated) return NextResponse.json({ error: "Order not found" }, { status: 404 });
       return NextResponse.json(updated);
@@ -81,7 +82,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const orders = readOrdersFile();
     const idx = orders.findIndex((o) => o.id === id);
     if (idx === -1) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    const updated = { ...orders[idx], status, updatedAt };
+    const updated = { ...orders[idx], ...fields };
     orders[idx] = updated;
     writeOrdersFile(orders);
     return NextResponse.json(updated);
