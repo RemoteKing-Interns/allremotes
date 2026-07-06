@@ -1144,11 +1144,11 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [unleashedModal, setUnleashedModal] = useState<{
     groupLabel: string;
     selectedOrderIds: string[];
-    aggregatedItems: { id: string; name: string; sku: string; quantity: number }[];
+    aggregatedItems: { id: string; name: string; sku: string; rk_sku?: string; quantity: number }[];
   } | null>(null);
 
   // ── Unleashed modal: editable items
-  const [modalItems, setModalItems] = useState<{ id: string; name: string; sku: string; quantity: number }[]>([]);
+  const [modalItems, setModalItems] = useState<{ id: string; name: string; sku: string; rk_sku?: string; quantity: number }[]>([]);
 
   // ── Unleashed modal: pushing state
   const [pushingToUnleashed, setPushingToUnleashed] = useState(false);
