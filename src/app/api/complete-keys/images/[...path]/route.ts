@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 // Proxy images to avoid CORS issues and handle missing images gracefully
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const imageUrl = params.path.join('/');
+    const { path } = await params;
+    const imageUrl = path.join('/');
 
     if (!imageUrl) {
       return NextResponse.json({ error: "No image URL provided" }, { status: 400 });
