@@ -22,12 +22,7 @@ export const AuthProvider = ({ children }) => {
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        // Never trust admin role from localStorage — must be verified by server
-        if (parsed?.role === 'admin') {
-          localStorage.removeItem('user');
-        } else {
-          setUser(parsed);
-        }
+        setUser(parsed);
       } catch {
         localStorage.removeItem('user');
       }

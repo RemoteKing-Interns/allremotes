@@ -353,15 +353,15 @@ const AdminContent = () => {
   const searchParams = useSearchParams();
   const isAdmin = user?.role === 'admin';
 
-  // Returns true if the user has full access OR the specific permission key
+  // Superuser = has wildcard permission (*)
+  const isSuperUser = (user?.permissions || []).includes('*');
+
+  // Returns true if the user has the specific permission key (or full access)
   const hasPermission = (key: string) => {
     if (key === 'superuser') return isSuperUser;
-    if (user?.role === 'admin') return true;
-    const perms: string[] = user?.permissions || ['*'];
+    const perms: string[] = user?.permissions || [];
     return perms.includes('*') || perms.includes(key);
   };
-
-  const isSuperUser = user?.role === 'admin' || (user?.permissions || []).includes('*');
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
