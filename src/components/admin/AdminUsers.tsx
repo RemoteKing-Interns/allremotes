@@ -62,9 +62,15 @@ export default function AdminUsers() {
     }
   };
 
+  const getCallerEmail = () => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").email || ""; } catch { return ""; }
+  };
+
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/admin/users");
+      const response = await fetch("/api/admin/users", {
+        headers: { "x-user-email": getCallerEmail() },
+      });
       const data = await response.json();
       if (response.ok) {
         setUsers(data.users);
@@ -154,7 +160,7 @@ export default function AdminUsers() {
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-user-email": getCallerEmail() },
         body: JSON.stringify(formData),
       });
 
@@ -182,7 +188,7 @@ export default function AdminUsers() {
       const userId = editingUser._id || editingUser.id;
       const response = await fetch("/api/admin/users", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-user-email": getCallerEmail() },
         body: JSON.stringify({
           id: userId,
           updates: {
@@ -215,6 +221,7 @@ export default function AdminUsers() {
     try {
       const response = await fetch(`/api/admin/users?id=${userId}`, {
         method: "DELETE",
+        headers: { "x-user-email": getCallerEmail() },
       });
 
       const data = await response.json();

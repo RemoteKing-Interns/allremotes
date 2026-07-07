@@ -7,13 +7,24 @@ import { ObjectId } from "mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+async function isSuperUser(request: NextRequest): Promise<boolean> {
+  const callerEmail = request.headers.get("x-user-email");
+  if (!callerEmail) return false;
+  if (!mongoEnabled()) return false;
+  const db = await getDb();
+  const caller = await db.collection("admin_users").findOne({ email: callerEmail });
+  if (!caller) return false;
+  return caller.role === "admin" || (Array.isArray(caller.permissions) && caller.permissions.includes("*"));
+}
+
 // Get all admin users
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!(await isSuperUser(request))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
     if (!mongoEnabled()) {
-      // Fallback to localStorage for development
-      const adminUsers = JSON.parse(localStorage.getItem('admin_users') || '[]');
-      return NextResponse.json({ users: adminUsers });
+      return NextResponse.json({ users: [] });
     }
 
     const db = await getDb();
@@ -37,6 +48,9 @@ export async function GET() {
 
 // Create new admin user
 export async function POST(request: NextRequest) {
+  if (!(await isSuperUser(request))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
     const { name, email, password, permissions } = await request.json();
 
@@ -129,6 +143,9 @@ export async function POST(request: NextRequest) {
 
 // Update admin user
 export async function PUT(request: NextRequest) {
+  if (!(await isSuperUser(request))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
     const { id, updates } = await request.json();
 
@@ -206,6 +223,9 @@ export async function PUT(request: NextRequest) {
 
 // Delete admin user
 export async function DELETE(request: NextRequest) {
+  if (!(await isSuperUser(request))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

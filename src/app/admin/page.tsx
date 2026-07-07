@@ -355,10 +355,13 @@ const AdminContent = () => {
 
   // Returns true if the user has full access OR the specific permission key
   const hasPermission = (key: string) => {
+    if (key === 'superuser') return isSuperUser;
     if (user?.role === 'admin') return true;
     const perms: string[] = user?.permissions || ['*'];
     return perms.includes('*') || perms.includes(key);
   };
+
+  const isSuperUser = user?.role === 'admin' || (user?.permissions || []).includes('*');
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -383,6 +386,35 @@ const AdminContent = () => {
   useEffect(() => {
     if (user?.email) activityLogger.setUser(user.email, user.id);
   }, [user]);
+
+  // Redirect to first permitted tab if current tab is inaccessible
+  useEffect(() => {
+    if (!isAdmin) return;
+    const allNavItems = [
+      { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
+      { id: 'products', perm: 'products' }, { id: 'customers', perm: 'customers' },
+      { id: 'analytics', perm: 'analytics' }, { id: 'marketing', perm: 'marketing' },
+      { id: 'content', perm: 'content' }, { id: 'settings', perm: 'settings' },
+    ];
+    const currentTabPerm = [
+      { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
+      { id: 'returns', perm: 'orders' }, { id: 'abandoned_carts', perm: 'orders' },
+      { id: 'products', perm: 'products' }, { id: 'categories', perm: 'products' },
+      { id: 'inventory', perm: 'products' }, { id: 'customers', perm: 'customers' },
+      { id: 'reviews', perm: 'customers' }, { id: 'messages', perm: 'customers' },
+      { id: 'promotions', perm: 'marketing' }, { id: 'discounts', perm: 'marketing' },
+      { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' },
+      { id: 'analytics', perm: 'analytics' }, { id: 'live_view', perm: 'analytics' },
+      { id: 'admin_users', perm: 'superuser' }, { id: 'admin_logs', perm: 'admin_users' },
+      { id: 'settings', perm: 'settings' }, { id: 'profile', perm: '' },
+    ].find(t => t.id === activeTab);
+    if (!currentTabPerm) return;
+    if (currentTabPerm.perm === '') return; // profile always allowed
+    if (!hasPermission(currentTabPerm.perm)) {
+      const first = allNavItems.find(t => hasPermission(t.perm));
+      if (first) setActiveTab(first.id);
+    }
+  }, [isAdmin, user]);
 
   // Log tab navigation only for meaningful sections (not every click)
   useEffect(() => {
@@ -789,7 +821,7 @@ const AdminContent = () => {
     { id: 'navigation',     label: 'Navigation',          icon: Compass,            perm: 'content' },
     { id: 'analytics',      label: 'Reports',             icon: BarChart3,          perm: 'analytics' },
     { id: 'live_view',      label: 'Live View',           icon: Eye,                perm: 'analytics' },
-    { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'admin_users' },
+    { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'superuser' },
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
     { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
   ];
@@ -995,27 +1027,35 @@ const AdminContent = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'dashboard' && <ShopifyDashboard onNavigateTab={setActiveTab} />}
-          {activeTab === 'analytics' && <AdminAnalytics />}
-          {activeTab === 'live_view' && <LiveViewSection />}
-          {activeTab === 'customers' && <CustomerManagement />}
-          {activeTab === 'admin_users' && <AdminUsersManager />}
-          {activeTab === 'admin_logs' && <AdminLogs />}
-          {activeTab === 'products' && <AdminProducts />}
-          {activeTab === 'categories' && <CategoriesBrandsSection />}
-          {activeTab === 'inventory' && <InventorySection />}
-          {activeTab === 'orders' && <AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} />}
-          {activeTab === 'returns' && <AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} />}
-          {activeTab === 'abandoned_carts' && <AdminAbandonedCarts />}
-          {activeTab === 'home' && <AdminHome />}
-          {activeTab === 'promotions' && <AdminPromotions />}
-          {activeTab === 'discounts' && <DiscountsSection />}
-          {activeTab === 'navigation' && <AdminNavigation />}
-          {activeTab === 'reviews' && <AdminReviews />}
-          {activeTab === 'messages' && <AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} />}
+          {activeTab === 'dashboard'      && hasPermission('dashboard')  && <ShopifyDashboard onNavigateTab={setActiveTab} />}
+          {activeTab === 'analytics'      && hasPermission('analytics')  && <AdminAnalytics />}
+          {activeTab === 'live_view'      && hasPermission('analytics')  && <LiveViewSection />}
+          {activeTab === 'customers'      && hasPermission('customers')  && <CustomerManagement />}
+          {activeTab === 'admin_users'    && isSuperUser                 && <AdminUsersManager />}
+          {activeTab === 'admin_logs'     && hasPermission('admin_users') && <AdminLogs />}
+          {activeTab === 'products'       && hasPermission('products')   && <AdminProducts />}
+          {activeTab === 'categories'     && hasPermission('products')   && <CategoriesBrandsSection />}
+          {activeTab === 'inventory'      && hasPermission('products')   && <InventorySection />}
+          {activeTab === 'orders'         && hasPermission('orders')     && <AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} />}
+          {activeTab === 'returns'        && hasPermission('orders')     && <AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} />}
+          {activeTab === 'abandoned_carts'&& hasPermission('orders')     && <AdminAbandonedCarts />}
+          {activeTab === 'home'           && hasPermission('content')    && <AdminHome />}
+          {activeTab === 'promotions'     && hasPermission('marketing')  && <AdminPromotions />}
+          {activeTab === 'discounts'      && hasPermission('marketing')  && <DiscountsSection />}
+          {activeTab === 'navigation'     && hasPermission('content')    && <AdminNavigation />}
+          {activeTab === 'reviews'        && hasPermission('customers')  && <AdminReviews />}
+          {activeTab === 'messages'       && hasPermission('customers')  && <AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} />}
+          {activeTab === 'settings'       && hasPermission('settings')   && <AdminSettings />}
+          {activeTab === 'profile'        && <AdminProfile />}
 
-          {activeTab === 'settings' && <AdminSettings />}
-          {activeTab === 'profile' && <AdminProfile />}
+          {/* Fallback: tab exists but user lacks permission */}
+          {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <div className="text-5xl mb-4">🔒</div>
+              <h2 className="text-xl font-semibold text-neutral-800">Access Denied</h2>
+              <p className="text-sm text-neutral-500 mt-2">You don&apos;t have permission to view this section.</p>
+            </div>
+          )}
         </main>
       </div>
 
