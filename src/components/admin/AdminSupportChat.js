@@ -56,10 +56,10 @@ export default function AdminSupportChat({ orderId, returnId = null, customerEma
     }
   }, [customerEmail, orderId, returnId]);
 
-  // Poll messages every 3s
+  // Poll messages every 10s
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 3000);
+    const interval = setInterval(loadMessages, 10000);
     return () => clearInterval(interval);
   }, [loadMessages]);
 
@@ -77,7 +77,7 @@ export default function AdminSupportChat({ orderId, returnId = null, customerEma
     return () => clearInterval(interval);
   }, []);
 
-  // Poll customer online status every 10s
+  // Poll customer online status every 30s
   useEffect(() => {
     if (!customerEmail) return;
     const checkOnline = async () => {
@@ -88,11 +88,11 @@ export default function AdminSupportChat({ orderId, returnId = null, customerEma
       } catch { setCustomerOnline(false); }
     };
     checkOnline();
-    const interval = setInterval(checkOnline, 10000);
+    const interval = setInterval(checkOnline, 30000);
     return () => clearInterval(interval);
   }, [customerEmail]);
 
-  // Poll customer typing indicator every 2s
+  // Poll customer typing indicator every 5s
   useEffect(() => {
     const checkTyping = async () => {
       const tid = threadIdRef.current;
@@ -103,7 +103,8 @@ export default function AdminSupportChat({ orderId, returnId = null, customerEma
         setCustomerTyping(resp.ok && data?.typing?.sender === 'customer');
       } catch { setCustomerTyping(false); }
     };
-    const interval = setInterval(checkTyping, 2000);
+    checkTyping();
+    const interval = setInterval(checkTyping, 5000);
     return () => clearInterval(interval);
   }, []);
 
