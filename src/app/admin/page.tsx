@@ -560,7 +560,7 @@ const AdminContent = () => {
   useEffect(() => {
     if (!isAdmin) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
@@ -2690,133 +2690,147 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const loadData = async () => {
+    try {
+      const [ordersRes, productsRes, returnsRes] = await Promise.all([
+        fetch("/api/orders", { cache: "no-store" }),
+        fetch("/api/products", { cache: "no-store" }),
+        fetch("/api/returns", { cache: "no-store" }),
+      ]);
+      
+      const orders = await ordersRes.json().catch(() => []);
+      const products = await productsRes.json().catch(() => []);
+      const returns = await returnsRes.json().catch(() => []);
+      
+      const totalSales = (orders || []).reduce((sum: number, o: any) => sum + (o?.pricing?.total || 0), 0);
+      const orderCount = (orders || []).length;
+      
+      setStats({
+        totalSales,
+        orders: orderCount,
+        customers: new Set((orders || []).map((o: any) => o?.customer?.email).filter(Boolean)).size,
+        products: (products || []).length,
+        returns: (returns || []).filter((r: any) => r.status === 'pending').length,
+        avgOrderValue: orderCount > 0 ? totalSales / orderCount : 0,
+      });
+      
+      setRecentOrders((orders || []).slice(0, 5));
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [ordersRes, productsRes, returnsRes] = await Promise.all([
-          fetch("/api/orders", { cache: "no-store" }),
-          fetch("/api/products", { cache: "no-store" }),
-          fetch("/api/returns", { cache: "no-store" }),
-        ]);
-        
-        const orders = await ordersRes.json().catch(() => []);
-        const products = await productsRes.json().catch(() => []);
-        const returns = await returnsRes.json().catch(() => []);
-        
-        const totalSales = (orders || []).reduce((sum: number, o: any) => sum + (o?.pricing?.total || 0), 0);
-        const orderCount = (orders || []).length;
-        
-        setStats({
-          totalSales,
-          orders: orderCount,
-          customers: new Set((orders || []).map((o: any) => o?.customer?.email).filter(Boolean)).size,
-          products: (products || []).length,
-          returns: (returns || []).filter((r: any) => r.status === 'pending').length,
-          avgOrderValue: orderCount > 0 ? totalSales / orderCount : 0,
-        });
-        
-        setRecentOrders((orders || []).slice(0, 5));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const statCards = [
-    { label: 'Total Sales', value: `AU$${stats.totalSales.toFixed(2)}`, icon: DollarSign, color: 'from-emerald-500 to-teal-500', change: '+12.5%', up: true },
-    { label: 'Orders', value: stats.orders, icon: ShoppingCart, color: 'from-blue-500 to-indigo-500', change: '+8.2%', up: true },
-    { label: 'Customers', value: stats.customers, icon: Users, color: 'from-violet-500 to-purple-500', change: '+5.1%', up: true },
-    { label: 'Products', value: stats.products, icon: Package, color: 'from-amber-500 to-orange-500', change: '0%', up: true },
+    { label: 'Total Orders', value: stats.orders, icon: ShoppingCart, gradient: 'from-blue-500 to-blue-600', change: '+8.2%', up: true },
+    { label: 'Total Revenue', value: `AU$${stats.totalSales.toFixed(2)}`, icon: DollarSign, gradient: 'from-emerald-500 to-emerald-600', change: '+12.5%', up: true },
+    { label: 'Active Users', value: stats.customers, icon: Users, gradient: 'from-purple-500 to-purple-600', change: '+5.1%', up: true },
+    { label: 'Pending Returns', value: stats.returns, icon: RotateCcw, gradient: 'from-amber-500 to-amber-600', change: null, up: true },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#2d2d2d] rounded-xl p-6 text-white">
-        <h2 className="text-2xl font-bold">Welcome back!</h2>
-        <p className="mt-1 text-neutral-300">Here's what's happening with your store today.</p>
-        <div className="mt-4 flex gap-3">
-          <button 
-            onClick={() => onNavigateTab('products')}
-            className="px-4 py-2 bg-white text-neutral-900 rounded-lg text-sm font-semibold hover:bg-neutral-100 transition-colors"
-          >
-            Add Product
-          </button>
-          <button 
-            onClick={() => onNavigateTab('orders')}
-            className="px-4 py-2 bg-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-colors"
-          >
-            View Orders
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-slate-500 mt-1">
+              {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : 'Loading...'}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button className="p-3 rounded-xl bg-white shadow-sm hover:shadow-md transition-all">
+                <Bell size={20} className="text-slate-600" />
+              </button>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+            </div>
+            <button className="p-3 rounded-xl bg-white shadow-sm hover:shadow-md transition-all">
+              <Settings size={20} className="text-slate-600" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="bg-white rounded-xl border border-neutral-200 p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-500">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-neutral-900">{stat.value}</p>
+            <div key={stat.label} className="relative overflow-hidden rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 group">
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity`}></div>
+              <div className="relative p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+                    <p className="mt-3 text-4xl font-bold text-slate-900">{stat.value}</p>
+                  </div>
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}>
+                    <Icon size={28} className="text-white" />
+                  </div>
                 </div>
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
-                  <Icon size={20} className="text-white" />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-sm">
-                {stat.up ? (
-                  <ArrowUpRight size={16} className="text-emerald-500" />
-                ) : (
-                  <ArrowDownRight size={16} className="text-red-500" />
+                {stat.change && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stat.up ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {stat.up ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                      <span className="text-sm font-semibold">{stat.change}</span>
+                    </div>
+                    <span className="text-sm text-slate-400">vs last month</span>
+                  </div>
                 )}
-                <span className={stat.up ? 'text-emerald-600' : 'text-red-600'}>{stat.change}</span>
-                <span className="text-neutral-400">vs last month</span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Quick Actions & Alerts */}
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200">
-          <div className="flex items-center justify-between p-4 border-b border-neutral-200">
-            <h3 className="font-semibold text-neutral-900">Recent Orders</h3>
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900">Recent Orders</h3>
             <button 
               onClick={() => onNavigateTab('orders')}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
             >
-              View all
+              View all →
             </button>
           </div>
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-slate-100">
             {loading ? (
-              <div className="p-8 text-center text-neutral-500">Loading...</div>
+              <div className="p-12 text-center text-slate-500">Loading...</div>
             ) : recentOrders.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">No orders yet</div>
+              <div className="p-12 text-center text-slate-500">No orders yet</div>
             ) : (
               recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 hover:bg-neutral-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600 text-sm font-medium">
+                <div key={order.id} className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-lg">
                       {order?.customer?.email?.charAt(0).toUpperCase() || '?'}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-neutral-900">{order?.customer?.email || 'Guest'}</p>
-                      <p className="text-xs text-neutral-500">#{order.id}</p>
+                      <p className="font-semibold text-slate-900">{order?.customer?.email || 'Guest'}</p>
+                      <p className="text-sm text-slate-500">#{order.id}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-neutral-900">AU${(order?.pricing?.total || 0).toFixed(2)}</p>
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                    <p className="font-bold text-slate-900">AU${(order?.pricing?.total || 0).toFixed(2)}</p>
+                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
                       order.status === 'delivered' || order.status === 'customer_received' ? 'bg-emerald-100 text-emerald-700' :
                       order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
                       order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
@@ -2832,46 +2846,48 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
-            <h3 className="font-semibold text-neutral-900 mb-3">Quick Actions</h3>
-            <div className="space-y-2">
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">Quick Actions</h3>
+            <div className="space-y-3">
               {[
-                { label: 'Add product', icon: Plus, tab: 'products' },
-                { label: 'Create discount', icon: Percent, tab: 'discounts' },
-                { label: 'View analytics', icon: BarChart3, tab: 'analytics' },
-                { label: 'Manage returns', icon: RotateCcw, tab: 'returns' },
+                { label: 'Add Product', icon: Plus, tab: 'products', color: 'from-blue-500 to-blue-600' },
+                { label: 'View Orders', icon: ShoppingCart, tab: 'orders', color: 'from-emerald-500 to-emerald-600' },
+                { label: 'Manage Returns', icon: RotateCcw, tab: 'returns', color: 'from-amber-500 to-amber-600' },
+                { label: 'View Analytics', icon: BarChart3, tab: 'analytics', color: 'from-purple-500 to-purple-600' },
               ].map((action) => {
                 const Icon = action.icon;
                 return (
                   <button
                     key={action.label}
                     onClick={() => onNavigateTab(action.tab)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-neutral-50 text-left transition-colors"
+                    className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center">
-                      <Icon size={16} className="text-neutral-600" />
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                      <Icon size={18} className="text-white" />
                     </div>
-                    <span className="text-sm font-medium text-neutral-700">{action.label}</span>
+                    <span className="font-semibold text-slate-700">{action.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Alerts */}
+          {/* Support Tickets Alert */}
           {stats.returns > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6 shadow-lg">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle size={24} className="text-white" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">Pending Returns</p>
-                  <p className="text-sm text-amber-700 mt-0.5">
+                  <p className="font-bold text-amber-900">Pending Returns</p>
+                  <p className="text-amber-700 mt-1">
                     You have {stats.returns} return request{stats.returns > 1 ? 's' : ''} awaiting review.
                   </p>
                   <button 
                     onClick={() => onNavigateTab('returns')}
-                    className="mt-2 text-sm font-medium text-amber-800 hover:text-amber-900"
+                    className="mt-3 font-semibold text-amber-900 hover:text-amber-800 transition-colors"
                   >
                     Review now →
                   </button>
@@ -2884,7 +2900,6 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
     </div>
   );
 }
-
 
 function CustomersSection() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -3014,30 +3029,113 @@ function CustomersSection() {
 function InventorySection() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingStock, setLoadingStock] = useState<Set<string>>(new Set());
+  const [sortColumn, setSortColumn] = useState<'name' | 'quantity' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // Memoize sorted products to avoid re-sorting on every render
+  const sortedProducts = useMemo(() => {
+    if (!sortColumn) return products;
+    
+    const sorted = [...products].sort((a, b) => {
+      if (sortColumn === 'name') {
+        const aName = a.name?.toLowerCase() || '';
+        const bName = b.name?.toLowerCase() || '';
+        if (sortDirection === 'asc') return aName.localeCompare(bName);
+        return bName.localeCompare(aName);
+      }
+      
+      if (sortColumn === 'quantity') {
+        const aQty = a.quantity;
+        const bQty = b.quantity;
+        
+        // Handle null values - always sort to end
+        if (aQty === null && bQty === null) return 0;
+        if (aQty === null) return 1;
+        if (bQty === null) return -1;
+        
+        // Both have values, sort normally
+        if (sortDirection === 'asc') return aQty - bQty;
+        return bQty - aQty;
+      }
+      
+      return 0;
+    });
+    
+    return sorted;
+  }, [products, sortColumn, sortDirection]);
+
+  const loadStock = async () => {
+    try {
+      setLoadingStock(new Set(products.map(p => p.id)));
+      const res = await fetch("/api/inventory/stock", { cache: "no-store" });
+      const data = await res.json().catch(() => ({ products: [] }));
+      setProducts(data.products || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingStock(new Set());
+    }
+  };
+
+  // Load product data from MongoDB first (without stock)
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const res = await fetch("/api/products", { cache: "no-store" });
         const data = await res.json().catch(() => []);
-        setProducts(data || []);
+        const productsWithRkSku = (data || []).filter((p: any) => p.rk_sku);
+        setProducts(productsWithRkSku.map((p: any) => ({ ...p, quantity: null, binLocation: null })));
+        setLoading(false);
+        // Then load stock data
+        loadStock();
       } catch (err) {
         console.error(err);
-      } finally {
         setLoading(false);
       }
     };
     loadProducts();
   }, []);
 
-  const lowStock = products.filter(p => (p.stock || p.inventory || 0) < 10 && (p.stock || p.inventory || 0) > 0);
-  const outOfStock = products.filter(p => (p.stock || p.inventory || 0) === 0);
+  const lowStock = products.filter(p => (p.quantity ?? 0) < 10 && (p.quantity ?? 0) > 0);
+  const outOfStock = products.filter(p => (p.quantity ?? 0) === 0);
+
+  const handleSort = (column: 'name' | 'quantity') => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Skeleton cell for quantity/bin location
+  const SkeletonCell = () => (
+    <div className="h-6 w-12 bg-neutral-200 rounded animate-pulse ml-auto" />
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-neutral-900">Inventory</h2>
-        <p className="text-sm text-neutral-500 mt-1">Track and manage your product stock levels</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-900">Inventory</h2>
+          <p className="text-sm text-neutral-500 mt-1">Live stock from Unleashed (by rk_sku)</p>
+        </div>
+        <button
+          onClick={() => { setRefreshing(true); loadStock(); }}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50"
+        >
+          {refreshing ? (
+            <RefreshCw size={16} className="animate-spin" />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+          Refresh
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -3056,46 +3154,97 @@ function InventorySection() {
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200">
-        <div className="p-4 border-b border-neutral-200">
-          <h3 className="font-semibold text-neutral-900">Inventory Alerts</h3>
+        <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+          <h3 className="font-semibold text-neutral-900">All Products</h3>
+          {refreshing && <span className="text-xs text-neutral-500">Updating...</span>}
         </div>
-        {loading ? (
+        {loading && products.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">Loading...</div>
-        ) : lowStock.length === 0 && outOfStock.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">
-            <CheckCircle size={40} className="mx-auto text-emerald-500 mb-2" />
-            <p>All products are well stocked!</p>
+            <p>No products with rk_sku found</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100">
-            {[...outOfStock, ...lowStock].slice(0, 10).map((product) => (
-              <div key={product.id} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-neutral-100 overflow-hidden">
-                    {product.image ? (
-                      <img src={product.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                        <Package size={20} />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase cursor-pointer hover:bg-neutral-100 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Product
+                      {sortColumn === 'name' && (
+                        <span className="text-neutral-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">RK SKU</th>
+                  <th 
+                    className="px-4 py-3 text-right text-xs font-medium text-neutral-500 uppercase cursor-pointer hover:bg-neutral-100 transition-colors"
+                    onClick={() => handleSort('quantity')}
+                  >
+                    <div className="flex items-center gap-1 justify-end">
+                      Quantity
+                      {sortColumn === 'quantity' && (
+                        <span className="text-neutral-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Bin Location</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {sortedProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-neutral-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-neutral-100 overflow-hidden flex-shrink-0">
+                          {product.image ? (
+                            <img src={product.image} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                              <Package size={16} />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-neutral-900">{product.name}</span>
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">{product.name || product.title}</p>
-                    <p className="text-xs text-neutral-500">SKU: {product.sku || product.id?.slice(0, 8)}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    (product.stock || product.inventory || 0) === 0 
-                      ? 'bg-red-100 text-red-700' 
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {(product.stock || product.inventory || 0) === 0 ? 'Out of stock' : `${product.stock || product.inventory} left`}
-                  </span>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-neutral-600">{product.sku || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-neutral-600">{product.rk_sku || '-'}</td>
+                    <td className="px-4 py-3 text-right">
+                      {refreshing ? (
+                        <SkeletonCell />
+                      ) : (
+                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          (product.quantity ?? 0) === 0 
+                            ? 'bg-red-100 text-red-700' 
+                            : (product.quantity ?? 0) < 10
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {product.quantity === null ? 'N/A' : product.quantity}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-neutral-600">
+                      {refreshing ? (
+                        <div className="h-4 w-24 bg-neutral-200 rounded animate-pulse" />
+                      ) : (
+                        product.binLocation || '-'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -3737,7 +3886,7 @@ function AdminProducts() {
     return () => window.removeEventListener('switchAdminTab', handleEditProduct as EventListener);
   }, []);
 
-  const save = () => {
+  const save = async () => {
     const currentProducts = [...products];
     const product = currentProducts.find((p) => p.id === editingId);
     if (!product) return;
@@ -3794,6 +3943,17 @@ function AdminProducts() {
       localStorage.removeItem('adminReturnToCategories');
       // Keep the return tab info for the CategoriesBrandsSection to restore
       window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'categories' } }));
+    }
+    
+    // Reload products from server to get fresh data
+    try {
+      const resp = await fetch("/api/products", { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (resp.ok && Array.isArray(data)) {
+        setProductsState(data);
+      }
+    } catch (err) {
+      console.error("Failed to reload products after save:", err);
     }
     
     setTimeout(() => setSaved(false), 3000);
