@@ -2988,7 +2988,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setRevenueByCategory(Object.entries(categoryRevenue)
-        .map(([category, revenue]) => ({ category, revenue }))
+        .map(([category, revenue]) => ({ category, revenue: Number(revenue) }))
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5));
       
@@ -3002,7 +3002,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setTopProducts(Object.entries(productSales)
-        .map(([name, quantity]) => ({ name, quantity }))
+        .map(([name, quantity]) => ({ name, quantity: Number(quantity) }))
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 5));
       
@@ -3027,7 +3027,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setInventoryByCategory(Object.entries(categoryInventory)
-        .map(([category, count]) => ({ category, count }))
+        .map(([category, count]) => ({ category, count: Number(count) }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5));
       
@@ -3058,7 +3058,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setGeographicData(Object.entries(geoData)
-        .map(([state, count]) => ({ state, count }))
+        .map(([state, count]) => ({ state, count: Number(count) }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5));
       
@@ -3102,7 +3102,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       
       setAvgOrderValueTrend(Object.entries(aovByDay).map(([date, total]) => ({
         date,
-        aov: orderCountByDay[date] > 0 ? total / orderCountByDay[date] : 0
+        aov: Number(orderCountByDay[date]) > 0 ? Number(total) / Number(orderCountByDay[date]) : 0
       })));
       
       // Calculate customer acquisition trend (new customers per day)
@@ -3148,7 +3148,7 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setPeakOrderingTimes(Object.entries(ordersByHour)
-        .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
+        .map(([hour, count]) => ({ hour: `${hour}:00`, count: Number(count) }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8));
       
