@@ -12,6 +12,7 @@ import AdminUsersManager from "../../components/admin/AdminUsers";
 import AdminLogs from "../../components/admin/AdminLogs";
 import CustomerManagement from "../../components/admin/CustomerManagement";
 import AdminAbandonedCarts from "../../components/admin/AdminAbandonedCarts";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   LayoutDashboard,
   BarChart3,
@@ -77,6 +78,7 @@ import {
   Archive,
   Send,
   Inbox,
+  Printer,
   FolderOpen,
   HelpCircle,
   LogOut,
@@ -1193,6 +1195,14 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   // ── Unleashed modal: pushing state
   const [pushingToUnleashed, setPushingToUnleashed] = useState(false);
 
+  // ── Shipment type change state
+  const [changeShippingModal, setChangeShippingModal] = useState<{
+    order: any;
+    newMethod: string;
+    step: 1 | 2;
+  } | null>(null);
+  const [changingShipping, setChangingShipping] = useState(false);
+
   // ── Unleashed modal: stock data fetched from Unleashed, cached per group label
   // allGroupStock: { [groupLabel]: { [productKey]: { unleashedQty, newStock } } }
   const [allGroupStock, setAllGroupStock] = useState<Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>>>({});
@@ -1683,6 +1693,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                         <th className="px-4 py-4 font-semibold">Order ID</th>
                         <th className="px-4 py-4 font-semibold">Time</th>
                         <th className="px-4 py-4 font-semibold">Customer</th>
+                        <th className="px-4 py-4 font-semibold">Shipping</th>
                         <th className="px-4 py-4 font-semibold text-center">Items</th>
                         <th className="px-4 py-4 font-semibold text-right">Total</th>
                         <th className="px-4 py-4 font-semibold text-center">Pushed</th>
@@ -1719,6 +1730,22 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                             </td>
                             <td className="px-4 py-4">
                               <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
+                            </td>
+                            <td className="px-4 py-4">
+                              {(() => {
+                                const shippingMethod = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
+                                const methodConfig: Record<string, { label: string; color: string }> = {
+                                  'untracked': { label: 'Free Untracked', color: 'bg-slate-100 text-slate-700' },
+                                  'tracked': { label: 'Tracked', color: 'bg-blue-100 text-blue-700' },
+                                  'express': { label: 'Express', color: 'bg-emerald-100 text-emerald-700' },
+                                };
+                                const config = methodConfig[shippingMethod] || methodConfig['untracked'];
+                                return (
+                                  <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${config.color}`}>
+                                    {config.label}
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-4 text-center font-medium text-neutral-600">
                               {Array.isArray(o.items) ? o.items.length : 0}
@@ -2036,6 +2063,31 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                   <p className="text-sm font-bold">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</p>
                 </div>
                 <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Shipping Method</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const shippingMethod = selectedOrder?.shippingMethod || selectedOrder?.pricing?.shippingMethod || 'untracked';
+                      const methodConfig: Record<string, { label: string; color: string }> = {
+                        'untracked': { label: 'Free Untracked', color: 'bg-slate-100 text-slate-700' },
+                        'tracked': { label: 'Tracked', color: 'bg-blue-100 text-blue-700' },
+                        'express': { label: 'Express', color: 'bg-emerald-100 text-emerald-700' },
+                      };
+                      const config = methodConfig[shippingMethod] || methodConfig['untracked'];
+                      return (
+                        <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${config.color}`}>
+                          {config.label}
+                        </span>
+                      );
+                    })()}
+                    <button
+                      onClick={() => setChangeShippingModal({ order: selectedOrder, newMethod: '', step: 1 })}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+                <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Unleashed</p>
                   {selectedOrder.unleashedOrderNumber ? (
                     <div className="flex items-center gap-1">
@@ -2159,14 +2211,188 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
               customerName={selectedOrder.customer?.fullName}
             />
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
               >
                 Close
               </button>
+              <button
+                onClick={async () => {
+                  try {
+                    // Load DYMO framework if not already loaded
+                    const { loadDymoFramework, printLabel } = await import('../../lib/dymo');
+                    await loadDymoFramework();
+                    
+                    // Get default template or use a simple one
+                    const template = {
+                      id: 'default',
+                      name: 'Default Label',
+                      fields: [
+                        { id: 'address_1', type: 'text' as const, label: 'Address', dataKey: 'address', x: 5, y: 10, fontSize: 12, fontWeight: 'normal' },
+                        { id: 'customer_1', type: 'text' as const, label: 'Customer', dataKey: 'customerName', x: 5, y: 30, fontSize: 14, fontWeight: 'bold' },
+                      ],
+                      layout: { width: 72, height: 252 },
+                    };
+                    
+                    await printLabel({
+                      orderId: selectedOrder.id,
+                      customerName: selectedOrder.customer?.fullName || selectedOrder.customer?.email || 'Guest',
+                      customerEmail: selectedOrder.customer?.email || '',
+                      customerPhone: selectedOrder.shipping?.phone || selectedOrder.customer?.phone || '',
+                      address: selectedOrder.shipping?.address || '',
+                      suburb: selectedOrder.shipping?.city || '',
+                      state: selectedOrder.shipping?.state || '',
+                      postcode: selectedOrder.shipping?.zipCode || '',
+                      items: selectedOrder.items || [],
+                      template,
+                    });
+                    
+                    alert('Label printed successfully!');
+                  } catch (error: any) {
+                    console.error('Failed to print label:', error);
+                    alert(`Failed to print label: ${error.message}\n\nEnsure DYMO LabelWriter is connected and DYMO Connect Framework is installed.`);
+                  }
+                }}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Print Label
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Shipping Method Confirmation Dialog */}
+      {changeShippingModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setChangeShippingModal(null)}>
+          <div className="max-w-md w-full rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {changeShippingModal.step === 1 ? (
+              <>
+                <h3 className="text-lg font-bold text-neutral-900 mb-4">Change Shipping Method</h3>
+                <p className="text-sm text-neutral-600 mb-4">
+                  Are you sure you want to change the shipping method for order #{changeShippingModal.order.id}?
+                </p>
+                <div className="space-y-2 mb-4">
+                  <label className="flex items-center gap-2 p-3 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50">
+                    <input
+                      type="radio"
+                      name="shippingMethod"
+                      value="untracked"
+                      checked={changeShippingModal.newMethod === 'untracked'}
+                      onChange={(e) => setChangeShippingModal({ ...changeShippingModal, newMethod: e.target.value })}
+                      className="accent-blue-600"
+                    />
+                    <div>
+                      <span className="font-medium text-neutral-900">Free Untracked</span>
+                      <span className="text-xs text-neutral-500 block">2-10 business days • $0.00</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 p-3 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50">
+                    <input
+                      type="radio"
+                      name="shippingMethod"
+                      value="tracked"
+                      checked={changeShippingModal.newMethod === 'tracked'}
+                      onChange={(e) => setChangeShippingModal({ ...changeShippingModal, newMethod: e.target.value })}
+                      className="accent-blue-600"
+                    />
+                    <div>
+                      <span className="font-medium text-neutral-900">Tracked Shipping</span>
+                      <span className="text-xs text-neutral-500 block">2-6 business days • $12.00</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 p-3 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50">
+                    <input
+                      type="radio"
+                      name="shippingMethod"
+                      value="express"
+                      checked={changeShippingModal.newMethod === 'express'}
+                      onChange={(e) => setChangeShippingModal({ ...changeShippingModal, newMethod: e.target.value })}
+                      className="accent-blue-600"
+                    />
+                    <div>
+                      <span className="font-medium text-neutral-900">Express Shipping</span>
+                      <span className="text-xs text-neutral-500 block">1-3 business days • $18.00</span>
+                    </div>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setChangeShippingModal(null)}
+                    className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (changeShippingModal.newMethod) {
+                        setChangeShippingModal({ ...changeShippingModal, step: 2 });
+                      }
+                    }}
+                    disabled={!changeShippingModal.newMethod}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirm Shipping Method Change</h3>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-amber-800 font-semibold">⚠️ This action will update the shipping method.</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Order #{changeShippingModal.order.id} will be changed to {
+                      changeShippingModal.newMethod === 'untracked' ? 'Free Untracked' :
+                      changeShippingModal.newMethod === 'tracked' ? 'Tracked Shipping' :
+                      'Express Shipping'
+                    }.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setChangeShippingModal({ ...changeShippingModal, step: 1 })}
+                    className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setChangingShipping(true);
+                      try {
+                        const resp = await fetch(`/api/orders/${changeShippingModal.order.id}`, {
+                          method: 'PATCH',
+                          headers: { 'content-type': 'application/json' },
+                          body: JSON.stringify({
+                            shippingMethod: changeShippingModal.newMethod,
+                          }),
+                        });
+                        if (!resp.ok) throw new Error('Failed to update shipping method');
+                        
+                        // Update local state
+                        setOrders(orders.map(o => 
+                          o.id === changeShippingModal.order.id 
+                            ? { ...o, shippingMethod: changeShippingModal.newMethod }
+                            : o
+                        ));
+                        setSelectedOrder({ ...selectedOrder, shippingMethod: changeShippingModal.newMethod });
+                        setChangeShippingModal(null);
+                      } catch (err) {
+                        alert('Failed to update shipping method');
+                      } finally {
+                        setChangingShipping(false);
+                      }
+                    }}
+                    disabled={changingShipping}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {changingShipping ? 'Updating...' : 'Confirm Change'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -2691,6 +2917,20 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  
+  // Additional insights state
+  const [salesTrend, setSalesTrend] = useState<any[]>([]);
+  const [revenueByCategory, setRevenueByCategory] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+  const [outOfStockItems, setOutOfStockItems] = useState<any[]>([]);
+  const [inventoryByCategory, setInventoryByCategory] = useState<any[]>([]);
+  const [returnTrend, setReturnTrend] = useState<any[]>([]);
+  const [geographicData, setGeographicData] = useState<any[]>([]);
+  const [newVsReturning, setNewVsReturning] = useState({ new: 0, returning: 0 });
+  const [avgOrderValueTrend, setAvgOrderValueTrend] = useState<any[]>([]);
+  const [customerAcquisitionTrend, setCustomerAcquisitionTrend] = useState<any[]>([]);
+  const [peakOrderingTimes, setPeakOrderingTimes] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -2717,6 +2957,201 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
       });
       
       setRecentOrders((orders || []).slice(0, 5));
+      
+      // Calculate sales trend (last 7 days)
+      const salesByDay: any = {};
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        salesByDay[dateStr] = 0;
+      }
+      
+      (orders || []).forEach((order: any) => {
+        const orderDate = new Date(order.createdAt || order.created_at);
+        const dateStr = orderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (salesByDay.hasOwnProperty(dateStr)) {
+          salesByDay[dateStr] += order?.pricing?.total || 0;
+        }
+      });
+      
+      setSalesTrend(Object.entries(salesByDay).map(([date, sales]) => ({ date, sales })));
+      
+      // Calculate revenue by category
+      const categoryRevenue: any = {};
+      (orders || []).forEach((order: any) => {
+        (order?.items || []).forEach((item: any) => {
+          const category = item.category || 'Uncategorized';
+          categoryRevenue[category] = (categoryRevenue[category] || 0) + (item.price || 0);
+        });
+      });
+      
+      setRevenueByCategory(Object.entries(categoryRevenue)
+        .map(([category, revenue]) => ({ category, revenue }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5));
+      
+      // Calculate top selling products
+      const productSales: any = {};
+      (orders || []).forEach((order: any) => {
+        (order?.items || []).forEach((item: any) => {
+          const productName = item.name || item.title || 'Unknown';
+          productSales[productName] = (productSales[productName] || 0) + (item.quantity || 1);
+        });
+      });
+      
+      setTopProducts(Object.entries(productSales)
+        .map(([name, quantity]) => ({ name, quantity }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5));
+      
+      // Calculate low stock items (quantity < 5)
+      setLowStockItems((products || []).filter((p: any) => {
+        const qty = p.quantity || p.inStock === true ? 10 : 0;
+        return qty > 0 && qty < 5;
+      }).slice(0, 5));
+      
+      // Calculate out of stock items
+      setOutOfStockItems((products || []).filter((p: any) => {
+        const qty = p.quantity || (p.inStock === true ? 10 : 0);
+        return qty === 0;
+      }).slice(0, 5));
+      
+      // Calculate inventory by category
+      const categoryInventory: any = {};
+      (products || []).forEach((product: any) => {
+        const category = product.category || 'Uncategorized';
+        const qty = product.quantity || (product.inStock === true ? 10 : 0);
+        categoryInventory[category] = (categoryInventory[category] || 0) + qty;
+      });
+      
+      setInventoryByCategory(Object.entries(categoryInventory)
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5));
+      
+      // Calculate return trend (last 7 days)
+      const returnsByDay: any = {};
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        returnsByDay[dateStr] = 0;
+      }
+      
+      (returns || []).forEach((ret: any) => {
+        const returnDate = new Date(ret.createdAt || ret.created_at);
+        const dateStr = returnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (returnsByDay.hasOwnProperty(dateStr)) {
+          returnsByDay[dateStr]++;
+        }
+      });
+      
+      setReturnTrend(Object.entries(returnsByDay).map(([date, count]) => ({ date, returns: count })));
+      
+      // Calculate geographic distribution
+      const geoData: any = {};
+      (orders || []).forEach((order: any) => {
+        const state = order?.shippingAddress?.state || order?.customer?.address?.state || 'Unknown';
+        geoData[state] = (geoData[state] || 0) + 1;
+      });
+      
+      setGeographicData(Object.entries(geoData)
+        .map(([state, count]) => ({ state, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5));
+      
+      // Calculate new vs returning customers
+      const customerOrders: any = {};
+      (orders || []).forEach((order: any) => {
+        const email = order?.customer?.email;
+        if (email) {
+          customerOrders[email] = (customerOrders[email] || 0) + 1;
+        }
+      });
+      
+      let newCustomers = 0;
+      let returningCustomers = 0;
+      Object.values(customerOrders).forEach((count: any) => {
+        if (count === 1) newCustomers++;
+        else returningCustomers++;
+      });
+      
+      setNewVsReturning({ new: newCustomers, returning: returningCustomers });
+      
+      // Calculate average order value trend (last 7 days)
+      const aovByDay: any = {};
+      const orderCountByDay: any = {};
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        aovByDay[dateStr] = 0;
+        orderCountByDay[dateStr] = 0;
+      }
+      
+      (orders || []).forEach((order: any) => {
+        const orderDate = new Date(order.createdAt || order.created_at);
+        const dateStr = orderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (aovByDay.hasOwnProperty(dateStr)) {
+          aovByDay[dateStr] += order?.pricing?.total || 0;
+          orderCountByDay[dateStr]++;
+        }
+      });
+      
+      setAvgOrderValueTrend(Object.entries(aovByDay).map(([date, total]) => ({
+        date,
+        aov: orderCountByDay[date] > 0 ? total / orderCountByDay[date] : 0
+      })));
+      
+      // Calculate customer acquisition trend (new customers per day)
+      const newCustomersByDay: any = {};
+      const firstOrderByCustomer: any = {};
+      
+      (orders || []).forEach((order: any) => {
+        const email = order?.customer?.email;
+        if (email) {
+          const orderDate = new Date(order.createdAt || order.created_at);
+          if (!firstOrderByCustomer[email] || orderDate < new Date(firstOrderByCustomer[email])) {
+            firstOrderByCustomer[email] = orderDate;
+          }
+        }
+      });
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        newCustomersByDay[dateStr] = 0;
+      }
+      
+      Object.values(firstOrderByCustomer).forEach((firstOrderDate: any) => {
+        const dateStr = new Date(firstOrderDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (newCustomersByDay.hasOwnProperty(dateStr)) {
+          newCustomersByDay[dateStr]++;
+        }
+      });
+      
+      setCustomerAcquisitionTrend(Object.entries(newCustomersByDay).map(([date, count]) => ({ date, count })));
+      
+      // Calculate peak ordering times (by hour)
+      const ordersByHour: any = {};
+      for (let i = 0; i < 24; i++) {
+        ordersByHour[i] = 0;
+      }
+      
+      (orders || []).forEach((order: any) => {
+        const orderDate = new Date(order.createdAt || order.created_at);
+        const hour = orderDate.getHours();
+        ordersByHour[hour]++;
+      });
+      
+      setPeakOrderingTimes(Object.entries(ordersByHour)
+        .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8));
+      
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
@@ -2771,6 +3206,214 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
             </div>
           );
         })}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Sales Trend Chart */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Sales Trend (Last 7 Days)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={salesTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Area type="monotone" dataKey="sales" stroke="#2563EB" fill="#2563EB" fillOpacity={0.3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Revenue by Category */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Revenue by Category</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={revenueByCategory}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="category" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="revenue" fill="#10B981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Second Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Return Trend */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Return Trend (Last 7 Days)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={returnTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="returns" stroke="#F59E0B" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Geographic Distribution */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Orders by State</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={geographicData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis dataKey="state" type="category" width={80} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#8B5CF6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Third Row - Lists and Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Top Selling Products */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Top Selling Products</h3>
+          <div className="space-y-3">
+            {topProducts.map((product, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <span className="font-medium text-slate-700 truncate">{product.name}</span>
+                </div>
+                <span className="font-bold text-slate-900">{product.quantity} sold</span>
+              </div>
+            ))}
+            {topProducts.length === 0 && <p className="text-slate-500 text-center py-4">No sales data yet</p>}
+          </div>
+        </div>
+
+        {/* Low Stock Alerts */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <AlertCircle size={20} className="text-amber-500" />
+            Low Stock Alerts
+          </h3>
+          <div className="space-y-3">
+            {lowStockItems.map((product, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div>
+                  <p className="font-medium text-slate-700">{product.name}</p>
+                  <p className="text-sm text-slate-500">{product.category}</p>
+                </div>
+                <span className="font-bold text-amber-600">{product.quantity} left</span>
+              </div>
+            ))}
+            {lowStockItems.length === 0 && <p className="text-slate-500 text-center py-4">No low stock items</p>}
+          </div>
+        </div>
+
+        {/* Out of Stock */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <XCircle size={20} className="text-red-500" />
+            Out of Stock
+          </h3>
+          <div className="space-y-3">
+            {outOfStockItems.map((product, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <div>
+                  <p className="font-medium text-slate-700">{product.name}</p>
+                  <p className="text-sm text-slate-500">{product.category}</p>
+                </div>
+                <span className="font-bold text-red-600">0 left</span>
+              </div>
+            ))}
+            {outOfStockItems.length === 0 && <p className="text-slate-500 text-center py-4">No out of stock items</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Fourth Row - Inventory and Customer Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Inventory by Category */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Inventory by Category</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={inventoryByCategory}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="category" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#06B6D4" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* New vs Returning Customers */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Customer Type</h3>
+          <div className="flex items-center justify-around h-64">
+            <div className="text-center">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 shadow-lg">
+                <span className="text-4xl font-bold text-white">{newVsReturning.new}</span>
+              </div>
+              <p className="font-semibold text-slate-700">New Customers</p>
+            </div>
+            <div className="text-center">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 shadow-lg">
+                <span className="text-4xl font-bold text-white">{newVsReturning.returning}</span>
+              </div>
+              <p className="font-semibold text-slate-700">Returning</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fifth Row - Additional Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Average Order Value Trend */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Avg Order Value (7 Days)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={avgOrderValueTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value) => `AU$${value.toFixed(2)}`} />
+              <Line type="monotone" dataKey="aov" stroke="#EC4899" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Customer Acquisition Trend */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">New Customers (7 Days)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={customerAcquisitionTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#F97316" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Peak Ordering Times */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Peak Ordering Times</h3>
+          <div className="space-y-3">
+            {peakOrderingTimes.map((item, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Clock size={16} className="text-slate-500" />
+                  <span className="font-medium text-slate-700">{item.hour}</span>
+                </div>
+                <span className="font-bold text-slate-900">{item.count} orders</span>
+              </div>
+            ))}
+            {peakOrderingTimes.length === 0 && <p className="text-slate-500 text-center py-4">No order data yet</p>}
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -3495,6 +4138,11 @@ function AdminDashboard({
       onClick: () => router.push("/admin/shipping"),
     },
     {
+      label: "Label Templates",
+      icon: Printer,
+      onClick: () => router.push("/admin/settings/labels"),
+    },
+    {
       label: "Import Products",
       icon: Import,
       onClick: () => router.push("/admin/upload-products"),
@@ -3831,9 +4479,6 @@ function AdminProducts() {
 
   useEffect(() => {
     loadProducts();
-    // Auto-refresh every 30 seconds in background
-    const interval = setInterval(() => loadProducts(true), 30000);
-    return () => clearInterval(interval);
   }, [getProducts]);
 
   // Reset valid image indices when switching products, but keep track of checked status per product
