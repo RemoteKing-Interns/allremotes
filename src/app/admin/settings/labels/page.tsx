@@ -297,6 +297,7 @@ export default function LabelSettingsPage() {
                             <button
                               onClick={() => removeFieldFromTemplate(field.id)}
                               className="p-1 hover:bg-red-100 rounded"
+                              title="Remove field"
                             >
                               <Trash2 size={12} className="text-red-600" />
                             </button>

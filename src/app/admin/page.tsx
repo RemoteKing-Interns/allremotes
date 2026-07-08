@@ -111,6 +111,14 @@ const slugify = (value: string) => {
 
 const makeId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+const moveArrayItem = <T,>(arr: T[], from: number, to: number): T[] => {
+  if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return arr;
+  const result = [...arr];
+  const [moved] = result.splice(from, 1);
+  result.splice(to, 0, moved);
+  return result;
+};
+
 const normalizeNavigationFromApi = (data: any) => {
   if (!data) return {};
   if (Array.isArray(data)) {
@@ -467,17 +475,40 @@ const AdminContent = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync URL params when tab/id state changes
+  // Sync URL params when tab/id state changes — use pushState so back button works
+  const isFirstTabRender = useRef(true);
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
+    const prevTab = p.get('tab');
     p.set('tab', activeTab);
     if (viewOrderId) p.set('order', viewOrderId); else p.delete('order');
     if (viewReturnId) p.set('return', viewReturnId); else p.delete('return');
     if (openThreadId) p.set('thread', openThreadId); else p.delete('thread');
     const newUrl = `${window.location.pathname}?${p.toString()}`;
-    window.history.replaceState(null, '', newUrl);
+    // First render: replace so we don't pollute history on load
+    if (isFirstTabRender.current) {
+      window.history.replaceState({ tab: activeTab }, '', newUrl);
+      isFirstTabRender.current = false;
+    } else if (prevTab !== activeTab) {
+      // Tab actually changed: push so browser back works
+      window.history.pushState({ tab: activeTab }, '', newUrl);
+    } else {
+      // Same tab, just params changed (order/return/thread): replace
+      window.history.replaceState({ tab: activeTab }, '', newUrl);
+    }
     localStorage.setItem('adminActiveTab', activeTab);
   }, [activeTab, viewOrderId, viewReturnId, openThreadId]);
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const p = new URLSearchParams(window.location.search);
+      const tab = p.get('tab') || 'dashboard';
+      setActiveTab(tab);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const fetchNotifications = async () => {
     setNotifLoading(true);
@@ -1027,30 +1058,9 @@ const AdminContent = () => {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content — tabs are kept mounted and hidden so data is never lost on switch */}
         <main className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'dashboard'      && hasPermission('dashboard')  && <ShopifyDashboard onNavigateTab={setActiveTab} />}
-          {activeTab === 'analytics'      && hasPermission('analytics')  && <AdminAnalytics />}
-          {activeTab === 'live_view'      && hasPermission('analytics')  && <LiveViewSection />}
-          {activeTab === 'customers'      && hasPermission('customers')  && <CustomerManagement />}
-          {activeTab === 'admin_users'    && isSuperUser                 && <AdminUsersManager />}
-          {activeTab === 'admin_logs'     && hasPermission('admin_users') && <AdminLogs />}
-          {activeTab === 'products'       && hasPermission('products')   && <AdminProducts />}
-          {activeTab === 'categories'     && hasPermission('products')   && <CategoriesBrandsSection />}
-          {activeTab === 'inventory'      && hasPermission('products')   && <InventorySection />}
-          {activeTab === 'orders'         && hasPermission('orders')     && <AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} />}
-          {activeTab === 'returns'        && hasPermission('orders')     && <AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} />}
-          {activeTab === 'abandoned_carts'&& hasPermission('orders')     && <AdminAbandonedCarts />}
-          {activeTab === 'home'           && hasPermission('content')    && <AdminHome />}
-          {activeTab === 'promotions'     && hasPermission('marketing')  && <AdminPromotions />}
-          {activeTab === 'discounts'      && hasPermission('marketing')  && <DiscountsSection />}
-          {activeTab === 'navigation'     && hasPermission('content')    && <AdminNavigation />}
-          {activeTab === 'reviews'        && hasPermission('customers')  && <AdminReviews />}
-          {activeTab === 'messages'       && hasPermission('customers')  && <AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} />}
-          {activeTab === 'settings'       && hasPermission('settings')   && <AdminSettings />}
-          {activeTab === 'profile'        && <AdminProfile />}
-
-          {/* Fallback: tab exists but user lacks permission */}
+          {/* Permission guard fallback */}
           {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <div className="text-5xl mb-4">🔒</div>
@@ -1058,6 +1068,26 @@ const AdminContent = () => {
               <p className="text-sm text-neutral-500 mt-2">You don&apos;t have permission to view this section.</p>
             </div>
           )}
+          {hasPermission('dashboard')   && <div className={activeTab === 'dashboard'       ? '' : 'hidden'}><ShopifyDashboard onNavigateTab={setActiveTab} /></div>}
+          {hasPermission('analytics')   && <div className={activeTab === 'analytics'       ? '' : 'hidden'}><AdminAnalytics /></div>}
+          {hasPermission('analytics')   && <div className={activeTab === 'live_view'       ? '' : 'hidden'}><LiveViewSection /></div>}
+          {hasPermission('customers')   && <div className={activeTab === 'customers'       ? '' : 'hidden'}><CustomerManagement /></div>}
+          {isSuperUser                  && <div className={activeTab === 'admin_users'     ? '' : 'hidden'}><AdminUsersManager /></div>}
+          {hasPermission('admin_users') && <div className={activeTab === 'admin_logs'      ? '' : 'hidden'}><AdminLogs /></div>}
+          {hasPermission('products')    && <div className={activeTab === 'products'        ? '' : 'hidden'}><AdminProducts /></div>}
+          {hasPermission('products')    && <div className={activeTab === 'categories'      ? '' : 'hidden'}><CategoriesBrandsSection /></div>}
+          {hasPermission('products')    && <div className={activeTab === 'inventory'       ? '' : 'hidden'}><InventorySection /></div>}
+          {hasPermission('orders')      && <div className={activeTab === 'orders'          ? '' : 'hidden'}><AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} /></div>}
+          {hasPermission('orders')      && <div className={activeTab === 'returns'         ? '' : 'hidden'}><AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} /></div>}
+          {hasPermission('orders')      && <div className={activeTab === 'abandoned_carts' ? '' : 'hidden'}><AdminAbandonedCarts /></div>}
+          {hasPermission('content')     && <div className={activeTab === 'home'            ? '' : 'hidden'}><AdminHome /></div>}
+          {hasPermission('marketing')   && <div className={activeTab === 'promotions'      ? '' : 'hidden'}><AdminPromotions /></div>}
+          {hasPermission('marketing')   && <div className={activeTab === 'discounts'       ? '' : 'hidden'}><DiscountsSection /></div>}
+          {hasPermission('content')     && <div className={activeTab === 'navigation'      ? '' : 'hidden'}><AdminNavigation /></div>}
+          {hasPermission('customers')   && <div className={activeTab === 'reviews'         ? '' : 'hidden'}><AdminReviews /></div>}
+          {hasPermission('customers')   && <div className={activeTab === 'messages'        ? '' : 'hidden'}><AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} /></div>}
+          {hasPermission('settings')    && <div className={activeTab === 'settings'        ? '' : 'hidden'}><AdminSettings /></div>}
+          <div className={activeTab === 'profile' ? '' : 'hidden'}><AdminProfile /></div>
         </main>
       </div>
 
@@ -4464,12 +4494,15 @@ function AdminProducts() {
     }
     setLoadError("");
     try {
-      const resp = await fetch("/api/products", { cache: "no-store" });
+      const cacheBust = isRefresh ? `?t=${Date.now()}` : '';
+      const resp = await fetch(`/api/products${cacheBust}`, { cache: "no-store" });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to load products");
       setProductsState(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setProductsState(getProducts());
+      if (!isRefresh) {
+        setProductsState(getProducts());
+      }
       setLoadError(err?.message || "Failed to load products");
     } finally {
       setIsLoading(false);
@@ -4860,6 +4893,7 @@ function AdminProducts() {
                     placeholder="Search by name, SKU, brand, description, tags, features..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
                     className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
@@ -5332,75 +5366,82 @@ function AdminProducts() {
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                    {/* Images Gallery - filter broken images unless showAllImages is enabled */}
-                    {(productForEdit.images || (productForEdit.image ? [productForEdit.image] : []))
-                      .map((img: string, idx: number) => {
-                        // An image is broken if explicitly marked as failed (negative index in set)
-                        // An image is valid if explicitly marked as loaded successfully
-                        const isBroken = validImageIndices.has(-idx - 1);
-                        const isValid = validImageIndices.has(idx);
-                        // Show image if: showAllImages is on, or image is valid, or image hasn't been checked yet (!isValid && !isBroken)
-                        const shouldShow = showAllImages || isValid || (!isValid && !isBroken);
-                        return { img, idx, isBroken, isValid, shouldShow };
-                      })
-                      .filter(({ shouldShow }) => shouldShow)
-                      .map(({ img, idx, isBroken, isValid }, displayIdx) => {
-                        const isDragging = draggedIndex === idx;
-                        const isDragOver = dragOverIndex === idx;
-                        return (
+                    {/* Images Gallery - hide broken images */}
+                    {(productForEdit.images || (productForEdit.image ? [productForEdit.image] : [])).map((img: string, idx: number) => {
+                      const isBroken = validImageIndices.has(-idx - 1);
+                      if (isBroken) return null;
+                      const isDragging = draggedIndex === idx;
+                      const isDragOver = dragOverIndex === idx;
+                      return (
                         <div
-                          key={idx + '-' + img}
-                          draggable={!isBroken}
-                          onDragStart={() => setDraggedIndex(idx)}
+                          key={img}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('application/x-image-url', img);
+                            e.dataTransfer.setData('text/plain', String(idx));
+                            setDraggedIndex(idx);
+                          }}
                           onDragEnd={() => { setDraggedIndex(null); setDragOverIndex(null); }}
-                          onDragOver={(e) => { e.preventDefault(); if (!isBroken) setDragOverIndex(idx); }}
+                          onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
                           onDragLeave={() => setDragOverIndex(null)}
                           onDrop={(e) => {
                             e.preventDefault();
-                            if (isBroken || draggedIndex === null || draggedIndex === idx) { setDragOverIndex(null); setDraggedIndex(null); return; }
+                            const draggedUrl = e.dataTransfer.getData('application/x-image-url');
+                            const fromIdxStr = e.dataTransfer.getData('text/plain');
+                            const fromIdx = parseInt(fromIdxStr, 10);
+                            const toIdx = idx;
+                            
+                            if (!draggedUrl || Number.isNaN(fromIdx) || fromIdx === toIdx) {
+                              setDragOverIndex(null);
+                              setDraggedIndex(null);
+                              return;
+                            }
+                            
                             const currentImages = [...(productForEdit.images || (productForEdit.image ? [productForEdit.image] : []))];
-                            const [moved] = currentImages.splice(draggedIndex, 1);
-                            currentImages.splice(idx, 0, moved);
-                            update(productForEdit.id, "images", currentImages);
-                            update(productForEdit.id, "image", currentImages[0] || "");
-                            // Remap pending deletions indices
+                            const actualFromIdx = currentImages.indexOf(draggedUrl);
+                            
+                            if (actualFromIdx === -1 || actualFromIdx === toIdx) {
+                              setDragOverIndex(null);
+                              setDraggedIndex(null);
+                              return;
+                            }
+                            
+                            const newImages = currentImages.filter((_, i) => i !== actualFromIdx);
+                            newImages.splice(toIdx, 0, draggedUrl);
+                            
+                            update(productForEdit.id, "images", newImages);
+                            update(productForEdit.id, "image", newImages[0] || "");
+                            setValidImageIndices(new Set());
+                            
                             const newDeletions = new Set<number>();
                             pendingImageDeletions.forEach((dIdx) => {
-                              if (dIdx === draggedIndex) newDeletions.add(idx);
-                              else if (dIdx > draggedIndex && dIdx <= idx) newDeletions.add(dIdx - 1);
-                              else if (dIdx < draggedIndex && dIdx >= idx) newDeletions.add(dIdx + 1);
-                              else newDeletions.add(dIdx);
+                              const url = currentImages[dIdx];
+                              const newIdx = newImages.indexOf(url);
+                              if (newIdx !== -1) newDeletions.add(newIdx);
                             });
                             setPendingImageDeletions(newDeletions);
+                            
                             setDragOverIndex(null);
                             setDraggedIndex(null);
                           }}
                           className={`relative group aspect-square rounded-lg border-2 overflow-hidden ${
-                            isBroken 
-                              ? 'bg-red-50 border-red-300 cursor-not-allowed' 
+                            pendingImageDeletions.has(idx)
+                              ? 'bg-neutral-50 border-rose-500 opacity-50 cursor-move'
                               : 'bg-neutral-50 border-neutral-300 cursor-move'
-                          } ${
-                            pendingImageDeletions.has(idx) ? 'border-rose-500 opacity-50' : ''
-                          } ${isDragging ? 'opacity-30' : ''} ${isDragOver ? 'ring-2 ring-emerald-500 border-emerald-400' : ''}`}
+                          } ${isDragging ? 'ring-2 ring-blue-500 shadow-lg scale-[1.02] z-10' : ''} ${isDragOver ? 'ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/50' : ''}`}
                         >
-                          {/* Broken Image Placeholder */}
-                          {isBroken && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-red-400">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><path d="m3 3 18 18"/></svg>
-                              <span className="text-xs mt-1">Image not found</span>
-                            </div>
-                          )}
                           <img
                             src={img}
-                            alt={`Product ${displayIdx + 1}`}
-                            className={`w-full h-full object-contain p-2 pointer-events-none transition-opacity duration-300 ${isBroken ? 'opacity-0' : 'opacity-100'}`}
+                            alt={`Product ${idx + 1}`}
+                            className="w-full h-full object-contain p-2 transition-opacity duration-300 opacity-100"
                             draggable={false}
                             onLoad={() => {
                               setValidImageIndices(prev => new Set([...prev, idx]));
                             }}
                             onError={() => {
-                              // Image failed to load - mark as broken using negative index
-                              setValidImageIndices(prev => new Set([...prev, -idx - 1]));
+                              if (img && !validImageIndices.has(idx)) {
+                                setValidImageIndices(prev => new Set([...prev, -idx - 1]));
+                              }
                             }}
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -5412,7 +5453,7 @@ function AdminProducts() {
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                             </button>
-                            {displayIdx === 0 && !pendingImageDeletions.has(idx) && (
+                            {idx === 0 && !pendingImageDeletions.has(idx) && (
                               <button
                                 type="button"
                                 onClick={(e) => e.stopPropagation()}
@@ -5435,23 +5476,22 @@ function AdminProducts() {
                                 setPendingImageDeletions(newDeletions);
                               }}
                               className="p-2 bg-white rounded-lg text-red-600 hover:bg-red-50"
-                              title={pendingImageDeletions.has(idx) ? "Undo delete" : "Delete"}
+                              title={pendingImageDeletions.has(idx) ? 'Undo delete' : 'Delete'}
                             >
                               <Trash2 size={16} />
                             </button>
                           </div>
                           <span className={`absolute top-2 left-2 px-2 py-0.5 text-white text-xs font-medium rounded ${
-                            pendingImageDeletions.has(idx) ? 'bg-rose-500' : isBroken ? 'bg-red-500' : (displayIdx === 0 ? 'bg-emerald-500' : 'bg-neutral-600')
+                            pendingImageDeletions.has(idx) ? 'bg-rose-500' : (idx === 0 ? 'bg-emerald-500' : 'bg-neutral-600')
                           }`}>
-                            {pendingImageDeletions.has(idx) ? 'Pending Delete' : isBroken ? 'Broken' : (displayIdx === 0 ? 'Main' : `#${displayIdx + 1}`)}
+                            {pendingImageDeletions.has(idx) ? 'Pending Delete' : (idx === 0 ? 'Main' : `#${idx + 1}`)}
                           </span>
-                          {/* Drag hint */}
                           <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-70 transition-opacity">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                           </div>
                         </div>
                       );
-                    })}
+                    }).filter(Boolean)}
 
                     {/* Upload Area */}
                     <label className="aspect-square rounded-lg border-2 border-dashed border-neutral-300 hover:border-emerald-500 hover:bg-emerald-50/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 text-neutral-500 hover:text-emerald-600">
