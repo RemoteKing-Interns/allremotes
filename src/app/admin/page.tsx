@@ -4890,10 +4890,15 @@ function AdminProducts() {
                   <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                   <input
                     type="text"
+                    name="admin-search"
                     placeholder="Search by name, SKU, brand, description, tags, features..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoComplete="off"
+                    formNoValidate
+                    readOnly
+                    onFocus={(e) => e.target.readOnly = false}
+                    onBlur={(e) => e.target.readOnly = true}
                     className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
@@ -9284,10 +9289,10 @@ function AdminMessages({ openThreadId, onThreadOpened }: { openThreadId?: string
         </div>
         <div className="flex-1 overflow-y-auto">
           {threads.map((thread) => (
-            <button
+            <div
               key={thread.id}
               onClick={() => setSelectedThread(thread)}
-              className={`w-full p-4 text-left border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
+              className={`w-full p-4 text-left border-b border-neutral-100 hover:bg-neutral-50 transition-colors cursor-pointer ${
                 selectedThread?.id === thread.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
               }`}
             >
@@ -9299,6 +9304,7 @@ function AdminMessages({ openThreadId, onThreadOpened }: { openThreadId?: string
                   <div className="text-xs text-neutral-500 mt-0.5">
                     {thread.orderId && (
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           localStorage.setItem('adminViewOrderId', thread.orderId);
@@ -9311,6 +9317,7 @@ function AdminMessages({ openThreadId, onThreadOpened }: { openThreadId?: string
                     )}
                     {thread.returnId && (
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           localStorage.setItem('adminViewReturnId', thread.returnId);
@@ -9335,7 +9342,7 @@ function AdminMessages({ openThreadId, onThreadOpened }: { openThreadId?: string
               <div className="text-xs text-neutral-400 mt-1">
                 {new Date(thread.lastMessageAt).toLocaleDateString()} at {new Date(thread.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>
