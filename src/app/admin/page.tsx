@@ -2741,31 +2741,6 @@ function ShopifyDashboard({ onNavigateTab }: { onNavigateTab: (tab: string) => v
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-slate-500 mt-1">
-              {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : 'Loading...'}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <button className="p-3 rounded-xl bg-white shadow-sm hover:shadow-md transition-all">
-                <Bell size={20} className="text-slate-600" />
-              </button>
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-            </div>
-            <button className="p-3 rounded-xl bg-white shadow-sm hover:shadow-md transition-all">
-              <Settings size={20} className="text-slate-600" />
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat) => {
@@ -3797,6 +3772,7 @@ function AdminProducts() {
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [pendingImageDeletions, setPendingImageDeletions] = useState(new Set<number>());
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -3832,38 +3808,32 @@ function AdminProducts() {
     setSettings(getSettings() || {});
   }, [getSettings]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+  const loadProducts = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
       setIsLoading(true);
-      setLoadError("");
-      try {
-        const resp = await fetch("/api/products", { cache: "no-store" });
-        const data = await resp.json().catch(() => null);
-        if (!resp.ok) throw new Error(data?.error || "Failed to load products");
-        if (!cancelled) setProductsState(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        if (!cancelled) {
-          setProductsState(getProducts());
-          setLoadError(err?.message || "Failed to load products");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-          // Check if there's a pending edit product ID after loading
-          const pendingEditId = localStorage.getItem('adminEditProductId');
-          if (pendingEditId) {
-            setEditingId(pendingEditId);
-            setIsNewProduct(false);
-            localStorage.removeItem('adminEditProductId');
-          }
-        }
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
+    }
+    setLoadError("");
+    try {
+      const resp = await fetch("/api/products", { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to load products");
+      setProductsState(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setProductsState(getProducts());
+      setLoadError(err?.message || "Failed to load products");
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+    // Auto-refresh every 30 seconds in background
+    const interval = setInterval(() => loadProducts(true), 30000);
+    return () => clearInterval(interval);
   }, [getProducts]);
 
   // Reset valid image indices when switching products, but keep track of checked status per product
@@ -4156,6 +4126,17 @@ function AdminProducts() {
           <p className="mt-1 text-sm text-neutral-500">Manage your product catalog and inventory.</p>
         </div>
         <div className="flex items-center gap-3">
+          {!editingId && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50"
+              onClick={() => loadProducts(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          )}
           {!editingId && (
             <button
               type="button"
