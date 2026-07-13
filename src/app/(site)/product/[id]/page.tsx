@@ -18,6 +18,7 @@ import {
   isDiscountEligible,
 } from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
+import ImageGallery from "../../../../components/images/ImageGallery";
 
 // Helper to clean HTML description - remove font styles but preserve colors/bold/italic
 const sanitizeDescription = (html: string): string => {
@@ -113,35 +114,8 @@ const ProductDetail = () => {
   });
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState("description");
-  const [validImageIndices, setValidImageIndices] = useState<Set<number>>(new Set());
-  
-  // Get images array (support both new images[] and legacy image field)
-  const images = React.useMemo(() => {
-    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-      return product.images.filter((img) => String(img || "").trim() !== "");
-    }
-    if (product?.image) {
-      return [product.image];
-    }
-    return [];
-  }, [product?.images, product?.image]);
-  
-  // Get primary image index (default to imgIndex or 0)
-  const primaryImageIndex = React.useMemo(() => {
-    let idx = product?.imgIndex ?? 0;
-    if (!Number.isFinite(idx) || idx < 0 || idx >= images.length) {
-      idx = 0;
-    }
-    return idx;
-  }, [product?.imgIndex, images.length]);
-  
-  // Update selected index on product change
-  React.useEffect(() => {
-    setSelectedImageIndex(primaryImageIndex);
-  }, [product?.id, primaryImageIndex]);
   const tabSections = [
     {
       id: "description",
@@ -355,72 +329,7 @@ const ProductDetail = () => {
 
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* LEFT: IMAGE GALLERY */}
-          <div className="flex flex-col gap-4">
-            {/* Main Image */}
-            <div
-              className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-panel"
-              onMouseMove={(e) => {
-                const box = e.currentTarget;
-                const img = box.querySelector("img");
-                if (!img) return;
-                const { left, top, width, height } = box.getBoundingClientRect();
-                const x = ((e.clientX - left) / width) * 100;
-                const y = ((e.clientY - top) / height) * 100;
-                img.style.transformOrigin = `${x}% ${y}%`;
-              }}
-              onMouseLeave={(e) => {
-                const img = e.currentTarget.querySelector("img");
-                if (!img) return;
-                img.style.transformOrigin = "center center";
-                img.style.transform = "scale(1)";
-              }}
-              onMouseEnter={(e) => {
-                const img = e.currentTarget.querySelector("img");
-                if (!img) return;
-                img.style.transform = "scale(2)";
-              }}
-            >
-              <img
-                key={selectedImageIndex}
-                src={images[selectedImageIndex] || "/favicon.png"}
-                alt={product.name}
-                className="relative h-full w-full max-h-[28rem] object-contain p-6 transition-transform duration-300 will-change-transform sm:max-h-[34rem]"
-                onError={(e) =>
-                  (e.currentTarget.src = "/favicon.png")
-                }
-              />
-            </div>
-
-            {/* Thumbnail Row (only show images that loaded successfully) */}
-            {images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {images.map((imgUrl, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`relative flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                      selectedImageIndex === idx
-                        ? "border-primary shadow-md"
-                        : "border-neutral-200 hover:border-neutral-300"
-                    } ${validImageIndices.has(idx) ? '' : 'hidden'}`}
-                    aria-label={`View image ${idx + 1}`}
-                  >
-                    <img
-                      src={imgUrl}
-                      alt={`${product.name} - image ${idx + 1}`}
-                      className="h-20 w-20 object-contain p-1"
-                      onLoad={() => {
-                        setValidImageIndices(prev => new Set([...prev, idx]));
-                      }}
-                      onError={() => {
-                        // Image failed to load - don't add to valid indices
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ImageGallery product={product} />
 
           {/* RIGHT: INFO */}
           <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur sm:p-8">

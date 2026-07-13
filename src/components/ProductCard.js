@@ -8,6 +8,8 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useStore } from "../context/StoreContext";
 import { getPriceBreakdown, isDiscountEligible } from "../utils/pricing";
+import ProductImage from "./images/ProductImage";
+import { getPrimaryImage, getFallbackLetter } from "../lib/images";
 
 function readWishlist(key) {
   try {
@@ -27,7 +29,6 @@ const ProductCard = ({
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { getPromotions } = useStore();
-  const [imageError, setImageError] = React.useState(false);
   const [isWishlisted, setIsWishlisted] = React.useState(false);
   const promotions = getPromotions();
   const pricing = getPriceBreakdown(product.price, isDiscountEligible(user), {
@@ -35,22 +36,9 @@ const ProductCard = ({
     product,
   });
 
-  // Get product image: prefer images[imgIndex], fall back to images[0], then fall back to single image
-  const productImage = React.useMemo(() => {
-    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-      const imgIndex = product?.imgIndex ?? 0;
-      // Use imgIndex if valid, otherwise use first image
-      if (Number.isFinite(imgIndex) && imgIndex >= 0 && imgIndex < product.images.length) {
-        return product.images[imgIndex];
-      }
-      return product.images[0];
-    }
-    return product?.image || "/images/mainlogo.png";
-  }, [product?.images, product?.imgIndex, product?.image]);
-
-  React.useEffect(() => {
-    setImageError(false);
-  }, [product?.images, product?.image, productImage]);
+  // Get product image using shared utility
+  const productImage = getPrimaryImage(product);
+  const fallbackLetter = getFallbackLetter(product);
 
   const brandLabel = product.brand?.trim() || "ALLREMOTES";
   const productName =
@@ -59,7 +47,6 @@ const ProductCard = ({
     pricing.hasDiscount && pricing.originalPrice > 0
       ? Math.round((pricing.discountAmount / pricing.originalPrice) * 100)
       : 0;
-  const fallbackInitial = brandLabel.charAt(0).toUpperCase();
   const userKey = React.useMemo(
     () => user?.id || user?.email || "guest",
     [user],
@@ -121,26 +108,15 @@ const ProductCard = ({
       />
 
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-white">
-        {/* Fallback Letter */}
-        {imageError && (
-          <div className="text-7xl font-extrabold text-neutral-300">
-            {fallbackInitial}
-          </div>
-        )}
-
-        {/* Product Image */}
-        {!imageError && (
-          <img
-            src={productImage}
-            alt={productName}
-            loading="lazy"
-            decoding="async"
-            className={`h-full w-full object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
-              !product.inStock ? "opacity-50" : ""
-            }`}
-            onError={() => setImageError(true)}
-          />
-        )}
+        <ProductImage
+          src={productImage}
+          alt={productName}
+          fallbackLetter={fallbackLetter}
+          className={`h-full w-full object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
+            !product.inStock ? "opacity-50" : ""
+          }`}
+          loading="lazy"
+        />
 
         {/* Badges - Top Left */}
         <div className="absolute left-2 top-2 right-12 z-20 flex flex-col gap-1 sm:left-3 sm:top-3 sm:right-auto sm:gap-1.5">

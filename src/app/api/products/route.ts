@@ -106,6 +106,43 @@ export async function GET() {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Product ID is required" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    if (mongoEnabled()) {
+      const db = await getDb();
+      const col = db.collection("products");
+      const result = await col.deleteOne({ id });
+      
+      if (result.deletedCount === 0) {
+        return NextResponse.json(
+          { error: "Product not found" },
+          { status: 404, headers: CORS_HEADERS }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { success: true, message: "Product deleted successfully" },
+      { headers: CORS_HEADERS }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to delete product", details: err?.message },
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, ArrowLeft, Building2, Package } from "lucide-react";
 import ProductCard from "../../../components/ProductCard";
+import ProductImage from "../../../components/images/ProductImage";
 
 interface Brand {
   name: string;
@@ -213,17 +214,11 @@ export default function ShopByBrandClient() {
                 {/* Brand Logo */}
                 <div className="aspect-square bg-neutral-50 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
                   {brand.image ? (
-                    <img
+                    <ProductImage
                       src={brand.image}
                       alt={brand.name}
+                      fallbackLetter={brand.name?.charAt(0)?.toUpperCase()}
                       className="w-full h-full object-contain p-3"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                        const parent = (e.target as HTMLImageElement).parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<div class="flex flex-col items-center text-neutral-400"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22h12a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2z"/><path d="M8 6h8"/><path d="M8 10h8"/><path d="M8 14h4"/></svg></div>`;
-                        }
-                      }}
                     />
                   ) : (
                     <Building2 size={40} className="text-neutral-400" />

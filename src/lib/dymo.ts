@@ -46,12 +46,58 @@ export interface PrintLabelOptions {
   template: LabelTemplate;
 }
 
+export interface PrintParams {
+  printerName: string;
+  copies?: number;
+  jobTitle?: string;
+}
+
+export interface RenderParams {
+  pngOutput?: boolean;
+  leftMargin?: number;
+  topMargin?: number;
+  scale?: number;
+}
+
 /**
  * Check if DYMO framework is loaded
  */
 export function isDymoFrameworkLoaded(): boolean {
   return typeof (window as any).dymo !== 'undefined' && 
          typeof (window as any).dymo.label !== 'undefined';
+}
+
+/**
+ * Initialize DYMO Label Framework
+ */
+export async function initDymoFramework(): Promise<void> {
+  if (!isDymoFrameworkLoaded()) {
+    throw new Error('DYMO framework not loaded. Please ensure dymo.label.framework.js is loaded.');
+  }
+
+  try {
+    await (window as any).dymo.label.framework.init();
+  } catch (error) {
+    console.error('Failed to initialize DYMO framework:', error);
+    throw new Error('Failed to initialize DYMO framework.');
+  }
+}
+
+/**
+ * Check if the environment meets DYMO requirements
+ */
+export async function checkDymoEnvironment(): Promise<boolean> {
+  if (!isDymoFrameworkLoaded()) {
+    return false;
+  }
+
+  try {
+    const result = await (window as any).dymo.label.framework.checkEnvironment();
+    return result === true;
+  } catch (error) {
+    console.error('Failed to check DYMO environment:', error);
+    return false;
+  }
 }
 
 /**
@@ -72,7 +118,140 @@ export async function getPrinters(): Promise<string[]> {
 }
 
 /**
- * Print a label using DYMO LabelWriter
+ * Load label from file name and return label instance
+ */
+export async function openLabelFile(fileName: string): Promise<any> {
+  if (!isDymoFrameworkLoaded()) {
+    throw new Error('DYMO framework not loaded. Please ensure dymo.label.framework.js is loaded.');
+  }
+
+  try {
+    const label = await (window as any).dymo.label.framework.openLabelFile(fileName);
+    return label;
+  } catch (error) {
+    console.error('Failed to open label file:', error);
+    throw new Error(`Failed to open label file: ${fileName}`);
+  }
+}
+
+/**
+ * Load label from XML content and return label instance
+ */
+export async function openLabelXml(labelXml: string): Promise<any> {
+  if (!isDymoFrameworkLoaded()) {
+    throw new Error('DYMO framework not loaded. Please ensure dymo.label.framework.js is loaded.');
+  }
+
+  try {
+    const label = await (window as any).dymo.label.framework.openLabelXml(labelXml);
+    return label;
+  } catch (error) {
+    console.error('Failed to open label XML:', error);
+    throw new Error('Failed to open label XML.');
+  }
+}
+
+/**
+ * Validate if the current content is a valid label based on the current service installed
+ */
+export function isValidLabel(label: any): boolean {
+  if (!label || typeof label.isValidLabel !== 'function') {
+    return false;
+  }
+
+  try {
+    return label.isValidLabel();
+  } catch (error) {
+    console.error('Failed to validate label:', error);
+    return false;
+  }
+}
+
+/**
+ * Validate if the current content is a valid DYMO Connect label based on DYMO Connect service
+ */
+export function isDCDLabel(label: any): boolean {
+  if (!label || typeof label.isDCDLabel !== 'function') {
+    return false;
+  }
+
+  try {
+    return label.isDCDLabel();
+  } catch (error) {
+    console.error('Failed to validate DCD label:', error);
+    return false;
+  }
+}
+
+/**
+ * Validate if the current content is a valid DYMO Label Software label based on DYMO Label Software service
+ */
+export function isDLSLabel(label: any): boolean {
+  if (!label || typeof label.isDLSLabel !== 'function') {
+    return false;
+  }
+
+  try {
+    return label.isDLSLabel();
+  } catch (error) {
+    console.error('Failed to validate DLS label:', error);
+    return false;
+  }
+}
+
+/**
+ * Print label using DYMO LabelWriter (framework version)
+ */
+export async function printLabelFramework(
+  printerName: string,
+  printParamsXml: string,
+  labelXml: string,
+  labelSetXml?: string
+): Promise<void> {
+  if (!isDymoFrameworkLoaded()) {
+    throw new Error('DYMO framework not loaded. Please ensure dymo.label.framework.js is loaded.');
+  }
+
+  try {
+    await (window as any).dymo.label.framework.printLabel(
+      printerName,
+      printParamsXml,
+      labelXml,
+      labelSetXml || ''
+    );
+  } catch (error) {
+    console.error('Failed to print label:', error);
+    throw new Error('Failed to print label. Check printer connection and try again.');
+  }
+}
+
+/**
+ * Get label preview image of the label
+ */
+export async function renderLabel(
+  labelXml: string,
+  renderParamsXml: string,
+  printerName?: string
+): Promise<string> {
+  if (!isDymoFrameworkLoaded()) {
+    throw new Error('DYMO framework not loaded. Please ensure dymo.label.framework.js is loaded.');
+  }
+
+  try {
+    const result = await (window as any).dymo.label.framework.renderLabel(
+      labelXml,
+      renderParamsXml,
+      printerName || ''
+    );
+    return result;
+  } catch (error) {
+    console.error('Failed to render label:', error);
+    throw new Error('Failed to render label preview.');
+  }
+}
+
+/**
+ * Print a label using DYMO LabelWriter (convenience function)
  */
 export async function printLabel(options: PrintLabelOptions): Promise<void> {
   if (!isDymoFrameworkLoaded()) {
@@ -93,7 +272,12 @@ export async function printLabel(options: PrintLabelOptions): Promise<void> {
     const labelXml = generateLabelXml(options);
 
     // Open label
-    const label = (window as any).dymo.label.framework.openLabelXml(labelXml);
+    const label = await openLabelXml(labelXml);
+
+    // Validate label
+    if (!isValidLabel(label)) {
+      throw new Error('Invalid label format.');
+    }
 
     // Set label data
     setLabelData(label, options);

@@ -1,17 +1,18 @@
 import fs from "fs/promises";
 import path from "path";
+import { filterS3GeneratedPlaceholders } from "@/lib/images";
 
 const PRODUCTS_JSON_PATH = path.resolve(process.cwd(), "public/allremotes.products.json");
 const LEGACY_PRODUCTS_PATH = path.resolve(process.cwd(), "products.json");
 
 // S3 Bucket configuration for product images
 const S3_BUCKET_URL = "https://allremotes.s3.ap-southeast-2.amazonaws.com";
-const MAX_IMAGES_PER_PRODUCT = 5; // Maximum number of images to check per SKU
+const MAX_IMAGES_PER_PRODUCT = 1; // Use only sku-1.png as a fallback; do not guess extra images
 
 /**
  * Generate S3 image URLs for a product based on its SKU
  * Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-1.png
- * Supports multiple images: sku-1.png, sku-2.png, ..., sku-5.png
+ * Only a single fallback image is generated to avoid broken -2..-5 placeholders.
  */
 export function generateS3ImageUrlsFromSku(sku: string | undefined): string[] {
   if (!sku || typeof sku !== "string") return [];
@@ -37,21 +38,28 @@ export function enrichProductWithS3Images(product: any): any {
   const sku = product.sku || product.product_code || product.SKU;
   const s3ImageUrls = generateS3ImageUrlsFromSku(sku);
   
-  // Get existing images
-  const existingImages = Array.isArray(product.images) 
+  // Get existing images as-is (preserve database order)
+  let existingImages: string[] = Array.isArray(product.images)
     ? product.images.filter((img: any) => typeof img === "string" && img.trim())
     : [];
-  
+
+  // Clean old S3 placeholder URLs (sku-2.png ... sku-5.png) if sku-1.png is present
+  existingImages = filterS3GeneratedPlaceholders(existingImages, sku);
+
   // If product has a single image field that's a URL, add it to the list
-  if (typeof product.image === "string" && product.image.trim() && !existingImages.includes(product.image)) {
+  if (typeof product.image === "string" && product.image.trim() &&
+      !existingImages.includes(product.image)) {
     existingImages.push(product.image);
   }
-  
-  // Combine existing images with S3 URLs (S3 URLs come first as they are the primary source)
-  const combinedImages = [...s3ImageUrls, ...existingImages];
+
+  // Preserve database image order - only add S3 URLs if product has no images
+  let finalImages = existingImages;
+  if (existingImages.length === 0) {
+    finalImages = s3ImageUrls;
+  }
   
   // Remove duplicates while preserving order
-  const uniqueImages = Array.from(new Set(combinedImages));
+  const uniqueImages = Array.from(new Set(finalImages));
   
   return {
     ...product,
@@ -59,7 +67,7 @@ export function enrichProductWithS3Images(product: any): any {
     // Set primary image if not already set
     image: product.image || uniqueImages[0] || "",
     // Track that images were auto-generated from SKU
-    _s3ImagesGenerated: s3ImageUrls.length > 0,
+    _s3ImagesGenerated: s3ImageUrls.length > 0 && existingImages.length === 0,
     _skuUsedForImages: sku,
   };
 }

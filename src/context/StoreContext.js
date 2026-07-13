@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
 import { navigationMenu as defaultNavFromFile } from '../data/navigation';
 import { remoteImages } from '../data/navigation';
+import { filterS3GeneratedPlaceholders } from '../lib/images';
 
 // Helper function to get S3 URL for local path
 // Hardcoded S3 bucket URL since env vars aren't available in client components
@@ -32,56 +33,57 @@ const getS3UrlForLocalPath = (localPath) => {
 
 // S3 configuration for SKU-based product images
 const S3_BUCKET_URL = 'https://allremotes.s3.ap-southeast-2.amazonaws.com';
-const MAX_IMAGES_PER_PRODUCT = 5;
+const MAX_IMAGES_PER_PRODUCT = 1;
 
 /**
  * Generate S3 image URLs for a product based on its SKU
  * Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-1.png
- * Supports multiple images: sku-1.png, sku-2.png, ..., sku-5.png
+ * Only a single fallback image is generated to avoid broken -2..-5 placeholders.
  */
 function generateS3ImageUrlsFromSku(sku) {
   if (!sku || typeof sku !== 'string') return [];
-  
+
   const normalizedSku = sku.trim();
   if (!normalizedSku) return [];
-  
+
   const imageUrls = [];
   for (let i = 1; i <= MAX_IMAGES_PER_PRODUCT; i++) {
     imageUrls.push(`${S3_BUCKET_URL}/images/${normalizedSku}-${i}.png`);
   }
-  
+
   return imageUrls;
 }
 
 /**
  * Enrich product with S3 image URLs based on SKU
- * If product already has images from server, preserve them
+ * Only used when the product has no images of its own.
  */
 function enrichProductWithS3Images(product) {
   if (!product || typeof product !== 'object') return product;
-  
-  // Skip if already enriched by server (has _s3ImagesGenerated flag)
-  if (product._s3ImagesGenerated) return product;
-  
+
   const sku = product.sku || product.product_code || product.SKU;
-  const s3ImageUrls = generateS3ImageUrlsFromSku(sku);
-  
-  // Get existing images
-  const existingImages = Array.isArray(product.images) 
-    ? product.images.filter((img) => typeof img === 'string' && img.trim())
+
+  // Get existing images and clean old S3 placeholder URLs (sku-2.png ... sku-5.png)
+  const existingImages = Array.isArray(product.images)
+    ? filterS3GeneratedPlaceholders(
+        product.images.filter((img) => typeof img === 'string' && img.trim()),
+        sku
+      )
     : [];
-  
+
   // If product has a single image field that's a URL, add it to the list
   if (typeof product.image === 'string' && product.image.trim() && !existingImages.includes(product.image)) {
     existingImages.push(product.image);
   }
-  
-  // Combine S3 URLs with existing images (S3 URLs come first)
+
+  // Only use S3 as a fallback when the product has no images
+  const s3ImageUrls = existingImages.length > 0 ? [] : generateS3ImageUrlsFromSku(sku);
+
   const combinedImages = [...s3ImageUrls, ...existingImages];
-  
+
   // Remove duplicates while preserving order
   const uniqueImages = Array.from(new Set(combinedImages));
-  
+
   return {
     ...product,
     images: uniqueImages,
@@ -236,9 +238,9 @@ function loadProducts() {
 function resolveProducts(productsData) {
   if (!productsData || !productsData.length) return [];
   return productsData.map((p) => {
-    // First, enrich product with S3 images if not already enriched
-    const enriched = p._s3ImagesGenerated ? p : enrichProductWithS3Images(p);
-    
+    // Always enrich/clean (removes old S3 placeholders) before resolving
+    const enriched = enrichProductWithS3Images(p);
+
     const normalizedImages = Array.isArray(enriched?.images)
       ? enriched.images
           .map((img) => (typeof img === 'string' ? img.trim() : ''))

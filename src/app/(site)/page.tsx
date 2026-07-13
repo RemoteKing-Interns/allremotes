@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../../context/StoreContext";
 import ProductCard from "../../components/ProductCard";
+import ProductImage from "../../components/images/ProductImage";
 
 const DEFAULT_FEEDBACK_REVIEWS = [
   {
@@ -301,19 +302,18 @@ const Home = () => {
         <div className="relative h-[500px] sm:h-[540px] lg:h-[620px]">
           <div className="absolute inset-0">
             {heroSlides.map((slide, index) => (
-              <img
+              <ProductImage
                 key={index}
                 src={slide.image}
                 alt=""
+                fallbackSrc="/images/mainlogo.png"
+                loading={index === 0 ? "eager" : "lazy"}
                 className={`hero-slide-image absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${
                   index === currentSlide
                     ? "hero-slide-image--active z-10 opacity-100"
                     : "z-0 opacity-0"
                 }`}
-                onError={(e) => {
-                  console.error(`Failed to load hero image: ${slide.image}`);
-                  (e.target as HTMLImageElement).src = '/images/mainlogo.png';
-                }}
+                onError={() => console.error(`Failed to load hero image: ${slide.image}`)}
               />
             ))}
             <div className="absolute inset-0 z-[15] bg-gradient-to-br from-neutral-900/70 via-neutral-900/60 to-neutral-800/50" />
@@ -421,9 +421,11 @@ const Home = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
                     {f.image || featureImagesByTitle[f.title] ? (
-                      <img
+                      <ProductImage
                         src={f.image || featureImagesByTitle[f.title]}
                         alt={f.title || "Feature"}
+                        fallbackSrc="/images/mainlogo.png"
+                        fallbackLetter={String(f.title || "AR").slice(0, 2)}
                         className="h-10 w-10 object-contain"
                       />
                     ) : (

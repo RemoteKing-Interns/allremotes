@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getPrimaryImage } from "@/lib/images";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://allremotes.com.au";
 const PRODUCTS_JSON_PATH = path.resolve(process.cwd(), "public/allremotes.products.json");
@@ -32,17 +33,8 @@ function escapeXml(str: string): string {
 }
 
 function getProductImage(product: Product): string {
-  if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-    const imgIndex = product?.imgIndex ?? 0;
-    if (Number.isFinite(imgIndex) && imgIndex >= 0 && imgIndex < product.images.length) {
-      return product.images[imgIndex];
-    }
-    return product.images[0];
-  }
-  if (product?.image) {
-    return product.image;
-  }
-  return `${BASE_URL}/images/mainlogo.png`;
+  const primary = getPrimaryImage(product);
+  return primary || `${BASE_URL}/images/mainlogo.png`;
 }
 
 function getProductTitle(product: Product): string {

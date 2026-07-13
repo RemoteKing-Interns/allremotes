@@ -2,16 +2,21 @@
 
 import React, { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "../../context/AuthContext";
-import { useStore } from "../../context/StoreContext";
-import { activityLogger } from "../../lib/activity-logger";
-import AdminSupportChat from "../../components/admin/AdminSupportChat";
-import ProductSpreadsheet from "../../components/admin/ProductSpreadsheet";
-import AdminUsersManager from "../../components/admin/AdminUsers";
-import AdminLogs from "../../components/admin/AdminLogs";
-import CustomerManagement from "../../components/admin/CustomerManagement";
-import AdminAbandonedCarts from "../../components/admin/AdminAbandonedCarts";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
+import { useStore } from "../../../context/StoreContext";
+import { activityLogger } from "../../../lib/activity-logger";
+import AdminSupportChat from "../../../components/admin/AdminSupportChat";
+import ProductSpreadsheet from "../../../components/admin/ProductSpreadsheet";
+import AdminUsersManager from "../../../components/admin/AdminUsers";
+import AdminLogs from "../../../components/admin/AdminLogs";
+import CustomerManagement from "../../../components/admin/CustomerManagement";
+import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
+import AdminImageGallery from "../../../components/images/AdminImageGallery";
+import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
+import ProductImage from "../../../components/images/ProductImage";
+import MediaPickerModal from "../../../components/images/MediaPickerModal";
+import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   LayoutDashboard,
@@ -95,6 +100,16 @@ const STORAGE_KEYS = {
   promotions: "allremotes_promotions",
   settings: "allremotes_settings",
 };
+
+const navGroupDefinitions = [
+  { label: 'Sales',     icon: ShoppingCart, ids: ['orders', 'returns', 'abandoned_carts'] },
+  { label: 'Catalog',   icon: Package,      ids: ['products', 'categories', 'inventory'] },
+  { label: 'Customers', icon: Users,        ids: ['customers', 'reviews', 'messages'] },
+  { label: 'Marketing', icon: Megaphone,    ids: ['promotions', 'discounts'] },
+  { label: 'Content',   icon: FileText,     ids: ['home', 'navigation', 'content'] },
+  { label: 'Analytics', icon: BarChart3,    ids: ['analytics', 'live_view'] },
+  { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'settings'] },
+];
 
 const isRecord = (value: any): value is Record<string, any> => {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -360,6 +375,8 @@ const AdminContent = () => {
   // All hooks must be declared before any conditional returns
   const { user, login, logout, loading: authLoading } = useAuth();
   const router = useRouter();
+  const params = useParams();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const isAdmin = user?.role === 'admin';
 
@@ -376,14 +393,33 @@ const AdminContent = () => {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
-      return p.get('tab') || localStorage.getItem('adminActiveTab') || 'dashboard';
+      return (params?.tab as string[])?.[0] || p.get('tab') || localStorage.getItem('adminActiveTab') || 'dashboard';
     }
     return 'dashboard';
   });
+
+  // Sync active tab from URL path on back/forward or direct navigation
+  useEffect(() => {
+    const paramTab = (params?.tab as string[])?.[0];
+    const queryTab = searchParams.get('tab');
+    const pathTab = paramTab || queryTab;
+    if (pathTab && pathTab !== activeTab) setActiveTab(pathTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, searchParams]);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+
+  // Auto-expand the sidebar group containing the active tab
+  useEffect(() => {
+    if (!isAdmin) return;
+    const group = navGroupDefinitions.find((g) => g.ids.includes(activeTab));
+    if (group && !expandedGroups.includes(group.label)) {
+      setExpandedGroups((prev) => [...prev, group.label]);
+    }
+  }, [activeTab, isAdmin]);
 
   // ── Global command palette (⌘K / Ctrl+K)
   const [cmdkOpen, setCmdkOpen] = useState(false);
@@ -413,7 +449,7 @@ const AdminContent = () => {
       { id: 'inventory', perm: 'products' }, { id: 'customers', perm: 'customers' },
       { id: 'reviews', perm: 'customers' }, { id: 'messages', perm: 'customers' },
       { id: 'promotions', perm: 'marketing' }, { id: 'discounts', perm: 'marketing' },
-      { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' },
+      { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' }, { id: 'content', perm: 'content' },
       { id: 'analytics', perm: 'analytics' }, { id: 'live_view', perm: 'analytics' },
       { id: 'admin_users', perm: 'superuser' }, { id: 'admin_logs', perm: 'admin_users' },
       { id: 'settings', perm: 'settings' }, { id: 'profile', perm: '' },
@@ -475,35 +511,41 @@ const AdminContent = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync URL params when tab/id state changes — use pushState so back button works
+  // Sync URL to path-based routes (/admin/:tab) with query params for sub-views
   const isFirstTabRender = useRef(true);
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const prevTab = p.get('tab');
-    p.set('tab', activeTab);
-    if (viewOrderId) p.set('order', viewOrderId); else p.delete('order');
-    if (viewReturnId) p.set('return', viewReturnId); else p.delete('return');
-    if (openThreadId) p.set('thread', openThreadId); else p.delete('thread');
-    const newUrl = `${window.location.pathname}?${p.toString()}`;
+    const pathSegments = pathname?.split('/').filter(Boolean) || [];
+    const currentPathTab = pathSegments[1] || 'dashboard';
+    const newParams = new URLSearchParams();
+    if (viewOrderId) newParams.set('order', viewOrderId);
+    if (viewReturnId) newParams.set('return', viewReturnId);
+    if (openThreadId) newParams.set('thread', openThreadId);
+    const newSearch = newParams.toString() ? '?' + newParams.toString() : '';
+    const newPath = '/admin/' + activeTab + newSearch;
+    const currentPath = pathname + (searchParams.toString() ? '?' + searchParams.toString() : '');
+    if (newPath === currentPath) {
+      localStorage.setItem('adminActiveTab', activeTab);
+      return;
+    }
     // First render: replace so we don't pollute history on load
     if (isFirstTabRender.current) {
-      window.history.replaceState({ tab: activeTab }, '', newUrl);
+      router.replace(newPath);
       isFirstTabRender.current = false;
-    } else if (prevTab !== activeTab) {
+    } else if (currentPathTab !== activeTab) {
       // Tab actually changed: push so browser back works
-      window.history.pushState({ tab: activeTab }, '', newUrl);
+      router.push(newPath);
     } else {
       // Same tab, just params changed (order/return/thread): replace
-      window.history.replaceState({ tab: activeTab }, '', newUrl);
+      router.replace(newPath);
     }
     localStorage.setItem('adminActiveTab', activeTab);
-  }, [activeTab, viewOrderId, viewReturnId, openThreadId]);
+  }, [activeTab, viewOrderId, viewReturnId, openThreadId, pathname, searchParams, router]);
 
   // Handle browser back/forward
   useEffect(() => {
     const onPopState = (e: PopStateEvent) => {
-      const p = new URLSearchParams(window.location.search);
-      const tab = p.get('tab') || 'dashboard';
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const tab = pathSegments[1] || new URLSearchParams(window.location.search).get('tab') || 'dashboard';
       setActiveTab(tab);
     };
     window.addEventListener('popstate', onPopState);
@@ -852,16 +894,20 @@ const AdminContent = () => {
     { id: 'discounts',      label: 'Discounts',           icon: Percent,            perm: 'marketing' },
     { id: 'home',           label: 'Homepage',            icon: FileText,           perm: 'content' },
     { id: 'navigation',     label: 'Navigation',          icon: Compass,            perm: 'content' },
+    { id: 'content',        label: 'Content',             icon: Image,              perm: 'content' },
     { id: 'analytics',      label: 'Reports',             icon: BarChart3,          perm: 'analytics' },
     { id: 'live_view',      label: 'Live View',           icon: Eye,                perm: 'analytics' },
     { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'superuser' },
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
     { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
   ];
-  const navItems = [
-    ...allNavItems.filter(item => hasPermission(item.perm)),
-    { id: 'profile', label: 'My Profile', icon: User, perm: '*' },
-  ];
+  const navItems = allNavItems.filter(item => hasPermission(item.perm));
+
+  const groupedIds = new Set(navGroupDefinitions.flatMap(g => g.ids));
+  const navGroups = navGroupDefinitions.map(g => ({
+    ...g,
+    items: g.ids.map(id => navItems.find(item => item.id === id)).filter(Boolean) as typeof navItems,
+  })).filter(g => g.items.length > 0);
 
   return (
     <div className="flex h-screen bg-[#f6f6f7]">
@@ -905,33 +951,114 @@ const AdminContent = () => {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 py-2">
           <div className="space-y-0.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              const showBadge = item.id === 'messages' && unreadMessageCount > 0;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <div className="relative">
-                    <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
-                    {showBadge && !sidebarCollapsed && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                        {unreadMessageCount}
-                      </span>
-                    )}
-                  </div>
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                </button>
-              );
-            })}
+            {sidebarCollapsed ? (
+              navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                const showBadge = item.id === 'messages' && unreadMessageCount > 0;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-white/10 text-white'
+                        : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                    title={item.label}
+                  >
+                    <div className="relative">
+                      <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
+                      {showBadge && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                          {unreadMessageCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <>
+                {/* Top-level items that are not part of a group */}
+                {navItems.filter((item) => !groupedIds.has(item.id)).map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        isActive
+                          ? 'bg-white/10 text-white'
+                          : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+
+                {/* Grouped dropdowns */}
+                {navGroups.map((group) => {
+                  const isExpanded = expandedGroups.includes(group.label);
+                  const groupActive = group.items.some((item) => item.id === activeTab);
+                  return (
+                    <div key={group.label} className="space-y-0.5">
+                      <button
+                        onClick={() =>
+                          setExpandedGroups((prev) =>
+                            prev.includes(group.label)
+                              ? prev.filter((l) => l !== group.label)
+                              : [...prev, group.label]
+                          )
+                        }
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          groupActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <group.icon size={18} className={groupActive ? 'text-emerald-400' : ''} />
+                        <span className="flex-1 text-left">{group.label}</span>
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      </button>
+                      {isExpanded && (
+                        <div className="pl-8 space-y-0.5">
+                          {group.items.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeTab === item.id;
+                            const showBadge = item.id === 'messages' && unreadMessageCount > 0;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  isActive
+                                    ? 'bg-white/10 text-white'
+                                    : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                                }`}
+                              >
+                                <div className="relative">
+                                  <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
+                                  {showBadge && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                                      {unreadMessageCount}
+                                    </span>
+                                  )}
+                                </div>
+                                <span>{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         </nav>
 
@@ -1059,7 +1186,7 @@ const AdminContent = () => {
         </header>
 
         {/* Page Content — tabs are kept mounted and hidden so data is never lost on switch */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-6">
           {/* Permission guard fallback */}
           {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
             <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -1068,7 +1195,7 @@ const AdminContent = () => {
               <p className="text-sm text-neutral-500 mt-2">You don&apos;t have permission to view this section.</p>
             </div>
           )}
-          {hasPermission('dashboard')   && <div className={activeTab === 'dashboard'       ? '' : 'hidden'}><ShopifyDashboard onNavigateTab={setActiveTab} /></div>}
+          {hasPermission('dashboard')   && <div className={activeTab === 'dashboard'       ? '' : 'hidden'}><AdminDashboard onNavigateTab={setActiveTab} /></div>}
           {hasPermission('analytics')   && <div className={activeTab === 'analytics'       ? '' : 'hidden'}><AdminAnalytics /></div>}
           {hasPermission('analytics')   && <div className={activeTab === 'live_view'       ? '' : 'hidden'}><LiveViewSection /></div>}
           {hasPermission('customers')   && <div className={activeTab === 'customers'       ? '' : 'hidden'}><CustomerManagement /></div>}
@@ -1084,6 +1211,7 @@ const AdminContent = () => {
           {hasPermission('marketing')   && <div className={activeTab === 'promotions'      ? '' : 'hidden'}><AdminPromotions /></div>}
           {hasPermission('marketing')   && <div className={activeTab === 'discounts'       ? '' : 'hidden'}><DiscountsSection /></div>}
           {hasPermission('content')     && <div className={activeTab === 'navigation'      ? '' : 'hidden'}><AdminNavigation /></div>}
+          {hasPermission('content')     && <div className={activeTab === 'content'         ? '' : 'hidden'}><AdminMediaLibrary /></div>}
           {hasPermission('customers')   && <div className={activeTab === 'reviews'         ? '' : 'hidden'}><AdminReviews /></div>}
           {hasPermission('customers')   && <div className={activeTab === 'messages'        ? '' : 'hidden'}><AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} /></div>}
           {hasPermission('settings')    && <div className={activeTab === 'settings'        ? '' : 'hidden'}><AdminSettings /></div>}
@@ -2252,7 +2380,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                 onClick={async () => {
                   try {
                     // Load DYMO framework if not already loaded
-                    const { loadDymoFramework, printLabel } = await import('../../lib/dymo');
+                    const { loadDymoFramework, printLabel } = await import('../../../lib/dymo');
                     await loadDymoFramework();
                     
                     // Get default template or use a simple one
@@ -4183,8 +4311,8 @@ function AdminDashboard({
     <div className="animate-in fade-in duration-300">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">Dashboard</h1>
-          <p className="text-sm text-neutral-500 mt-1">Here's what's happening today.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+          <p className="text-sm text-neutral-500 mt-1">Overview of your store today.</p>
         </div>
         <div className="inline-flex h-10 items-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-600 shadow-sm">
           {new Date().toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
@@ -4192,7 +4320,7 @@ function AdminDashboard({
       </div>
 
       {loadingStats ? (
-        <div className="mb-8 flex h-44 items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="mb-8 flex h-44 items-center justify-center rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-600">
             <div className="spinner" />
             Loading dashboard metrics...
@@ -4200,54 +4328,101 @@ function AdminDashboard({
         </div>
       ) : (
         <>
+          {/* Stat cards */}
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, index) => (
-              (() => {
-                const StatIcon = stat.icon;
-                return (
-                  <div
-                    key={index}
-                    className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-panel"
-                  >
-                    <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${stat.tone} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-neutral-500">{stat.label}</p>
-                        <p className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">{stat.value}</p>
-                      </div>
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${stat.tone} text-white shadow-soft transition-transform duration-200 group-hover:scale-105`}>
-                        <StatIcon size={20} strokeWidth={2.2} />
-                      </div>
+            {stats.map((stat, index) => {
+              const StatIcon = stat.icon;
+              return (
+                <div
+                  key={index}
+                  className="group relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                >
+                  <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${stat.tone} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-500">{stat.label}</p>
+                      <p className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">{stat.value}</p>
+                    </div>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${stat.tone} text-white shadow-sm transition-transform duration-200 group-hover:scale-105`}>
+                      <StatIcon size={20} strokeWidth={2.2} />
                     </div>
                   </div>
-                );
-              })()
-            ))}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="mb-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-neutral-900">Recent Activity</h3>
-                <button className="text-sm font-semibold text-primary hover:text-primary-dark">View all</button>
-              </div>
-              <div className="relative border-l-2 border-dashed border-neutral-200 pl-4 space-y-6">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="relative flex items-start gap-4 text-sm">
-                    <div className="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white" />
-                    <div className="min-w-0 flex-1">
-                      <strong className="text-neutral-900">{activity.action}</strong>
-                      <p className="mt-0.5 text-neutral-600">{activity.item}</p>
+          {/* Main two-column layout */}
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            {/* Left column */}
+            <div className="space-y-6">
+              {/* Recent Activity */}
+              <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-neutral-900">Recent Activity</h3>
+                  <button
+                    onClick={() => onNavigateTab?.('orders')}
+                    className="text-sm font-semibold text-primary hover:text-primary-dark"
+                  >
+                    View all
+                  </button>
+                </div>
+                <div className="relative border-l-2 border-dashed border-neutral-200 pl-4 space-y-6">
+                  {recentActivity.map((activity, index) => (
+                    <div key={index} className="relative flex items-start gap-4 text-sm">
+                      <div className="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white" />
+                      <div className="min-w-0 flex-1">
+                        <strong className="text-neutral-900">{activity.action}</strong>
+                        <p className="mt-0.5 text-neutral-600">{activity.item}</p>
+                      </div>
+                      <div className="shrink-0 pt-0.5 text-xs font-semibold text-neutral-600">{activity.time}</div>
                     </div>
-                    <div className="shrink-0 pt-0.5 text-xs font-semibold text-neutral-600">{activity.time}</div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hero Preview */}
+              <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-neutral-900">Hero Preview</h3>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">Featured</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-6 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
+                  <div className="flex-1 space-y-3 text-sm">
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Title</span>
+                      <span className="mt-1 block font-semibold text-neutral-900">{home?.hero?.title || "Not set"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Subtitle</span>
+                      <span className="mt-1 block font-medium text-neutral-800">{home?.hero?.subtitle || "Not set"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Description</span>
+                      <span className="mt-1 block leading-relaxed text-neutral-700 line-clamp-2">{home?.hero?.description || "Not set"}</span>
+                    </div>
                   </div>
-                ))}
+                  <div className="flex h-32 w-full sm:w-56 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-neutral-800 to-neutral-900 shadow-sm text-sm text-white relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    <strong className="tracking-tight">HERO SECTION</strong>
+                    <span className="mt-1 text-xs text-neutral-200">Main landing area</span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-end">
+                  <button
+                    onClick={() => onNavigateTab?.('home')}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark transition-colors"
+                  >
+                    Review Performance
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-neutral-900 mb-6">Quick Actions</h3>
-              <div className="grid gap-3">
+            {/* Quick Actions */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-neutral-900 mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-3">
                 {quickActions.map((action, i) => {
                   const ActionIcon = action.icon;
                   return (
@@ -4255,40 +4430,15 @@ function AdminDashboard({
                       key={i}
                       type="button"
                       onClick={action.onClick}
-                      className="group flex w-full items-center gap-3 rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-left text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary-dark"
+                      className="group flex flex-col items-center justify-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-center text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary-dark"
                     >
                       <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors group-hover:border-primary/25 group-hover:bg-primary/10 group-hover:text-primary-dark">
                         <ActionIcon size={17} strokeWidth={2.2} />
                       </span>
-                      {action.label}
+                      <span className="leading-tight">{action.label}</span>
                     </button>
                   );
                 })}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm mb-6">
-            <h3 className="text-lg font-bold text-neutral-900 mb-4">Hero Preview</h3>
-            <div className="flex flex-col sm:flex-row gap-6 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
-              <div className="flex-1 space-y-3 text-sm">
-                <div>
-                  <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Title</span>
-                  <span className="mt-1 block font-semibold text-neutral-900">{home?.hero?.title || "Not set"}</span>
-                </div>
-                <div>
-                  <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Subtitle</span>
-                  <span className="mt-1 block font-medium text-neutral-800">{home?.hero?.subtitle || "Not set"}</span>
-                </div>
-                <div>
-                  <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Description</span>
-                  <span className="mt-1 block leading-relaxed text-neutral-700 line-clamp-2">{home?.hero?.description || "Not set"}</span>
-                </div>
-              </div>
-              <div className="flex h-32 w-full sm:w-56 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-neutral-800 to-neutral-900 shadow-soft text-sm text-white relative overflow-hidden group">
-                <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
-                <strong className="tracking-tight">HERO SECTION</strong>
-                <span className="mt-1 text-xs text-neutral-200">Main landing area</span>
               </div>
             </div>
           </div>
@@ -4547,13 +4697,6 @@ function AdminProducts() {
 
     let updatedProduct = { ...product };
 
-    if (pendingImageDeletions.size > 0) {
-      const currentImages = product.images || (product.image ? [product.image] : []);
-      const filteredImages = currentImages.filter((_, idx) => !pendingImageDeletions.has(idx));
-      updatedProduct.images = filteredImages;
-      updatedProduct.image = filteredImages[0] || "";
-    }
-
     // Ensure comparePrice is explicitly set
     if (updatedProduct.comparePrice === undefined) {
       updatedProduct.comparePrice = 0;
@@ -4684,15 +4827,26 @@ function AdminProducts() {
     );
   };
 
-  const remove = (id) => {
+  const remove = async (id) => {
     if (window.confirm('Remove this product?')) {
-      const updatedProducts = products.filter((p) => p.id !== id);
-      setProductsState(updatedProducts);
-      // Persist to backend
-      setTimeout(() => {
+      try {
+        const res = await fetch('/api/products', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to delete product');
+        }
+        const updatedProducts = products.filter((p) => p.id !== id);
+        setProductsState(updatedProducts);
         setProducts(updatedProducts);
-      }, 0);
-      if (editingId === id) setEditingId(null);
+        if (editingId === id) setEditingId(null);
+      } catch (err: any) {
+        console.error('Failed to delete product:', err);
+        alert(err.message || 'Failed to delete product');
+      }
     }
   };
 
@@ -5355,241 +5509,36 @@ function AdminProducts() {
 
               {/* Media Card */}
               <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-                  <h3 className="font-semibold text-neutral-900">Media</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllImages(!showAllImages)}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      showAllImages 
-                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                    }`}
-                  >
-                    {showAllImages ? '⚠️ Showing All (Including Broken)' : '✓ Showing Valid Only'}
-                  </button>
-                </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                    {/* Images Gallery - hide broken images */}
-                    {(productForEdit.images || (productForEdit.image ? [productForEdit.image] : [])).map((img: string, idx: number) => {
-                      const isBroken = validImageIndices.has(-idx - 1);
-                      if (isBroken) return null;
-                      const isDragging = draggedIndex === idx;
-                      const isDragOver = dragOverIndex === idx;
-                      return (
-                        <div
-                          key={img}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('application/x-image-url', img);
-                            e.dataTransfer.setData('text/plain', String(idx));
-                            setDraggedIndex(idx);
-                          }}
-                          onDragEnd={() => { setDraggedIndex(null); setDragOverIndex(null); }}
-                          onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
-                          onDragLeave={() => setDragOverIndex(null)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const draggedUrl = e.dataTransfer.getData('application/x-image-url');
-                            const fromIdxStr = e.dataTransfer.getData('text/plain');
-                            const fromIdx = parseInt(fromIdxStr, 10);
-                            const toIdx = idx;
-                            
-                            if (!draggedUrl || Number.isNaN(fromIdx) || fromIdx === toIdx) {
-                              setDragOverIndex(null);
-                              setDraggedIndex(null);
-                              return;
-                            }
-                            
-                            const currentImages = [...(productForEdit.images || (productForEdit.image ? [productForEdit.image] : []))];
-                            const actualFromIdx = currentImages.indexOf(draggedUrl);
-                            
-                            if (actualFromIdx === -1 || actualFromIdx === toIdx) {
-                              setDragOverIndex(null);
-                              setDraggedIndex(null);
-                              return;
-                            }
-                            
-                            const newImages = currentImages.filter((_, i) => i !== actualFromIdx);
-                            newImages.splice(toIdx, 0, draggedUrl);
-                            
-                            update(productForEdit.id, "images", newImages);
-                            update(productForEdit.id, "image", newImages[0] || "");
-                            setValidImageIndices(new Set());
-                            
-                            const newDeletions = new Set<number>();
-                            pendingImageDeletions.forEach((dIdx) => {
-                              const url = currentImages[dIdx];
-                              const newIdx = newImages.indexOf(url);
-                              if (newIdx !== -1) newDeletions.add(newIdx);
-                            });
-                            setPendingImageDeletions(newDeletions);
-                            
-                            setDragOverIndex(null);
-                            setDraggedIndex(null);
-                          }}
-                          className={`relative group aspect-square rounded-lg border-2 overflow-hidden ${
-                            pendingImageDeletions.has(idx)
-                              ? 'bg-neutral-50 border-rose-500 opacity-50 cursor-move'
-                              : 'bg-neutral-50 border-neutral-300 cursor-move'
-                          } ${isDragging ? 'ring-2 ring-blue-500 shadow-lg scale-[1.02] z-10' : ''} ${isDragOver ? 'ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/50' : ''}`}
-                        >
-                          <img
-                            src={img}
-                            alt={`Product ${idx + 1}`}
-                            className="w-full h-full object-contain p-2 transition-opacity duration-300 opacity-100"
-                            draggable={false}
-                            onLoad={() => {
-                              setValidImageIndices(prev => new Set([...prev, idx]));
-                            }}
-                            onError={() => {
-                              if (img && !validImageIndices.has(idx)) {
-                                setValidImageIndices(prev => new Set([...prev, -idx - 1]));
-                              }
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setPreviewImage(img); }}
-                              className="p-2 bg-white rounded-lg text-blue-600 hover:bg-blue-50"
-                              title="Preview"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                            </button>
-                            {idx === 0 && !pendingImageDeletions.has(idx) && (
-                              <button
-                                type="button"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-2 bg-white rounded-lg text-neutral-600 hover:bg-neutral-50"
-                                title="Main image"
-                              >
-                                <span className="text-xs font-medium">Main</span>
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newDeletions = new Set(pendingImageDeletions);
-                                if (newDeletions.has(idx)) {
-                                  newDeletions.delete(idx);
-                                } else {
-                                  newDeletions.add(idx);
-                                }
-                                setPendingImageDeletions(newDeletions);
-                              }}
-                              className="p-2 bg-white rounded-lg text-red-600 hover:bg-red-50"
-                              title={pendingImageDeletions.has(idx) ? 'Undo delete' : 'Delete'}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <span className={`absolute top-2 left-2 px-2 py-0.5 text-white text-xs font-medium rounded ${
-                            pendingImageDeletions.has(idx) ? 'bg-rose-500' : (idx === 0 ? 'bg-emerald-500' : 'bg-neutral-600')
-                          }`}>
-                            {pendingImageDeletions.has(idx) ? 'Pending Delete' : (idx === 0 ? 'Main' : `#${idx + 1}`)}
-                          </span>
-                          <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-70 transition-opacity">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                          </div>
-                        </div>
-                      );
-                    }).filter(Boolean)}
-
-                    {/* Upload Area */}
-                    <label className="aspect-square rounded-lg border-2 border-dashed border-neutral-300 hover:border-emerald-500 hover:bg-emerald-50/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 text-neutral-500 hover:text-emerald-600">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={async (e) => {
-                          const files = Array.from(e.target.files || []);
-                          if (files.length === 0) return;
-                          
-                          const currentImages = [...(productForEdit.images || (productForEdit.image ? [productForEdit.image] : []))];
-                          
-                          for (const file of files) {
-                            try {
-                              const formData = new FormData();
-                              formData.append('file', file);
-                              formData.append('productId', productForEdit.id);
-                              
-                              const res = await fetch('/api/upload', {
-                                method: 'POST',
-                                body: formData,
-                              });
-                              const data = await res.json();
-                              
-                              if (data.url) {
-                                currentImages.push(data.url);
-                              }
-                            } catch (err) {
-                              console.error('Upload failed:', err);
-                              // Fallback: use data URL for preview
-                              await new Promise<void>((resolve) => {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  if (ev.target?.result) {
-                                    currentImages.push(ev.target.result as string);
-                                  }
-                                  resolve();
-                                };
-                                reader.readAsDataURL(file);
-                              });
-                            }
+                  <AdminImageGallery
+                    product={productForEdit}
+                    images={productForEdit.images || []}
+                    onChange={(newImages) => {
+                      update(productForEdit.id, "images", newImages);
+                      update(productForEdit.id, "image", newImages[0] || "");
+                    }}
+                    onUpload={async (files) => {
+                      const uploadedUrls: string[] = [];
+                      for (const file of files) {
+                        try {
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          formData.append("productId", productForEdit.id);
+                          const res = await fetch("/api/upload", {
+                            method: "POST",
+                            body: formData,
+                          });
+                          const data = await res.json();
+                          if (data.url) {
+                            uploadedUrls.push(data.url);
                           }
-                          
-                          update(productForEdit.id, "images", currentImages);
-                          update(productForEdit.id, "image", currentImages[0] || "");
-                        }}
-                      />
-                      <Upload size={24} />
-                      <span className="text-xs font-medium">Add images</span>
-                    </label>
-                  </div>
-
-                  {/* Image URL Input */}
-                  <div className="pt-4 border-t border-neutral-100">
-                    <label className="block text-sm font-medium text-neutral-600 mb-2">Or add image URL</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="https://example.com/image.jpg"
-                        className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const input = e.target as HTMLInputElement;
-                            if (input.value) {
-                              const currentImages = productForEdit.images || (productForEdit.image ? [productForEdit.image] : []);
-                              const newImages = [...currentImages, input.value];
-                              update(productForEdit.id, "images", newImages);
-                              update(productForEdit.id, "image", newImages[0] || "");
-                              input.value = '';
-                            }
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                          if (input.value) {
-                            const currentImages = productForEdit.images || (productForEdit.image ? [productForEdit.image] : []);
-                            const newImages = [...currentImages, input.value];
-                            update(productForEdit.id, "images", newImages);
-                            update(productForEdit.id, "image", newImages[0] || "");
-                            input.value = '';
-                          }
-                        }}
-                        className="px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
+                        } catch (err) {
+                          console.error("Upload failed:", err);
+                        }
+                      }
+                      return uploadedUrls;
+                    }}
+                  />
                 </div>
               </div>
 
@@ -5966,7 +5915,13 @@ function AdminProducts() {
                       <tr key={p.id} className="transition-colors hover:bg-neutral-50/70">
                         <td className="px-6 py-3 align-top">
                           <div className="h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
-                            <img src={p.image} alt="" className="h-full w-full object-contain p-1" />
+                            <ProductImage
+                              src={getPrimaryImage(p)}
+                              alt={p.name || ""}
+                              fallbackLetter={getFallbackLetter(p)}
+                              className="h-full w-full object-contain p-1"
+                              loading="lazy"
+                            />
                           </div>
                         </td>
                         <td className="px-6 py-4 align-top">
@@ -6117,6 +6072,7 @@ function AdminHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -6205,10 +6161,12 @@ function AdminHome() {
   };
 
   const addHeroImage = () => {
+    const nextIndex = (content.heroImages || []).length;
     setContent((prev) => ({
       ...prev,
       heroImages: [...(prev.heroImages || []), "/images/hero.jpg"],
     }));
+    setPickerIndex(nextIndex);
   };
 
   const removeHeroImage = (index: number) => {
@@ -6216,6 +6174,19 @@ function AdminHome() {
       ...prev,
       heroImages: (prev.heroImages || []).filter((_, i) => i !== index),
     }));
+  };
+
+  const uploadHeroImages = async (files: File[]) => {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append("files", file);
+    }
+    const res = await fetch("/api/media", { method: "POST", body: formData });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.urls) {
+      throw new Error(data?.error || data?.details || "Upload failed");
+    }
+    return (data.urls as any[]).map((u: any) => u?.url).filter((u): u is string => typeof u === "string");
   };
 
   const save = async () => {
@@ -6416,7 +6387,12 @@ function AdminHome() {
                 <div key={i} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
                     {img ? (
-                      <img src={img} alt={`Slide ${i + 1}`} className="h-full w-full object-cover" />
+                      <ProductImage
+                        src={img}
+                        alt={`Slide ${i + 1}`}
+                        fallbackLetter={String(i + 1)}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <span className="text-xs text-neutral-400">{i + 1}</span>
                     )}
@@ -6430,6 +6406,13 @@ function AdminHome() {
                       className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setPickerIndex(i)}
+                    className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Select
+                  </button>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -6478,6 +6461,21 @@ function AdminHome() {
                   </div>
                 </div>
               ))}
+
+              {pickerIndex !== null && (
+                <MediaPickerModal
+                  isOpen={pickerIndex !== null}
+                  onClose={() => setPickerIndex(null)}
+                  onSelect={(urls) => {
+                    if (pickerIndex !== null && urls.length > 0) {
+                      updateHeroImage(pickerIndex, urls[0]);
+                    }
+                    setPickerIndex(null);
+                  }}
+                  onUpload={uploadHeroImages}
+                  existingImages={content.heroImages || []}
+                />
+              )}
 
               {(!content.heroImages || content.heroImages.length === 0) && (
                 <div className="rounded-lg border-2 border-dashed border-neutral-200 p-6 text-center">
@@ -8956,9 +8954,10 @@ function CategoriesBrandsSection() {
                       {/* Brand Image */}
                       <div className="relative aspect-square bg-white flex items-center justify-center p-4">
                         {stats.image ? (
-                          <img
+                          <ProductImage
                             src={stats.image}
                             alt={name}
+                            fallbackLetter={name?.charAt(0)?.toUpperCase()}
                             className="w-full h-full object-contain"
                           />
                         ) : (

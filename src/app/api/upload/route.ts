@@ -61,17 +61,27 @@ export async function POST(request: NextRequest) {
 
   console.log("Upload config check:", { region: config.region, bucket: config.bucket, configured: config.configured });
 
+  // Fall back to local storage if S3 is not configured
   if (!config.configured) {
-    console.error("S3 not configured. Missing:", {
+    console.warn("S3 not configured, falling back to local storage. Missing:", {
       region: config.region ? "set" : "missing",
       accessKeyId: config.accessKeyId ? "set" : "missing",
       secretAccessKey: config.secretAccessKey ? "set" : "missing",
       bucket: config.bucket ? "set" : "missing",
     });
-    return NextResponse.json(
-      { error: "S3 not configured. Please set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET_NAME environment variables." },
-      { status: 500 }
-    );
+    
+    try {
+      const formData = await request.formData();
+      const productId = formData.get("productId") as string | null;
+      const result = await saveToLocal(formData, productId);
+      return NextResponse.json(result);
+    } catch (error: any) {
+      console.error("Local upload error:", error);
+      return NextResponse.json(
+        { error: "Failed to upload file locally", details: error?.message },
+        { status: 500 }
+      );
+    }
   }
 
   try {
