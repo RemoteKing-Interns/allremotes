@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
+import { useStore } from "../../../context/StoreContext";
 import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
 import ShippingCalculator from "../../../components/ShippingCalculator";
 import OrderSuccessAnimation from "../../../components/checkout/OrderSuccessAnimation";
@@ -21,6 +22,8 @@ const Checkout = () => {
     clearCart,
   } = useCart();
   const { user } = useAuth();
+  const { getSettings } = useStore();
+  const settings = getSettings();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = searchParams.get('guest') === '1';
@@ -125,12 +128,15 @@ const Checkout = () => {
         setIsAddressLoading(true);
         const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
         url.searchParams.set('text', normalizedAddressQuery);
-        url.searchParams.set('limit', '5');
+        url.searchParams.set('limit', '20');
         url.searchParams.set('format', 'json');
+        url.searchParams.set('lang', 'en');
         url.searchParams.set('apiKey', geoapifyApiKey);
         if (geoapifyCountryFilter) {
           url.searchParams.set('filter', `countrycode:${geoapifyCountryFilter}`);
         }
+        // Bias toward the centre of Australia to improve ranking of AU results
+        url.searchParams.set('bias', 'proximity:133.7751,-25.2744');
 
         const response = await fetch(url.toString(), {
           method: 'GET',
@@ -149,7 +155,8 @@ const Checkout = () => {
             formatted: r.formatted ?? '',
             addressLine1: r.address_line1 ?? '',
             addressLine2: r.address_line2 ?? '',
-            city: r.city ?? r.town ?? r.village ?? r.suburb ?? '',
+            city: r.suburb || r.city || r.town || r.village || '',
+            suburb: r.suburb ?? '',
             state: r.state ?? '',
             postcode: r.postcode ?? '',
             country: r.country ?? ''
@@ -220,7 +227,7 @@ const Checkout = () => {
     setFormData((prev) => ({
       ...prev,
       address: suggestion.addressLine1 || suggestion.formatted || prev.address,
-      city: suggestion.city || prev.city,
+      city: suggestion.city || suggestion.suburb || prev.city,
       state: suggestion.state || prev.state,
       zipCode: suggestion.postcode || prev.zipCode
     }));
@@ -760,6 +767,8 @@ const Checkout = () => {
                 address={formData}
                 onShippingSelect={handleShippingSelect}
                 selectedShipping={selectedShipping}
+                items={cart}
+                cartTotal={discountedTotal}
               />
             </div>
 
@@ -769,12 +778,36 @@ const Checkout = () => {
                 <p>Review your order and click below to confirm.</p>
                 <div className="order-total-line">
                   <span>Total Amount:</span>
-                  <strong>${discountedTotal.toFixed(2)} AUD</strong>
+                  <strong>AU${discountedTotal.toFixed(2)}</strong>
+                </div>
+                <p className="mt-2 text-sm text-neutral-500">{settings.gstStatement}</p>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+                <p className="font-semibold text-neutral-900">{settings.businessName}</p>
+                <p className="mt-1">{settings.businessAddress}</p>
+                <p className="mt-1">ABN: {settings.abn} &middot; {settings.siteEmail}</p>
+                <p className="mt-2 text-neutral-600">
+                  We accept Mastercard, Visa, eftpos, AMEX, JCB, Apple Pay and Google Pay.
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Eligible multi-network debit cards may be routed through the eftpos network.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {['mastercard', 'visa', 'eftpos', 'amex', 'jcb', 'apple-pay', 'google-pay'].map((icon) => (
+                    <img
+                      key={icon}
+                      src={`/icons/payments/${icon}.png`}
+                      alt={icon}
+                      className="h-8 w-auto rounded"
+                    />
+                  ))}
                 </div>
               </div>
+
               <button
                 type="submit"
-                className="btn btn-primary btn-large place-order-btn"
+                className="btn btn-primary btn-large place-order-btn mt-4"
                 disabled={loading}
               >
                 {loading ? (
@@ -783,7 +816,7 @@ const Checkout = () => {
                     Processing...
                   </>
                 ) : (
-                  <>Place Order - ${discountedTotal.toFixed(2)}</>
+                  <>Place Order - AU${discountedTotal.toFixed(2)}</>
                 )}
               </button>
             </div>

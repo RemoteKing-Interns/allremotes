@@ -123,7 +123,7 @@ const defaultHomeContent = {
     { icon: 'FS', title: 'Free Shipping Australia Wide', description: 'We offer free shipping on all non-bulky items across Australia. Fast and reliable delivery.' },
     { icon: 'WR', title: '12 Month Warranty', description: 'All purchases include a 12-month warranty for your peace of mind. We stand behind every product we sell.' },
     { icon: 'CS', title: 'Unbeatable Support', description: 'Friendly, reliable support you can trust. Our experienced team is ready to help via phone, email, or live chat.' },
-    { icon: 'PM', title: 'Secure Payments', description: 'Mastercard, VISA, AMEX - All payment options are surcharge-free and secure.' },
+    { icon: 'PM', title: 'Secure Payments', description: 'We accept Mastercard, Visa, eftpos, AMEX, JCB, Apple Pay and Google Pay. All transactions are encrypted and secure.' },
     { icon: 'TR', title: 'Trusted by Thousands', description: 'Over 1,500 five-star reviews and trusted by homeowners, tradespeople, and businesses across Australia.' },
   ],
   ctaSection: {
@@ -178,6 +178,10 @@ const defaultReviews = [
 const defaultSettings = {
   siteName: 'AllRemotes',
   siteEmail: 'shane@allremotes.com.au',
+  businessName: 'ALL REMOTES PTY LTD',
+  abn: '23 679 611 351',
+  businessAddress: '32 Bell Street, Yarra Glen, Victoria 3775',
+  gstStatement: 'All prices include GST',
   maintenanceMode: false,
   enableRegistration: true,
   enableReviews: true,

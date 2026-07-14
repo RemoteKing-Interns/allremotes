@@ -57,7 +57,7 @@ const Addresses = () => {
       const filter = 'filter=countrycode:au';
       
       const response = await fetch(
-        `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&${bias}&${filter}&limit=5&apiKey=${GEOAPIFY_API_KEY}`
+        `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&${bias}&${filter}&limit=20&apiKey=${GEOAPIFY_API_KEY}`
       );
       
       if (!response.ok) throw new Error('Failed to fetch suggestions');
@@ -114,7 +114,7 @@ const Addresses = () => {
     // - state: state code (NSW, VIC, QLD, etc.)
     // - post_code: 4-digit postcode
     const suburb = props.suburb || props.district || '';
-    const city = props.city || suburb || '';
+    const city = suburb || props.city || '';
     const state = props.state_code || props.state || '';
     const postcode = props.postcode || '';
     const country = props.country_code?.toUpperCase() === 'AU' ? 'AU' : (props.country || 'AU');

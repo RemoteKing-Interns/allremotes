@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { readContentJson } from "@/lib/content-json";
+import { getStarshipitRates, starshipitConfigured, StarshipitAddress } from "@/lib/starshipit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,18 +15,68 @@ const defaultShippingOptions = {
   ]
 };
 
-// Map options to rates format
-const mapOptionsToRates = (options: any[]) => {
+const DEFAULT_ITEM_WEIGHT_KG = Number(process.env.STARSHIPIT_DEFAULT_ITEM_WEIGHT || 0.1);
+const DEFAULT_PACKAGE_WEIGHT_KG = Number(process.env.STARSHIPIT_DEFAULT_PACKAGE_WEIGHT || 0.5);
+
+// Map internal fixed options to the UI rate format
+function mapOptionsToUiRates(options: any[]) {
   return options
     .filter((opt: any) => opt.enabled !== false)
     .map((opt: any) => ({
-      service_code: opt.id,
-      service_name: opt.name,
-      total_price: Number(opt.price),
-      transit_time: opt.duration,
-      currency: "AUD",
+      id: opt.id,
+      name: opt.name,
+      description: opt.duration,
+      price: Number(opt.price),
+      tracking: opt.id !== "free",
+      icon: opt.id === "free" ? "📮" : opt.id === "express" ? "🚀" : "📦",
     }));
-};
+}
+
+// Map Starshipit rate response to the UI rate format
+function mapStarshipitRatesToUiRates(rates: any[]) {
+  return rates.map((rate) => {
+    const id = rate.service_name
+      ? String(rate.service_name).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+      : rate.service_code;
+    const name = rate.service_name || rate.service_code;
+    const isExpress = /express|priority|overnight|fast/i.test(name);
+    const isUntracked = /untracked|no tracking|regular letter/i.test(name);
+    return {
+      id,
+      name,
+      description: "",
+      price: Number(rate.total_price),
+      tracking: !isUntracked,
+      icon: isUntracked ? "📮" : isExpress ? "🚀" : "📦",
+    };
+  });
+}
+
+function buildPackages(items?: any[]) {
+  if (!items || items.length === 0) {
+    return [{ weight: DEFAULT_PACKAGE_WEIGHT_KG }];
+  }
+
+  const totalWeight = items.reduce((sum, item) => {
+    const itemWeight = Number(item.weight || DEFAULT_ITEM_WEIGHT_KG);
+    const qty = Number(item.quantity || 1);
+    return sum + itemWeight * qty;
+  }, 0);
+
+  return [{ weight: Math.max(totalWeight, 0.01) }];
+}
+
+function buildDestination(address: any): StarshipitAddress {
+  const country = String(address.country || "AU").toUpperCase();
+  return {
+    street: address.address,
+    suburb: address.city,
+    city: address.city,
+    state: address.state,
+    post_code: address.zipCode,
+    country_code: country === "AU" ? "AU" : country,
+  };
+}
 
 async function getShippingSettings(): Promise<{ options: Array<{ id: string; name: string; price: number; duration: string; enabled: boolean }> }> {
   // Always use default options with correct names, merge with DB for enabled/price overrides only
@@ -73,33 +124,40 @@ async function getShippingSettings(): Promise<{ options: Array<{ id: string; nam
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
-    const { address, items, cartTotal } = body || {};
+    const { address, items } = body || {};
 
-    // Get shipping options from settings
+    if (!address || !address.zipCode || !address.state) {
+      return NextResponse.json({
+        success: true,
+        rates: mapOptionsToUiRates(defaultShippingOptions.options),
+      });
+    }
+
+    // Try Starshipit live rates if configured
+    if (starshipitConfigured()) {
+      try {
+        const destination = buildDestination(address);
+        const packages = buildPackages(items);
+        const starshipitRates = await getStarshipitRates({ destination, packages });
+        if (Array.isArray(starshipitRates) && starshipitRates.length > 0) {
+          return NextResponse.json({
+            success: true,
+            rates: mapStarshipitRatesToUiRates(starshipitRates),
+          });
+        }
+      } catch (starshipitError: any) {
+        console.error("Starshipit rates error:", starshipitError?.message);
+      }
+    }
+
+    // Fallback to fixed shipping options
     const settings = await getShippingSettings();
-    
-    // Filter only enabled options and format for display
-    const rates = settings.options
-      .filter((opt: any) => opt.enabled !== false)
-      .map((opt: any) => ({
-        service_code: opt.id,
-        service_name: opt.name,
-        total_price: Number(opt.price),
-        transit_time: opt.duration,
-        currency: "AUD",
-      }));
+    const rates = mapOptionsToUiRates(settings.options);
 
-    // If no rates available, return defaults
     if (rates.length === 0) {
       return NextResponse.json({
         success: true,
-        rates: defaultShippingOptions.options.map(opt => ({
-          service_code: opt.id,
-          service_name: opt.name,
-          total_price: opt.price,
-          transit_time: opt.duration,
-          currency: "AUD",
-        }))
+        rates: mapOptionsToUiRates(defaultShippingOptions.options),
       });
     }
 
@@ -109,16 +167,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Shipping rates error:", error);
-    // Return default rates on error
     return NextResponse.json({
       success: true,
-      rates: defaultShippingOptions.options.map(opt => ({
-        service_code: opt.id,
-        service_name: opt.name,
-        total_price: opt.price,
-        transit_time: opt.duration,
-        currency: "AUD",
-      }))
+      rates: mapOptionsToUiRates(defaultShippingOptions.options),
     });
   }
 }

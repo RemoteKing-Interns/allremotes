@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-const ShippingCalculator = ({ address, onShippingSelect, selectedShipping }) => {
+const ShippingCalculator = ({ address, onShippingSelect, selectedShipping, items = [], cartTotal }) => {
   const [rates, setRates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -11,7 +11,7 @@ const ShippingCalculator = ({ address, onShippingSelect, selectedShipping }) => 
     if (address && address.zipCode && address.city) {
       fetchShippingRates();
     }
-  }, [address]);
+  }, [address, items, cartTotal]);
 
   const fetchShippingRates = async () => {
     setLoading(true);
@@ -21,7 +21,7 @@ const ShippingCalculator = ({ address, onShippingSelect, selectedShipping }) => 
       const response = await fetch('/api/shipping/rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ address, items, cartTotal }),
       });
 
       const data = await response.json();
