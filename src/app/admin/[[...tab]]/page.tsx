@@ -10,6 +10,9 @@ import AdminSupportChat from "../../../components/admin/AdminSupportChat";
 import ProductSpreadsheet from "../../../components/admin/ProductSpreadsheet";
 import AdminUsersManager from "../../../components/admin/AdminUsers";
 import AdminLogs from "../../../components/admin/AdminLogs";
+import AdminPrinterSettings from "../../../components/admin/AdminPrinterSettings";
+import LabelTemplatesSection from "../../../components/admin/LabelTemplatesSection";
+import dynamic from "next/dynamic";
 import CustomerManagement from "../../../components/admin/CustomerManagement";
 import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
@@ -108,7 +111,7 @@ const navGroupDefinitions = [
   { label: 'Marketing', icon: Megaphone,    ids: ['promotions', 'discounts'] },
   { label: 'Content',   icon: FileText,     ids: ['home', 'navigation', 'content'] },
   { label: 'Analytics', icon: BarChart3,    ids: ['analytics', 'live_view'] },
-  { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'settings'] },
+  { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'printers', 'labels', 'settings'] },
 ];
 
 const isRecord = (value: any): value is Record<string, any> => {
@@ -440,7 +443,7 @@ const AdminContent = () => {
       { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
       { id: 'products', perm: 'products' }, { id: 'customers', perm: 'customers' },
       { id: 'analytics', perm: 'analytics' }, { id: 'marketing', perm: 'marketing' },
-      { id: 'content', perm: 'content' }, { id: 'settings', perm: 'settings' },
+      { id: 'content', perm: 'content' }, { id: 'printers', perm: 'settings' }, { id: 'settings', perm: 'settings' },
     ];
     const currentTabPerm = [
       { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
@@ -452,7 +455,7 @@ const AdminContent = () => {
       { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' }, { id: 'content', perm: 'content' },
       { id: 'analytics', perm: 'analytics' }, { id: 'live_view', perm: 'analytics' },
       { id: 'admin_users', perm: 'superuser' }, { id: 'admin_logs', perm: 'admin_users' },
-      { id: 'settings', perm: 'settings' }, { id: 'profile', perm: '' },
+      { id: 'printers', perm: 'settings' }, { id: 'settings', perm: 'settings' }, { id: 'profile', perm: '' },
     ].find(t => t.id === activeTab);
     if (!currentTabPerm) return;
     if (currentTabPerm.perm === '') return; // profile always allowed
@@ -696,6 +699,7 @@ const AdminContent = () => {
       { id: 'live_view', label: 'Live View' },
       { id: 'admin_users', label: 'Admin Users' },
       { id: 'admin_logs', label: 'Logs' },
+      { id: 'printers', label: 'Printer Setup' },
       { id: 'settings', label: 'Settings' },
     ];
 
@@ -899,6 +903,8 @@ const AdminContent = () => {
     { id: 'live_view',      label: 'Live View',           icon: Eye,                perm: 'analytics' },
     { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'superuser' },
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
+    { id: 'printers',       label: 'Printer Setup',       icon: Printer,            perm: 'settings' },
+    { id: 'labels',         label: 'Label Templates',     icon: Tags,               perm: 'settings' },
     { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
   ];
   const navItems = allNavItems.filter(item => hasPermission(item.perm));
@@ -1214,6 +1220,8 @@ const AdminContent = () => {
           {hasPermission('content')     && <div className={activeTab === 'content'         ? '' : 'hidden'}><AdminMediaLibrary /></div>}
           {hasPermission('customers')   && <div className={activeTab === 'reviews'         ? '' : 'hidden'}><AdminReviews /></div>}
           {hasPermission('customers')   && <div className={activeTab === 'messages'        ? '' : 'hidden'}><AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} /></div>}
+          {hasPermission('settings')    && <div className={activeTab === 'printers'        ? '' : 'hidden'}><AdminPrinterSettings /></div>}
+          {hasPermission('settings')    && <div className={activeTab === 'labels'          ? '' : 'hidden'}><LabelTemplatesSection /></div>}
           {hasPermission('settings')    && <div className={activeTab === 'settings'        ? '' : 'hidden'}><AdminSettings /></div>}
           <div className={activeTab === 'profile' ? '' : 'hidden'}><AdminProfile /></div>
         </main>
@@ -1324,6 +1332,8 @@ type UnleashedPushState = {
   unleashedOrderUrl?: string;
 };
 
+const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/LabelCanvasEditor"), { ssr: false });
+
 function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void }) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1331,6 +1341,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
+  const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
@@ -1378,6 +1389,109 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
       }
     }
   }, [viewOrderId, orders, setViewOrderId]);
+
+  const defaultLabelTemplate = {
+    id: 'default',
+    name: 'Default Label',
+    fields: [
+      { id: 'address_1', type: 'text' as const, label: 'Address', dataKey: 'address', x: 5, y: 10, fontSize: 12, fontWeight: 'normal' },
+      { id: 'customer_1', type: 'text' as const, label: 'Customer', dataKey: 'customerName', x: 5, y: 30, fontSize: 14, fontWeight: 'bold' },
+    ],
+    layout: { width: 252, height: 79 },
+  };
+
+  const buildLabelOptions = (order: any, fields: Record<string, string>, template: any) => ({
+    orderId: order.id,
+    customerName: fields.customerName ?? (order.customer?.fullName || order.customer?.email || 'Guest'),
+    customerEmail: fields.customerEmail ?? (order.customer?.email || ''),
+    customerPhone: fields.customerPhone ?? (order.shipping?.phone || order.customer?.phone || ''),
+    address: fields.address ?? (order.shipping?.address || ''),
+    suburb: fields.suburb ?? (order.shipping?.city || ''),
+    state: fields.state ?? (order.shipping?.state || ''),
+    postcode: fields.postcode ?? (order.shipping?.zipCode || ''),
+    items: order.items || [],
+    template,
+    fieldValues: fields,
+  });
+
+  const availableLabelFields = [
+    { id: 'customerName', label: 'Customer Name', type: 'text' as const },
+    { id: 'address', label: 'Street Address', type: 'text' as const },
+    { id: 'suburb', label: 'Suburb', type: 'text' as const },
+    { id: 'state', label: 'State', type: 'text' as const },
+    { id: 'postcode', label: 'Postcode', type: 'text' as const },
+    { id: 'customerPhone', label: 'Phone', type: 'text' as const },
+    { id: 'customerEmail', label: 'Email', type: 'text' as const },
+    { id: 'orderId', label: 'Order ID', type: 'text' as const },
+    { id: 'items', label: 'Product List', type: 'text' as const },
+  ];
+
+  const openLabelModal = async (order: any) => {
+    // Load saved templates from API
+    let savedTemplates: any[] = [];
+    try {
+      const res = await fetch('/api/admin/label-templates');
+      const data = await res.json();
+      savedTemplates = Array.isArray(data) ? data : [];
+    } catch {}
+
+    // Use default template (from localStorage), or first saved template, or hardcoded default
+    const { getSelectedLabelTemplateId } = await import('../../../lib/dymo');
+    const defaultId = getSelectedLabelTemplateId();
+    let template = savedTemplates.find((t: any) => t.id === defaultId) || savedTemplates[0] || defaultLabelTemplate;
+    const fields: Record<string, string> = {
+      customerName: order.customer?.fullName || order.customer?.email || 'Guest',
+      customerEmail: order.customer?.email || '',
+      customerPhone: order.shipping?.phone || order.customer?.phone || '',
+      address: order.shipping?.address || '',
+      suburb: order.shipping?.city || '',
+      state: order.shipping?.state || '',
+      postcode: order.shipping?.zipCode || '',
+      orderId: order.id,
+      items: (order.items || []).map((i: any) => `${i.quantity}x ${i.name}`).join(', '),
+    };
+    setLabelModal({ order, preview: '', loading: true, printing: false, fields, template, savedTemplates });
+    try {
+      const { loadDymoFramework, renderLabelFromOptions, getSelectedDymoPrinter } = await import('../../../lib/dymo');
+      await loadDymoFramework();
+      const printerName = getSelectedDymoPrinter();
+      const dataUri = await renderLabelFromOptions({ ...buildLabelOptions(order, fields, template), printerName });
+      setLabelModal((prev) => prev ? { ...prev, preview: dataUri, loading: false } : prev);
+    } catch (err: any) {
+      setLabelModal((prev) => prev ? { ...prev, loading: false } : prev);
+      console.error('Preview failed:', err);
+    }
+  };
+
+  const refreshLabelPreview = async (fields: Record<string, string>, template: any) => {
+    if (!labelModal) return;
+    setLabelModal((prev) => prev ? { ...prev, fields, template, loading: true } : prev);
+    try {
+      const { renderLabelFromOptions, getSelectedDymoPrinter } = await import('../../../lib/dymo');
+      const printerName = getSelectedDymoPrinter();
+      const dataUri = await renderLabelFromOptions({ ...buildLabelOptions(labelModal.order, fields, template), printerName });
+      setLabelModal((prev) => prev ? { ...prev, preview: dataUri, loading: false } : prev);
+    } catch (err: any) {
+      setLabelModal((prev) => prev ? { ...prev, loading: false } : prev);
+      console.error('Preview refresh failed:', err);
+    }
+  };
+
+  const printFromModal = async () => {
+    if (!labelModal) return;
+    setLabelModal((prev) => prev ? { ...prev, printing: true } : prev);
+    try {
+      const { printLabel, getSelectedDymoPrinter } = await import('../../../lib/dymo');
+      const printerName = getSelectedDymoPrinter();
+      const result = await printLabel({ ...buildLabelOptions(labelModal.order, labelModal.fields, labelModal.template), printerName });
+      alert(result.message);
+      setLabelModal(null);
+    } catch (err: any) {
+      alert(`Failed to print label: ${err.message}`);
+    } finally {
+      setLabelModal((prev) => prev ? { ...prev, printing: false } : prev);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -2489,45 +2603,243 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                 {pushingStarshipit ? "Pushing..." : selectedOrder.starshipitPushedAt || selectedOrder.starshipitOrderId ? "Pushed to Starshipit" : "Push to Starshipit"}
               </button>
               <button
-                onClick={async () => {
-                  try {
-                    // Load DYMO framework if not already loaded
-                    const { loadDymoFramework, printLabel } = await import('../../../lib/dymo');
-                    await loadDymoFramework();
-                    
-                    // Get default template or use a simple one
-                    const template = {
-                      id: 'default',
-                      name: 'Default Label',
-                      fields: [
-                        { id: 'address_1', type: 'text' as const, label: 'Address', dataKey: 'address', x: 5, y: 10, fontSize: 12, fontWeight: 'normal' },
-                        { id: 'customer_1', type: 'text' as const, label: 'Customer', dataKey: 'customerName', x: 5, y: 30, fontSize: 14, fontWeight: 'bold' },
-                      ],
-                      layout: { width: 72, height: 252 },
-                    };
-                    
-                    await printLabel({
-                      orderId: selectedOrder.id,
-                      customerName: selectedOrder.customer?.fullName || selectedOrder.customer?.email || 'Guest',
-                      customerEmail: selectedOrder.customer?.email || '',
-                      customerPhone: selectedOrder.shipping?.phone || selectedOrder.customer?.phone || '',
-                      address: selectedOrder.shipping?.address || '',
-                      suburb: selectedOrder.shipping?.city || '',
-                      state: selectedOrder.shipping?.state || '',
-                      postcode: selectedOrder.shipping?.zipCode || '',
-                      items: selectedOrder.items || [],
-                      template,
-                    });
-                    
-                    alert('Label printed successfully!');
-                  } catch (error: any) {
-                    console.error('Failed to print label:', error);
-                    alert(`Failed to print label: ${error.message}\n\nEnsure DYMO LabelWriter is connected and DYMO Connect Framework is installed.`);
-                  }
-                }}
+                onClick={() => void openLabelModal(selectedOrder)}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Print Label
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Label Preview & Edit Modal */}
+      {labelModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setLabelModal(null)}>
+          <div className="max-w-5xl w-full max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-neutral-900">Label Preview & Editor</h3>
+              <button onClick={() => setLabelModal(null)} className="text-neutral-400 hover:text-neutral-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            {/* Template selector */}
+            <div className="mb-4 flex items-center gap-3">
+              <label className="text-sm font-semibold text-neutral-700">Template:</label>
+              <select
+                value={labelModal.template.id}
+                onChange={(e) => {
+                  const tmpl = labelModal.savedTemplates.find((t: any) => t.id === e.target.value) || defaultLabelTemplate;
+                  setLabelModal(prev => prev ? { ...prev, template: tmpl } : prev);
+                  void refreshLabelPreview(labelModal.fields, tmpl);
+                }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg"
+              >
+                <option value="default">Default Label</option>
+                {labelModal.savedTemplates.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <Link href="/admin?tab=labels" target="_blank" className="text-xs text-blue-600 hover:underline">Manage templates</Link>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left: Field management */}
+              <div className="space-y-4">
+                {/* Add fields */}
+                <div>
+                  <h4 className="font-semibold text-neutral-900 text-sm mb-2">Add Field</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {availableLabelFields.map((af) => {
+                      const exists = labelModal.template.fields.some((f: any) => f.dataKey === af.id);
+                      return (
+                        <button
+                          key={af.id}
+                          disabled={exists}
+                          onClick={() => {
+                            const newField = {
+                              id: `${af.id}_${Date.now()}`,
+                              type: af.type,
+                              label: af.label,
+                              dataKey: af.id,
+                              x: 5,
+                              y: 10 + labelModal.template.fields.length * 20,
+                              width: 240,
+                              height: 20,
+                              fontSize: 12,
+                              fontWeight: 'normal',
+                            };
+                            const template = { ...labelModal.template, fields: [...labelModal.template.fields, newField] };
+                            setLabelModal(prev => prev ? { ...prev, template } : prev);
+                            void refreshLabelPreview(labelModal.fields, template);
+                          }}
+                          className="px-2 py-1 text-xs font-medium rounded-lg border border-neutral-200 bg-white hover:bg-blue-50 hover:border-blue-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          + {af.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Field list with boundary controls */}
+                <div>
+                  <h4 className="font-semibold text-neutral-900 text-sm mb-2">Fields & Boundaries</h4>
+                  <div className="space-y-2">
+                    {labelModal.template.fields.length === 0 && (
+                      <p className="text-xs text-neutral-400 py-4 text-center">No fields. Add one above.</p>
+                    )}
+                    {labelModal.template.fields.map((field: any, idx: number) => (
+                      <div key={field.id} className="p-3 bg-neutral-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-neutral-800">{field.label}</span>
+                          <button
+                            onClick={() => {
+                              const template = { ...labelModal.template, fields: labelModal.template.fields.filter((_: any, i: number) => i !== idx) };
+                              setLabelModal(prev => prev ? { ...prev, template } : prev);
+                              void refreshLabelPreview(labelModal.fields, template);
+                            }}
+                            className="text-red-500 hover:text-red-700 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-6 gap-2">
+                          {[
+                            { prop: 'x', label: 'X', min: 0, max: 252 },
+                            { prop: 'y', label: 'Y', min: 0, max: 79 },
+                            { prop: 'width', label: 'W', min: 20, max: 252 },
+                            { prop: 'height', label: 'H', min: 10, max: 79 },
+                            { prop: 'fontSize', label: 'Font', min: 6, max: 32 },
+                          ].map(({ prop, label: plabel, min, max }) => (
+                            <div key={prop}>
+                              <label className="block text-[10px] text-neutral-500 mb-0.5">{plabel}</label>
+                              <input
+                                type="number"
+                                value={(field as any)[prop] ?? (prop === 'width' ? 240 : prop === 'height' ? 20 : prop === 'fontSize' ? 12 : 0)}
+                                min={min}
+                                max={max}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  const template = {
+                                    ...labelModal.template,
+                                    fields: labelModal.template.fields.map((f: any, i: number) => i === idx ? { ...f, [prop]: val } : f),
+                                  };
+                                  setLabelModal(prev => prev ? { ...prev, template } : prev);
+                                }}
+                                onBlur={() => void refreshLabelPreview(labelModal.fields, labelModal.template)}
+                                className="w-full px-1.5 py-1 text-xs border border-neutral-300 rounded"
+                              />
+                            </div>
+                          ))}
+                          <div>
+                            <label className="block text-[10px] text-neutral-500 mb-0.5">Weight</label>
+                            <select
+                              value={field.fontWeight || 'normal'}
+                              onChange={(e) => {
+                                const template = {
+                                  ...labelModal.template,
+                                  fields: labelModal.template.fields.map((f: any, i: number) => i === idx ? { ...f, fontWeight: e.target.value } : f),
+                                };
+                                setLabelModal(prev => prev ? { ...prev, template } : prev);
+                              }}
+                              onBlur={() => void refreshLabelPreview(labelModal.fields, labelModal.template)}
+                              className="w-full px-1 py-1 text-xs border border-neutral-300 rounded"
+                            >
+                              <option value="normal">Normal</option>
+                              <option value="bold">Bold</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Editable content */}
+                <div>
+                  <h4 className="font-semibold text-neutral-900 text-sm mb-2">Content (editable)</h4>
+                  <div className="space-y-2">
+                    {labelModal.template.fields.map((field: any) => {
+                      const key = field.dataKey || field.id;
+                      return (
+                        <div key={field.id}>
+                          <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">{field.label}</label>
+                          <input
+                            type="text"
+                            value={labelModal.fields[key] || ''}
+                            onChange={(e) => {
+                              const fields = { ...labelModal.fields, [key]: e.target.value };
+                              setLabelModal(prev => prev ? { ...prev, fields } : prev);
+                            }}
+                            onBlur={() => void refreshLabelPreview(labelModal.fields, labelModal.template)}
+                            className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Visual layout editor */}
+                <div>
+                  <h4 className="font-semibold text-neutral-900 text-sm mb-2">Visual Layout (drag to arrange)</h4>
+                  <LabelCanvasEditorLazy
+                    fields={labelModal.template.fields}
+                    layoutWidth={labelModal.template.layout?.width || 252}
+                    layoutHeight={labelModal.template.layout?.height || 79}
+                    onChange={(id: string, updates: any) => {
+                      const template = {
+                        ...labelModal.template,
+                        fields: labelModal.template.fields.map((f: any) => f.id === id ? { ...f, ...updates } : f),
+                      };
+                      setLabelModal(prev => prev ? { ...prev, template } : prev);
+                    }}
+                    onDragEnd={() => void refreshLabelPreview(labelModal.fields, labelModal.template)}
+                  />
+                  <p className="text-xs text-neutral-400 mt-2 text-center">Drag to move · Drag corner to resize · Red lines show alignment</p>
+                </div>
+              </div>
+
+              {/* Right: Preview */}
+              <div>
+                <h4 className="font-semibold text-neutral-900 text-sm mb-3">Live Preview</h4>
+                <div className="flex items-center justify-center min-h-[200px] rounded-lg border border-neutral-200 bg-neutral-50 p-4 sticky top-0">
+                  {labelModal.loading ? (
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                  ) : labelModal.preview ? (
+                    <img
+                      src={labelModal.preview}
+                      alt="Label preview"
+                      className="rounded-lg border border-neutral-200 bg-white shadow-sm"
+                      style={{ maxHeight: 350, width: 'auto' }}
+                    />
+                  ) : (
+                    <p className="text-sm text-neutral-400">Preview unavailable. Ensure DYMO Connect is running.</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => void refreshLabelPreview(labelModal.fields, labelModal.template)}
+                  disabled={labelModal.loading}
+                  className="mt-3 w-full inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  {labelModal.loading ? 'Generating...' : 'Refresh preview'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setLabelModal(null)}
+                className="px-4 py-2 text-sm font-semibold text-neutral-700 rounded-lg border border-neutral-300 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void printFromModal()}
+                disabled={labelModal.printing || labelModal.loading}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              >
+                {labelModal.printing ? 'Printing...' : 'Print Label'}
               </button>
             </div>
           </div>
@@ -4425,9 +4737,9 @@ function AdminDashboard({
       onClick: () => router.push("/admin/shipping"),
     },
     {
-      label: "Label Templates",
+      label: "Printer Setup",
       icon: Printer,
-      onClick: () => router.push("/admin/settings/labels"),
+      onClick: () => onNavigateTab?.("printers"),
     },
     {
       label: "Import Products",
