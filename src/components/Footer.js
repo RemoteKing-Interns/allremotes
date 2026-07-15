@@ -15,7 +15,7 @@ const policyItems = [
 const supportItems = [
   { href: "/support", label: "Support Center" },
   { href: "/contact", label: "Contact Us" },
-  { href: "mailto:shane@allremotes.com.au", label: "shane@allremotes.com.au" },
+  { href: "mailto:info@allremotes.com.au", label: "info@allremotes.com.au" },
 ];
 
 function FooterItem({ href, label }) {
@@ -46,7 +46,7 @@ function FooterColumn({ title, items }) {
       <h4 className="mb-2 text-[0.7rem] font-extrabold uppercase tracking-[0.14em] text-white/95">
         {title}
       </h4>
-      <ul className="grid gap-1.5">
+      <ul className="grid gap-2.5">
         {items.map((item) => (
           <li key={`${title}-${item.label}`}>
             <FooterItem href={item.href} label={item.label} />
@@ -66,8 +66,8 @@ const Footer = () => {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_36%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-container-wide px-4 py-8 sm:py-10">
-        <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <section className="grid min-w-0 content-start gap-2">
+        <div className="grid items-start gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+          <section className="grid min-w-0 content-start gap-3">
             <Link href="/" className="inline-flex w-fit max-w-full items-center" aria-label="ALLREMOTES home">
               <Image
                 src="/images/mainlogo.png"
@@ -87,13 +87,13 @@ const Footer = () => {
           <FooterColumn title="Company" items={policyItems} />
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-white/15 pt-4 text-xs text-white/60 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-6 flex flex-col gap-3 border-t border-white/15 pt-5 text-xs text-white/60 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             <span className="font-semibold text-white/90">{settings.businessName}</span>
             <span>ABN: {settings.abn}</span>
             <span>{settings.businessAddress}</span>
             <span>{settings.gstStatement}</span>
-            <a href={`mailto:${settings.siteEmail}`} className="underline hover:text-white">{settings.siteEmail}</a>
+            <a href="mailto:info@allremotes.com.au" className="underline hover:text-white">info@allremotes.com.au</a>
             <span>Australia-wide shipping only</span>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
@@ -108,7 +108,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <p className="mt-4 text-xs text-white/40">
+        <p className="mt-5 text-xs text-white/40">
           &copy; {currentYear} ALLREMOTES. All rights reserved.
         </p>
       </div>

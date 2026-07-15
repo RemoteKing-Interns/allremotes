@@ -1318,7 +1318,7 @@ type UnleashedPushState = {
   // orderIds that have been pushed for this group label
   pushedOrderIds: string[];
   // Push targets per order ID
-  pushTargets: Record<string, { unleashed: boolean; pickops: boolean }>;
+  pushTargets: Record<string, { unleashed: boolean; pickops: boolean; starshipit?: boolean }>;
   // Unleashed order number returned after push (populated later)
   unleashedOrderNumber?: string;
   unleashedOrderUrl?: string;
@@ -1330,6 +1330,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [pushingStarshipit, setPushingStarshipit] = useState(false);
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
@@ -1395,12 +1396,12 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
         const groupResult = getDateGroup(order.createdAt || order.updatedAt || "");
         const groupLabel = typeof groupResult === "string" ? groupResult : (groupResult as any)?.label ?? String(groupResult);
 
-        if (order.unleashedOrderNumber) {
+        if (order.unleashedOrderNumber || order.pickopsPushedAt || order.starshipitPushedAt || order.starshipitOrderId) {
           if (!rebuilt[groupLabel] || !rebuilt[groupLabel].unleashedOrderNumber) {
             rebuilt[groupLabel] = {
               pushedOrderIds: [],
               pushTargets: {},
-              unleashedOrderNumber: order.unleashedOrderNumber,
+              unleashedOrderNumber: order.unleashedOrderNumber || "",
               unleashedOrderUrl: order.unleashedOrderUrl || "",
             };
           }
@@ -1411,6 +1412,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
           rebuilt[groupLabel].pushTargets[order.id] = {
             unleashed: order.unleashedOrderNumber ? true : false,
             pickops: order.pickopsPushedAt ? true : false,
+            starshipit: order.starshipitPushedAt || order.starshipitOrderId ? true : false,
           };
         }
 
@@ -1832,6 +1834,78 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                         </span>
                       )}
                     </button>
+
+                    {/* Push to Starshipit button */}
+                    <button
+                      type="button"
+                      disabled={selection.size === 0 || pushingStarshipit}
+                      onClick={async () => {
+                        const orderIds = Array.from(selection);
+                        if (orderIds.length === 0) return;
+                        setPushingStarshipit(true);
+                        let pushedCount = 0;
+                        for (const orderId of orderIds) {
+                          try {
+                            const resp = await fetch("/api/orders/starshipit", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ orderId }),
+                            });
+                            const data = await resp.json().catch(() => ({} as any));
+                            if (!resp.ok) {
+                              throw new Error(data.error || `Push failed (${resp.status})`);
+                            }
+                            const update = {
+                              starshipitPushedAt: new Date().toISOString(),
+                              starshipitOrderNumber: data.order?.order_number,
+                              starshipitOrderId: data.order?.order_id,
+                            };
+                            setOrders((prev: any[]) =>
+                              prev.map((o: any) => (o.id === orderId ? { ...o, ...update } : o))
+                            );
+                            setUnleashedPushState((prev) => {
+                              const existing = prev[groupLabel] || { pushedOrderIds: [], pushTargets: {} };
+                              const merged = Array.from(new Set([...existing.pushedOrderIds, orderId]));
+                              const targets = existing.pushTargets[orderId] || { unleashed: false, pickops: false };
+                              return {
+                                ...prev,
+                                [groupLabel]: {
+                                  ...existing,
+                                  pushedOrderIds: merged,
+                                  pushTargets: {
+                                    ...existing.pushTargets,
+                                    [orderId]: { ...targets, starshipit: true },
+                                  },
+                                },
+                              };
+                            });
+                            pushedCount++;
+                          } catch (err: any) {
+                            console.error(`Failed to push order ${orderId} to Starshipit:`, err);
+                            alert(`Failed to push order ${orderId} to Starshipit: ${err.message}`);
+                            break;
+                          }
+                        }
+                        setPushingStarshipit(false);
+                        if (pushedCount > 0) {
+                          activityLogger.action("orders_pushed", {
+                            orderIds: orderIds.slice(0, pushedCount),
+                            orderCount: pushedCount,
+                            groupLabel,
+                            targets: "Starshipit",
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Truck className="h-3.5 w-3.5" />
+                      {pushingStarshipit ? "Pushing..." : "Push to Starshipit"}
+                      {!pushingStarshipit && selection.size > 0 && (
+                        <span className="ml-0.5 rounded-full bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                          {selection.size}
+                        </span>
+                      )}
+                    </button>
                   </div>
 
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -1918,22 +1992,19 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                                 if (!targets) {
                                   return <span className="text-xs text-neutral-300">—</span>;
                                 }
-                                
-                                let text = "";
-                                if (targets.unleashed && targets.pickops) {
-                                  text = "PickOps + Unleashed";
-                                } else if (targets.unleashed) {
-                                  text = "Unleashed";
-                                } else if (targets.pickops) {
-                                  text = "PickOps";
-                                } else {
+
+                                const labels = [];
+                                if (targets.unleashed) labels.push("Unleashed");
+                                if (targets.pickops) labels.push("PickOps");
+                                if (targets.starshipit) labels.push("Starshipit");
+                                if (labels.length === 0) {
                                   return <span className="text-xs text-neutral-300">—</span>;
                                 }
-                                
+
                                 return (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
                                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                                    {text}
+                                    {labels.join(" + ")}
                                   </span>
                                 );
                               })()}
@@ -2181,9 +2252,9 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
       {/* Order Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedOrder(null)}>
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between border-b border-neutral-200 pb-4">
-              <h2 className="text-xl font-bold text-neutral-900">Order Details</h2>
+          <div className="max-h-[90vh] w-[70%] overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-3">
+              <h2 className="text-lg font-bold text-neutral-900">Order Details</h2>
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-full p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
@@ -2194,9 +2265,9 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Order Info */}
-              <div className="grid grid-cols-2 gap-4 rounded-lg bg-neutral-50 p-4">
+              <div className="grid grid-cols-4 gap-3 rounded-lg bg-neutral-50 p-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Order ID</p>
                   <p className="font-mono text-sm font-medium">#{selectedOrder.id}</p>
@@ -2298,67 +2369,73 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                     );
                   })()}
                 </div>
-              </div>
-
-              {/* Customer Info */}
-              <div>
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Customer</h3>
-                <div className="rounded-lg border border-neutral-200 p-4">
-                  <p className="font-medium text-neutral-900">{selectedOrder?.customer?.fullName || 'N/A'}</p>
-                  <p className="text-sm text-neutral-600">{selectedOrder?.customer?.email}</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Starshipit</p>
+                  {selectedOrder.starshipitPushedAt || selectedOrder.starshipitOrderId ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      {selectedOrder.starshipitOrderNumber ? `Pushed (${selectedOrder.starshipitOrderNumber})` : "Pushed"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-neutral-400">Not pushed</span>
+                  )}
                 </div>
               </div>
 
-              {/* Shipping Address */}
-              <div>
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Shipping Address</h3>
-                <div className="rounded-lg border border-neutral-200 p-4">
-                  <p className="font-medium text-neutral-900">{selectedOrder?.shipping?.address}</p>
-                  <p className="text-sm text-neutral-600">
-                    {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
-                  </p>
-                  <p className="text-sm text-neutral-600">{selectedOrder?.shipping?.country}</p>
-                  {selectedOrder?.shipping?.phone && (
-                    <p className="mt-2 text-sm text-neutral-600">📞 {selectedOrder.shipping.phone}</p>
-                  )}
+              {/* Customer + Shipping + Pricing row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Customer & Shipping</h3>
+                  <div className="rounded-lg border border-neutral-200 p-3 space-y-1">
+                    <p className="font-medium text-sm text-neutral-900">{selectedOrder?.customer?.fullName || 'N/A'}</p>
+                    <p className="text-xs text-neutral-600">{selectedOrder?.customer?.email}</p>
+                    <div className="mt-1.5 border-t border-neutral-100 pt-1.5">
+                      <p className="text-sm text-neutral-900">{selectedOrder?.shipping?.address}</p>
+                      <p className="text-xs text-neutral-600">
+                        {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
+                      </p>
+                      <p className="text-xs text-neutral-600">{selectedOrder?.shipping?.country}</p>
+                      {selectedOrder?.shipping?.phone && (
+                        <p className="text-xs text-neutral-600">📞 {selectedOrder.shipping.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Pricing</h3>
+                  <div className="rounded-lg border border-neutral-200 p-3">
+                    <div className="flex justify-between py-0.5 text-sm">
+                      <span className="text-neutral-600">Subtotal</span>
+                      <span>AU${Number(selectedOrder?.pricing?.subtotal || 0).toFixed(2)}</span>
+                    </div>
+                    {selectedOrder?.pricing?.discountTotal > 0 && (
+                      <div className="flex justify-between py-0.5 text-sm text-emerald-600">
+                        <span>Discount</span>
+                        <span>-AU${Number(selectedOrder.pricing.discountTotal).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="mt-1.5 flex justify-between border-t border-neutral-200 pt-1.5">
+                      <span className="font-bold text-sm text-neutral-900">Total</span>
+                      <span className="font-bold text-sm text-neutral-900">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Items */}
               <div>
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Items</h3>
+                <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Items</h3>
                 <div className="rounded-lg border border-neutral-200">
                   {(selectedOrder?.items || []).map((item: any, idx: number) => (
-                    <div key={idx} className={`flex items-center justify-between p-4 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
+                    <div key={idx} className={`flex items-center justify-between p-3 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
-                        <p className="font-medium text-neutral-900">{item.name}</p>
+                        <p className="font-medium text-sm text-neutral-900">{item.name}</p>
                         {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
-                        <p className="text-sm text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
+                        <p className="text-xs text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
                       </div>
-                      <p className="font-semibold text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
+                      <p className="font-semibold text-sm text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Pricing Summary */}
-              <div>
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-neutral-500">Pricing</h3>
-                <div className="rounded-lg border border-neutral-200 p-4">
-                  <div className="flex justify-between py-1">
-                    <span className="text-neutral-600">Subtotal</span>
-                    <span>AU${Number(selectedOrder?.pricing?.subtotal || 0).toFixed(2)}</span>
-                  </div>
-                  {selectedOrder?.pricing?.discountTotal > 0 && (
-                    <div className="flex justify-between py-1 text-emerald-600">
-                      <span>Member Discount</span>
-                      <span>-AU${Number(selectedOrder.pricing.discountTotal).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="mt-2 flex justify-between border-t border-neutral-200 pt-2">
-                    <span className="font-bold text-neutral-900">Total</span>
-                    <span className="font-bold text-neutral-900">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2369,12 +2446,47 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
               customerName={selectedOrder.customer?.fullName}
             />
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-3 flex justify-end gap-3">
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
               >
                 Close
+              </button>
+              <button
+                onClick={async () => {
+                  setPushingStarshipit(true);
+                  try {
+                    const resp = await fetch("/api/orders/starshipit", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderId: selectedOrder.id }),
+                    });
+                    const data = await resp.json().catch(() => ({} as any));
+                    if (!resp.ok) {
+                      throw new Error(data.error || "Failed to push to Starshipit");
+                    }
+                    const update = {
+                      starshipitPushedAt: new Date().toISOString(),
+                      starshipitOrderNumber: data.order?.order_number,
+                      starshipitOrderId: data.order?.order_id,
+                    };
+                    setSelectedOrder((prev: any) => (prev ? { ...prev, ...update } : prev));
+                    setOrders((prev: any[]) =>
+                      prev.map((o: any) => (o.id === selectedOrder.id ? { ...o, ...update } : o))
+                    );
+                    alert(data.alreadyExists ? "Order already exists in Starshipit" : "Pushed to Starshipit successfully");
+                  } catch (error: any) {
+                    console.error("Failed to push to Starshipit:", error);
+                    alert(`Failed to push to Starshipit: ${error.message}`);
+                  } finally {
+                    setPushingStarshipit(false);
+                  }
+                }}
+                disabled={pushingStarshipit || selectedOrder.starshipitPushedAt || selectedOrder.starshipitOrderId}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pushingStarshipit ? "Pushing..." : selectedOrder.starshipitPushedAt || selectedOrder.starshipitOrderId ? "Pushed to Starshipit" : "Push to Starshipit"}
               </button>
               <button
                 onClick={async () => {
@@ -3842,18 +3954,31 @@ function InventorySection() {
     return sorted;
   }, [products, sortColumn, sortDirection]);
 
-  const loadStock = async () => {
+  const loadProductStock = async (product: any) => {
+    const productId = product.id;
+    setLoadingStock((current) => new Set(current).add(productId));
     try {
-      setLoadingStock(new Set(products.map(p => p.id)));
-      const res = await fetch("/api/inventory/stock", { cache: "no-store" });
-      const data = await res.json().catch(() => ({ products: [] }));
-      setProducts(data.products || []);
+      const res = await fetch("/api/inventory/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: productId, rk_sku: product.rk_sku }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load stock");
+
+      setProducts((current) => current.map((item) =>
+        item.id === productId
+          ? { ...item, quantity: data.product.quantity, binLocation: data.product.binLocation }
+          : item
+      ));
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingStock(new Set());
+      setLoadingStock((current) => {
+        const next = new Set(current);
+        next.delete(productId);
+        return next;
+      });
     }
   };
 
@@ -3864,10 +3989,12 @@ function InventorySection() {
         const res = await fetch("/api/products", { cache: "no-store" });
         const data = await res.json().catch(() => []);
         const productsWithRkSku = (data || []).filter((p: any) => p.rk_sku);
-        setProducts(productsWithRkSku.map((p: any) => ({ ...p, quantity: null, binLocation: null })));
+        setProducts(productsWithRkSku.map((p: any) => ({
+          ...p,
+          quantity: typeof p.stock === "number" ? p.stock : null,
+          binLocation: p.binLocation || null,
+        })));
         setLoading(false);
-        // Then load stock data
-        loadStock();
       } catch (err) {
         console.error(err);
         setLoading(false);
@@ -3876,8 +4003,8 @@ function InventorySection() {
     loadProducts();
   }, []);
 
-  const lowStock = products.filter(p => (p.quantity ?? 0) < 10 && (p.quantity ?? 0) > 0);
-  const outOfStock = products.filter(p => (p.quantity ?? 0) === 0);
+  const lowStock = products.filter((p) => typeof p.quantity === "number" && p.quantity > 0 && p.quantity < 10);
+  const outOfStock = products.filter((p) => p.quantity === 0);
 
   const handleSort = (column: 'name' | 'quantity') => {
     if (sortColumn === column) {
@@ -3898,20 +4025,8 @@ function InventorySection() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-neutral-900">Inventory</h2>
-          <p className="text-sm text-neutral-500 mt-1">Live stock from Unleashed (by rk_sku)</p>
+          <p className="text-sm text-neutral-500 mt-1">Load current stock and location from Unleashed only when needed.</p>
         </div>
-        <button
-          onClick={() => { setRefreshing(true); loadStock(); }}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-50"
-        >
-          {refreshing ? (
-            <RefreshCw size={16} className="animate-spin" />
-          ) : (
-            <RefreshCw size={16} />
-          )}
-          Refresh
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -3932,7 +4047,7 @@ function InventorySection() {
       <div className="bg-white rounded-xl border border-neutral-200">
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
           <h3 className="font-semibold text-neutral-900">All Products</h3>
-          {refreshing && <span className="text-xs text-neutral-500">Updating...</span>}
+          <span className="text-xs text-neutral-500">Use “Load stock” for a current Unleashed lookup.</span>
         </div>
         {loading && products.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">Loading...</div>
@@ -3974,6 +4089,7 @@ function InventorySection() {
                     </div>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Bin Location</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -3996,26 +4112,39 @@ function InventorySection() {
                     <td className="px-4 py-3 text-sm text-neutral-600">{product.sku || '-'}</td>
                     <td className="px-4 py-3 text-sm text-neutral-600">{product.rk_sku || '-'}</td>
                     <td className="px-4 py-3 text-right">
-                      {refreshing ? (
+                      {loadingStock.has(product.id) ? (
                         <SkeletonCell />
+                      ) : product.quantity === null || product.quantity === undefined ? (
+                        <span className="text-sm text-neutral-400">Not loaded</span>
                       ) : (
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          (product.quantity ?? 0) === 0 
-                            ? 'bg-red-100 text-red-700' 
-                            : (product.quantity ?? 0) < 10
+                          product.quantity === 0
+                            ? 'bg-red-100 text-red-700'
+                            : product.quantity < 10
                             ? 'bg-amber-100 text-amber-700'
                             : 'bg-emerald-100 text-emerald-700'
                         }`}>
-                          {product.quantity === null ? 'N/A' : product.quantity}
+                          {product.quantity}
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-neutral-600">
-                      {refreshing ? (
+                      {loadingStock.has(product.id) ? (
                         <div className="h-4 w-24 bg-neutral-200 rounded animate-pulse" />
                       ) : (
                         product.binLocation || '-'
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => loadProductStock(product)}
+                        disabled={loadingStock.has(product.id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <RefreshCw size={14} className={loadingStock.has(product.id) ? "animate-spin" : ""} />
+                        Load stock
+                      </button>
                     </td>
                   </tr>
                 ))}

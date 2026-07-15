@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
+import { combineAddressUnit } from "../../../lib/utils";
 import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
 import ShippingCalculator from "../../../components/ShippingCalculator";
 import OrderSuccessAnimation from "../../../components/checkout/OrderSuccessAnimation";
@@ -150,17 +151,21 @@ const Checkout = () => {
         const data = await response.json();
         const results = Array.isArray(data?.results) ? data.results : [];
         const suggestions = results
-          .map((r, idx) => ({
-            id: String(r.place_id ?? r.rank?.popularity ?? r.formatted ?? idx),
-            formatted: r.formatted ?? '',
-            addressLine1: r.address_line1 ?? '',
-            addressLine2: r.address_line2 ?? '',
-            city: r.suburb || r.city || r.town || r.village || '',
-            suburb: r.suburb ?? '',
-            state: r.state ?? '',
-            postcode: r.postcode ?? '',
-            country: r.country ?? ''
-          }))
+          .map((r, idx) => {
+            const house = r.housenumber ?? '';
+            return {
+              id: String(r.place_id ?? r.rank?.popularity ?? r.formatted ?? idx),
+              formatted: combineAddressUnit(normalizedAddressQuery, house, r.formatted ?? ''),
+              addressLine1: combineAddressUnit(normalizedAddressQuery, house, r.address_line1 ?? ''),
+              addressLine2: r.address_line2 ?? '',
+              housenumber: house,
+              city: r.suburb || r.city || r.town || r.village || '',
+              suburb: r.suburb ?? '',
+              state: r.state_code || r.state || '',
+              postcode: r.postcode ?? '',
+              country: r.country ?? ''
+            };
+          })
           .filter((s) => s.formatted || s.addressLine1);
 
         setAddressSuggestions(suggestions);
@@ -226,7 +231,11 @@ const Checkout = () => {
   const applyAddressSuggestion = (suggestion) => {
     setFormData((prev) => ({
       ...prev,
-      address: suggestion.addressLine1 || suggestion.formatted || prev.address,
+      address: combineAddressUnit(
+        prev.address || '',
+        suggestion.housenumber || '',
+        suggestion.addressLine1 || suggestion.formatted || prev.address
+      ),
       city: suggestion.city || suggestion.suburb || prev.city,
       state: suggestion.state || prev.state,
       zipCode: suggestion.postcode || prev.zipCode

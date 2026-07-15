@@ -58,7 +58,7 @@ async function fetchProductStock(apiId: string, apiKey: string, productCode: str
   return { quantity, binLocation };
 }
 
-export async function GET() {
+export async function POST(request: Request) {
   const apiId = process.env.UNLEASHED_API_ID;
   const apiKey = process.env.UNLEASHED_API_KEY;
 
@@ -71,35 +71,42 @@ export async function GET() {
   }
 
   try {
-    const db = await getDb();
-    
-    // Fetch all products with rk_sku
-    const products = await db.collection("products")
-      .find({ rk_sku: { $exists: true, $ne: "" } })
-      .project({ _id: 1, sku: 1, name: 1, rk_sku: 1, image: 1 })
-      .toArray();
-
-    if (products.length === 0) {
-      return NextResponse.json({ products: [] });
+    const { id, rk_sku } = await request.json();
+    if (!id && !rk_sku) {
+      return NextResponse.json({ error: "Product id or RK SKU is required" }, { status: 400 });
     }
 
-    // Fetch stock for each product in parallel (limit to 20 concurrent to avoid rate limits)
-    const stockData = await Promise.all(
-      products.map(async (product: any) => {
-        const { quantity, binLocation } = await fetchProductStock(apiId, apiKey, product.rk_sku);
-        return {
-          id: product._id?.toString() || product.id,
-          sku: product.sku,
-          name: product.name,
-          rk_sku: product.rk_sku,
-          image: product.image,
-          quantity,
-          binLocation,
-        };
-      })
+    const db = await getDb();
+    const product = await db.collection("products").findOne(
+      id ? { id } : { rk_sku },
+      { projection: { _id: 1, id: 1, sku: 1, name: 1, rk_sku: 1, image: 1 } }
     );
 
-    return NextResponse.json({ products: stockData });
+    if (!product?.rk_sku) {
+      return NextResponse.json({ error: "Product with an RK SKU was not found" }, { status: 404 });
+    }
+
+    const { quantity, binLocation } = await fetchProductStock(apiId, apiKey, product.rk_sku);
+    const refreshedAt = new Date().toISOString();
+    const updates = {
+      ...(quantity !== null ? { stock: quantity, inStock: quantity >= 1 } : {}),
+      ...(binLocation !== null ? { binLocation } : {}),
+      inventoryRefreshedAt: refreshedAt,
+    };
+
+    await db.collection("products").updateOne(
+      { _id: product._id },
+      { $set: updates }
+    );
+
+    return NextResponse.json({
+      product: {
+        id: product.id || product._id?.toString(),
+        quantity,
+        binLocation,
+        refreshedAt,
+      },
+    });
   } catch (error: any) {
     console.error("Error fetching inventory stock:", error);
     return NextResponse.json(

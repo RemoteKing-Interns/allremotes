@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { readContentJson } from "@/lib/content-json";
-import { getStarshipitRates, starshipitConfigured, StarshipitAddress } from "@/lib/starshipit";
+import {
+  getStarshipitRates,
+  starshipitConfigured,
+  StarshipitAddress,
+  normalizeStateCode,
+  normalizeCountryCode,
+} from "@/lib/starshipit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,14 +73,13 @@ function buildPackages(items?: any[]) {
 }
 
 function buildDestination(address: any): StarshipitAddress {
-  const country = String(address.country || "AU").toUpperCase();
   return {
     street: address.address,
     suburb: address.city,
     city: address.city,
-    state: address.state,
+    state: normalizeStateCode(address.state),
     post_code: address.zipCode,
-    country_code: country === "AU" ? "AU" : country,
+    country_code: normalizeCountryCode(address.country) || "AU",
   };
 }
 

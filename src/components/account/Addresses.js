@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { btn, tw } from './tw';
+import { combineAddressUnit } from '../../lib/utils';
 import { MapPin, Loader2 } from 'lucide-react';
 
 // Geoapify API key from environment
@@ -63,7 +64,17 @@ const Addresses = () => {
       if (!response.ok) throw new Error('Failed to fetch suggestions');
       
       const data = await response.json();
-      setAddressSuggestions(data.features || []);
+      const features = Array.isArray(data?.features) ? data.features : [];
+      setAddressSuggestions(
+        features.map((feature) => {
+          const props = feature.properties || {};
+          const house = props.housenumber || '';
+          if (house && props.formatted) {
+            props.display = combineAddressUnit(query, house, props.formatted);
+          }
+          return feature;
+        })
+      );
     } catch (error) {
       console.error('Address autocomplete error:', error);
       setAddressSuggestions([]);
@@ -107,6 +118,9 @@ const Addresses = () => {
       const parts = props.formatted.split(',');
       street = parts[0]?.trim() || '';
     }
+
+    // Preserve unit/apartment prefixes (e.g., U20, Unit 20, 20/3) from the user's input
+    street = combineAddressUnit(formData.street || '', props.housenumber || '', street);
     
     // Australian address format:
     // - suburb: the suburb/locality (e.g., "Surry Hills")
@@ -315,7 +329,7 @@ const Addresses = () => {
                         <MapPin size={18} className="mt-0.5 flex-shrink-0 text-primary" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate">
-                            {feature.properties.formatted}
+                            {feature.properties.display || feature.properties.formatted}
                           </p>
                           <p className="text-xs text-neutral-500">
                             {feature.properties.city || feature.properties.suburb}, {feature.properties.state_code}

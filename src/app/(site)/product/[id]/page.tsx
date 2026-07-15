@@ -99,6 +99,26 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
+  useEffect(() => {
+    if (!product?.id || !product?.rk_sku) return;
+
+    fetch('/api/inventory/stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: product.id, rk_sku: product.rk_sku }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.product) return;
+        setProduct((current: any) => current ? {
+          ...current,
+          stock: data.product.quantity ?? current.stock,
+          binLocation: data.product.binLocation ?? current.binLocation,
+        } : current);
+      })
+      .catch(() => {});
+  }, [product?.id, product?.rk_sku]);
+
   const relatedProducts = products
     .filter(
       (item) => (product?.cat1 && item.cat1 === product.cat1) || 
