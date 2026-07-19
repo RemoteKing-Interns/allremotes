@@ -430,13 +430,13 @@ export const StoreProvider = ({ children }) => {
     // productsVersion forces new reference so consumers re-render after setProducts
   }, [productsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setProducts = useCallback((productsArray) => {
+  const setProducts = useCallback(async (productsArray) => {
     saveProducts(productsArray);
     setProductsVersion((v) => v + 1);
 
     // Best-effort: persist to backend when MongoDB is enabled there.
     // If the backend isn't running / Mongo isn't configured, we silently keep localStorage behavior.
-    postJson('/api/admin/products', productsArray, { method: 'PUT' });
+    return await postJson('/api/admin/products', productsArray, { method: 'PUT' });
   }, [postJson]);
 
   const refreshProductsFromServer = useCallback(async () => {

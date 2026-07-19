@@ -5150,10 +5150,8 @@ function AdminProducts() {
     // Update local state first
     setProductsState(updatedProducts);
 
-    // Save to store context (MongoDB/JSON) - do this after state update
-    setTimeout(() => {
-      setProducts(updatedProducts);
-    }, 0);
+    // Save to store context (MongoDB/JSON) - wait for backend before refetching
+    await setProducts(updatedProducts);
 
     activityLogger.action("product_saved", {
       productId: editingId,
