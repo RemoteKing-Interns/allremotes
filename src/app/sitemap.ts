@@ -33,7 +33,6 @@ const STATIC_ROUTES = [
   "/products/all",
   "/products/garage",
   "/products/car",
-  "/api/feed/products",
 ] as const;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];

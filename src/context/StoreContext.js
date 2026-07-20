@@ -129,7 +129,7 @@ const defaultHomeContent = {
   ctaSection: {
     title: 'Ready to Find Your Perfect Remote?',
     description: 'Browse our collection and find the perfect remote for your needs',
-    buttonText: 'View All Products',
+    buttonText: 'Browse Full Catalogue',
     buttonPath: '/products/all',
   },
 };

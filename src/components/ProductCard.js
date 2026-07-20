@@ -42,7 +42,9 @@ const ProductCard = ({
 
   const brandLabel = product.brand?.trim() || "ALLREMOTES";
   const productName =
-    product.model?.trim() || product.name?.trim() || "Replacement Remote";
+    product.model?.trim() ||
+    product.name?.trim() ||
+    `Remote ${product.id ?? product.sku ?? ""}`.trim();
   const productLabel = `${
     brandLabel && brandLabel !== "ALLREMOTES" ? `${brandLabel} ` : ""
   }${productName}`;
@@ -108,10 +110,12 @@ const ProductCard = ({
     >
       {/* Make whole card clickable (buttons stopPropagation) */}
       <Link
-        href={`/product/${product.id}`}
+        href={`/product/${encodeURIComponent(String(product.id))}`}
         aria-label={`View details for ${productLabel}`}
         className="absolute inset-0 z-10"
-      />
+      >
+        <span className="sr-only">{productLabel}</span>
+      </Link>
 
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-white">
         <ProductImage

@@ -109,7 +109,20 @@ export default async function ProductsCategoryPage({
   const { category } = await params;
   return (
     <>
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <div className="container py-8 sm:py-10">
+            <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/90 p-7 shadow-panel backdrop-blur sm:p-10">
+              <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                {getCategoryPageTitle(category)} Remotes
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+                {getCategoryDescription(category)}
+              </p>
+            </div>
+          </div>
+        }
+      >
         <ProductListClient routeCategory={category} />
       </Suspense>
       <CategoryJsonLd category={category} />

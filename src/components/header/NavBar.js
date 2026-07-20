@@ -157,13 +157,13 @@ const NavBar = ({
                 Contact
               </Link>
 
-              {/* View All Products CTA */}
+              {/* Browse Catalogue CTA */}
               <Link
                 href="/products/all"
                 className="rounded-2xl bg-primary px-4 py-3 text-center text-sm font-extrabold text-white transition hover:bg-primary-dark"
                 onClick={handleMobileLinkClick}
               >
-                View All Products
+                Browse Catalogue
               </Link>
             </nav>
 
@@ -341,7 +341,7 @@ const NavBar = ({
                 href="/products/all"
                 className="ml-2 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-primary-dark"
               >
-                View All Products
+                Shop All
               </Link>
 
             </div>

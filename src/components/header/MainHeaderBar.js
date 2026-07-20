@@ -84,7 +84,7 @@ const MainHeaderBar = ({
                     return (
                       <Link
                         key={product.id}
-                        href={`/product/${product.id}`}
+                        href={`/product/${encodeURIComponent(String(product.id))}`}
                         className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
                         onClick={handleProductClick}
                       >

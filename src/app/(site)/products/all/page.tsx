@@ -79,7 +79,20 @@ function AllProductsJsonLd() {
 export default function ProductsAllPage() {
   return (
     <>
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <div className="container py-8 sm:py-10">
+            <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/90 p-7 shadow-panel backdrop-blur sm:p-10">
+              <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                Shop All Products
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+                Browse all garage, gate, car and home remotes at ALLREMOTES Australia.
+              </p>
+            </div>
+          </div>
+        }
+      >
         <ProductListClient routeCategory="all" />
       </Suspense>
       <AllProductsJsonLd />

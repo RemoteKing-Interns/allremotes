@@ -201,7 +201,7 @@ const Home = () => {
         " Built for fitment and fast reordering.",
       primaryCta: "Shop Automotive",
       primaryCtaPath: "/products/car",
-      secondaryCta: "View All Products",
+      secondaryCta: "See Full Range",
       secondaryCtaPath: "/products/all",
       sideKicker: "Automotive focus",
       sideTitle: "Vehicle-ready replacements",
@@ -475,7 +475,7 @@ const Home = () => {
             href="/products/all"
             className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
           >
-            View All Products
+            Shop All Products
           </Link>
         </div>
       </section>
