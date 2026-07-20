@@ -38,7 +38,14 @@ export const metadata: Metadata = {
     description:
       "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
     url: "/",
-    images: [{ url: "/images/3.jpg" }],
+    images: [
+      {
+        url: "/images/3.jpg",
+        width: 1000,
+        height: 667,
+        alt: "ALLREMOTES Australia - garage door and gate remotes, motors and accessories",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -46,7 +53,14 @@ export const metadata: Metadata = {
       "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
     description:
       "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
-    images: [{ url: "/images/3.jpg" }],
+    images: [
+      {
+        url: "/images/3.jpg",
+        width: 1000,
+        height: 667,
+        alt: "ALLREMOTES Australia - garage door and gate remotes, motors and accessories",
+      },
+    ],
   },
   manifest: "/manifest.json",
   icons: {

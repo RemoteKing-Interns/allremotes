@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "http://localhost:3000";
+const DEFAULT_SITE_URL = "https://allremotes.com.au";
 
 function normalizeSiteUrl(value: string) {
   const trimmed = String(value || "").trim();
