@@ -49,7 +49,7 @@ export async function generateMetadata({
   } remote at ALLREMOTES Australia. SKU: ${
     product.sku || product.rk_sku || ""
   }. Compatible replacement with fast shipping, warranty and expert support.`;
-  const canonical = `/product/${id}`;
+  const canonical = `/product/${encodeURIComponent(id)}`;
   const images = product.image
     ? [{ url: product.image }]
     : [{ url: "/images/3.jpg" }];
@@ -155,7 +155,7 @@ async function ProductJsonLd({ id }: { id: string }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas).replace(/</g, '\\u003C') }}
     />
   );
 }

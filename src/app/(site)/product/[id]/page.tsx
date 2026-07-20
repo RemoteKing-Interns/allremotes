@@ -66,11 +66,11 @@ Seek urgent medical attention or call:
 - Australia: Poisons Information Centre on 13 11 26
 - New Zealand: National Poisons Centre on 0800 764 766
 
-Remote Pro supplies aftermarket products intended to be compatible with a wide range of original brands. Unless a product is expressly stated as genuine, all items sold on this website are aftermarket products and are not manufactured, authorised, endorsed, or approved by the original equipment manufacturers (OEMs).
+ALLREMOTES Australia supplies aftermarket products intended to be compatible with a wide range of original brands. Unless a product is expressly stated as genuine, all items sold on this website are aftermarket products and are not manufactured, authorised, endorsed, or approved by the original equipment manufacturers (OEMs).
 
-Any references to brand names, trademarks, or model numbers are used only to describe compatibility or suitability with relevant equipment. Remote Pro is not affiliated with, sponsored by, or associated with these brand owners, and no OEM approval or endorsement is implied.
+Any references to brand names, trademarks, or model numbers are used only to describe compatibility or suitability with relevant equipment. ALLREMOTES Australia is not affiliated with, sponsored by, or associated with these brand owners, and no OEM approval or endorsement is implied.
 
-All trademarks, brand names, and product names remain the property of their respective owners. Remote Pro distributes a range of aftermarket products, including (but not limited to) remote controls compatible with garage and gate motors and receivers from other manufacturers, as well as substitute automotive keys, remote controls, and casings designed to be compatible with vehicles made by other manufacturers.`;
+All trademarks, brand names, and product names remain the property of their respective owners. ALLREMOTES Australia distributes a range of aftermarket products, including (but not limited to) remote controls compatible with garage and gate motors and receivers from other manufacturers, as well as substitute automotive keys, remote controls, and casings designed to be compatible with vehicles made by other manufacturers.`;
 
 const ProductDetail = () => {
   const params = useParams<{ id: string }>();

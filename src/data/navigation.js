@@ -597,17 +597,17 @@ export const navigationMenu = {
       {
         title: "Popular Brands",
         items: [
-          { name: "Elsema", path: "/shop-by-brand/elsema", icon: getIcon(14) },
+          { name: "Elsema", path: `/brands/${encodeURIComponent("Elsema")}`, icon: getIcon(14) },
           {
             name: "Centurion",
-            path: "/shop-by-brand/centurion",
+            path: `/brands/${encodeURIComponent("Centurion")}`,
             icon: getIcon(15),
           },
-          { name: "B&D", path: "/shop-by-brand/bd", icon: getIcon(16) },
-          { name: "Merlin", path: "/shop-by-brand/merlin", icon: getIcon(17) },
+          { name: "B&D", path: `/brands/${encodeURIComponent("B&D")}`, icon: getIcon(16) },
+          { name: "Merlin", path: `/brands/${encodeURIComponent("Merlin")}`, icon: getIcon(17) },
           {
             name: "Hormann",
-            path: "/shop-by-brand/hormann",
+            path: `/brands/${encodeURIComponent("Hormann")}`,
             icon: getIcon(18),
           },
         ],

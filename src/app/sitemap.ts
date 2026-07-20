@@ -5,7 +5,16 @@ import { getSiteUrl } from "@/lib/site-url";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PRIORITY_BRANDS = ["Merlin", "ATA", "B&D", "Chamberlain", "Gliderol"] as const;
+const PRIORITY_BRANDS = [
+  "Merlin",
+  "ATA",
+  "B&D",
+  "Chamberlain",
+  "Gliderol",
+  "Elsema",
+  "Centurion",
+  "Hormann",
+] as const;
 
 const STATIC_ROUTES = [
   "/",
@@ -15,6 +24,10 @@ const STATIC_ROUTES = [
   "/locksmithing",
   "/shop-by-brand",
   "/support",
+  "/support/which-garage-door-remote-do-i-need",
+  "/support/merlin-remote-wont-program",
+  "/support/ata-vs-merlin-remote",
+  "/support/replace-lost-gate-remote",
   "/contact",
   "/return-policy",
   "/products/all",

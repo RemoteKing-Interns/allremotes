@@ -46,7 +46,9 @@ const ProductCard = ({
   const productLabel = `${
     brandLabel && brandLabel !== "ALLREMOTES" ? `${brandLabel} ` : ""
   }${productName}`;
-  const productImageAlt = `${productLabel} remote`;
+  const productImageAlt = productLabel.toLowerCase().includes("remote")
+    ? productLabel
+    : `${productLabel} remote`;
   const discountPercent =
     pricing.hasDiscount && pricing.originalPrice > 0
       ? Math.round((pricing.discountAmount / pricing.originalPrice) * 100)

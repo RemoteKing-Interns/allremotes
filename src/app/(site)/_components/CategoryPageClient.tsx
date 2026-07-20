@@ -88,9 +88,7 @@ export default function CategoryPageClient({ category }: { category: string }) {
                         key={itemIndex}
                         href={
                           category === "shop-by-brand"
-                            ? `/products/all?brand=${encodeURIComponent(
-                                String(item.name || "").toUpperCase(),
-                              )}`
+                            ? `/brands/${encodeURIComponent(item.name)}`
                             : productsListingPath
                         }
                         className="group flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"

@@ -5,11 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "../../../../context/StoreContext";
 import { useCart } from "../../../../context/CartContext";
-import { useAuth } from "../../../../context/AuthContext";
-import {
-  getPriceBreakdown,
-  isDiscountEligible,
-} from "../../../../utils/pricing";
 import {
   getCategoryPageTitle,
   matchesProductToCategory,
@@ -356,10 +351,8 @@ export default function ProductListClient({
   routeCategory: string;
   routeBrand?: string;
 }) {
-  const { getProducts, getPromotions } = useStore();
-  const promotions = getPromotions();
-  const { cart, addToCart, updateQuantity } = useCart();
-  const { user } = useAuth();
+  const { getProducts } = useStore();
+  const { addToCart } = useCart();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -386,10 +379,8 @@ export default function ProductListClient({
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(500);
   const [sortBy, setSortBy] = useState("name");
-  const [addedItem, setAddedItem] = useState<any>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const skipPageReset = React.useRef(false);
-  const isModalOpen = Boolean(addedItem);
 
   const pageFromUrl = Number(searchParams.get("page") || "1");
   const [currentPage, setCurrentPage] = useState(
@@ -437,7 +428,7 @@ export default function ProductListClient({
       skipPageReset.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString(), routeCategoryKey]);
+  }, [searchParams.toString(), routeCategoryKey, routeBrand]);
 
   const brands = useMemo<string[]>(() => {
     const brandValues = (products || [])
@@ -541,22 +532,6 @@ export default function ProductListClient({
     setCurrentPage(1);
   }, [selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
 
-  useEffect(() => {
-    if (!isModalOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setAddedItem(null);
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [isModalOpen]);
-
   // Persist brand/search/category/page into the URL without triggering Next.js navigation,
   // to avoid remounting this component (which can drop focus while typing in the filter input).
   useEffect(() => {
@@ -611,25 +586,6 @@ export default function ProductListClient({
     }
     return out;
   }, [clampedPage, totalPages]);
-
-  const modalCartItem = useMemo(() => {
-    if (!addedItem) return null;
-    return (cart || []).find((item) => item.id === addedItem.id) || null;
-  }, [addedItem, cart]);
-
-  const modalQuantity = modalCartItem?.quantity ?? 1;
-  const hasDiscount = isDiscountEligible(user);
-  const modalPrice = getPriceBreakdown(addedItem?.price || 0, hasDiscount, {
-    promotions,
-    product: addedItem,
-  });
-
-  const handleModalQuantityChange = (nextQuantity: any) => {
-    if (!addedItem) return;
-    const parsed = Number(nextQuantity);
-    if (!Number.isFinite(parsed)) return;
-    updateQuantity(addedItem.id, Math.max(1, Math.floor(parsed)));
-  };
 
   const handleCategorySelectChange = (next: string) => {
     const nextCategory = resolveProductCategory(next);
@@ -704,6 +660,22 @@ export default function ProductListClient({
           <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
             {pageDescription}
           </p>
+
+          {!routeBrand && routeCategoryKey === "all" && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["Merlin", "ATA", "B&D", "Chamberlain", "Gliderol"].map(
+                (brand) => (
+                  <Link
+                    key={brand}
+                    href={`/brands/${encodeURIComponent(brand)}`}
+                    className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-xs transition hover:border-primary/30 hover:text-primary"
+                  >
+                    {brand} Remotes
+                  </Link>
+                ),
+              )}
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap gap-2">
             <span className="inline-flex items-center rounded-full bg-accent/10 px-4 py-2 text-xs font-extrabold text-accent-dark">
@@ -925,132 +897,6 @@ export default function ProductListClient({
         </div>
       </div>
 
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-[1600] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center"
-          onClick={() => setAddedItem(null)}
-        >
-          <div
-            className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-strong max-sm:max-h-[calc(100vh-2rem)] max-sm:overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Added to cart"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-4">
-              <div className="text-sm font-extrabold uppercase tracking-[0.14em] text-neutral-600">
-                Added to cart
-              </div>
-              <button
-                type="button"
-                className="rounded-xl bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
-                onClick={() => setAddedItem(null)}
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="grid gap-5 p-5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start sm:p-6">
-              <img
-                src={addedItem?.image}
-                alt={addedItem?.name || "Product"}
-                className="mx-auto h-28 w-28 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-3 sm:mx-0 sm:h-32 sm:w-32"
-                onError={(e: any) => {
-                  e.currentTarget.src = "/images/mainlogo.png";
-                }}
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-accent-dark">
-                  {addedItem?.brand || "Remote Pro"}
-                </p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-neutral-900">
-                  {addedItem?.name}
-                </h3>
-                {addedItem?.description && (
-                  <p className="mt-2 text-sm leading-7 text-neutral-600 line-clamp-3">
-                    {addedItem.description}
-                  </p>
-                )}
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
-                      Price
-                    </div>
-                    <div className="mt-2">
-                      {modalPrice.hasDiscount ? (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-semibold text-neutral-400 line-through">
-                            AU${modalPrice.originalPrice.toFixed(2)}
-                          </span>
-                          <strong className="text-lg font-extrabold text-neutral-900">
-                            AU${modalPrice.finalPrice.toFixed(2)}
-                          </strong>
-                        </div>
-                      ) : (
-                        <strong className="text-lg font-extrabold text-neutral-900">
-                          AU${modalPrice.finalPrice.toFixed(2)}
-                        </strong>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
-                      Quantity
-                    </div>
-                    <div className="mt-2 inline-flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
-                      <button
-                        type="button"
-                        className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
-                        onClick={() =>
-                          handleModalQuantityChange(modalQuantity - 1)
-                        }
-                        disabled={modalQuantity <= 1}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={modalQuantity}
-                        onChange={(e) =>
-                          handleModalQuantityChange(e.target.value)
-                        }
-                        aria-label="Quantity"
-                        className="h-10 w-14 border-x border-neutral-200 text-center text-sm font-extrabold text-neutral-900 outline-none"
-                      />
-                      <button
-                        type="button"
-                        className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
-                        onClick={() =>
-                          handleModalQuantityChange(modalQuantity + 1)
-                        }
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    onClick={() => setAddedItem(null)}
-                  >
-                    Continue Shopping
-                  </Button>
-                  <Button asChild className="w-full sm:w-auto">
-                    <Link href="/cart">View Cart</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

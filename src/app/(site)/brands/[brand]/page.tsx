@@ -1,9 +1,19 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import ProductListClient from "../../products/_components/ProductListClient";
 import { getSiteUrl } from "@/lib/site-url";
 
-const PRIORITY_BRANDS = ["Merlin", "ATA", "B&D", "Chamberlain", "Gliderol"];
+const PRIORITY_BRANDS = [
+  "Merlin",
+  "ATA",
+  "B&D",
+  "Chamberlain",
+  "Gliderol",
+  "Elsema",
+  "Centurion",
+  "Hormann",
+];
 
 function normalizeBrandParam(value: string) {
   try {
@@ -95,7 +105,7 @@ function BrandJsonLd({ brand }: { brand: string }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas).replace(/</g, '\\u003C') }}
     />
   );
 }
@@ -108,15 +118,17 @@ export default async function BrandPage({
   const { brand: rawBrand } = await params;
   const brand = normalizeBrandParam(rawBrand);
 
-  // Unknown brand slugs still render generically; known brands get pre-filtered.
   const validatedBrand = PRIORITY_BRANDS.includes(brand) ? brand : null;
+  if (!validatedBrand) {
+    notFound();
+  }
 
   return (
     <>
       <Suspense fallback={null}>
         <ProductListClient
           routeCategory="all"
-          routeBrand={validatedBrand || undefined}
+          routeBrand={validatedBrand}
         />
       </Suspense>
       <BrandJsonLd brand={brand} />
