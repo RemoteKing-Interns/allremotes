@@ -88,10 +88,10 @@ const ProductDetail = () => {
     const fetchProduct = async () => {
       setProductLoading(true);
       try {
-        const res = await fetch('/api/products', { cache: 'no-store' });
-        const allProducts = await res.json();
-        const freshProduct = allProducts.find((p: any) => p.id === id);
-        if (freshProduct) {
+        const res = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const freshProduct = await res.json();
+        if (freshProduct && !freshProduct.error) {
           setProduct(freshProduct);
         }
       } catch (err) {
@@ -100,7 +100,7 @@ const ProductDetail = () => {
         setProductLoading(false);
       }
     };
-    fetchProduct();
+    if (id) fetchProduct();
   }, [id]);
 
   useEffect(() => {
