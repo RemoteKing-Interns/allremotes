@@ -26,6 +26,15 @@ import {
 } from "../../../../components/ui/sheet";
 
 const PAGE_SIZE = 15;
+const EMPTY_BRANDS: string[] = [];
+
+function arraysEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
 
 // Price Range Slider Component
 function PriceRangeSlider({
@@ -368,13 +377,14 @@ export default function ProductListClient({
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(EMPTY_BRANDS);
   const [stockStatus, setStockStatus] = useState("all");
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(500);
   const [sortBy, setSortBy] = useState("name");
   const [addedItem, setAddedItem] = useState<any>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const skipPageReset = React.useRef(false);
   const isModalOpen = Boolean(addedItem);
 
   const pageFromUrl = Number(searchParams.get("page") || "1");
@@ -394,18 +404,32 @@ export default function ProductListClient({
     const urlPriceMax = Number(searchParams.get("priceMax") || "500");
     const urlSort = searchParams.get("sort") || "name";
 
-    if (urlBrands) {
-      setSelectedBrands(urlBrands.split(",").filter(Boolean));
-    } else {
-      setSelectedBrands([]);
+    const urlBrandsArray = urlBrands
+      ? urlBrands.split(",").filter(Boolean)
+      : EMPTY_BRANDS;
+
+    skipPageReset.current = false;
+
+    if (!arraysEqual(selectedBrands, urlBrandsArray)) {
+      setSelectedBrands(urlBrandsArray);
+      skipPageReset.current = true;
     }
-    setSearchQuery(urlSearch);
-    setPriceMin(urlPriceMin);
-    setPriceMax(urlPriceMax);
-    setSortBy(urlSort);
-    if (routeCategoryKey === "all") setSelectedCategory(urlCategory);
-    else setSelectedCategory(routeCategoryKey);
-    setCurrentPage(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
+    if (searchQuery !== urlSearch) setSearchQuery(urlSearch);
+    if (priceMin !== urlPriceMin) setPriceMin(urlPriceMin);
+    if (priceMax !== urlPriceMax) setPriceMax(urlPriceMax);
+    if (sortBy !== urlSort) setSortBy(urlSort);
+    if (routeCategoryKey === "all" && selectedCategory !== urlCategory) {
+      setSelectedCategory(urlCategory);
+      skipPageReset.current = true;
+    } else if (routeCategoryKey !== "all" && selectedCategory !== routeCategoryKey) {
+      setSelectedCategory(routeCategoryKey);
+      skipPageReset.current = true;
+    }
+    const nextPage = Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1;
+    if (currentPage !== nextPage) {
+      setCurrentPage(nextPage);
+      skipPageReset.current = true;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString(), routeCategoryKey]);
 
@@ -504,6 +528,10 @@ export default function ProductListClient({
   }, [filteredProducts, clampedPage]);
 
   useEffect(() => {
+    if (skipPageReset.current) {
+      skipPageReset.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
 

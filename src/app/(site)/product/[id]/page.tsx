@@ -88,7 +88,7 @@ const ProductDetail = () => {
     const fetchProduct = async () => {
       setProductLoading(true);
       try {
-        const res = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        const res = await fetch(`/api/products/${id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const freshProduct = await res.json();
         if (freshProduct && !freshProduct.error) {

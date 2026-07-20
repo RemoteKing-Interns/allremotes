@@ -5056,6 +5056,8 @@ function AdminProducts() {
   // Track which RK fields are editable
   const [editableRkSku, setEditableRkSku] = useState(false);
   const [editableRkUrl, setEditableRkUrl] = useState(false);
+  // Ref to skip the page-reset effect during URL filter restoration
+  const isRestoringFilters = useRef(false);
   // Spreadsheet view toggle
   const [spreadsheetView, setSpreadsheetView] = useState(false);
 
@@ -5357,6 +5359,13 @@ function AdminProducts() {
   useEffect(() => {
     if (editingId && productForEdit && !isNewProduct) {
       setOriginalProduct(JSON.parse(JSON.stringify(productForEdit)));
+      activityLogger.action("product_edit_started", {
+        productId: editingId,
+        name: productForEdit.name || productForEdit.title || "",
+        sku: productForEdit.sku || productForEdit.rk_sku || "",
+        category: productForEdit.category || "",
+        brand: productForEdit.brand || "",
+      });
     } else if (!editingId) {
       setOriginalProduct(null);
     }
@@ -5400,10 +5409,66 @@ function AdminProducts() {
     return matchesSearch && matchesCategory && matchesStock && matchesStatus;
   });
 
+  // Restore filters, sorting, and pagination from the URL on load/reload
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+
+    const search = params.get("search") || "";
+    const category = params.get("category") || "all";
+    const stock = params.get("stock") || "all";
+    const status = params.get("status") || "all";
+    const sortF = params.get("sortField");
+    const sortD = params.get("sortDirection") || "asc";
+    const page = Number(params.get("page") || "1");
+    const perPage = Number(params.get("perPage") || "25");
+
+    isRestoringFilters.current = true;
+    setSearchQuery(search);
+    setCategoryFilter(category);
+    setStockFilter(stock);
+    setStatusFilter(status);
+    setSortField(sortF ? String(sortF) : null);
+    setSortDirection(sortD === "desc" ? "desc" : "asc");
+    setCurrentPage(Number.isFinite(page) && page > 0 ? page : 1);
+    setProductsPerPage([10, 25, 50, 100].includes(perPage) ? perPage : 25);
+  }, []);
+
   // Reset to page 1 when filters change
   useEffect(() => {
+    if (isRestoringFilters.current) {
+      isRestoringFilters.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [searchQuery, categoryFilter, stockFilter, statusFilter]);
+
+  // Persist filters, sorting, and pagination to the URL
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const applyParam = (params: URLSearchParams, key: string, value: string | null) => {
+      if (value == null || value === "") params.delete(key);
+      else params.set(key, value);
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    applyParam(params, "search", searchQuery || null);
+    applyParam(params, "category", categoryFilter === "all" ? null : categoryFilter);
+    applyParam(params, "stock", stockFilter === "all" ? null : stockFilter);
+    applyParam(params, "status", statusFilter === "all" ? null : statusFilter);
+    applyParam(params, "sortField", sortField || null);
+    applyParam(params, "sortDirection", sortField ? sortDirection : null);
+    applyParam(params, "page", currentPage === 1 ? null : String(currentPage));
+    applyParam(params, "perPage", productsPerPage === 25 ? null : String(productsPerPage));
+
+    const qs = params.toString();
+    const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [searchQuery, categoryFilter, stockFilter, statusFilter, sortField, sortDirection, currentPage, productsPerPage]);
 
   // Sorting function
   const handleSort = (field: string) => {

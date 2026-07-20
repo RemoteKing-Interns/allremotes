@@ -19,8 +19,12 @@ function prettifyAction(action: string): string {
     "error:return_update_failed": "Failed to update return",
     // products
     "action:product_saved": "Saved product",
+    "action:product_created": "Created product",
+    "action:product_updated": "Updated product",
+    "action:product_edit_started": "Started editing product",
     "action:spreadsheet_bulk_save": "Bulk-saved products (spreadsheet)",
     "error:spreadsheet_save_failed": "Spreadsheet save failed",
+    "error:product_save_failed": "Product save failed",
     // categories & brands
     "action:category_added": "Added category",
     "action:category_renamed": "Renamed category",
@@ -72,8 +76,17 @@ function summarizeLine(action: string, details: any): string | null {
   if (action === "action:return_updated")
     return `#${d.returnId} · fields: ${(d.fields ?? []).join(", ")}`;
 
-  if (action === "action:product_saved")
-    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""} · $${d.price ?? ""}${d.inStock ? "" : " · out of stock"}`;
+  if (action === "action:product_saved" || action === "action:product_updated")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.changedFieldCount ?? 0} change${d.changedFieldCount === 1 ? "" : "s"}${d.changedFields?.length ? ` · ${d.changedFields.map((c: any) => c.field).join(", ")}` : ""}`;
+
+  if (action === "action:product_created")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""}${d.brand ? ` · ${d.brand}` : ""}`;
+
+  if (action === "action:product_edit_started")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""}${d.brand ? ` · ${d.brand}` : ""}`;
+
+  if (action === "error:product_save_failed")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.error ?? ""}`;
 
   if (action === "action:spreadsheet_bulk_save")
     return `${d.count ?? d.modifiedCount ?? "?"} products updated`;

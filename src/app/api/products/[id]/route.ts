@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { readProductsJson, enrichProductWithS3Images } from "@/lib/products-json";
 
+const CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -9,7 +11,6 @@ const CORS_HEADERS = {
 };
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 function mongoTroubleshootingHint(err: unknown) {
   const msg = String((err as any)?.message || err || "");
@@ -75,7 +76,7 @@ export async function GET(
 
     return NextResponse.json(product, {
       headers: {
-        "Cache-Control": "no-store",
+        "Cache-Control": CACHE_CONTROL,
         "X-Product-Source": source,
         "X-S3-Images-Enriched": "true",
         ...CORS_HEADERS,
