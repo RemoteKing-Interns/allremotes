@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { S3_BUCKET_URL } from "@/lib/images";
+import { batchPresign } from "@/lib/presign-batch";
 
 interface ProductImageProps {
   src?: string;
@@ -13,6 +15,8 @@ interface ProductImageProps {
   onLoad?: () => void;
   onError?: () => void;
   onClick?: () => void;
+  fill?: boolean;
+  sizes?: string;
 }
 
 function isS3Url(src: string) {
@@ -29,12 +33,9 @@ function getS3Key(src: string) {
 }
 
 /**
- * Base product image component.
- * Shows an image, and a neutral fallback placeholder with the provided letter
- * when the source is missing or fails to load.
- *
- * For S3 URLs, it fetches a short-lived signed URL so private objects can be
- * previewed without making the whole bucket public.
+ * Base product image component using next/image for automatic WebP/AVIF
+ * optimization and resizing. Uses batch pre-signing for S3 URLs to reduce
+ * HTTP requests from N to 1 per page load.
  */
 const ProductImage: React.FC<ProductImageProps> = ({
   src,
@@ -46,12 +47,13 @@ const ProductImage: React.FC<ProductImageProps> = ({
   onLoad,
   onError,
   onClick,
+  fill = false,
+  sizes,
 }) => {
   const [error, setError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
   const [signedSrc, setSignedSrc] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const letter = fallbackLetter?.trim() || alt?.charAt(0)?.toUpperCase() || "R";
 
   const onErrorRef = React.useRef(onError);
@@ -59,9 +61,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
     onErrorRef.current = onError;
   }, [onError]);
 
-  const latestRef = React.useRef({ src: src ?? "", attempt: 0 });
   useEffect(() => {
-    setAttempt(0);
     setError(false);
     setFallbackError(false);
     setSignedSrc(null);
@@ -83,42 +83,48 @@ const ProductImage: React.FC<ProductImageProps> = ({
       return;
     }
 
-    const current = { src: src ?? "", attempt };
-    latestRef.current = current;
+    let cancelled = false;
     setFetching(true);
-    fetch(`/api/s3-presign?key=${encodeURIComponent(key)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (latestRef.current !== current) return;
-        if (data.signedUrl) {
-          setSignedSrc(data.signedUrl);
-        } else {
-          setError(true);
-          onErrorRef.current?.();
-        }
-      })
-      .catch(() => {
-        if (latestRef.current !== current) return;
+    batchPresign(key).then((url) => {
+      if (cancelled) return;
+      if (url) {
+        setSignedSrc(url);
+      } else {
         setError(true);
         onErrorRef.current?.();
-      })
-      .finally(() => {
-        if (latestRef.current !== current) return;
-        setFetching(false);
-      });
-  }, [src, attempt]);
+      }
+      setFetching(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  const fallbackEl = (
+    <div
+      className={`flex items-center justify-center bg-neutral-100 ${className}`}
+      onClick={onClick}
+      aria-label={alt}
+    >
+      <span className="text-7xl font-extrabold text-neutral-300 select-none">
+        {letter}
+      </span>
+    </div>
+  );
 
   if (!src || error || fetching) {
     if (fallbackSrc && !fallbackError) {
       return (
-        <img
+        <Image
           src={fallbackSrc}
           alt={alt}
           loading={loading}
-          decoding="async"
           className={className}
           onClick={onClick}
           onLoad={onLoad}
+          fill={fill}
+          sizes={sizes}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -126,32 +132,22 @@ const ProductImage: React.FC<ProductImageProps> = ({
         />
       );
     }
-
-    return (
-      <div
-        className={`flex items-center justify-center bg-neutral-100 ${className}`}
-        onClick={onClick}
-        aria-label={alt}
-      >
-        <span className="text-7xl font-extrabold text-neutral-300 select-none">
-          {letter}
-        </span>
-      </div>
-    );
+    return fallbackEl;
   }
 
   const imgSrc = signedSrc || src;
   if (!imgSrc) {
     if (fallbackSrc && !fallbackError) {
       return (
-        <img
+        <Image
           src={fallbackSrc}
           alt={alt}
           loading={loading}
-          decoding="async"
           className={className}
           onClick={onClick}
           onLoad={onLoad}
+          fill={fill}
+          sizes={sizes}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -159,36 +155,22 @@ const ProductImage: React.FC<ProductImageProps> = ({
         />
       );
     }
-
-    return (
-      <div
-        className={`flex items-center justify-center bg-neutral-100 ${className}`}
-        onClick={onClick}
-        aria-label={alt}
-      >
-        <span className="text-7xl font-extrabold text-neutral-300 select-none">
-          {letter}
-        </span>
-      </div>
-    );
+    return fallbackEl;
   }
 
   return (
-    <img
+    <Image
       src={imgSrc}
       alt={alt}
       loading={loading}
-      decoding="async"
       className={className}
       onClick={onClick}
       onLoad={onLoad}
+      fill={fill}
+      sizes={sizes}
       onError={() => {
-        if (src && isS3Url(src) && attempt < 2) {
-          setAttempt((prev) => prev + 1);
-        } else {
-          setError(true);
-          onErrorRef.current?.();
-        }
+        setError(true);
+        onErrorRef.current?.();
       }}
     />
   );

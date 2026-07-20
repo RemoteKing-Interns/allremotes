@@ -212,13 +212,15 @@ export default function ShopByBrandClient() {
                 className="group bg-white rounded-xl border border-neutral-200 p-4 hover:border-primary/30 hover:shadow-md transition-all text-center"
               >
                 {/* Brand Logo */}
-                <div className="aspect-square bg-neutral-50 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+                <div className="relative aspect-square bg-neutral-50 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
                   {brand.image ? (
                     <ProductImage
                       src={brand.image}
                       alt={brand.name}
                       fallbackLetter={brand.name?.charAt(0)?.toUpperCase()}
-                      className="w-full h-full object-contain p-3"
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-contain p-3"
                     />
                   ) : (
                     <Building2 size={40} className="text-neutral-400" />

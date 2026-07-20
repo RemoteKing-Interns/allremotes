@@ -122,7 +122,9 @@ const ProductCard = ({
           src={productImage}
           alt={productImageAlt}
           fallbackLetter={fallbackLetter}
-          className={`h-full w-full object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          className={`object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
             !product.inStock ? "opacity-50" : ""
           }`}
           loading="lazy"

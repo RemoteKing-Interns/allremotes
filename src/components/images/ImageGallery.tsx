@@ -78,12 +78,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Main Image */}
-      <div className="relative flex items-center justify-center overflow-hidden bg-white rounded-2xl">
+      <div className="relative flex h-[28rem] items-center justify-center overflow-hidden bg-white rounded-2xl sm:h-[34rem]">
         <ProductImage
           src={currentImage}
           alt={product?.name || "Product image"}
           fallbackLetter={fallbackLetter}
-          className="h-full w-full max-h-[28rem] object-contain p-6 sm:max-h-[34rem]"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-contain p-6"
           loading="eager"
           onLoad={() => handleImageLoad(safeCurrentImageIndex)}
           onError={() => handleImageError(safeCurrentImageIndex)}
@@ -102,7 +104,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
               <button
                 key={`thumb-${idx}-${imgUrl}`}
                 onClick={() => setSelectedImageIndex(idx)}
-                className={`relative flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                className={`relative flex h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
                   isSelected
                     ? "border-primary shadow-md"
                     : "border-neutral-200 hover:border-neutral-300"
@@ -113,7 +115,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
                   src={imgUrl}
                   alt={`${product?.name || "Product"} - image ${idx + 1}`}
                   fallbackLetter={fallbackLetter}
-                  className="h-20 w-20 object-contain p-1"
+                  fill
+                  sizes="80px"
+                  className="object-contain p-1"
                   loading="lazy"
                   onLoad={() => handleImageLoad(idx)}
                   onError={() => handleImageError(idx)}

@@ -302,7 +302,9 @@ const Home = () => {
                 alt={slide.title || "Hero image"}
                 fallbackSrc="/images/mainlogo.png"
                 loading={index === 0 ? "eager" : "lazy"}
-                className={`hero-slide-image absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${
+                fill
+                sizes="100vw"
+                className={`hero-slide-image object-cover transition-opacity duration-[1200ms] ease-out ${
                   index === currentSlide
                     ? "hero-slide-image--active z-10 opacity-100"
                     : "z-0 opacity-0"
@@ -411,14 +413,16 @@ const Home = () => {
                 className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
                     {f.image || featureImagesByTitle[f.title] ? (
                       <ProductImage
                         src={f.image || featureImagesByTitle[f.title]}
                         alt={f.title || "Feature"}
                         fallbackSrc="/images/mainlogo.png"
                         fallbackLetter={String(f.title || "AR").slice(0, 2)}
-                        className="h-10 w-10 object-contain"
+                        fill
+                        sizes="56px"
+                        className="object-contain"
                       />
                     ) : (
                       <span className="text-sm font-extrabold text-accent-dark">
