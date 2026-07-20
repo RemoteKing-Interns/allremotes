@@ -5,6 +5,8 @@ import { getSiteUrl } from "@/lib/site-url";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const PRIORITY_BRANDS = ["Merlin", "ATA", "B&D", "Chamberlain", "Gliderol"] as const;
+
 const STATIC_ROUTES = [
   "/",
   "/garage-gate",
@@ -133,6 +135,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: "daily",
       priority: 0.85,
+    });
+  });
+
+  PRIORITY_BRANDS.forEach((brand) => {
+    upsertEntry(entries, `/brands/${encodeURIComponent(brand)}`, {
+      lastModified: navigationUpdatedAt,
+      changeFrequency: "weekly",
+      priority: 0.75,
     });
   });
 

@@ -351,8 +351,10 @@ function FiltersPanel({
 
 export default function ProductListClient({
   routeCategory,
+  routeBrand,
 }: {
   routeCategory: string;
+  routeBrand?: string;
 }) {
   const { getProducts, getPromotions } = useStore();
   const promotions = getPromotions();
@@ -377,7 +379,9 @@ export default function ProductListClient({
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(EMPTY_BRANDS);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(
+    routeBrand ? [routeBrand] : EMPTY_BRANDS,
+  );
   const [stockStatus, setStockStatus] = useState("all");
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(500);
@@ -406,7 +410,9 @@ export default function ProductListClient({
 
     const urlBrandsArray = urlBrands
       ? urlBrands.split(",").filter(Boolean)
-      : EMPTY_BRANDS;
+      : routeBrand
+        ? [routeBrand]
+        : EMPTY_BRANDS;
 
     skipPageReset.current = false;
 
@@ -655,6 +661,39 @@ export default function ProductListClient({
     return "Shop All Products";
   })();
 
+  const pageDescription = (() => {
+    const brandDescriptions: Record<string, string> = {
+      Merlin:
+        "Shop Merlin garage door and gate remote controls at ALLREMOTES Australia. Compatible replacements for Merlin motors with fast local shipping and warranty.",
+      ATA:
+        "Shop ATA garage door and gate remote controls at ALLREMOTES Australia. Compatible replacements for ATA motors with fast local shipping and warranty.",
+      "B&D":
+        "Shop B&D garage door and gate remote controls at ALLREMOTES Australia. Compatible replacements for B&D motors with fast local shipping and warranty.",
+      Chamberlain:
+        "Shop Chamberlain garage door and gate remote controls at ALLREMOTES Australia. Compatible replacements for Chamberlain motors with fast local shipping and warranty.",
+      Gliderol:
+        "Shop Gliderol garage door and gate remote controls at ALLREMOTES Australia. Compatible replacements for Gliderol motors with fast local shipping and warranty.",
+    };
+    if (selectedBrands.length === 1 && brandDescriptions[selectedBrands[0]]) {
+      return brandDescriptions[selectedBrands[0]];
+    }
+
+    const descriptions: Record<string, string> = {
+      all: "Browse our complete range of remotes and accessories.",
+      garage:
+        "Find garage door remotes, gate remotes, receivers and opener accessories for all major brands.",
+      car:
+        "Shop replacement car remotes, key fobs, transponder keys and key shells for popular vehicles.",
+      home:
+        "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more.",
+      locksmith:
+        "Browse locksmith tools, key programmers, picks, decoders and key-cutting accessories.",
+    };
+    const effective =
+      routeCategoryKey !== "all" ? routeCategoryKey : selectedCategory;
+    return descriptions[effective] || descriptions.all;
+  })();
+
   return (
     <div className="animate-fadeIn">
       <div className="container py-8 sm:py-10">
@@ -663,7 +702,7 @@ export default function ProductListClient({
             {pageTitle}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
-            Browse our complete range of remotes and accessories.
+            {pageDescription}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">

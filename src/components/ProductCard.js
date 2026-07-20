@@ -43,6 +43,10 @@ const ProductCard = ({
   const brandLabel = product.brand?.trim() || "ALLREMOTES";
   const productName =
     product.model?.trim() || product.name?.trim() || "Replacement Remote";
+  const productLabel = `${
+    brandLabel && brandLabel !== "ALLREMOTES" ? `${brandLabel} ` : ""
+  }${productName}`;
+  const productImageAlt = `${productLabel} remote`;
   const discountPercent =
     pricing.hasDiscount && pricing.originalPrice > 0
       ? Math.round((pricing.discountAmount / pricing.originalPrice) * 100)
@@ -103,14 +107,14 @@ const ProductCard = ({
       {/* Make whole card clickable (buttons stopPropagation) */}
       <Link
         href={`/product/${product.id}`}
-        aria-label={`View details for ${productName}`}
+        aria-label={`View details for ${productLabel}`}
         className="absolute inset-0 z-10"
       />
 
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-white">
         <ProductImage
           src={productImage}
-          alt={productName}
+          alt={productImageAlt}
           fallbackLetter={fallbackLetter}
           className={`h-full w-full object-contain p-3 pt-11 transition-transform duration-300 group-hover:scale-110 sm:p-5 ${
             !product.inStock ? "opacity-50" : ""
