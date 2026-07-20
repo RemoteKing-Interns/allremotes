@@ -39,6 +39,8 @@ const MainHeaderBar = ({
             <img
               src="/images/mainlogo.png"
               alt="ALLREMOTES"
+              width={200}
+              height={50}
               className="h-10 w-auto sm:h-12 xl:h-14"
             />
           </Link>
@@ -91,6 +93,8 @@ const MainHeaderBar = ({
                         <img
                           src={product.image}
                           alt={product.name}
+                          width={48}
+                          height={48}
                           className="h-12 w-12 rounded-lg border border-neutral-200 bg-white object-contain p-1"
                           onError={(e) => {
                             e.currentTarget.src = "/images/mainlogo.png";

@@ -168,3 +168,13 @@ export async function getNavigationPaths(): Promise<{
   };
 }
 
+export async function getHomeContentServer(): Promise<any> {
+  const { data } = await readContentDoc("home");
+  return data;
+}
+
+export async function getReviewsServer(): Promise<any[]> {
+  const { data } = await readContentDoc("reviews");
+  return Array.isArray(data) ? data : [];
+}
+
