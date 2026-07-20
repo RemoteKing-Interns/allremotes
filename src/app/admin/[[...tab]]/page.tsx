@@ -5038,8 +5038,10 @@ function AdminProducts() {
   const router = useRouter();
   const [products, setProductsState] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [originalProduct, setOriginalProduct] = useState<any | null>(null);
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -5136,6 +5138,8 @@ function AdminProducts() {
       return;
     }
 
+    setIsSaving(true);
+
     let updatedProduct = { ...product };
 
     // Ensure comparePrice is explicitly set
@@ -5147,24 +5151,81 @@ function AdminProducts() {
       p.id === editingId ? updatedProduct : p
     );
 
+    // Build a detailed before/after changeset
+    const compareValue = (v: any) => {
+      if (v === undefined || v === null) return '';
+      if (Array.isArray(v)) return JSON.stringify(v);
+      if (typeof v === 'object') return JSON.stringify(v);
+      return String(v);
+    };
+    const fieldNames = [
+      'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
+      'price', 'comparePrice', 'inStock', 'status', 'condition',
+      'quantity', 'binLocation', 'frequency_mhz', 'buttons',
+      'compatibility', 'description', 'instructions', 'features',
+      'specifications', 'seo_title', 'seo_description'
+    ];
+    const changedFields: Array<{ field: string; oldValue: string; newValue: string }> = [];
+    fieldNames.forEach((field) => {
+      const before = compareValue(originalProduct?.[field]);
+      const after = compareValue(updatedProduct[field]);
+      if (before !== after) {
+        changedFields.push({ field, oldValue: before, newValue: after });
+      }
+    });
+    // Image changes summary
+    const beforeImages = JSON.stringify(originalProduct?.images || []);
+    const afterImages = JSON.stringify(updatedProduct.images || []);
+    if (beforeImages !== afterImages) {
+      changedFields.push({
+        field: 'images',
+        oldValue: `count=${originalProduct?.images?.length || 0}`,
+        newValue: `count=${updatedProduct.images?.length || 0}`,
+      });
+    }
+
     // Update local state first
     setProductsState(updatedProducts);
 
-    // Save to store context (MongoDB/JSON) - wait for backend before refetching
-    await setProducts(updatedProducts);
+    try {
+      // Save to store context (MongoDB/JSON) - wait for backend before refetching
+      await setProducts(updatedProducts);
 
-    activityLogger.action("product_saved", {
-      productId: editingId,
-      name: updatedProduct.name,
-      sku: updatedProduct.sku || updatedProduct.rk_sku || '',
-      category: updatedProduct.category || '',
-      price: updatedProduct.price,
-      inStock: updatedProduct.inStock,
-    });
+      activityLogger.action(isNewProduct ? 'product_created' : 'product_updated', {
+        productId: editingId,
+        name: updatedProduct.name,
+        sku: updatedProduct.sku || updatedProduct.rk_sku || '',
+        category: updatedProduct.category || '',
+        brand: updatedProduct.brand || '',
+        price: updatedProduct.price,
+        comparePrice: updatedProduct.comparePrice,
+        inStock: updatedProduct.inStock,
+        status: updatedProduct.status || '',
+        condition: updatedProduct.condition || '',
+        quantity: updatedProduct.quantity,
+        isNewProduct,
+        changedFieldCount: changedFields.length,
+        changedFields,
+      });
+    } catch (err: any) {
+      activityLogger.error('product_save_failed', {
+        productId: editingId,
+        name: updatedProduct.name,
+        sku: updatedProduct.sku || updatedProduct.rk_sku || '',
+        error: err?.message || 'Unknown error',
+        changedFieldCount: changedFields.length,
+      });
+      setIsSaving(false);
+      console.error('Failed to save product:', err);
+      alert('Failed to save product: ' + (err?.message || 'Unknown error'));
+      return;
+    }
+
     setPendingImageDeletions(new Set());
     setSaved(true);
     setIsNewProduct(false);
     setEditingId(null);
+    setOriginalProduct(null);
     
     // Check if we should return to Categories & Brands
     const returnToCategories = localStorage.getItem('adminReturnToCategories');
@@ -5186,6 +5247,7 @@ function AdminProducts() {
       console.error("Failed to reload products after save:", err);
     }
     
+    setIsSaving(false);
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -5290,6 +5352,15 @@ function AdminProducts() {
   };
 
   const productForEdit = products.find((p) => p.id === editingId);
+
+  // Snapshot the original product when entering edit mode for detailed change logging
+  useEffect(() => {
+    if (editingId && productForEdit && !isNewProduct) {
+      setOriginalProduct(JSON.parse(JSON.stringify(productForEdit)));
+    } else if (!editingId) {
+      setOriginalProduct(null);
+    }
+  }, [editingId]);
 
   // Get unique category values
   const categoryOptions = [...new Set(products.map((p: any) => p.category).filter(Boolean))].sort();
@@ -5652,9 +5723,25 @@ function AdminProducts() {
               <button
                 type="button"
                 onClick={save}
-                className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                disabled={isSaving}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Save
+                {isSaving ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save
+                  </>
+                )}
               </button>
             </div>
           </div>

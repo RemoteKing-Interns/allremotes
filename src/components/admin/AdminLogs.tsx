@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Search, Trash2, Download, RefreshCw, ChevronDown, ChevronRight, User, AlertTriangle, Info, CheckCircle, Bug, ArrowRight, Eye, ShoppingCart, Package, Settings, LogIn, LogOut, Zap } from "lucide-react";
+import { FileText, Search, Trash2, Download, RefreshCw, ChevronDown, ChevronRight, User, AlertTriangle, Info, CheckCircle, Bug, ArrowRight, Eye, ShoppingCart, Package, Settings, LogIn, LogOut, Zap, X } from "lucide-react";
 import { LogEntry } from "../../lib/logger";
 import toast from "react-hot-toast";
 
@@ -191,6 +191,14 @@ export default function AdminLogs() {
     } catch { toast.error("Failed to clear logs"); }
   };
 
+  const clearFilters = () => {
+    setSearch('');
+    setLevelFilter('');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  };
+
   const exportLogs = async () => {
     try {
       const q = new URLSearchParams();
@@ -299,6 +307,15 @@ export default function AdminLogs() {
             <button onClick={() => { setStartDate(""); setEndDate(""); setPage(1); }} className="text-neutral-400 hover:text-neutral-600 ml-1">✕</button>
           )}
         </div>
+
+        {/* Clear filters */}
+        <button
+          onClick={clearFilters}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          title="Clear all filters"
+        >
+          <X size={13} /> Clear filters
+        </button>
       </div>
 
       {/* ── Timeline feed ── */}
