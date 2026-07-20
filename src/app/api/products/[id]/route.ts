@@ -37,9 +37,9 @@ function mongoTroubleshootingHint(err: unknown) {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   let mongoError: unknown = null;
 
   try {
