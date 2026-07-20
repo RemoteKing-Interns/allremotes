@@ -6,9 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title:
-    "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+    "ALLREMOTES | Garage, Gate & Car Remotes",
   description:
-    "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+    "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
   keywords: [
     "garage door remote",
     "gate remote",
@@ -34,9 +34,9 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     title:
-      "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+      "ALLREMOTES | Garage, Gate & Car Remotes",
     description:
-      "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+      "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
     url: "/",
     images: [
       {
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title:
-      "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+      "ALLREMOTES | Garage, Gate & Car Remotes",
     description:
-      "ALLREMOTES Australia | Garage Door & Gate Remotes, Motors & Accessories",
+      "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
     images: [
       {
         url: "/images/3.jpg",
@@ -71,6 +71,13 @@ export const metadata: Metadata = {
       { url: "/favicon.ico", type: "image/x-icon" },
     ],
     shortcut: "/favicon.ico",
+    apple: [
+      {
+        url: "/favicon.png",
+        type: "image/png",
+        sizes: "512x512",
+      },
+    ],
   },
 };
 

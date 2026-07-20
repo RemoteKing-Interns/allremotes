@@ -124,12 +124,6 @@ const Home = () => {
     return next.length > 0 ? next : DEFAULT_FEEDBACK_REVIEWS;
   }, [reviews]);
 
-  const feedbackMarqueeReviews = React.useMemo(() => {
-    const base =
-      feedbackReviews.length > 0 ? feedbackReviews : DEFAULT_FEEDBACK_REVIEWS;
-    return [...base, ...base];
-  }, [feedbackReviews]);
-
   const hero = home?.hero || {};
   const features = home?.features || [];
   const whyBuy = home?.whyBuy || [];
@@ -305,7 +299,7 @@ const Home = () => {
               <ProductImage
                 key={index}
                 src={slide.image}
-                alt=""
+                alt={slide.title || "Hero image"}
                 fallbackSrc="/images/mainlogo.png"
                 loading={index === 0 ? "eager" : "lazy"}
                 className={`hero-slide-image absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${
@@ -345,9 +339,7 @@ const Home = () => {
                     {slide.subtitle}
                   </div>
 
-                  <h1 className="mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white">
-                    {slide.title}
-                  </h1>
+                  {React.createElement(index === currentSlide ? "h1" : "h2", { className: "mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white" }, slide.title)}
                   <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
                     {slide.description}
                   </p>
@@ -535,10 +527,9 @@ const Home = () => {
         </div>
         <div className="feedback-marquee mt-8" aria-live="polite">
           <div className="feedback-marquee-track">
-            {feedbackMarqueeReviews.map((r, i) => (
+            {feedbackReviews.map((r, i) => (
               <div
                 key={`${r.author}-${i}`}
-                aria-hidden={i >= feedbackMarqueeReviews.length / 2}
                 className="w-[min(88vw,22rem)] shrink-0 pr-3 sm:w-[20rem] sm:pr-4 lg:w-[22rem]"
               >
                 <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-sm backdrop-blur">
