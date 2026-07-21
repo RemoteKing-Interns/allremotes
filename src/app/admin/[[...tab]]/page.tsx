@@ -5056,6 +5056,9 @@ function AdminProducts() {
   // Track which RK fields are editable
   const [editableRkSku, setEditableRkSku] = useState(false);
   const [editableRkUrl, setEditableRkUrl] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState("");
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAutoSavingRef = useRef(false);
   // Ref to skip the page-reset effect during URL filter restoration
   const isRestoringFilters = useRef(false);
   // Spreadsheet view toggle
@@ -5105,14 +5108,81 @@ function AdminProducts() {
     }
   };
 
+  const initialLoadDone = useRef(false);
   useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
     loadProducts();
   }, [getProducts]);
+
+  // Auto-save the currently edited product after a pause in edits
+  useEffect(() => {
+    if (!editingId || isNewProduct || isSaving || isAutoSavingRef.current || !originalProduct) return;
+    const product = products.find((p) => p.id === editingId);
+    if (!product || JSON.stringify(originalProduct) === JSON.stringify(product)) return;
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      if (isAutoSavingRef.current || isSaving) return;
+      const current = products.find((p) => p.id === editingId);
+      if (!current || JSON.stringify(originalProduct) === JSON.stringify(current)) return;
+
+      const fieldNames = [
+        'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
+        'price', 'comparePrice', 'inStock', 'status', 'condition',
+        'quantity', 'binLocation', 'frequency_mhz', 'buttons',
+        'compatibility', 'description', 'instructions', 'features',
+        'specifications', 'seo_title', 'seo_description'
+      ];
+      const changedFields: string[] = [];
+      fieldNames.forEach((field) => {
+        if (JSON.stringify(originalProduct?.[field]) !== JSON.stringify(current[field])) {
+          changedFields.push(field);
+        }
+      });
+      const beforeImages = JSON.stringify(originalProduct?.images || []);
+      const afterImages = JSON.stringify(current.images || []);
+      if (beforeImages !== afterImages) changedFields.push('images');
+
+      isAutoSavingRef.current = true;
+      setAutoSaveStatus("Saving...");
+      try {
+        await setProducts([...products]);
+        setAutoSaveStatus("Saved");
+        activityLogger.action('product_auto_saved', {
+          productId: editingId,
+          name: current.name || current.title || '',
+          sku: current.sku || current.rk_sku || '',
+          savedFields: changedFields,
+          unsavedFields: [],
+          fieldCount: changedFields.length,
+        });
+      } catch (err: any) {
+        setAutoSaveStatus("Save failed");
+        activityLogger.error('product_auto_save_failed', {
+          productId: editingId,
+          name: current.name || current.title || '',
+          sku: current.sku || current.rk_sku || '',
+          savedFields: [],
+          unsavedFields: changedFields,
+          error: err?.message || 'Unknown error',
+        });
+      } finally {
+        isAutoSavingRef.current = false;
+        if (autoSaveTimeoutRef.current) {
+          autoSaveTimeoutRef.current = setTimeout(() => setAutoSaveStatus(""), 2000);
+        }
+      }
+    }, 1200);
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    };
+  }, [editingId, isNewProduct, originalProduct, products, isSaving, setProducts]);
 
   // Reset valid image indices when switching products, but keep track of checked status per product
   useEffect(() => {
     setValidImageIndices(new Set());
     setShowAllImages(false);
+    setAutoSaveStatus("");
   }, [editingId]);
 
   // Listen for edit product requests from other admin sections
