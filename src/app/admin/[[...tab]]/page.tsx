@@ -5174,7 +5174,14 @@ function AdminProducts() {
     }
   }, [editingId, isNewProduct, isSaving, originalProduct, setProducts]);
 
-  const onBlurSave = useCallback(() => { setTimeout(autoSave, 0); }, [autoSave]);
+  const pendingAutoSaveRef = useRef(false);
+  const onBlurSave = useCallback(() => { pendingAutoSaveRef.current = true; }, []);
+  useEffect(() => {
+    if (pendingAutoSaveRef.current) {
+      pendingAutoSaveRef.current = false;
+      autoSave();
+    }
+  }, [products, autoSave]);
 
   // Reset valid image indices when switching products, but keep track of checked status per product
   useEffect(() => {
@@ -6202,8 +6209,8 @@ function AdminProducts() {
                     onChange={(newImages) => {
                       update(productForEdit.id, "images", newImages);
                       update(productForEdit.id, "image", newImages[0] || "");
-                      // Images don't blur, so auto-save after the state update settles
-                      setTimeout(() => autoSave(), 50);
+                      // Images don't blur, so signal auto-save for next render
+                      pendingAutoSaveRef.current = true;
                     }}
                     onUpload={async (files) => {
                       const uploadedUrls: string[] = [];
@@ -6602,12 +6609,14 @@ function AdminProducts() {
                     {paginatedProducts.map((p) => (
                       <tr key={p.id} className="transition-colors hover:bg-neutral-50/70">
                         <td className="px-6 py-3 align-top">
-                          <div className="h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                          <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
                             <ProductImage
                               src={getPrimaryImage(p)}
                               alt={p.name || ""}
                               fallbackLetter={getFallbackLetter(p)}
-                              className="h-full w-full object-contain p-1"
+                              fill
+                              sizes="48px"
+                              className="object-contain p-1"
                               loading="lazy"
                             />
                           </div>
@@ -7079,7 +7088,9 @@ function AdminHome() {
                         src={img}
                         alt={`Slide ${i + 1}`}
                         fallbackLetter={String(i + 1)}
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="64px"
+                        className="object-cover"
                       />
                     ) : (
                       <span className="text-xs text-neutral-400">{i + 1}</span>
@@ -9646,7 +9657,9 @@ function CategoriesBrandsSection() {
                             src={stats.image}
                             alt={name}
                             fallbackLetter={name?.charAt(0)?.toUpperCase()}
-                            className="w-full h-full object-contain"
+                            fill
+                            sizes="160px"
+                            className="object-contain"
                           />
                         ) : (
                           <div className="flex flex-col items-center text-neutral-400">
