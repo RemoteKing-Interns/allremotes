@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
 
@@ -36,10 +37,13 @@ const MainHeaderBar = ({
       <div className="container">
         <div className="flex flex-wrap items-center gap-3 py-3.5 sm:gap-4 md:gap-6 md:py-4">
           <Link href="/" className="shrink-0" aria-label="ALLREMOTES home">
-            <img
+            <Image
               src="/images/mainlogo.png"
               alt="ALLREMOTES"
+              width={160}
+              height={56}
               className="h-10 w-auto sm:h-12 xl:h-14"
+              priority={false}
             />
           </Link>
 
@@ -91,6 +95,8 @@ const MainHeaderBar = ({
                         <img
                           src={product.image}
                           alt={product.name}
+                          width={48}
+                          height={48}
                           className="h-12 w-12 rounded-lg border border-neutral-200 bg-white object-contain p-1"
                           onError={(e) => {
                             e.currentTarget.src = "/images/mainlogo.png";

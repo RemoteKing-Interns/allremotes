@@ -320,6 +320,7 @@ const Home = () => {
               {heroSlides.map((slide, index) => (
                 <div
                   key={`hero-content-${index}`}
+                  aria-hidden={index !== currentSlide}
                   className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                     index === currentSlide
                       ? "hero-slide-content z-30 translate-y-0 opacity-100"

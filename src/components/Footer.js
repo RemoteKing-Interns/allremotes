@@ -102,6 +102,8 @@ const Footer = () => {
                 key={icon}
                 src={`/icons/payments/${icon}.png`}
                 alt={icon}
+                width={48}
+                height={32}
                 className="h-8 w-auto rounded"
               />
             ))}

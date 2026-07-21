@@ -35,16 +35,21 @@ const NavBar = ({
   // Fetch categories from dedicated API
   const [categories, setCategories] = useState([]);
   useEffect(() => {
-    fetch('/api/categories')
-      .then(r => r.json())
-      .then(data => {
-        if (!Array.isArray(data)) return;
-        setCategories(data.map(c => ({
-          ...c,
-          path: `/products/all?category=${encodeURIComponent(c.key)}`,
-        })));
-      })
-      .catch(() => {});
+    const runWhenIdle = (typeof window !== "undefined" && window.requestIdleCallback)
+      ? window.requestIdleCallback
+      : (cb) => setTimeout(cb, 150);
+    runWhenIdle(() => {
+      fetch('/api/categories')
+        .then(r => r.json())
+        .then(data => {
+          if (!Array.isArray(data)) return;
+          setCategories(data.map(c => ({
+            ...c,
+            path: `/products/all?category=${encodeURIComponent(c.key)}`,
+          })));
+        })
+        .catch(() => {});
+    });
   }, []);
 
   useEffect(() => {

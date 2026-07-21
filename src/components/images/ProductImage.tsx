@@ -125,6 +125,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           onLoad={onLoad}
           fill={fill}
           sizes={sizes}
+          priority={loading === "eager"}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -148,6 +149,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           onLoad={onLoad}
           fill={fill}
           sizes={sizes}
+          priority={loading === "eager"}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -168,6 +170,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
       onLoad={onLoad}
       fill={fill}
       sizes={sizes}
+      priority={loading === "eager"}
       onError={() => {
         setError(true);
         onErrorRef.current?.();

@@ -40,11 +40,16 @@ const Header = () => {
       setNavProducts(stored);
       return;
     }
-    // Fetch from API if store is empty
-    fetch("/api/products")
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data) && data.length > 0) setNavProducts(data); })
-      .catch(() => {});
+    // Fetch from API if store is empty, but defer to avoid blocking LCP/TBT
+    const runWhenIdle = (typeof window !== "undefined" && window.requestIdleCallback)
+      ? window.requestIdleCallback
+      : (cb) => setTimeout(cb, 150);
+    runWhenIdle(() => {
+      fetch("/api/products")
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data) && data.length > 0) setNavProducts(data); })
+        .catch(() => {});
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Also sync when store products update (e.g. after store hydration)
