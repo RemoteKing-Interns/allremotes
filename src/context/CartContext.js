@@ -130,7 +130,8 @@ export const CartProvider = ({ children }) => {
       if (!resp.ok) return null;
 
       return data?.cart || null;
-    } catch {
+    } catch (err) {
+      console.error('Failed to load cart from database:', err);
       return null;
     }
   }, [user]);
@@ -152,7 +153,8 @@ export const CartProvider = ({ children }) => {
       });
 
       return resp.ok;
-    } catch {
+    } catch (err) {
+      console.error('Failed to save cart to database:', err);
       return false;
     }
   }, [user]);

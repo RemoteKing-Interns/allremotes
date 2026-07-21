@@ -12,7 +12,6 @@ interface ProductImageProps {
   fallbackSrc?: string;
   className?: string;
   loading?: "lazy" | "eager";
-  priority?: boolean;
   onLoad?: () => void;
   onError?: () => void;
   onClick?: () => void;
@@ -45,7 +44,6 @@ const ProductImage: React.FC<ProductImageProps> = ({
   fallbackSrc,
   className = "",
   loading = "lazy",
-  priority,
   onLoad,
   onError,
   onClick,
@@ -122,7 +120,6 @@ const ProductImage: React.FC<ProductImageProps> = ({
           src={fallbackSrc}
           alt={alt}
           loading={loading}
-          priority={priority}
           className={className}
           onClick={onClick}
           onLoad={onLoad}
@@ -166,7 +163,6 @@ const ProductImage: React.FC<ProductImageProps> = ({
       src={imgSrc}
       alt={alt}
       loading={loading}
-      priority={priority}
       className={className}
       onClick={onClick}
       onLoad={onLoad}

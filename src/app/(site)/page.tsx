@@ -1,3 +1,6 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -8,30 +11,50 @@ import {
   Truck,
   Users,
 } from "lucide-react";
-import { Suspense } from "react";
-import { getHomeContentServer, getReviewsServer } from "@/lib/public-site";
-import HeroSlider, { type HeroSlide } from "./_components/HeroSlider";
-import FeaturesSection, { type Feature } from "./_components/FeaturesSection";
-import FeaturedProductsData from "./_components/FeaturedProductsData";
-
-export const revalidate = 60;
-
-const DEFAULT_HERO_IMAGES = [
-  "/images/3.jpg",
-  "/images/1.jpg",
-  "/images/5.png",
-];
+import { useStore } from "../../context/StoreContext";
+import ProductCard from "../../components/ProductCard";
+import ProductImage from "../../components/images/ProductImage";
 
 const DEFAULT_FEEDBACK_REVIEWS = [
-  { rating: 5, text: "Fast dispatch and clear compatibility notes. The remote paired in minutes.", author: "Daniel S.", verified: true },
-  { rating: 5, text: "Exactly what we needed for workshop reorders. Product quality is consistent.", author: "Mia L.", verified: true },
-  { rating: 4, text: "Good pricing and support replied quickly with programming guidance.", author: "Cooper R.", verified: true },
-  { rating: 5, text: "Ordered two gate remotes and both worked perfectly. Packaging was secure.", author: "Harper T.", verified: true },
-  { rating: 5, text: "Trade account workflow is smooth and reordering is much faster now.", author: "Ava K.", verified: true },
-  { rating: 4, text: "Reliable stock levels and straightforward checkout. Will buy again.", author: "Noah P.", verified: true },
+  {
+    rating: 5,
+    text: "Fast dispatch and clear compatibility notes. The remote paired in minutes.",
+    author: "Daniel S.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Exactly what we needed for workshop reorders. Product quality is consistent.",
+    author: "Mia L.",
+    verified: true,
+  },
+  {
+    rating: 4,
+    text: "Good pricing and support replied quickly with programming guidance.",
+    author: "Cooper R.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Ordered two gate remotes and both worked perfectly. Packaging was secure.",
+    author: "Harper T.",
+    verified: true,
+  },
+  {
+    rating: 5,
+    text: "Trade account workflow is smooth and reordering is much faster now.",
+    author: "Ava K.",
+    verified: true,
+  },
+  {
+    rating: 4,
+    text: "Reliable stock levels and straightforward checkout. Will buy again.",
+    author: "Noah P.",
+    verified: true,
+  },
 ];
 
-const WHY_BUY_ICON_MAP: Record<string, any> = {
+const WHY_BUY_ICON_MAP = {
   qa: ShieldCheck,
   shieldcheck: ShieldCheck,
   shield: ShieldCheck,
@@ -51,53 +74,114 @@ const WHY_BUY_ICON_MAP: Record<string, any> = {
   reviews: Star,
 };
 
-const DEFAULT_WHY_BUY = [
-  { title: "Quality Guaranteed", description: "Every remote is checked for fit, finish, and reliable day-to-day use before it reaches your cart." },
-  { title: "Fast Shipping", description: "Responsive dispatch and clear communication for retail buyers, workshops, and trade customers." },
-  { title: "Support That Knows Remotes", description: "Practical help for identifying the right model, checking compatibility, and reordering quickly." },
-];
+const DEFAULT_HERO_IMAGES = ["/images/3.jpg", "/images/1.jpg", "/images/5.png", "/images/2.jpg", "/images/6.png", "/images/4.png", "/images/7.png", "/images/8.png", "/images/9.png", "/images/10.png"];
 
-function resolveWhyBuyIcon(card: any, index: number) {
-  const keyFromIcon = String(card?.icon || "").toLowerCase().replace(/[^a-z]/g, "");
-  const keyFromTitle = String(card?.title || "").toLowerCase().replace(/[^a-z]/g, "");
-  if (WHY_BUY_ICON_MAP[keyFromIcon]) return WHY_BUY_ICON_MAP[keyFromIcon];
-  if (WHY_BUY_ICON_MAP[keyFromTitle]) return WHY_BUY_ICON_MAP[keyFromTitle];
-  const fallbackIcons = [ShieldCheck, Truck, RotateCcw, Headset, CreditCard, Users];
-  return fallbackIcons[index % fallbackIcons.length];
-}
+const Home = () => {
+  const { getProducts, getHomeContent, getReviews } = useStore();
+  const products = getProducts() || [];
+  const reviews = getReviews() || [];
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
-export default async function Home() {
-  const [homeRaw, reviewsRaw] = await Promise.all([
-    getHomeContentServer(),
-    getReviewsServer(),
-  ]);
+  useEffect(() => { setMounted(true); }, []);
 
-  const home = homeRaw || {};
-  const hero = home.hero || {};
-  const features: Feature[] = Array.isArray(home.features) ? home.features : [];
-  const whyBuy = Array.isArray(home.whyBuy) ? home.whyBuy : [];
-  const cta = home.ctaSection || {};
-  const heroImages =
-    home.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0
-      ? home.heroImages
-      : DEFAULT_HERO_IMAGES;
+  const home = mounted ? getHomeContent() : null;
+  // Use CMS hero images if available, otherwise fallback to defaults
+  const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
+    ? home.heroImages
+    : DEFAULT_HERO_IMAGES;
 
-  const whyBuyCards = whyBuy.length > 0 ? whyBuy : DEFAULT_WHY_BUY;
-  const heroReasons = whyBuyCards.slice(0, 3);
-  const heroLeadReason = heroReasons[0] || DEFAULT_WHY_BUY[0];
-  const heroSideReasons = heroReasons.slice(1);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
 
-  const defaultHeroHighlights = [
-    heroSideReasons[0] || { title: "Fast Shipping", description: "Responsive dispatch and practical support for trade and retail buyers." },
-    heroSideReasons[1] || { title: "Support That Knows Remotes", description: "Practical guidance for matching remotes, keys, and compatible accessories." },
+  const feedbackReviews = React.useMemo(() => {
+    const normalized = (reviews || [])
+      .map((r, idx) => ({
+        rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
+        text: String(r?.text || "").trim(),
+        author: String(r?.author || "").trim() || `Customer ${idx + 1}`,
+        verified: Boolean(r?.verified),
+      }))
+      .filter((r) => r.text);
+
+    const next = [...normalized];
+    const seen = new Set(
+      normalized.map((r) => `${r.text}__${r.author}`.toLowerCase()),
+    );
+
+    for (const review of DEFAULT_FEEDBACK_REVIEWS) {
+      if (next.length >= 9) break;
+      const key = `${review.text}__${review.author}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push(review);
+    }
+
+    return next.length > 0 ? next : DEFAULT_FEEDBACK_REVIEWS;
+  }, [reviews]);
+
+  const hero = home?.hero || {};
+  const features = home?.features || [];
+  const whyBuy = home?.whyBuy || [];
+  const cta = home?.ctaSection || {};
+  const defaultWhyBuy = [
+    {
+      title: "Quality Guaranteed",
+      description:
+        "Every remote is checked for fit, finish, and reliable day-to-day use before it reaches your cart.",
+    },
+    {
+      title: "Fast Shipping",
+      description:
+        "Responsive dispatch and clear communication for retail buyers, workshops, and trade customers.",
+    },
+    {
+      title: "Support That Knows Remotes",
+      description:
+        "Practical help for identifying the right model, checking compatibility, and reordering quickly.",
+    },
   ];
-
-  const configuredHeroSlides = Array.isArray(home.heroSlides) ? home.heroSlides : [];
+  const whyBuyCards = whyBuy.length > 0 ? whyBuy : defaultWhyBuy;
+  const heroReasons = whyBuyCards.slice(0, 3);
+  const heroLeadReason = heroReasons[0] || defaultWhyBuy[0];
+  const heroSideReasons = heroReasons.slice(1);
+  const carProductsCount = products.filter(
+    (product) => product?.category === "car",
+  ).length;
+  const garageProductsCount = products.filter(
+    (product) => product?.category === "garage",
+  ).length;
+  const featureImagesByTitle = {
+    "Car Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
+    "Garage Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
+    "Quality Guaranteed": "/images/mainlogo.webp",
+  };
+  const defaultHeroHighlights = [
+    heroSideReasons[0] || {
+      title: "Fast Shipping",
+      description:
+        "Responsive dispatch and practical support for trade and retail buyers.",
+    },
+    heroSideReasons[1] || {
+      title: "Support That Knows Remotes",
+      description:
+        "Practical guidance for matching remotes, keys, and compatible accessories.",
+    },
+  ];
+  const configuredHeroSlides = Array.isArray(home?.heroSlides)
+    ? home.heroSlides
+    : [];
   const fallbackHeroSlides = [
     {
       subtitle: hero.subtitle || "Quality is Guaranteed",
       title: hero.title || "Garage Door & Gate Remotes",
-      description: hero.description || "Your trusted source for car and garage remotes. Browse reliable replacements and accessories.",
+      description:
+        hero.description ||
+        "Your trusted source for car and garage remotes. Browse reliable replacements and accessories.",
       primaryCta: hero.primaryCta || "Shop Car Remotes",
       primaryCtaPath: hero.primaryCtaPath || "/products/car",
       secondaryCta: hero.secondaryCta || "Shop Garage Remotes",
@@ -111,92 +195,295 @@ export default async function Home() {
       subtitle: "Automotive remote keys",
       title: "Replacement Car Keys & Smart Remotes",
       description:
-        "Browse automotive remote options across smart keys, shells, and replacement key solutions. Built for fitment and fast reordering.",
+        (carProductsCount > 0
+          ? `Browse ${carProductsCount}+ automotive remote options across smart keys, shells, and replacement key solutions.`
+          : "Browse automotive remote options across smart keys, shells, and replacement key solutions.") +
+        " Built for fitment and fast reordering.",
       primaryCta: "Shop Automotive",
       primaryCtaPath: "/products/car",
       secondaryCta: "See Full Range",
       secondaryCtaPath: "/products/all",
       sideKicker: "Automotive focus",
       sideTitle: "Vehicle-ready replacements",
-      sideDescription: "Find the right remote key solution faster with a catalog focused on popular automotive formats and dependable stock.",
+      sideDescription:
+        "Find the right remote key solution faster with a catalog focused on popular automotive formats and dependable stock.",
       highlights: [
-        { title: "Fitment-first range", description: "Organized for faster browsing across common vehicle remote and smart key styles." },
-        { title: "Clearer buying path", description: "Category-led navigation helps retail buyers and workshops locate automotive options quickly." },
+        {
+          title: "Fitment-first range",
+          description:
+            "Organized for faster browsing across common vehicle remote and smart key styles.",
+        },
+        {
+          title: "Clearer buying path",
+          description:
+            "Category-led navigation helps retail buyers and workshops locate automotive options quickly.",
+        },
       ],
     },
     {
       subtitle: "Garage & gate access",
       title: "Garage, Gate & Access Remotes",
       description:
-        "Explore garage and gate remote options for home, building, and access automation needs. A practical range backed by responsive support.",
+        (garageProductsCount > 0
+          ? `Explore ${garageProductsCount}+ garage and gate remote options for home, building, and access automation needs.`
+          : "Explore garage and gate remote options for home, building, and access automation needs.") +
+        " A practical range backed by responsive support.",
       primaryCta: "Shop Garage & Gate",
       primaryCtaPath: "/products/garage",
       secondaryCta: "Browse Best Sellers",
       secondaryCtaPath: "/products/all",
       sideKicker: "Access control range",
       sideTitle: "Reliable everyday control",
-      sideDescription: "From household remotes to trade supply, the garage and gate range is designed for clean selection and repeat ordering.",
+      sideDescription:
+        "From household remotes to trade supply, the garage and gate range is designed for clean selection and repeat ordering.",
       highlights: [
-        { title: "Home and trade ready", description: "Suitable for homeowners, installers, locksmiths, and repeat trade customers." },
-        { title: "Support beyond checkout", description: "Get help with product identification, reordering, and general remote selection." },
+        {
+          title: "Home and trade ready",
+          description:
+            "Suitable for homeowners, installers, locksmiths, and repeat trade customers.",
+        },
+        {
+          title: "Support beyond checkout",
+          description:
+            "Get help with product identification, reordering, and general remote selection.",
+        },
       ],
     },
   ];
 
-  const heroSlides: HeroSlide[] = heroImages.map((image: string, index: number) => {
+  const resolveWhyBuyIcon = (card, index) => {
+    const keyFromIcon = String(card?.icon || "")
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+    const keyFromTitle = String(card?.title || "")
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+    const iconByIconKey = WHY_BUY_ICON_MAP[keyFromIcon];
+    const iconByTitleKey = WHY_BUY_ICON_MAP[keyFromTitle];
+
+    if (iconByIconKey) return iconByIconKey;
+    if (iconByTitleKey) return iconByTitleKey;
+
+    const fallbackIcons = [
+      ShieldCheck,
+      Truck,
+      RotateCcw,
+      Headset,
+      CreditCard,
+      Users,
+    ];
+    return fallbackIcons[index % fallbackIcons.length];
+  };
+
+  const heroSlides = heroImages.map((image, index) => {
     const fallback = fallbackHeroSlides[index % fallbackHeroSlides.length];
     const configured = configuredHeroSlides[index] || {};
     const configuredHighlights =
       Array.isArray(configured.highlights) && configured.highlights.length > 0
         ? configured.highlights.slice(0, 2)
         : fallback.highlights;
-    return { image, ...fallback, ...configured, highlights: configuredHighlights };
+
+    return {
+      image,
+      ...fallback,
+      ...configured,
+      highlights: configuredHighlights,
+    };
   });
-
-  // Merge server reviews with defaults
-  const normalizedReviews = (reviewsRaw || [])
-    .map((r: any, idx: number) => ({
-      rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
-      text: String(r?.text || "").trim(),
-      author: String(r?.author || "").trim() || `Customer ${idx + 1}`,
-      verified: Boolean(r?.verified),
-    }))
-    .filter((r: any) => r.text);
-
-  const seenKeys = new Set(normalizedReviews.map((r: any) => `${r.text}__${r.author}`.toLowerCase()));
-  const feedbackReviews = [...normalizedReviews];
-  for (const review of DEFAULT_FEEDBACK_REVIEWS) {
-    if (feedbackReviews.length >= 9) break;
-    const key = `${review.text}__${review.author}`.toLowerCase();
-    if (seenKeys.has(key)) continue;
-    seenKeys.add(key);
-    feedbackReviews.push(review);
-  }
-  const finalReviews = feedbackReviews.length > 0 ? feedbackReviews : DEFAULT_FEEDBACK_REVIEWS;
-
   return (
     <div className="animate-fadeIn">
-      <HeroSlider slides={heroSlides} />
+      <section className="relative overflow-hidden border-b border-neutral-200/70">
+        <div className="relative h-[500px] sm:h-[540px] lg:h-[620px]">
+          <div className="absolute inset-0">
+            {heroSlides.map((slide, index) => (
+              <ProductImage
+                key={index}
+                src={slide.image}
+                alt={slide.title || "Hero image"}
+                fallbackSrc="/images/mainlogo.png"
+                loading={index === 0 ? "eager" : "lazy"}
+                fill
+                sizes="100vw"
+                className={`hero-slide-image object-cover transition-opacity duration-[1200ms] ease-out ${
+                  index === currentSlide
+                    ? "hero-slide-image--active z-10 opacity-100"
+                    : "z-0 opacity-0"
+                }`}
+                onError={() => console.error(`Failed to load hero image: ${slide.image}`)}
+              />
+            ))}
+            <div className="absolute inset-0 z-[15] bg-gradient-to-br from-neutral-900/70 via-neutral-900/60 to-neutral-800/50" />
+          </div>
 
-      <FeaturesSection features={features} />
+          <div className="container relative z-30 flex h-full items-center py-8 sm:py-10">
+            <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px] text-left">
+              {heroSlides.map((slide, index) => (
+                <div
+                  key={`hero-content-${index}`}
+                  className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    index === currentSlide
+                      ? "hero-slide-content z-30 translate-y-0 opacity-100"
+                      : "pointer-events-none z-0 translate-y-3 opacity-0"
+                  }`}
+                >
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary-light backdrop-blur-sm">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {slide.subtitle}
+                  </div>
 
-      <Suspense
-        fallback={
-          <section className="container py-10 sm:py-14">
-            <div className="h-8 w-64 rounded bg-neutral-200/70 animate-pulse" />
-            <div className="mt-4 h-4 w-1/2 rounded bg-neutral-200/60 animate-pulse" />
-            <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="aspect-[3/4] rounded-2xl bg-neutral-200/50 animate-pulse" />
+                  {React.createElement(index === currentSlide ? "h1" : "h2", { className: "mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white" }, slide.title)}
+                  <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
+                    {slide.description}
+                  </p>
+
+                  <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    <Link
+                      href={slide.primaryCtaPath}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark sm:w-auto"
+                    >
+                      {slide.primaryCta}
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                      </svg>
+                    </Link>
+                    <Link
+                      href={slide.secondaryCtaPath}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15 sm:w-auto"
+                    >
+                      {slide.secondaryCta}
+                    </Link>
+                  </div>
+                </div>
               ))}
             </div>
-          </section>
-        }
-      >
-        <FeaturedProductsData />
-      </Suspense>
+          </div>
 
-      {/* Why Buy — server-rendered, no client JS */}
+          <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+            {heroImages.map((_, index) => (
+              <button
+                key={index}
+                className={`h-2 rounded-full transition-all duration-500 ease-out ${
+                  index === currentSlide
+                    ? "w-8 bg-white"
+                    : "w-2 bg-white/45 hover:bg-white/70"
+                }`}
+                onClick={() => setCurrentSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="container py-10 sm:py-14">
+        <div className="grid gap-10">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+              Start with the remote type you need
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
+              Move through automotive, garage, gate, home, and locksmith ranges
+              with clearer entry points and business-ready product organization.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 shadow-xs">
+                    {f.image || featureImagesByTitle[f.title] ? (
+                      <ProductImage
+                        src={f.image || featureImagesByTitle[f.title]}
+                        alt={f.title || "Feature"}
+                        fallbackSrc="/images/mainlogo.png"
+                        fallbackLetter={String(f.title || "AR").slice(0, 2)}
+                        fill
+                        sizes="56px"
+                        className="object-contain"
+                      />
+                    ) : (
+                      <span className="text-sm font-extrabold text-accent-dark">
+                        {String(f.icon || "AR").slice(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-neutral-900">
+                      {f.title || ""}
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-neutral-600">
+                      {f.description || ""}
+                    </p>
+                  </div>
+                </div>
+                {f.path && f.linkText && (
+                  <Link
+                    href={f.path}
+                    className="mt-5 inline-flex text-sm font-semibold text-accent-dark hover:text-accent"
+                  >
+                    {f.linkText}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="container py-10 sm:py-14">
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            Featured Products
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-neutral-600 sm:text-base">
+            Browse our most popular remote controls across car, garage, and
+            access-control categories.
+            </p>
+        </div>
+        {products.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/70 p-6 text-sm font-semibold text-neutral-700">
+            No products available right now.
+          </div>
+        ) : (
+          <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+            {products.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+        <div className="mt-8">
+          <Link
+            href="/products/all"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-sm font-extrabold text-white shadow-soft hover:bg-primary-dark"
+          >
+            Shop All Products
+          </Link>
+        </div>
+      </section>
+
       <section className="container py-10 sm:py-14">
         <div className="max-w-2xl">
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
@@ -208,29 +495,30 @@ export default async function Home() {
           </p>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {whyBuyCards.map((b: any, i: number) => {
-            const WhyBuyIcon = resolveWhyBuyIcon(b, i);
-            return (
-              <div
-                key={i}
-                className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
-              >
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
-                  <WhyBuyIcon size={22} strokeWidth={2.1} />
-                </div>
-                <p className="text-base font-semibold text-neutral-900">
-                  {b.title || ""}
-                </p>
-                <p className="mt-2 text-sm leading-7 text-neutral-600">
-                  {b.description || ""}
-                </p>
-              </div>
-            );
-          })}
+          {whyBuyCards.map((b, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur"
+            >
+              {(() => {
+                const WhyBuyIcon = resolveWhyBuyIcon(b, i);
+                return (
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
+                    <WhyBuyIcon size={22} strokeWidth={2.1} />
+                  </div>
+                );
+              })()}
+              <h3 className="text-base font-semibold text-neutral-900">
+                {b.title || ""}
+              </h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">
+                {b.description || ""}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Reviews marquee — server-rendered, pure CSS animation */}
       <section className="container py-10 sm:py-14">
         <div className="max-w-2xl">
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
@@ -243,7 +531,7 @@ export default async function Home() {
         </div>
         <div className="feedback-marquee mt-8" aria-live="polite">
           <div className="feedback-marquee-track">
-            {finalReviews.map((r, i) => (
+            {feedbackReviews.map((r, i) => (
               <div
                 key={`${r.author}-${i}`}
                 className="w-[min(88vw,22rem)] shrink-0 pr-3 sm:w-[20rem] sm:pr-4 lg:w-[22rem]"
@@ -277,7 +565,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* CTA — server-rendered */}
       <section className="container py-10 sm:py-14">
         <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 p-8 shadow-panel sm:p-12">
           <div className="max-w-2xl">
@@ -285,7 +572,8 @@ export default async function Home() {
               {cta.title || "Ready to Find Your Perfect Remote?"}
             </h2>
             <p className="mt-3 text-sm leading-7 text-neutral-300 sm:text-base">
-              {cta.description || "Browse our collection and find the perfect remote for your needs"}
+              {cta.description ||
+                "Browse our collection and find the perfect remote for your needs"}
             </p>
             <Link
               href={cta.buttonPath || "/products/all"}
@@ -298,4 +586,6 @@ export default async function Home() {
       </section>
     </div>
   );
-}
+};
+
+export default Home;

@@ -39,9 +39,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-plus-jakarta)", "Avenir Next", "Segoe UI", "sans-serif"],
-        display: ["var(--font-plus-jakarta)", "Avenir Next", "Segoe UI", "sans-serif"],
-        body: ["var(--font-plus-jakarta)", "Avenir Next", "Segoe UI", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
+        display: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
+        body: ["Plus Jakarta Sans", "Avenir Next", "Segoe UI", "sans-serif"],
       },
       fontSize: {
         xs: ["0.72rem", { lineHeight: "1.2" }],
