@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { navigationMenu as defaultNavigationMenu } from "@/data/navigation";
 import { readContentJson } from "@/lib/content-json";
 import { getDb, mongoEnabled } from "@/lib/mongo";
@@ -142,17 +143,30 @@ async function readContentDoc(key: string): Promise<ContentDoc> {
 export async function getPublicProducts(): Promise<ProductRecord[]> {
   if (mongoEnabled()) {
     const db = await getDb();
-    const products = await db
-      .collection("products")
-      .find({})
-      .toArray();
-
+    const products = await db.collection("products").find({}).toArray();
     return Array.isArray(products) ? (products as ProductRecord[]) : [];
   }
-
   const products = await readProductsJson();
   return Array.isArray(products) ? (products as ProductRecord[]) : [];
 }
+
+export const getHomeContentServer = unstable_cache(
+  async () => {
+    const { data } = await readContentDoc("home");
+    return data;
+  },
+  ["home-content"],
+  { revalidate: 60, tags: ["home-content"] },
+);
+
+export const getReviewsServer = unstable_cache(
+  async () => {
+    const { data } = await readContentDoc("reviews");
+    return Array.isArray(data) ? data : [];
+  },
+  ["reviews"],
+  { revalidate: 60, tags: ["reviews"] },
+);
 
 export async function getNavigationPaths(): Promise<{
   paths: string[];
@@ -167,14 +181,3 @@ export async function getNavigationPaths(): Promise<{
     updatedAt,
   };
 }
-
-export async function getHomeContentServer(): Promise<any> {
-  const { data } = await readContentDoc("home");
-  return data;
-}
-
-export async function getReviewsServer(): Promise<any[]> {
-  const { data } = await readContentDoc("reviews");
-  return Array.isArray(data) ? data : [];
-}
-

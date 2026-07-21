@@ -8,10 +8,11 @@ import {
   Truck,
   Users,
 } from "lucide-react";
-import { getPublicProducts, getHomeContentServer, getReviewsServer } from "@/lib/public-site";
+import { Suspense } from "react";
+import { getHomeContentServer, getReviewsServer } from "@/lib/public-site";
 import HeroSlider, { type HeroSlide } from "./_components/HeroSlider";
 import FeaturesSection, { type Feature } from "./_components/FeaturesSection";
-import FeaturedProducts from "./_components/FeaturedProducts";
+import FeaturedProductsData from "./_components/FeaturedProductsData";
 
 export const revalidate = 60;
 
@@ -19,13 +20,6 @@ const DEFAULT_HERO_IMAGES = [
   "/images/3.jpg",
   "/images/1.jpg",
   "/images/5.png",
-  "/images/2.jpg",
-  "/images/6.png",
-  "/images/4.png",
-  "/images/7.png",
-  "/images/8.png",
-  "/images/9.png",
-  "/images/10.png",
 ];
 
 const DEFAULT_FEEDBACK_REVIEWS = [
@@ -73,8 +67,7 @@ function resolveWhyBuyIcon(card: any, index: number) {
 }
 
 export default async function Home() {
-  const [products, homeRaw, reviewsRaw] = await Promise.all([
-    getPublicProducts(),
+  const [homeRaw, reviewsRaw] = await Promise.all([
     getHomeContentServer(),
     getReviewsServer(),
   ]);
@@ -93,9 +86,6 @@ export default async function Home() {
   const heroReasons = whyBuyCards.slice(0, 3);
   const heroLeadReason = heroReasons[0] || DEFAULT_WHY_BUY[0];
   const heroSideReasons = heroReasons.slice(1);
-
-  const carProductsCount = products.filter((p: any) => p?.category === "car").length;
-  const garageProductsCount = products.filter((p: any) => p?.category === "garage").length;
 
   const defaultHeroHighlights = [
     heroSideReasons[0] || { title: "Fast Shipping", description: "Responsive dispatch and practical support for trade and retail buyers." },
@@ -121,10 +111,7 @@ export default async function Home() {
       subtitle: "Automotive remote keys",
       title: "Replacement Car Keys & Smart Remotes",
       description:
-        (carProductsCount > 0
-          ? `Browse ${carProductsCount}+ automotive remote options across smart keys, shells, and replacement key solutions.`
-          : "Browse automotive remote options across smart keys, shells, and replacement key solutions.") +
-        " Built for fitment and fast reordering.",
+        "Browse automotive remote options across smart keys, shells, and replacement key solutions. Built for fitment and fast reordering.",
       primaryCta: "Shop Automotive",
       primaryCtaPath: "/products/car",
       secondaryCta: "See Full Range",
@@ -141,10 +128,7 @@ export default async function Home() {
       subtitle: "Garage & gate access",
       title: "Garage, Gate & Access Remotes",
       description:
-        (garageProductsCount > 0
-          ? `Explore ${garageProductsCount}+ garage and gate remote options for home, building, and access automation needs.`
-          : "Explore garage and gate remote options for home, building, and access automation needs.") +
-        " A practical range backed by responsive support.",
+        "Explore garage and gate remote options for home, building, and access automation needs. A practical range backed by responsive support.",
       primaryCta: "Shop Garage & Gate",
       primaryCtaPath: "/products/garage",
       secondaryCta: "Browse Best Sellers",
@@ -196,7 +180,21 @@ export default async function Home() {
 
       <FeaturesSection features={features} />
 
-      <FeaturedProducts products={products} />
+      <Suspense
+        fallback={
+          <section className="container py-10 sm:py-14">
+            <div className="h-8 w-64 rounded bg-neutral-200/70 animate-pulse" />
+            <div className="mt-4 h-4 w-1/2 rounded bg-neutral-200/60 animate-pulse" />
+            <div className="mt-8 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="aspect-[3/4] rounded-2xl bg-neutral-200/50 animate-pulse" />
+              ))}
+            </div>
+          </section>
+        }
+      >
+        <FeaturedProductsData />
+      </Suspense>
 
       {/* Why Buy — server-rendered, no client JS */}
       <section className="container py-10 sm:py-14">
@@ -220,9 +218,9 @@ export default async function Home() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
                   <WhyBuyIcon size={22} strokeWidth={2.1} />
                 </div>
-                <h3 className="text-base font-semibold text-neutral-900">
+                <p className="text-base font-semibold text-neutral-900">
                   {b.title || ""}
-                </h3>
+                </p>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">
                   {b.description || ""}
                 </p>

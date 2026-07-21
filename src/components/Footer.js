@@ -43,9 +43,9 @@ function FooterItem({ href, label }) {
 function FooterColumn({ title, items }) {
   return (
     <section className="min-w-0">
-      <h4 className="mb-2 text-[0.7rem] font-extrabold uppercase tracking-[0.14em] text-white/95">
+      <h3 className="mb-2 text-[0.7rem] font-extrabold uppercase tracking-[0.14em] text-white/95">
         {title}
-      </h4>
+      </h3>
       <ul className="grid gap-2.5">
         {items.map((item) => (
           <li key={`${title}-${item.label}`}>

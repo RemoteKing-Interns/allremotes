@@ -58,9 +58,9 @@ export default function FeaturesSection({ features }: { features: Feature[] }) {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-neutral-900">
+                  <p className="text-base font-semibold text-neutral-900">
                     {f.title || ""}
-                  </h3>
+                  </p>
                   <p className="mt-1 text-sm leading-6 text-neutral-600">
                     {f.description || ""}
                   </p>

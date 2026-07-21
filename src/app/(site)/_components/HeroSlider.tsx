@@ -43,6 +43,7 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
                   ? "hero-slide-image--active z-10 opacity-100"
                   : "z-0 opacity-0"
               }`}
+              priority={index === 0}
               onError={() => {}}
             />
           ))}
