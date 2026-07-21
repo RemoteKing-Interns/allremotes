@@ -467,9 +467,13 @@ export async function printLabel(options: PrintLabelOptions): Promise<PrintLabel
       // Fix: bypass the SDK's network printer path and call the DYMO Connect web service
       // directly. The web service prints through the Windows print spooler (same as the
       // desktop app), which correctly sends data over TCP/9100.
-      const labelXmlToPrint = label.getLabelXml ? label.getLabelXml() : labelXml;
-      await printViaDymoWebService(printerName, labelXmlToPrint);
-      return { status: 'submitted', message: 'LAN print job sent to DYMO Connect. Check the printer.' };
+      const env = (window as any)[DYMO_FRAMEWORK_KEY];
+      if (env && typeof env.printLabelAsync === 'function') {
+        const labelXmlToPrint = label.getLabelXml ? label.getLabelXml() : labelXml;
+        await printViaDymoWebService(printerName, labelXmlToPrint);
+        return { status: 'submitted', message: 'LAN print job sent to DYMO Connect. Check the printer.' };
+      }
+      // Fall back to standard print path if web service API is unavailable
     }
     return await printAndWaitForCompletion(label, printerName);
   } catch (error) {
