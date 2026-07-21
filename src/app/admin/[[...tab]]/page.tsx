@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState, useRef, useMemo } from "react";
+import React, { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
@@ -5057,8 +5057,10 @@ function AdminProducts() {
   const [editableRkSku, setEditableRkSku] = useState(false);
   const [editableRkUrl, setEditableRkUrl] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState("");
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
   const isAutoSavingRef = useRef(false);
+  const productsRef = useRef(products);
+  productsRef.current = products;
   // Ref to skip the page-reset effect during URL filter restoration
   const isRestoringFilters = useRef(false);
   // Spreadsheet view toggle
@@ -5115,68 +5117,64 @@ function AdminProducts() {
     loadProducts();
   }, [getProducts]);
 
-  // Auto-save the currently edited product after a pause in edits
-  useEffect(() => {
+  // On-blur auto-save: persist the current product when a field loses focus or images change
+  const autoSave = useCallback(async () => {
     if (!editingId || isNewProduct || isSaving || isAutoSavingRef.current || !originalProduct) return;
-    const product = products.find((p) => p.id === editingId);
-    if (!product || JSON.stringify(originalProduct) === JSON.stringify(product)) return;
-    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      if (isAutoSavingRef.current || isSaving) return;
-      const current = products.find((p) => p.id === editingId);
-      if (!current || JSON.stringify(originalProduct) === JSON.stringify(current)) return;
+    const latestProducts = productsRef.current;
+    const current = latestProducts.find((p) => p.id === editingId);
+    if (!current || JSON.stringify(originalProduct) === JSON.stringify(current)) return;
 
-      const fieldNames = [
-        'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
-        'price', 'comparePrice', 'inStock', 'status', 'condition',
-        'quantity', 'binLocation', 'frequency_mhz', 'buttons',
-        'compatibility', 'description', 'instructions', 'features',
-        'specifications', 'seo_title', 'seo_description'
-      ];
-      const changedFields: string[] = [];
-      fieldNames.forEach((field) => {
-        if (JSON.stringify(originalProduct?.[field]) !== JSON.stringify(current[field])) {
-          changedFields.push(field);
-        }
-      });
-      const beforeImages = JSON.stringify(originalProduct?.images || []);
-      const afterImages = JSON.stringify(current.images || []);
-      if (beforeImages !== afterImages) changedFields.push('images');
-
-      isAutoSavingRef.current = true;
-      setAutoSaveStatus("Saving...");
-      try {
-        await setProducts([...products]);
-        setAutoSaveStatus("Saved");
-        activityLogger.action('product_auto_saved', {
-          productId: editingId,
-          name: current.name || current.title || '',
-          sku: current.sku || current.rk_sku || '',
-          savedFields: changedFields,
-          unsavedFields: [],
-          fieldCount: changedFields.length,
-        });
-      } catch (err: any) {
-        setAutoSaveStatus("Save failed");
-        activityLogger.error('product_auto_save_failed', {
-          productId: editingId,
-          name: current.name || current.title || '',
-          sku: current.sku || current.rk_sku || '',
-          savedFields: [],
-          unsavedFields: changedFields,
-          error: err?.message || 'Unknown error',
-        });
-      } finally {
-        isAutoSavingRef.current = false;
-        if (autoSaveTimeoutRef.current) {
-          autoSaveTimeoutRef.current = setTimeout(() => setAutoSaveStatus(""), 2000);
-        }
+    const fieldNames = [
+      'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
+      'price', 'comparePrice', 'inStock', 'status', 'condition',
+      'quantity', 'binLocation', 'frequency_mhz', 'buttons',
+      'compatibility', 'description', 'instructions', 'features',
+      'specifications', 'seo_title', 'seo_description'
+    ];
+    const changedFields: string[] = [];
+    fieldNames.forEach((field) => {
+      if (JSON.stringify(originalProduct?.[field]) !== JSON.stringify(current[field])) {
+        changedFields.push(field);
       }
-    }, 1200);
-    return () => {
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    };
-  }, [editingId, isNewProduct, originalProduct, products, isSaving, setProducts]);
+    });
+    const beforeImages = JSON.stringify(originalProduct?.images || []);
+    const afterImages = JSON.stringify(current.images || []);
+    if (beforeImages !== afterImages) changedFields.push('images');
+
+    if (changedFields.length === 0) return;
+
+    isAutoSavingRef.current = true;
+    setAutoSaveStatus("Saving...");
+    try {
+      await setProducts([...latestProducts]);
+      setAutoSaveStatus("Saved");
+      setLastAutoSavedAt(new Date());
+      setOriginalProduct(JSON.parse(JSON.stringify(current)));
+      activityLogger.action('product_auto_saved', {
+        productId: editingId,
+        name: current.name || current.title || '',
+        sku: current.sku || current.rk_sku || '',
+        savedFields: changedFields,
+        unsavedFields: [],
+        fieldCount: changedFields.length,
+      });
+    } catch (err: any) {
+      setAutoSaveStatus("Save failed");
+      activityLogger.error('product_auto_save_failed', {
+        productId: editingId,
+        name: current.name || current.title || '',
+        sku: current.sku || current.rk_sku || '',
+        savedFields: [],
+        unsavedFields: changedFields,
+        error: err?.message || 'Unknown error',
+      });
+    } finally {
+      isAutoSavingRef.current = false;
+      setTimeout(() => setAutoSaveStatus(""), 2000);
+    }
+  }, [editingId, isNewProduct, isSaving, originalProduct, setProducts]);
+
+  const onBlurSave = useCallback(() => { setTimeout(autoSave, 0); }, [autoSave]);
 
   // Reset valid image indices when switching products, but keep track of checked status per product
   useEffect(() => {
@@ -5398,6 +5396,19 @@ function AdminProducts() {
     setProductsState((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
     );
+  };
+
+  const startEditing = async (id: string) => {
+    try {
+      const resp = await fetch(`/api/products/${id}`, { cache: "no-store" });
+      if (resp.ok) {
+        const fresh = await resp.json();
+        setProductsState((prev) => prev.map((p) => (p.id === id ? { ...fresh, id } : p)));
+      }
+    } catch { /* proceed with stale data if fetch fails */ }
+    setEditingId(id);
+    setIsNewProduct(false);
+    setLastAutoSavedAt(null);
   };
 
   const remove = async (id) => {
@@ -5855,6 +5866,20 @@ function AdminProducts() {
               >
                 Cancel
               </button>
+              {autoSaveStatus && (
+                <span className={`text-xs font-medium ${
+                  autoSaveStatus === 'Saved' ? 'text-emerald-600' :
+                  autoSaveStatus === 'Saving...' ? 'text-amber-600' :
+                  'text-red-600'
+                }`}>
+                  {autoSaveStatus}
+                </span>
+              )}
+              {lastAutoSavedAt && !autoSaveStatus && (
+                <span className="text-xs text-neutral-500">
+                  Last saved {lastAutoSavedAt.toLocaleTimeString()}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={save}
@@ -5881,7 +5906,7 @@ function AdminProducts() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" onBlur={onBlurSave}>
             {/* Main Content - Left Column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Basic Info Card */}
@@ -6177,6 +6202,8 @@ function AdminProducts() {
                     onChange={(newImages) => {
                       update(productForEdit.id, "images", newImages);
                       update(productForEdit.id, "image", newImages[0] || "");
+                      // Images don't blur, so auto-save after the state update settles
+                      setTimeout(() => autoSave(), 50);
                     }}
                     onUpload={async (files) => {
                       const uploadedUrls: string[] = [];
@@ -6499,7 +6526,7 @@ function AdminProducts() {
                       <button
                         type="button"
                         className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white p-2 text-neutral-600 shadow-sm transition-colors hover:bg-neutral-50 hover:text-primary-dark"
-                        onClick={() => setEditingId(p.id)}
+                        onClick={() => startEditing(p.id)}
                         title="Edit"
                       >
                         <Edit size={18} />
@@ -6648,7 +6675,7 @@ function AdminProducts() {
                             <button
                               type="button"
                               className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white p-2 text-neutral-600 shadow-sm transition-colors hover:bg-neutral-50 hover:text-primary-dark"
-                              onClick={() => setEditingId(p.id)}
+                              onClick={() => startEditing(p.id)}
                               title="Edit"
                             >
                               <Edit size={16} />
