@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useStore } from "../context/StoreContext";
-import { generateNavigationFromProducts } from "../data/navigation";
 import MainHeaderBar from "./header/MainHeaderBar";
 import NavBar from "./header/NavBar";
 import TopInfoBar from "./header/TopInfoBar";
@@ -13,8 +12,7 @@ import TopInfoBar from "./header/TopInfoBar";
 const Header = () => {
   const { user, logout } = useAuth();
   const { getCartItemCount } = useCart();
-  const { getNavigation, getProducts, getPromotions } = useStore();
-  const navigationMenu = getNavigation();
+  const { getProducts, getPromotions } = useStore();
   const promotions = getPromotions();
   const router = useRouter();
   const pathname = usePathname();
@@ -28,47 +26,6 @@ const Header = () => {
   const searchRef = useRef(null);
   const hamburgerRef = useRef(null);
   const accountMenuCloseTimeoutRef = useRef(null);
-
-  // Get products for nav generation — prefer store cache, fallback to API fetch
-  const [isClient, setIsClient] = useState(false);
-  const [navProducts, setNavProducts] = useState([]);
-
-  useEffect(() => {
-    setIsClient(true);
-    const stored = getProducts();
-    if (stored && stored.length > 0) {
-      setNavProducts(stored);
-      return;
-    }
-    // Fetch from API if store is empty, but defer to avoid blocking LCP/TBT
-    const runWhenIdle = (typeof window !== "undefined" && window.requestIdleCallback)
-      ? window.requestIdleCallback
-      : (cb) => setTimeout(cb, 150);
-    runWhenIdle(() => {
-      fetch("/api/products")
-        .then((r) => r.json())
-        .then((data) => { if (Array.isArray(data) && data.length > 0) setNavProducts(data); })
-        .catch(() => {});
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Also sync when store products update (e.g. after store hydration)
-  const storeProducts = useMemo(() => getProducts() || [], [getProducts]);
-  useEffect(() => {
-    if (storeProducts.length > 0 && storeProducts.length !== navProducts.length) {
-      setNavProducts(storeProducts);
-    }
-  }, [storeProducts, navProducts.length]);
-
-  // Generate navigation from product categories (only on client to avoid hydration errors)
-  const dynamicNavigation = useMemo(() => {
-    if (!isClient || !navProducts || navProducts.length === 0) return null;
-    return generateNavigationFromProducts(navProducts);
-  }, [navProducts, isClient]);
-
-  const navItems = Object.entries(dynamicNavigation || {})
-    .filter(([, item]) => !item?.hidden)
-    .map(([key, item]) => ({ key, ...item }));
 
   const isRouteActive = (path) => {
     if (!path) return false;
@@ -236,7 +193,6 @@ const Header = () => {
       <NavBar
         user={user}
         pathname={pathname}
-        navItems={navItems}
         hamburgerRef={hamburgerRef}
         mobileDrawerOpen={mobileDrawerOpen}
         setMobileDrawerOpen={setMobileDrawerOpen}

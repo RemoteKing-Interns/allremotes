@@ -317,12 +317,14 @@ const Home = () => {
 
           <div className="container relative z-30 flex h-full items-center py-8 sm:py-10">
             <div className="relative w-full max-w-4xl min-h-[320px] sm:min-h-[360px] lg:min-h-[390px] text-left">
-              {heroSlides.map((slide, index) => (
+              {heroSlides.map((slide, index) => {
+                const hidden = index !== currentSlide;
+                return (
                 <div
                   key={`hero-content-${index}`}
-                  aria-hidden={index !== currentSlide}
+                  aria-hidden={hidden}
                   className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                    index === currentSlide
+                    !hidden
                       ? "hero-slide-content z-30 translate-y-0 opacity-100"
                       : "pointer-events-none z-0 translate-y-3 opacity-0"
                   }`}
@@ -342,18 +344,21 @@ const Home = () => {
                     {slide.subtitle}
                   </div>
 
-                  {React.createElement(index === currentSlide ? "h1" : "h2", { className: "mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white" }, slide.title)}
+                  {React.createElement(hidden ? "p" : "h1", { className: "mt-5 max-w-3xl text-[clamp(2rem,5vw,3.8rem)] font-extrabold leading-[1.1] tracking-[-0.03em] text-white" }, slide.title)}
                   <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
                     {slide.description}
                   </p>
 
                   <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                    <Link
-                      href={slide.primaryCtaPath}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark sm:w-auto"
-                    >
-                      {slide.primaryCta}
+                    {React.createElement(
+                      hidden ? "span" : (Link as any),
+                      {
+                        className: "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white shadow-soft transition-all hover:bg-primary-dark sm:w-auto",
+                        ...(hidden ? {} : { href: slide.primaryCtaPath }),
+                      } as any,
+                      slide.primaryCta,
                       <svg
+                        key="primary-arrow"
                         width="15"
                         height="15"
                         viewBox="0 0 24 24"
@@ -366,16 +371,18 @@ const Home = () => {
                         <path d="M5 12h14" />
                         <path d="m12 5 7 7-7 7" />
                       </svg>
-                    </Link>
-                    <Link
-                      href={slide.secondaryCtaPath}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15 sm:w-auto"
-                    >
-                      {slide.secondaryCta}
-                    </Link>
+                    )}
+                    {React.createElement(
+                      hidden ? "span" : (Link as any),
+                      {
+                        className: "inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/15 sm:w-auto",
+                        ...(hidden ? {} : { href: slide.secondaryCtaPath }),
+                      } as any,
+                      slide.secondaryCta
+                    )}
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </div>
 
