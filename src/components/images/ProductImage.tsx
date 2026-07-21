@@ -52,8 +52,10 @@ const ProductImage: React.FC<ProductImageProps> = ({
 }) => {
   const [error, setError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
-  const [signedSrc, setSignedSrc] = useState<string | null>(null);
-  const [fetching, setFetching] = useState(false);
+  const [signedSrc, setSignedSrc] = useState<string | null>(() =>
+    src && !isS3Url(src) ? src : null,
+  );
+  const [fetching, setFetching] = useState(() => Boolean(src && isS3Url(src)));
   const letter = fallbackLetter?.trim() || alt?.charAt(0)?.toUpperCase() || "R";
 
   const onErrorRef = React.useRef(onError);
@@ -64,16 +66,22 @@ const ProductImage: React.FC<ProductImageProps> = ({
   useEffect(() => {
     setError(false);
     setFallbackError(false);
-    setSignedSrc(null);
-    setFetching(false);
-  }, [src]);
-
-  useEffect(() => {
-    if (!src || !isS3Url(src)) {
-      setSignedSrc(src || null);
+    if (!src) {
+      setSignedSrc(null);
       setFetching(false);
       return;
     }
+    if (!isS3Url(src)) {
+      setSignedSrc(src);
+      setFetching(false);
+      return;
+    }
+    setSignedSrc(null);
+    setFetching(true);
+  }, [src]);
+
+  useEffect(() => {
+    if (!src || !isS3Url(src)) return;
 
     const key = getS3Key(src);
     if (!key) {

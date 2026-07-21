@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import ProductImage from "../images/ProductImage";
 import {
   Package,
   Mail,
@@ -581,7 +582,16 @@ export default function AdminAbandonedCarts() {
                           {(cart.items || []).map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center gap-3 bg-white rounded-lg border border-neutral-200 p-3">
                               {item.image ? (
-                                <img src={item.image} alt={item.name} className="h-12 w-12 rounded-md object-cover border border-neutral-200" />
+                                <div className="relative h-12 w-12 shrink-0">
+                                  <ProductImage
+                                    src={item.image}
+                                    alt={item.name}
+                                    fill
+                                    sizes="48px"
+                                    className="rounded-md object-cover border border-neutral-200"
+                                    loading="lazy"
+                                  />
+                                </div>
                               ) : (
                                 <div className="h-12 w-12 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-400">
                                   <Package size={18} />
@@ -727,7 +737,16 @@ export default function AdminAbandonedCarts() {
                 {(viewModal.items || []).map((item: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-3 bg-white rounded-lg border border-neutral-200 p-3">
                     {item.image ? (
-                      <img src={item.image} alt={item.name} className="h-14 w-14 rounded-md object-cover border border-neutral-200" />
+                      <div className="relative h-14 w-14 shrink-0">
+                        <ProductImage
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="56px"
+                          className="rounded-md object-cover border border-neutral-200"
+                          loading="lazy"
+                        />
+                      </div>
                     ) : (
                       <div className="h-14 w-14 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-400">
                         <Package size={20} />

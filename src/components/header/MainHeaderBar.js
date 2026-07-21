@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import ProductImage from "../images/ProductImage";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
 
@@ -92,16 +93,16 @@ const MainHeaderBar = ({
                         className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
                         onClick={handleProductClick}
                       >
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 rounded-lg border border-neutral-200 bg-white object-contain p-1"
-                          onError={(e) => {
-                            e.currentTarget.src = "/images/mainlogo.png";
-                          }}
-                        />
+                        <div className="relative h-12 w-12 shrink-0">
+                          <ProductImage
+                            src={product.image}
+                            alt={product.name}
+                            fill
+                            sizes="48px"
+                            className="rounded-lg border border-neutral-200 bg-white object-contain p-1"
+                            loading="lazy"
+                          />
+                        </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-semibold text-neutral-900">
                             {product.name}
