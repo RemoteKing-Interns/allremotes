@@ -5132,14 +5132,19 @@ function AdminProducts() {
       'specifications', 'seo_title', 'seo_description'
     ];
     const changedFields: string[] = [];
+    const changedFieldsDetail: Array<{ field: string; oldValue: any; newValue: any }> = [];
     fieldNames.forEach((field) => {
       if (JSON.stringify(originalProduct?.[field]) !== JSON.stringify(current[field])) {
         changedFields.push(field);
+        changedFieldsDetail.push({ field, oldValue: originalProduct?.[field], newValue: current[field] });
       }
     });
     const beforeImages = JSON.stringify(originalProduct?.images || []);
     const afterImages = JSON.stringify(current.images || []);
-    if (beforeImages !== afterImages) changedFields.push('images');
+    if (beforeImages !== afterImages) {
+      changedFields.push('images');
+      changedFieldsDetail.push({ field: 'images', oldValue: originalProduct?.images || [], newValue: current.images || [] });
+    }
 
     if (changedFields.length === 0) return;
 
@@ -5155,6 +5160,8 @@ function AdminProducts() {
         name: current.name || current.title || '',
         sku: current.sku || current.rk_sku || '',
         savedFields: changedFields,
+        changedFieldsDetail,
+        rawData: JSON.parse(JSON.stringify(current)),
         unsavedFields: [],
         fieldCount: changedFields.length,
       });
@@ -5259,6 +5266,17 @@ function AdminProducts() {
         oldValue: `count=${originalProduct?.images?.length || 0}`,
         newValue: `count=${updatedProduct.images?.length || 0}`,
       });
+    }
+
+    // If auto-save already persisted everything, skip the redundant DB write
+    if (changedFields.length === 0 && !isNewProduct) {
+      setPendingImageDeletions(new Set());
+      setSaved(true);
+      setEditingId(null);
+      setOriginalProduct(null);
+      setIsSaving(false);
+      setTimeout(() => setSaved(false), 3000);
+      return;
     }
 
     // Update local state first
