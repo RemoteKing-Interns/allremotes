@@ -22,6 +22,8 @@ function prettifyAction(action: string): string {
     "action:product_created": "Created product",
     "action:product_updated": "Updated product",
     "action:product_edit_started": "Started editing product",
+    "action:product_auto_saved": "Product Auto Saved",
+    "error:product_auto_save_failed": "Product Auto-Save Failed",
     "action:spreadsheet_bulk_save": "Bulk-saved products (spreadsheet)",
     "error:spreadsheet_save_failed": "Spreadsheet save failed",
     "error:product_save_failed": "Product save failed",
@@ -81,6 +83,12 @@ function summarizeLine(action: string, details: any): string | null {
 
   if (action === "action:product_created")
     return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""}${d.brand ? ` · ${d.brand}` : ""}`;
+
+  if (action === "action:product_auto_saved")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.fieldCount ?? 0} field${d.fieldCount === 1 ? "" : "s"} · ${(d.savedFields ?? []).join(", ")}`;
+
+  if (action === "error:product_auto_save_failed")
+    return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.error ?? ""}`;
 
   if (action === "action:product_edit_started")
     return `${d.name}${d.sku ? ` · SKU: ${d.sku}` : ""} · ${d.category ?? ""}${d.brand ? ` · ${d.brand}` : ""}`;
