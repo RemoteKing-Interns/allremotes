@@ -5127,9 +5127,10 @@ function AdminProducts() {
     const fieldNames = [
       'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
       'price', 'comparePrice', 'inStock', 'status', 'condition',
-      'quantity', 'binLocation', 'frequency_mhz', 'buttons',
+      'quantity', 'stock', 'binLocation', 'frequency_mhz', 'buttons',
       'compatibility', 'description', 'instructions', 'features',
-      'specifications', 'seo_title', 'seo_description'
+      'specification', 'specifications', 'specificationPdf',
+      'returns', 'tags', 'seller', 'seo_title', 'seo_description'
     ];
     const changedFields: string[] = [];
     const changedFieldsDetail: Array<{ field: string; oldValue: any; newValue: any }> = [];
@@ -5222,6 +5223,14 @@ function AdminProducts() {
       return;
     }
 
+    // Log that the user clicked Save
+    activityLogger.action('product_save_clicked', {
+      productId: editingId,
+      name: product.name || product.title || '',
+      sku: product.sku || product.rk_sku || '',
+      isNewProduct,
+    });
+
     setIsSaving(true);
 
     let updatedProduct = { ...product };
@@ -5245,9 +5254,10 @@ function AdminProducts() {
     const fieldNames = [
       'name', 'title', 'category', 'brand', 'sku', 'rk_sku', 'rk_url',
       'price', 'comparePrice', 'inStock', 'status', 'condition',
-      'quantity', 'binLocation', 'frequency_mhz', 'buttons',
+      'quantity', 'stock', 'binLocation', 'frequency_mhz', 'buttons',
       'compatibility', 'description', 'instructions', 'features',
-      'specifications', 'seo_title', 'seo_description'
+      'specification', 'specifications', 'specificationPdf',
+      'returns', 'tags', 'seller', 'seo_title', 'seo_description'
     ];
     const changedFields: Array<{ field: string; oldValue: string; newValue: string }> = [];
     fieldNames.forEach((field) => {
@@ -5268,22 +5278,24 @@ function AdminProducts() {
       });
     }
 
-    // If auto-save already persisted everything, skip the redundant DB write
-    if (changedFields.length === 0 && !isNewProduct) {
-      setPendingImageDeletions(new Set());
-      setSaved(true);
-      setEditingId(null);
-      setOriginalProduct(null);
-      setIsSaving(false);
-      setTimeout(() => setSaved(false), 3000);
-      return;
-    }
-
     // Update local state first
     setProductsState(updatedProducts);
 
+    // Wait for any in-progress auto-save to finish to avoid concurrent writes
+    if (isAutoSavingRef.current) {
+      // Auto-save is in flight — wait for it to complete before sending our write
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (!isAutoSavingRef.current) resolve();
+          else setTimeout(check, 50);
+        };
+        check();
+      });
+    }
+
     try {
-      // Save to store context (MongoDB/JSON) - wait for backend before refetching
+      // Always persist to DB — even if auto-save already ran, this ensures the
+      // full product (including fields auto-save may have missed) is committed.
       await setProducts(updatedProducts);
 
       activityLogger.action(isNewProduct ? 'product_created' : 'product_updated', {
@@ -5301,6 +5313,7 @@ function AdminProducts() {
         isNewProduct,
         changedFieldCount: changedFields.length,
         changedFields,
+        rawData: JSON.parse(JSON.stringify(updatedProduct)),
       });
     } catch (err: any) {
       activityLogger.error('product_save_failed', {
