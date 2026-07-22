@@ -304,16 +304,14 @@ function coerceServerProductsToLocal(productsFromServer) {
       : (typeof p?.imageIndex === 'number' ? p.imageIndex : 0);
 
     const product = {
+      ...p,
       id: p?.id ?? String(Date.now()),
-      name: p?.name ?? '',
       cat1: p?.cat1 ?? '',
       cat2: p?.cat2 ?? '',
-      category: p?.cat1 ?? p?.category ?? 'garage', // Fallback to cat1 or old category field
+      category: p?.cat1 ?? p?.category ?? 'garage',
       price: p?.price ?? 0,
       comparePrice: p?.comparePrice ?? 0,
-      description: p?.description ?? '',
       inStock: typeof p?.inStock === 'boolean' ? p.inStock : true,
-      brand: p?.brand ?? '',
       sku: p?.sku ?? p?.product_code ?? '',
       image: p?.image ?? images[0] ?? '',
       images,

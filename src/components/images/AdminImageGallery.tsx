@@ -159,6 +159,8 @@ const AdminImageGallery: React.FC<AdminImageGalleryProps> = ({
                 fallbackLetter={fallbackLetter}
                 className="w-full h-full object-contain p-2"
                 loading="lazy"
+                fill
+                sizes="(max-width: 640px) 50vw, 25vw"
                 onLoad={() => handleImageLoad(idx)}
                 onError={() => handleImageError(idx)}
               />
@@ -239,7 +241,7 @@ const AdminImageGallery: React.FC<AdminImageGalleryProps> = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full h-full max-w-4xl max-h-[90vh] p-4" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => setPreviewImage(null)}
@@ -264,8 +266,10 @@ const AdminImageGallery: React.FC<AdminImageGalleryProps> = ({
               src={previewImage}
               alt="Preview"
               fallbackLetter={fallbackLetter}
-              className="max-w-full max-h-[85vh] object-contain bg-white rounded-lg"
+              className="object-contain bg-white rounded-lg"
               loading="eager"
+              fill
+              sizes="(max-width: 1536px) 90vw, 90vw"
             />
           </div>
         </div>

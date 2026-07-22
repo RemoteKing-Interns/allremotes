@@ -219,6 +219,8 @@ const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                       fallbackLetter={letter}
                       className="h-full w-full object-contain p-2"
                       loading="lazy"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
                     />
                     <div className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-2 py-1 text-center text-xs text-white opacity-0 transition group-hover:opacity-100">
                       {filename}
