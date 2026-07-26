@@ -182,7 +182,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { orderId, status, trackingNumber, customerEmail } = await request.json();
+    const { orderId, status, trackingNumber, customerEmail, payment } = await request.json();
 
     if (!orderId || !status) {
       return NextResponse.json(
@@ -202,6 +202,10 @@ export async function PUT(request: Request) {
         status,
         updatedAt: now
       };
+
+      if (payment) {
+        updateData.payment = payment;
+      }
 
       if (status === 'shipped') {
         updateData.shippedAt = now;

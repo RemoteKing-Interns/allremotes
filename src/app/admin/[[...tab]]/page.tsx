@@ -1373,6 +1373,9 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   } | null>(null);
   const [changingShipping, setChangingShipping] = useState(false);
 
+  // ── Payment link preview / send modal
+  const [paymentLinkModal, setPaymentLinkModal] = useState<{ order: any; message: string; sending: boolean } | null>(null);
+
   // ── Unleashed modal: stock data fetched from Unleashed, cached per group label
   // allGroupStock: { [groupLabel]: { [productKey]: { unleashedQty, newStock } } }
   const [allGroupStock, setAllGroupStock] = useState<Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>>>({});
@@ -2607,6 +2610,85 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Print Label
+              </button>
+              <button
+                onClick={() => setPaymentLinkModal({ order: selectedOrder, message: "", sending: false })}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
+              >
+                Send Payment Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Link Preview Modal */}
+      {paymentLinkModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setPaymentLinkModal(null)}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between border-b border-neutral-200 pb-3">
+              <h3 className="text-lg font-bold text-neutral-900">Payment Link Preview</h3>
+              <button onClick={() => setPaymentLinkModal(null)} className="text-neutral-400 hover:text-neutral-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-lg bg-neutral-50 p-3 space-y-1 text-sm">
+                <p><strong>To:</strong> {paymentLinkModal.order.customer?.email}</p>
+                <p><strong>Order:</strong> #{paymentLinkModal.order.id}</p>
+                <p><strong>Amount:</strong> AU${Number(paymentLinkModal.order?.pricing?.total || 0).toFixed(2)}</p>
+                <p><strong>Subject:</strong> Payment Required - Order #{paymentLinkModal.order.id}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-neutral-700">Additional note (optional)</label>
+                <textarea
+                  value={paymentLinkModal.message}
+                  onChange={(e) => setPaymentLinkModal((prev) => (prev ? { ...prev, message: e.target.value } : prev))}
+                  rows={4}
+                  placeholder="e.g. Please complete payment within 24 hours..."
+                  className="w-full rounded-lg border border-neutral-300 p-3 text-sm focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setPaymentLinkModal(null)}
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setPaymentLinkModal((prev) => (prev ? { ...prev, sending: true } : prev));
+                  try {
+                    const resp = await fetch("/api/admin/orders/payment-link", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        orderId: paymentLinkModal.order.id,
+                        message: paymentLinkModal.message.trim(),
+                      }),
+                    });
+                    const data = await resp.json().catch(() => ({} as any));
+                    if (!resp.ok) {
+                      throw new Error(data.error || "Failed to create payment link");
+                    }
+                    const resultMessage = data.emailSent
+                      ? `Payment link emailed to ${paymentLinkModal.order.customer?.email}`
+                      : `Payment link created but email failed: ${data.emailError || "unknown error"}`;
+                    alert(`${resultMessage}\n\n${data.url}`);
+                    setPaymentLinkModal(null);
+                  } catch (err: any) {
+                    alert(`Payment link error: ${err.message}`);
+                    setPaymentLinkModal((prev) => (prev ? { ...prev, sending: false } : prev));
+                  }
+                }}
+                disabled={paymentLinkModal.sending}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {paymentLinkModal.sending ? "Sending..." : "Send Email"}
               </button>
             </div>
           </div>
@@ -4109,35 +4191,46 @@ function CustomersSection() {
   useEffect(() => {
     const loadCustomers = async () => {
       try {
-        const res = await fetch("/api/orders", { cache: "no-store" });
-        const orders = await res.json().catch(() => []);
-        
-        const customerMap = new Map();
+        const [customersRes, ordersRes] = await Promise.all([
+          fetch("/api/admin/customers", { cache: "no-store" }),
+          fetch("/api/orders", { cache: "no-store" }),
+        ]);
+
+        const customersData = await customersRes.json().catch(() => ({ customers: [] }));
+        const ordersData = await ordersRes.json().catch(() => []);
+        const orders = ordersData.orders || ordersData || [];
+
+        const orderStats = new Map<string, { orders: number; totalSpent: number; lastOrder: string | null }>();
         (orders || []).forEach((order: any) => {
           const email = order?.customer?.email;
           if (!email) return;
-          
-          if (customerMap.has(email)) {
-            const existing = customerMap.get(email);
-            existing.orders += 1;
-            existing.totalSpent += order?.pricing?.total || 0;
-            if (new Date(order.createdAt) > new Date(existing.lastOrder)) {
-              existing.lastOrder = order.createdAt;
-            }
-          } else {
-            customerMap.set(email, {
-              email,
-              name: order?.customer?.name || order?.shipping?.name || '',
-              phone: order?.customer?.phone || order?.shipping?.phone || '',
-              orders: 1,
-              totalSpent: order?.pricing?.total || 0,
-              lastOrder: order.createdAt,
-              address: order?.shipping ? `${order.shipping.city}, ${order.shipping.state}` : '',
-            });
+
+          const existing = orderStats.get(email) || { orders: 0, totalSpent: 0, lastOrder: null };
+          existing.orders += 1;
+          existing.totalSpent += order?.pricing?.total || 0;
+          const orderDate = order.createdAt;
+          if (orderDate && (!existing.lastOrder || new Date(orderDate) > new Date(existing.lastOrder))) {
+            existing.lastOrder = orderDate;
           }
+          orderStats.set(email, existing);
         });
-        
-        setCustomers(Array.from(customerMap.values()));
+
+        const mapped = (customersData.customers || []).map((customer: any) => {
+          const stats = orderStats.get(customer.email);
+          const addr = customer.address || {};
+          const addressStr = [addr.city, addr.state].filter(Boolean).join(', ');
+          return {
+            email: customer.email,
+            name: customer.name || 'Guest',
+            phone: customer.phone || '',
+            address: addressStr || '-',
+            orders: stats?.orders ?? (customer.totalOrders || 0),
+            totalSpent: stats?.totalSpent ?? (customer.totalSpent || 0),
+            lastOrder: stats?.lastOrder || customer.lastOrderDate || null,
+          };
+        });
+
+        setCustomers(mapped);
       } catch (err) {
         console.error(err);
       } finally {
@@ -4213,7 +4306,7 @@ function CustomersSection() {
                     <td className="px-4 py-3 text-center text-sm font-medium text-neutral-900">{customer.orders}</td>
                     <td className="px-4 py-3 text-right text-sm font-semibold text-neutral-900">AU${customer.totalSpent.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-sm text-neutral-500">
-                      {new Date(customer.lastOrder).toLocaleDateString()}
+                      {customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : '-'}
                     </td>
                   </tr>
                 ))}

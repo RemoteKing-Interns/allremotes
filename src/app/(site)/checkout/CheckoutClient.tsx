@@ -364,7 +364,7 @@ const Checkout = () => {
         currency: "AUD",
         subtotal: originalTotal,
         discountTotal,
-        total: discountedTotal,
+        total: finalTotal,
         hasMemberDiscount: Boolean(hasDiscount),
         memberDiscountRate: Number(discountRate || 0),
         couponDiscount: couponDiscount,
@@ -382,6 +382,7 @@ const Checkout = () => {
           quantity: item.quantity,
           unitPrice: unit,
           lineTotal: line,
+          price: unit,
         };
       });
 
@@ -400,31 +401,37 @@ const Checkout = () => {
         pricing,
         shipping,
         payment: {
-          method: 'direct',
-          status: 'confirmed'
+          method: 'stripe',
+          status: 'succeeded',
+          sessionId: null,
         },
+        status: 'processing',
         couponCode: couponDiscount > 0 ? couponCode.trim() : null,
       };
 
-      const resp = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(orderData),
+      const stripeResp = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: finalTotal,
+          items,
+          customer_email: customer.email,
+        }),
       });
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        throw new Error(data?.error || "Failed to place order");
+      const stripeData = await stripeResp.json().catch(() => null);
+      if (!stripeResp.ok || !stripeData?.url || !stripeData?.sessionId) {
+        throw new Error(stripeData?.error || 'Failed to start Stripe checkout');
       }
 
-      // Send confirmation emails
-      await sendOrderEmails(data?.id, orderData);
+      try {
+        sessionStorage.setItem(`pendingOrder_${stripeData.sessionId}`, JSON.stringify(orderData));
+      } catch (err) {
+        console.error('Failed to store pending order:', err);
+      }
 
-      setPlacedOrderId(data?.id || null);
-      setShowAnimation(true);
-      clearCart();
+      window.location.href = stripeData.url;
     } catch (err: any) {
       setPlaceError(err?.message || "Failed to place order");
-    } finally {
       setLoading(false);
     }
   };

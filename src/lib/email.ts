@@ -763,6 +763,56 @@ export async function sendVerificationEmail({
   });
 }
 
+// Payment request email with Stripe checkout link
+export async function sendPaymentRequestEmail({
+  to,
+  orderId,
+  customerName,
+  total,
+  paymentUrl,
+  message,
+}: {
+  to: string;
+  orderId: string;
+  customerName: string;
+  total: number;
+  paymentUrl: string;
+  message?: string;
+}) {
+  const noteHtml = message?.trim()
+    ? `<div class="info-box" style="background: #e8f5f3; border-left: 4px solid #1A7A6E;"><strong>Message from All Remotes:</strong><br>${message.replace(/\n/g, '<br>')}</div>`
+    : '';
+
+  const content = `
+    <h2>Payment required for order #${orderId}</h2>
+    <p>Hi ${customerName},</p>
+    <p>We are ready to process your order. Please complete payment using the secure link below:</p>
+    
+    <div class="info-box">
+      <strong>Order ID:</strong> #${orderId}<br>
+      <strong>Amount Due:</strong> AU$${total.toFixed(2)}
+    </div>
+
+    ${noteHtml}
+    
+    <center>
+      <a href="${paymentUrl}" class="button">Pay AU$${total.toFixed(2)} Now</a>
+    </center>
+    
+    <p style="margin-top: 20px; word-break: break-all; font-size: 12px; color: #6b7280;">
+      If the button does not work, copy this link:<br>${paymentUrl}
+    </p>
+    
+    <p>If you have any questions, please contact us at <a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a>.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Payment Required - Order #${orderId}`,
+    html: baseTemplate(content, 'Payment Required'),
+  });
+}
+
 // Test email configuration
 export async function testEmailConfiguration() {
   const transporter = createTransporter();
