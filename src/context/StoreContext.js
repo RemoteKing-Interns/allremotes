@@ -361,7 +361,20 @@ function saveProducts(productsWithImages) {
       image: primaryImage,
     };
   });
-  localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(toSave));
+  try {
+    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(toSave));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.products);
+        localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(toSave));
+      } catch (e2) {
+        console.warn('Product cache disabled: localStorage quota exceeded');
+      }
+    } else {
+      console.warn('Failed to save products to localStorage:', e);
+    }
+  }
 }
 
 const StoreContext = createContext();

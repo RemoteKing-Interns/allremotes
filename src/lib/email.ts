@@ -764,15 +764,13 @@ export async function sendVerificationEmail({
 }
 
 // Payment request email with Stripe checkout link
-export async function sendPaymentRequestEmail({
-  to,
+export function getPaymentRequestEmailHtml({
   orderId,
   customerName,
   total,
   paymentUrl,
   message,
 }: {
-  to: string;
   orderId: string;
   customerName: string;
   total: number;
@@ -806,10 +804,30 @@ export async function sendPaymentRequestEmail({
     <p>If you have any questions, please contact us at <a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a>.</p>
   `;
 
+  return baseTemplate(content, 'Payment Required');
+}
+
+export async function sendPaymentRequestEmail({
+  to,
+  orderId,
+  customerName,
+  total,
+  paymentUrl,
+  message,
+}: {
+  to: string;
+  orderId: string;
+  customerName: string;
+  total: number;
+  paymentUrl: string;
+  message?: string;
+}) {
+  const html = getPaymentRequestEmailHtml({ orderId, customerName, total, paymentUrl, message });
+
   return sendEmail({
     to,
     subject: `Payment Required - Order #${orderId}`,
-    html: baseTemplate(content, 'Payment Required'),
+    html,
   });
 }
 

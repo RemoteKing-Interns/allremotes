@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Search, Trash2, Download, RefreshCw, ChevronDown, ChevronRight, User, AlertTriangle, Info, CheckCircle, Bug, ArrowRight, Eye, ShoppingCart, Package, Settings, LogIn, LogOut, Zap, X } from "lucide-react";
+import { FileText, Search, Trash2, Download, RefreshCw, ChevronDown, ChevronRight, User, AlertTriangle, Info, CheckCircle, Bug, ArrowRight, Eye, ShoppingCart, Package, Settings, LogIn, LogOut, Zap, X, ExternalLink } from "lucide-react";
 import { LogEntry } from "../../lib/logger";
 import toast from "react-hot-toast";
 
@@ -131,6 +131,12 @@ function summarizeLine(action: string, details: any): string | null {
     return d.page ?? d.tab ?? null;
 
   return null;
+}
+
+function getProductCustomerUrl(action: string, details: any): string | null {
+  if (!action?.includes("product") || !details || typeof details !== "object") return null;
+  const id = details.productId || details.id || details._id || details.product_id;
+  return id ? `/product/${id}` : null;
 }
 
 function getActionIcon(action: string) {
@@ -361,6 +367,7 @@ export default function AdminLogs() {
               const expanded = expandedId === id;
               const ls = LEVEL_STYLES[log.level] ?? LEVEL_STYLES.debug;
               const hasDetails = log.details || log.route || log.method || log.statusCode || log.ip || log.error || log.metadata;
+              const productUrl = getProductCustomerUrl(log.action, log.details);
 
               return (
                 <li key={id}>
@@ -379,6 +386,16 @@ export default function AdminLogs() {
                       <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                         <span className="text-sm font-semibold text-neutral-900">{prettifyAction(log.action)}</span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-1 ring-inset ${ls.pill}`}>{ls.label}</span>
+                        {productUrl && (
+                          <span
+                            onClick={(e) => { e.stopPropagation(); window.open(productUrl, "_blank", "noopener,noreferrer"); }}
+                            role="button"
+                            title="Open product in customer view"
+                            className="inline-flex items-center gap-1 cursor-pointer text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-1 ring-inset bg-violet-100 text-violet-700 ring-violet-200 hover:bg-violet-200"
+                          >
+                            View <ExternalLink size={10} />
+                          </span>
+                        )}
                         {log.route && (
                           <span className="text-xs text-neutral-400 font-mono truncate max-w-xs">
                             {log.method && <span className="text-violet-500 font-bold">{log.method} </span>}{log.route}
