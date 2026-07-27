@@ -134,6 +134,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           fill={fill}
           sizes={sizes}
           priority={loading === "eager"}
+          unoptimized={isS3Url(fallbackSrc || "")}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -158,6 +159,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           fill={fill}
           sizes={sizes}
           priority={loading === "eager"}
+          unoptimized={isS3Url(fallbackSrc || "")}
           onError={() => {
             setFallbackError(true);
             onErrorRef.current?.();
@@ -179,6 +181,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
       fill={fill}
       sizes={sizes}
       priority={loading === "eager"}
+      unoptimized={isS3Url(imgSrc || "")}
       onError={() => {
         setError(true);
         onErrorRef.current?.();

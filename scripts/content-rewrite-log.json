@@ -1,0 +1,57 @@
+{
+  "runs": [
+    {
+      "startedAt": "2026-07-27T03:35:58.328Z",
+      "apply": true,
+      "skus": [
+        "AR-RMDB04B",
+        "AR-RSL02C",
+        "AR-RMDB01B",
+        "AR-RCG01B",
+        "AR-FR60",
+        "AR-RCG02B",
+        "AR-RNG04B",
+        "AR-RCM48"
+      ],
+      "changes": [
+        {
+          "sku": "AR-RMDB04B",
+          "updated": true
+        },
+        {
+          "sku": "AR-RSL02C",
+          "updated": true
+        },
+        {
+          "sku": "AR-RMDB01B",
+          "updated": true
+        },
+        {
+          "sku": "AR-RCG01B",
+          "updated": true
+        },
+        {
+          "sku": "AR-FR60",
+          "updated": true
+        },
+        {
+          "sku": "AR-RCG02B",
+          "updated": true
+        },
+        {
+          "sku": "AR-RNG04B",
+          "updated": true
+        },
+        {
+          "sku": "AR-RCM48",
+          "updated": true
+        }
+      ],
+      "finishedAt": "2026-07-27T03:35:58.621Z"
+    },
+    {
+      "sku": "AR-RCM48",
+      "status": "updated"
+    }
+  ]
+}

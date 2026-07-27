@@ -1,0 +1,30 @@
+{
+  "AR-RNG04B": {
+    "title": "Centsys Nova TX4 434MHz 4-Button Transmitter",
+    "brand": "Centsys",
+    "model": "Nova TX4",
+    "frequency": "434MHz (433.92MHz)",
+    "codingType": "Code-Hopping / Rolling Code",
+    "numberOfButtons": "4",
+    "battery": "GP23 12V Alkaline",
+    "batteryIncluded": "Yes",
+    "warranty": "12 Months",
+    "features": "<ul><li>Genuine or high-quality compatible replacement</li><li>Secure code-hopping / rolling code technology</li><li>Controls up to 4 devices</li><li>Compact, durable design</li><li>Battery included</li><li>Easy programming</li><li>Australian stock</li><li>12-month warranty</li></ul>",
+    "compatibility": "<p>Compatible with the following Centsys / Centurion receivers:</p><ul><li>✅ Nova Helix</li><li>✅ SupaHelix</li><li>✅ Nova</li><li>✅ Suitable replacement for Duratronic TM4</li></ul><p><strong>Not compatible with:</strong> all-green or all-red button models.</p>",
+    "instructions": "<h3>📖 Programming Instructions</h3><ol><li>Press and hold the desired button on the new remote.</li><li>Press the Learn or Link button on the Centsys receiver until the indicator confirms.</li><li>Release the remote button and test operation.</li></ol><h3>⚠️ Important Information</h3><ul><li>Please check your Centsys opener model before ordering.</li><li>The appearance of your existing remote does not always determine compatibility.</li><li>Incorrect model or frequency selection may result in the remote not working.</li><li>If you're unsure which remote you need, contact our team before purchasing.</li></ul><h3>Why choose All Remotes?</h3><ul><li>🇦🇺 Australian owned & operated</li><li>🚚 Fast Australia-wide shipping</li><li>🔋 Battery included</li><li>⭐ Quality tested products</li><li>📞 Friendly local support</li></ul>"
+  },
+  "AR-RCM48": {
+    "title": "Merlin M842RS 434MHz 2-Button Remote",
+    "brand": "Merlin",
+    "model": "M842RS",
+    "frequency": "433.92MHz (434MHz)",
+    "codingType": "Merlin Legacy RF",
+    "numberOfButtons": "2",
+    "battery": "CR2025 3V Lithium",
+    "batteryIncluded": "Yes",
+    "warranty": "12 Months",
+    "features": "<ul><li>Genuine or high-quality compatible replacement</li><li>Merlin Legacy RF technology</li><li>Controls up to 2 garage doors or gates</li><li>Compact keyring design with green buttons</li><li>Battery included</li><li>Easy programming</li><li>Australian stock</li><li>12-month warranty</li></ul>",
+    "compatibility": "<p>Compatible with Merlin openers sold between 2001 and 2007 (must have Learn button):</p><ul><li>✅ Merlin M430R Prolift</li><li>✅ Merlin M230T</li><li>✅ Merlin M-500 Receiver</li><li>✅ Merlin M-501 Receiver</li><li>✅ Merlin M-502 Receiver</li></ul><p><strong>Note:</strong> Not compatible with openers using DIP switches (not Learn button).</p>",
+    "instructions": "<h3>📖 Programming Instructions</h3><ol><li>Press and hold the desired button on your new remote.</li><li>Press and release the Learn button on the Merlin opener panel.</li><li>Wait for the opener light to flash or for confirmation.</li><li>Test the remote operation.</li></ol><h3>⚠️ Important Information</h3><ul><li>Please check your Merlin opener model before ordering.</li><li>The appearance of your existing remote does not always determine compatibility.</li><li>Incorrect model or frequency selection may result in the remote not working.</li><li>If you're unsure which remote you need, contact our team before purchasing.</li></ul><h3>Why choose All Remotes?</h3><ul><li>🇦🇺 Australian owned & operated</li><li>🚚 Fast Australia-wide shipping</li><li>🔋 Battery included</li><li>⭐ Quality tested products</li><li>📞 Friendly local support</li></ul>"
+  }
+}

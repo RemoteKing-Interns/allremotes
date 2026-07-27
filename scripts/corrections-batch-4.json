@@ -1,0 +1,31 @@
+{
+  "AR-FR60": {
+    "title": "Vicway FR60 433MHz 4-Button Remote",
+    "brand": "Vicway",
+    "model": "FR60",
+    "frequency": "433MHz",
+    "codingType": "Rolling Code",
+    "numberOfButtons": "4",
+    "battery": "27A 12V",
+    "batteryIncluded": "Yes",
+    "warranty": "12 Months",
+    "features": "<ul><li>Genuine or high-quality compatible replacement</li><li>Secure rolling code technology</li><li>Controls up to 4 doors</li><li>Compact, durable design</li><li>Battery included</li><li>Easy programming</li><li>Australian stock</li><li>12-month warranty</li></ul>",
+    "compatibility": "<p>Compatible with the following Vicway systems (original remote must have white buttons):</p><ul><li>✅ V-380G (original remote must have white buttons)</li><li>✅ V-380LM</li><li>✅ V-390G (original remote must have white buttons)</li><li>✅ FR46 Remote (must have white buttons)</li><li>✅ FR32 Remote</li><li>✅ FR42 Remote</li><li>✅ V500 Sliding Gate</li><li>✅ V600 Swing Gate</li></ul><p><strong>Not compatible with:</strong> motors installed 2015 and after, or remotes with blue buttons.</p>",
+    "instructions": "<h3>📖 Programming Instructions</h3><ol><li>Press and hold the desired button on your new remote.</li><li>Press and release the Learn button on the Vicway opener panel.</li><li>Wait for the opener indicator to confirm the code has been learned.</li><li>Test the remote operation.</li></ol><h3>⚠️ Important Information</h3><ul><li>Please check your Vicway opener model before ordering.</li><li>The appearance of your existing remote does not always determine compatibility.</li><li>Incorrect model or frequency selection may result in the remote not working.</li><li>If you're unsure which remote you need, contact our team before purchasing.</li></ul><h3>Why choose All Remotes?</h3><ul><li>🇦🇺 Australian owned & operated</li><li>🚚 Fast Australia-wide shipping</li><li>🔋 Battery included</li><li>⭐ Quality tested products</li><li>📞 Friendly local support</li></ul>"
+  },
+  "AR-RCG02B": {
+    "title": "Gliderol TM27 27MHz 1-Button Remote",
+    "brand": "Gliderol",
+    "model": "TM27",
+    "frequency": "27MHz",
+    "codingType": "Fixed Code (9 Dipswitch)",
+    "numberOfButtons": "1",
+    "battery": "23A 12V Alkaline",
+    "batteryIncluded": "Yes",
+    "dimensions": "78 x 40 x 16mm",
+    "warranty": "12 Months",
+    "features": "<ul><li>Genuine or high-quality compatible replacement</li><li>Fixed code dipswitch technology</li><li>Controls 1 garage door or gate</li><li>Compact, durable design</li><li>Battery included</li><li>Easy programming</li><li>Australian stock</li><li>12-month warranty</li></ul>",
+    "compatibility": "<p>Compatible with the following Gliderol systems:</p><ul><li>✅ Gliderol TM27 Black</li><li>✅ Gliderol GTX2</li><li>✅ Gliderol GTX3</li><li>✅ Gliderol GTX-M27</li><li>✅ Gliderol GTX-M27G</li><li>✅ Gliderol GT-27MTX-B</li><li>✅ Glidermatic De Luxe</li><li>✅ Matadoor 26.995</li></ul><p><strong>Note:</strong> The circuit board must be green. If the board is blue, your remote is the obsolete GTXU1 and requires a receiver upgrade.</p>",
+    "instructions": "<h3>📖 Programming Instructions</h3><ol><li>Open the remote and set the 9 dipswitches to match your existing remote or opener.</li><li>Ensure the dipswitch positions match exactly.</li><li>Test the remote operation.</li></ol><h3>⚠️ Important Information</h3><ul><li>Please check your Gliderol opener model before ordering.</li><li>The appearance of your existing remote does not always determine compatibility.</li><li>Incorrect model or frequency selection may result in the remote not working.</li><li>If you're unsure which remote you need, contact our team before purchasing.</li></ul><h3>Why choose All Remotes?</h3><ul><li>🇦🇺 Australian owned & operated</li><li>🚚 Fast Australia-wide shipping</li><li>🔋 Battery included</li><li>⭐ Quality tested products</li><li>📞 Friendly local support</li></ul>"
+  }
+}
