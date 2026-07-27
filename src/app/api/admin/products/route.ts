@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { getProductSkuForKey, normalizeSkuKey } from "@/lib/products-import";
-import { writeProductsJson } from "@/lib/products-json";
+import { readProductsJson, writeProductsJson } from "@/lib/products-json";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -127,6 +127,51 @@ export async function OPTIONS() {
     status: 200,
     headers: CORS_HEADERS,
   });
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(1000, Math.max(1, Number(searchParams.get("limit") || 200)));
+    const page = Math.max(1, Number(searchParams.get("page") || 1));
+    const search = String(searchParams.get("search") || "").trim().toLowerCase();
+
+    if (mongoEnabled()) {
+      const db = await getDb();
+      const col = db.collection("products");
+      const filter: any = {};
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { sku: { $regex: search, $options: "i" } },
+          { id: { $regex: search, $options: "i" } },
+        ];
+      }
+      const total = await col.countDocuments(filter);
+      const products = await col
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .toArray();
+      return NextResponse.json({ products, total, page, limit }, { headers: CORS_HEADERS });
+    }
+
+    const products = await readProductsJson();
+    const filtered = search
+      ? products.filter((p: any) =>
+          [p.name, p.sku, p.id, p.brand].some((v) => String(v || "").toLowerCase().includes(search))
+        )
+      : products;
+    const total = filtered.length;
+    const paginated = filtered.slice((page - 1) * limit, page * limit);
+    return NextResponse.json({ products: paginated, total, page, limit }, { headers: CORS_HEADERS });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to load products", details: err?.message || String(err) },
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
 }
 
 // POST handler - same as PUT but accepts { products: [...] } format

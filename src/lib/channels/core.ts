@@ -88,6 +88,7 @@ export interface ChannelAdapter {
   exchangeCode(code: string): Promise<ChannelCredentials>;
   refreshCredentials(credentials: ChannelCredentials): Promise<ChannelCredentials>;
   publishListing(payload: ListingPayload, creds: ChannelCredentials): Promise<{ externalId: string; externalUrl?: string }>;
+  updateListing?(externalId: string, payload: ListingPayload, creds: ChannelCredentials): Promise<{ externalId: string; externalUrl?: string }>;
   updateInventory(sku: string, price: number, quantity: number, creds: ChannelCredentials): Promise<void>;
   fetchOrders(since: Date, creds: ChannelCredentials): Promise<ChannelOrder[]>;
 }

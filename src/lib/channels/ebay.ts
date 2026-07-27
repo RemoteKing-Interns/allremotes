@@ -197,9 +197,75 @@ export const eBayAdapter: ChannelAdapter = {
     });
 
     return {
-      externalId: String(publishRes?.listingId || offerId),
+      externalId: offerId,
       externalUrl: publishRes?.listingId ? `https://www.ebay.com.au/itm/${publishRes.listingId}` : undefined,
     };
+  },
+
+  async updateListing(offerId: string, payload: ListingPayload, creds: ChannelCredentials) {
+    const inventoryItem: any = {
+      sku: payload.sku,
+      locale: "en-AU",
+      product: {
+        title: payload.title,
+        description: payload.description,
+        imageUrls: payload.images,
+        aspects: { Brand: [payload.brand] },
+      },
+      condition: mapCondition(payload.condition),
+      availability: {
+        shipToLocationAvailability: { quantity: payload.quantity },
+      },
+    };
+
+    if (payload.mpn) inventoryItem.product.aspects.MPN = [payload.mpn];
+    if (payload.gtin) inventoryItem.product.aspects.GTIN = [payload.gtin];
+    if (payload.packageWeight) {
+      inventoryItem.packageWeightAndSize = {
+        weight: { value: payload.packageWeight.value, unit: payload.packageWeight.unit },
+      };
+      if (payload.packageDimensions) {
+        inventoryItem.packageWeightAndSize.packageDimensions = {
+          length: { value: payload.packageDimensions.length, unit: payload.packageDimensions.unit },
+          width: { value: payload.packageDimensions.width, unit: payload.packageDimensions.unit },
+          height: { value: payload.packageDimensions.height, unit: payload.packageDimensions.unit },
+          unit: payload.packageDimensions.unit,
+        };
+      }
+    }
+
+    await ebayFetch(`/sell/inventory/v1/inventory_item/${encodeURIComponent(payload.sku)}`, {
+      method: "PUT",
+      accessToken: creds.accessToken,
+      body: JSON.stringify(inventoryItem),
+    });
+
+    const offerPayload = {
+      sku: payload.sku,
+      marketplaceId: EBAY_MARKETPLACE_ID,
+      format: "FIXED_PRICE",
+      availableQuantity: payload.quantity,
+      categoryId: payload.category || "0",
+      listingDescription: payload.description,
+      pricingSummary: {
+        price: { currency: payload.currency, value: payload.price.toFixed(2) },
+      },
+      listingPolicies: {
+        fulfillmentPolicyId: EBAY_FULFILLMENT_POLICY_ID,
+        paymentPolicyId: EBAY_PAYMENT_POLICY_ID,
+        returnPolicyId: EBAY_RETURN_POLICY_ID,
+      },
+      merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
+    };
+
+    await ebayFetch(`/sell/inventory/v1/offer/${offerId}`, {
+      method: "PUT",
+      accessToken: creds.accessToken,
+      body: JSON.stringify(offerPayload),
+      headers: { "Content-Language": "en-AU" },
+    });
+
+    return { externalId: offerId };
   },
 
   async updateInventory(sku, price, quantity, creds) {
