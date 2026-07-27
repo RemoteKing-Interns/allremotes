@@ -129,7 +129,7 @@ export default function ChannelManager() {
       const res = await fetch("/api/channels/ebay/auth");
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else setMessage(data.error || "No auth URL returned");
+      else setMessage(data.details || data.error || "No auth URL returned");
     } catch (err: any) {
       setMessage(`eBay auth failed: ${err?.message || err}`);
     }
