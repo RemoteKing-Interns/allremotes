@@ -5324,7 +5324,8 @@ function AdminProducts() {
       'quantity', 'stock', 'binLocation', 'frequency_mhz', 'buttons',
       'compatibility', 'description', 'instructions', 'features',
       'specification', 'specifications', 'specificationPdf',
-      'returns', 'tags', 'seller', 'seo_title', 'seo_description'
+      'returns', 'tags', 'seller', 'seo_title', 'seo_description',
+      'mpn', 'gtin', 'packageWeight', 'packageDimensions', 'marketplaceCategory'
     ];
     const changedFields: string[] = [];
     const changedFieldsDetail: Array<{ field: string; oldValue: any; newValue: any }> = [];
@@ -5451,7 +5452,8 @@ function AdminProducts() {
       'quantity', 'stock', 'binLocation', 'frequency_mhz', 'buttons',
       'compatibility', 'description', 'instructions', 'features',
       'specification', 'specifications', 'specificationPdf',
-      'returns', 'tags', 'seller', 'seo_title', 'seo_description'
+      'returns', 'tags', 'seller', 'seo_title', 'seo_description',
+      'mpn', 'gtin', 'packageWeight', 'packageDimensions', 'marketplaceCategory'
     ];
     const changedFields: Array<{ field: string; oldValue: string; newValue: string }> = [];
     fieldNames.forEach((field) => {

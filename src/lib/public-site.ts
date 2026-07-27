@@ -37,6 +37,16 @@ type ProductRecord = {
   imgIndex?: number; // New: which image is primary/thumbnail (default 0)
   condition?: string; // New: e.g., Brand New
   description?: string;
+  mpn?: string;
+  gtin?: string;
+  packageWeight?: { value: number; unit: string };
+  packageDimensions?: { length: number; width: number; height: number; unit: string };
+  marketplaceCategory?: {
+    ebay?: string;
+    amazon?: string;
+    temu?: string;
+    aliexpress?: string;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 };
