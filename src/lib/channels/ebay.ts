@@ -132,7 +132,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_US",
+      locale: "en_AU",
       product: {
         title,
         description: payload.description,
@@ -169,7 +169,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
     });
 
     const offerPayload = {
@@ -194,7 +194,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "POST",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
     });
     const offerId = offerRes?.offerId;
     if (!offerId) throw new Error("eBay did not return an offerId");
@@ -219,7 +219,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_US",
+      locale: "en_AU",
       product: {
         title,
         description: payload.description,
@@ -252,7 +252,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
     });
 
     const offerPayload = {
@@ -277,7 +277,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
     });
 
     return { externalId: offerId };
@@ -380,7 +380,7 @@ export async function createEbayInventoryLocation(
     method: "POST",
     accessToken,
     body: JSON.stringify(body),
-    headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+    headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
   });
 }
 
