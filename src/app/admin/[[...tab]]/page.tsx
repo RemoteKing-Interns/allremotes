@@ -2126,7 +2126,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                               {new Date(o.createdAt || Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
                             </td>
                             <td className="px-4 py-4">
-                              <div className="font-medium text-neutral-900">{o?.customer?.email || "Guest User"}</div>
+                              <div className="font-medium text-neutral-900">{o?.customer?.fullName || o?.customer?.email || o?.customer?.username || "Guest User"}</div>
                             </td>
                             <td className="px-4 py-4">
                               {(() => {
