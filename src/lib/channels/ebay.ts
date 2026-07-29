@@ -446,6 +446,21 @@ export async function guessCategory(query: string): Promise<string | null> {
   return list[0]?.category?.categoryId || null;
 }
 
+export async function getRequiredAspects(categoryId: string): Promise<Record<string, string[]>> {
+  const appToken = await getApplicationAccessToken();
+  const aspects: any = await ebayFetch(
+    `/commerce/taxonomy/v1/category_tree/${categoryId}/get_item_aspects_for_category`,
+    { method: "GET", accessToken: appToken }
+  );
+  const result: Record<string, string[]> = {};
+  for (const aspect of aspects?.aspects || []) {
+    if (aspect?.required) {
+      result[aspect.aspectName] = aspect?.aspectValues?.map((v: any) => v.value) || [];
+    }
+  }
+  return result;
+}
+
 function mapEbayOrderStatus(status: string): string {
   if (!status) return "processing";
   const s = status.toLowerCase();

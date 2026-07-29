@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongo";
-import { eBayAdapter, guessCategory } from "@/lib/channels/ebay";
+import { eBayAdapter, guessCategory, getRequiredAspects } from "@/lib/channels/ebay";
 import { getValidCredentials, saveChannelListing } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 
@@ -32,6 +32,7 @@ function buildListingPayload(product: any) {
     category: product.marketplaceCategory?.ebay,
     mpn: product.mpn,
     gtin: product.gtin,
+    type: product.type,
     packageWeight: product.packageWeight,
     packageDimensions: product.packageDimensions,
   };
@@ -75,6 +76,13 @@ export async function GET(request: Request) {
 
     product.marketplaceCategory = { ...product.marketplaceCategory, ebay: categoryId };
     const payload = buildListingPayload(product);
+
+    // Fetch required aspects for the category and add to payload
+    const requiredAspects = await getRequiredAspects(categoryId);
+    if (requiredAspects.Type && !payload.type) {
+      payload.type = requiredAspects.Type[0] || "Remote Control";
+    }
+
     const { externalId, externalUrl } = await eBayAdapter.publishListing(payload, creds);
     await saveChannelListing({
       productId,
