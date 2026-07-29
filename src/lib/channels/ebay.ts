@@ -156,10 +156,10 @@ export const eBayAdapter: ChannelAdapter = {
         weight: { value: payload.packageWeight.value, unit: payload.packageWeight.unit },
       };
       if (payload.packageDimensions) {
-        inventoryItem.packageWeightAndSize.packageDimensions = {
-          length: { value: payload.packageDimensions.length, unit: payload.packageDimensions.unit },
-          width: { value: payload.packageDimensions.width, unit: payload.packageDimensions.unit },
-          height: { value: payload.packageDimensions.height, unit: payload.packageDimensions.unit },
+        inventoryItem.packageWeightAndSize.dimensions = {
+          length: payload.packageDimensions.length,
+          width: payload.packageDimensions.width,
+          height: payload.packageDimensions.height,
           unit: payload.packageDimensions.unit,
         };
       }
@@ -239,10 +239,10 @@ export const eBayAdapter: ChannelAdapter = {
         weight: { value: payload.packageWeight.value, unit: payload.packageWeight.unit },
       };
       if (payload.packageDimensions) {
-        inventoryItem.packageWeightAndSize.packageDimensions = {
-          length: { value: payload.packageDimensions.length, unit: payload.packageDimensions.unit },
-          width: { value: payload.packageDimensions.width, unit: payload.packageDimensions.unit },
-          height: { value: payload.packageDimensions.height, unit: payload.packageDimensions.unit },
+        inventoryItem.packageWeightAndSize.dimensions = {
+          length: payload.packageDimensions.length,
+          width: payload.packageDimensions.width,
+          height: payload.packageDimensions.height,
           unit: payload.packageDimensions.unit,
         };
       }
