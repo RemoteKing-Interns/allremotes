@@ -383,6 +383,21 @@ export async function createEbayInventoryLocation(
   });
 }
 
+export async function guessCategory(query: string, creds: ChannelCredentials): Promise<string | null> {
+  const treeRes: any = await ebayFetch(
+    `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${EBAY_MARKETPLACE_ID}`,
+    { method: "GET", accessToken: creds.accessToken }
+  );
+  const treeId = treeRes?.categoryTreeId;
+  if (!treeId) return null;
+  const suggestions: any = await ebayFetch(
+    `/commerce/taxonomy/v1/category_tree/${treeId}/get_category_suggestions?q=${encodeURIComponent(query)}`,
+    { method: "GET", accessToken: creds.accessToken }
+  );
+  const list = suggestions?.categorySuggestions || [];
+  return list[0]?.category?.categoryId || null;
+}
+
 function mapEbayOrderStatus(status: string): string {
   if (!status) return "processing";
   const s = status.toLowerCase();
