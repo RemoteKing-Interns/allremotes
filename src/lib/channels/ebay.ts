@@ -453,6 +453,7 @@ export async function getRequiredAspects(categoryId: string): Promise<Record<str
     { method: "GET", accessToken: appToken }
   );
   const treeId = treeRes?.categoryTreeId;
+  console.error(`[getRequiredAspects] categoryId=${categoryId}, treeId=${treeId}, fullTreeRes=`, treeRes);
   if (!treeId) return {};
   const aspects: any = await ebayFetch(
     `/commerce/taxonomy/v1/category_tree/${treeId}/get_item_aspects_for_category?category_id=${categoryId}`,
