@@ -38,11 +38,14 @@ async function ebayFetch(path: string, options: RequestInit & { accessToken: str
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "Accept-Language": "en-US",
+      "Content-Language": "en-US",
       ...(rest.headers || {}),
     },
   });
   if (!res.ok) {
     const text = await res.text();
+    console.error(`[eBayFetch] ${res.status} ${path}`, { responseHeaders: Object.fromEntries(res.headers.entries()), body: text });
     throw new Error(`eBay API error ${res.status}: ${text}`);
   }
   if (res.status === 204) return null;
