@@ -382,12 +382,34 @@ export const eBayAdapter: ChannelAdapter = {
     const orders = res?.orders || [];
     return orders.map((order: any): ChannelOrder => {
       const buyer = order.buyer || {};
-      const fulfillment = order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo || {};
+      const instruction = order.fulfillmentStartInstructions?.[0] || {};
+      const shipTo = instruction.shippingStep?.shipTo || {};
+      const finalDest = instruction.finalDestinationAddress;
       const registration = buyer.buyerRegistrationAddress || {};
-      const shipTo = fulfillment || {};
-      const contact = shipTo.contactAddress || registration.contactAddress || {};
-      const addr1 = contact.addressLine1 || "";
-      const addr2 = contact.addressLine2 || "";
+
+      const isEbayToken = (val: any) =>
+        typeof val === "string" && /^ebay:/i.test(val.trim());
+
+      const hasRealStreet = (addr: any) =>
+        addr &&
+        ((!isEbayToken(addr.addressLine1) && addr.addressLine1) ||
+          (!isEbayToken(addr.addressLine2) && addr.addressLine2));
+
+      const addressCandidates = [
+        shipTo.contactAddress,
+        finalDest,
+        registration.contactAddress,
+      ].filter(Boolean);
+      const addressContact =
+        addressCandidates.find((a) => hasRealStreet(a)) || shipTo.contactAddress || finalDest || registration.contactAddress || {};
+
+      const rawLines = [
+        addressContact.addressLine1,
+        addressContact.addressLine2,
+      ].filter((l) => typeof l === "string" && l.trim().length > 0) as string[];
+      const cleanLines = rawLines.filter((l) => !isEbayToken(l.trim()));
+      const addr1 = cleanLines[0] || "";
+      const addr2 = cleanLines[1];
 
       const phone =
         shipTo.primaryPhone?.phoneNumber ||
@@ -436,10 +458,10 @@ export const eBayAdapter: ChannelAdapter = {
         shipping: {
           address: addr1,
           address2: addr2 || undefined,
-          city: contact.city || "",
-          state: contact.stateOrProvince || "",
-          zipCode: contact.postalCode || "",
-          country: contact.countryCode || contact.country,
+          city: addressContact.city || "",
+          state: addressContact.stateOrProvince || "",
+          zipCode: addressContact.postalCode || "",
+          country: addressContact.countryCode || addressContact.country,
           phone,
         },
         items: lineItems,
