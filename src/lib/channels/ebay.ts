@@ -384,16 +384,35 @@ export async function createEbayInventoryLocation(
   });
 }
 
-export async function guessCategory(query: string, creds: ChannelCredentials): Promise<string | null> {
+async function getApplicationAccessToken(): Promise<string> {
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    scope: "https://api.ebay.com/oauth/api_scope",
+  });
+  const res = await fetch(`${EBAY_API_URL}/identity/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthHeader(),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`eBay app token failed: ${await res.text()}`);
+  const data = await res.json();
+  return data.access_token;
+}
+
+export async function guessCategory(query: string): Promise<string | null> {
+  const appToken = await getApplicationAccessToken();
   const treeRes: any = await ebayFetch(
     `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${EBAY_MARKETPLACE_ID}`,
-    { method: "GET", accessToken: creds.accessToken }
+    { method: "GET", accessToken: appToken }
   );
   const treeId = treeRes?.categoryTreeId;
   if (!treeId) return null;
   const suggestions: any = await ebayFetch(
     `/commerce/taxonomy/v1/category_tree/${treeId}/get_category_suggestions?q=${encodeURIComponent(query)}`,
-    { method: "GET", accessToken: creds.accessToken }
+    { method: "GET", accessToken: appToken }
   );
   const list = suggestions?.categorySuggestions || [];
   return list[0]?.category?.categoryId || null;

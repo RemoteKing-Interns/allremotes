@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     let categoryId = product.marketplaceCategory?.ebay;
 
     if (!categoryId || categoryId === "0") {
-      categoryId = await guessCategory(product.name || product.sku || product.id, creds);
+      categoryId = await guessCategory(product.name || product.sku || product.id);
       if (categoryId) {
         await db
           .collection("products")
