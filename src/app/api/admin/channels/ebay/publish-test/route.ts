@@ -5,12 +5,12 @@ import { getValidCredentials, saveChannelListing } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 import { toPublicImageUrls } from "@/lib/channels/images";
 
-function buildListingPayload(product: any, suffix?: string) {
+async function buildListingPayload(product: any, suffix?: string) {
   const baseSku = product.sku || getProductSkuForKey(product) || product.id;
   const sku = suffix ? `${baseSku}-${suffix}` : baseSku;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
-  const images = toPublicImageUrls(
+  const images = await toPublicImageUrls(
     Array.isArray(product.images) && product.images.length > 0
       ? product.images
       : product.image
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     }
 
     const suffix = Date.now().toString();
-    const payload = buildListingPayload(product, suffix);
+    const payload = await buildListingPayload(product, suffix);
     (payload as any).aspects = productAspects;
 
     const { externalId, externalUrl } = await eBayAdapter.publishListing(payload as any, creds);

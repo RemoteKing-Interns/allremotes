@@ -15,11 +15,11 @@ async function loadProduct(productId: string) {
   return db.collection("products").findOne({ id: productId });
 }
 
-function buildListingPayload(product: any): ListingPayload {
+async function buildListingPayload(product: any): Promise<ListingPayload> {
   const sku = product.sku || getProductSkuForKey(product) || product.id;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
-  const images = toPublicImageUrls(
+  const images = await toPublicImageUrls(
     Array.isArray(product.images) && product.images.length > 0
       ? product.images
       : product.image
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 async function pushToChannel(channel: Marketplace, productId: string, fields: string[]) {
   const product = await loadProduct(productId);
   if (!product) throw new Error(`Product ${productId} not found`);
-  const payload = buildListingPayload(product);
+  const payload = await buildListingPayload(product);
   const creds = await getValidCredentials(channel);
 
   const existing = await getChannelListings(productId).then((list) =>
@@ -176,7 +176,7 @@ export async function POST(request: Request) {
       if (!productId) return NextResponse.json({ error: "Missing productId" }, { status: 400 });
       const product = await loadProduct(productId);
       if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-      const payload = buildListingPayload(product);
+      const payload = await buildListingPayload(product);
       const channel: Marketplace = body?.channel || "ebay";
       const creds = await getValidCredentials(channel);
       const { externalId, externalUrl } = await getAdapter(channel).publishListing(payload, creds);
