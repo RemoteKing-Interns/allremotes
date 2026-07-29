@@ -448,8 +448,14 @@ export async function guessCategory(query: string): Promise<string | null> {
 
 export async function getRequiredAspects(categoryId: string): Promise<Record<string, string[]>> {
   const appToken = await getApplicationAccessToken();
+  const treeRes: any = await ebayFetch(
+    `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${EBAY_MARKETPLACE_ID}`,
+    { method: "GET", accessToken: appToken }
+  );
+  const treeId = treeRes?.categoryTreeId;
+  if (!treeId) return {};
   const aspects: any = await ebayFetch(
-    `/commerce/taxonomy/v1/category_tree/${categoryId}/get_item_aspects_for_category`,
+    `/commerce/taxonomy/v1/category_tree/${treeId}/get_item_aspects_for_category?category_id=${categoryId}`,
     { method: "GET", accessToken: appToken }
   );
   const result: Record<string, string[]> = {};
