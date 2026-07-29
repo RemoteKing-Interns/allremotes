@@ -2553,9 +2553,20 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                   <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Customer & Shipping</h3>
                   <div className="rounded-lg border border-neutral-200 p-3 space-y-1">
                     <p className="font-medium text-sm text-neutral-900">{selectedOrder?.customer?.fullName || 'N/A'}</p>
-                    <p className="text-xs text-neutral-600">{selectedOrder?.customer?.email}</p>
+                    {selectedOrder?.customer?.email && (
+                      <p className="text-xs text-neutral-600">{selectedOrder.customer.email}</p>
+                    )}
+                    {selectedOrder?.customer?.username && (
+                      <p className="text-xs text-neutral-600">eBay user: {selectedOrder.customer.username}</p>
+                    )}
+                    {selectedOrder?.customer?.phone && (
+                      <p className="text-xs text-neutral-600">📞 {selectedOrder.customer.phone}</p>
+                    )}
                     <div className="mt-1.5 border-t border-neutral-100 pt-1.5">
                       <p className="text-sm text-neutral-900">{selectedOrder?.shipping?.address}</p>
+                      {selectedOrder?.shipping?.address2 && (
+                        <p className="text-sm text-neutral-900">{selectedOrder.shipping.address2}</p>
+                      )}
                       <p className="text-xs text-neutral-600">
                         {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
                       </p>
@@ -2573,6 +2584,12 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                       <span className="text-neutral-600">Subtotal</span>
                       <span>AU${Number(selectedOrder?.pricing?.subtotal || 0).toFixed(2)}</span>
                     </div>
+                    {selectedOrder?.pricing?.shipping > 0 && (
+                      <div className="flex justify-between py-0.5 text-sm text-neutral-600">
+                        <span>Shipping</span>
+                        <span>AU${Number(selectedOrder.pricing.shipping).toFixed(2)}</span>
+                      </div>
+                    )}
                     {selectedOrder?.pricing?.discountTotal > 0 && (
                       <div className="flex justify-between py-0.5 text-sm text-emerald-600">
                         <span>Discount</span>

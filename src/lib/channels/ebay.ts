@@ -382,7 +382,43 @@ export const eBayAdapter: ChannelAdapter = {
     const orders = res?.orders || [];
     return orders.map((order: any): ChannelOrder => {
       const buyer = order.buyer || {};
-      const shipping = order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo || {};
+      const fulfillment = order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo || {};
+      const registration = buyer.buyerRegistrationAddress || {};
+      const shipTo = fulfillment || {};
+      const contact = shipTo.contactAddress || registration.contactAddress || {};
+      const addr1 = contact.addressLine1 || "";
+      const addr2 = contact.addressLine2 || "";
+
+      const phone =
+        shipTo.primaryPhone?.phoneNumber ||
+        shipTo.primaryPhone?.number ||
+        registration.primaryPhone?.phoneNumber ||
+        registration.primaryPhone?.number ||
+        "";
+
+      const fullName = shipTo.fullName || registration.fullName || buyer.username || "eBay buyer";
+      const email = shipTo.email || registration.email || buyer.email || undefined;
+      const username = buyer.username || undefined;
+
+      const lineItems = (order.lineItems || []).map((line: any) => ({
+        sku: line.sku || line.legacyItemId || "",
+        name: line.title || "",
+        quantity: Number(line.quantity || 1),
+        unitPrice: Number(line.lineItemCost?.value || 0) / (Number(line.quantity) || 1),
+        lineTotal: Number(line.lineItemCost?.value || 0),
+      }));
+
+      const lineSubtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
+      const currency = order.pricingSummary?.total?.currency || order.pricingSummary?.priceSubtotal?.currency || "AUD";
+      const subtotal = Number(
+        order.pricingSummary?.priceSubtotal?.value ??
+        order.pricingSummary?.subtotal?.value ??
+        lineSubtotal
+      );
+      const shippingCost = Number(order.pricingSummary?.deliveryCost?.value || 0);
+      const discount = Number(order.pricingSummary?.discount?.value || 0);
+      const total = Number(order.pricingSummary?.total?.value ?? lineSubtotal + shippingCost - discount);
+
       return {
         orderId: order.orderId,
         channel: "ebay",
@@ -392,27 +428,27 @@ export const eBayAdapter: ChannelAdapter = {
         createdAt: order.creationDate,
         updatedAt: order.lastModifiedDate || order.creationDate,
         customer: {
-          fullName: shipping.fullName || buyer.username || "eBay buyer",
-          email: buyer.email || undefined,
+          fullName,
+          email,
+          username,
+          phone,
         },
         shipping: {
-          address: shipping.contactAddress?.addressLine1 || "",
-          city: shipping.contactAddress?.city || "",
-          state: shipping.contactAddress?.stateOrProvince || "",
-          zipCode: shipping.contactAddress?.postalCode || "",
-          country: shipping.contactAddress?.countryCode,
+          address: addr1,
+          address2: addr2 || undefined,
+          city: contact.city || "",
+          state: contact.stateOrProvince || "",
+          zipCode: contact.postalCode || "",
+          country: contact.countryCode || contact.country,
+          phone,
         },
-        items: (order.lineItems || []).map((line: any) => ({
-          sku: line.sku,
-          name: line.title,
-          quantity: line.quantity,
-          unitPrice: Number(line.lineItemCost?.value || 0) / (line.quantity || 1),
-          lineTotal: Number(line.lineItemCost?.value || 0),
-        })),
+        items: lineItems,
         pricing: {
-          currency: order.pricingSummary?.total?.currency || "AUD",
-          subtotal: Number(order.pricingSummary?.subtotal?.value || 0),
-          total: Number(order.pricingSummary?.total?.value || 0),
+          currency,
+          subtotal,
+          total,
+          shipping: shippingCost || undefined,
+          discountTotal: discount || undefined,
         },
       };
     });

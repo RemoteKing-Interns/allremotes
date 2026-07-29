@@ -43,13 +43,17 @@ export interface ChannelOrder {
   customer: {
     fullName: string;
     email?: string;
+    username?: string;
+    phone?: string;
   };
   shipping: {
     address: string;
+    address2?: string;
     city: string;
     state: string;
     zipCode: string;
     country?: string;
+    phone?: string;
   };
   items: Array<{
     sku: string;
@@ -62,6 +66,8 @@ export interface ChannelOrder {
     currency: string;
     subtotal: number;
     total: number;
+    shipping?: number;
+    discountTotal?: number;
   };
 }
 
