@@ -53,12 +53,18 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId") || undefined;
-    const [ebayAccount, listings] = await Promise.all([
-      getMarketplaceAccount("ebay"),
+    const channels: Marketplace[] = ["ebay", "amazon", "temu", "aliexpress"];
+    const [listings, ...accounts] = await Promise.all([
       getChannelListings(productId),
+      ...channels.map((c) => getMarketplaceAccount(c)),
     ]);
+    const accountMap: Record<string, { connected: boolean; updatedAt?: string }> = {};
+    channels.forEach((channel, idx) => {
+      const account = accounts[idx];
+      accountMap[channel] = { connected: account?.connected || false, updatedAt: account?.updatedAt };
+    });
     return NextResponse.json({
-      accounts: { ebay: { connected: ebayAccount?.connected || false, updatedAt: ebayAccount?.updatedAt } },
+      accounts: accountMap,
       listings,
     });
   } catch (err: any) {
