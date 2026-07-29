@@ -83,9 +83,38 @@ export async function getChannelListings(productId?: string): Promise<ChannelLis
 export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
   if (!mongoEnabled()) return;
   const db = await getDb();
+  const now = new Date().toISOString();
   await db.collection(ORDERS_COLLECTION).updateOne(
     { orderId: order.orderId },
-    { $set: { ...order, updatedAt: new Date().toISOString() } },
+    { $set: { ...order, updatedAt: now } },
+    { upsert: true }
+  );
+
+  // Also upsert into the main orders collection so channel orders show up
+  // in the admin Orders UI (labels, Starshipit, Unleashed, status, etc.)
+  // alongside site orders. Fields owned by the channel are always refreshed;
+  // status/createdAt are only set on first insert so local admin changes
+  // (e.g. marking shipped) aren't clobbered on resync.
+  const id = `${order.channel.toUpperCase()}-${order.externalOrderId}`;
+  await db.collection("orders").updateOne(
+    { id },
+    {
+      $set: {
+        channel: order.channel,
+        externalOrderId: order.externalOrderId,
+        externalStatus: order.externalStatus,
+        customer: order.customer,
+        shipping: order.shipping,
+        items: order.items,
+        pricing: order.pricing,
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        id,
+        status: order.status,
+        createdAt: order.createdAt,
+      },
+    },
     { upsert: true }
   );
 }

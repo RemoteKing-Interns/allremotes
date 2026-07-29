@@ -2115,8 +2115,11 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                               />
                             </td>
                             <td className="px-4 py-4">
-                              <span className="inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
+                              <span className="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
                                 #{o.id}
+                                {o.channel === "ebay" && (
+                                  <span className="rounded bg-yellow-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-yellow-800">eBay</span>
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-4 font-medium text-neutral-600">
