@@ -43,13 +43,18 @@ async function ebayFetch(path: string, options: RequestInit & { accessToken: str
       ...(rest.headers || {}),
     },
   });
+  if (res.status === 204) return null;
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     console.error(`[eBayFetch] ${res.status} ${path}`, { responseHeaders: Object.fromEntries(res.headers.entries()), body: text });
     throw new Error(`eBay API error ${res.status}: ${text}`);
   }
-  if (res.status === 204) return null;
-  return res.json().catch(() => null);
+  const data = text ? JSON.parse(text) : null;
+  if (data?.errors?.length) {
+    console.error(`[eBayFetch] ${res.status} ${path}`, { responseHeaders: Object.fromEntries(res.headers.entries()), body: text });
+    throw new Error(`eBay API error ${res.status}: ${text}`);
+  }
+  return data;
 }
 
 export const eBayAdapter: ChannelAdapter = {
