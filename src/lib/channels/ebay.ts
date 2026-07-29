@@ -334,6 +334,42 @@ export const eBayAdapter: ChannelAdapter = {
   },
 };
 
+export async function createEbayInventoryLocation(
+  {
+    city,
+    state,
+    postcode,
+    country = "AU",
+  }: {
+    city: string;
+    state: string;
+    postcode: string;
+    country?: string;
+  },
+  accessToken: string
+) {
+  const body = {
+    location: {
+      address: {
+        city,
+        stateOrProvince: state,
+        postalCode: postcode,
+        country,
+      },
+      name: "All Remotes Warehouse",
+    },
+    locationTypes: ["WAREHOUSE"],
+    merchantLocationStatus: "ENABLED",
+  };
+
+  await ebayFetch(`/sell/inventory/v1/location/${encodeURIComponent(EBAY_MERCHANT_LOCATION_KEY)}`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+    headers: { "Content-Language": "en-AU" },
+  });
+}
+
 function mapEbayOrderStatus(status: string): string {
   if (!status) return "processing";
   const s = status.toLowerCase();
