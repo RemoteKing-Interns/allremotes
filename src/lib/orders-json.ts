@@ -5,6 +5,9 @@ const ORDERS_JSON_PATH = path.resolve(process.cwd(), "orders.json");
 
 export type OrderDoc = {
   id: string;
+  source?: "web" | "pos" | "ebay" | "amazon" | "temu" | "aliexpress";
+  externalOrderId?: string;
+  externalStatus?: string;
   status: "processing" | "shipped" | "delivered" | "cancelled";
   createdAt: string;
   updatedAt: string;
