@@ -356,7 +356,6 @@ export async function createEbayInventoryLocation(
         postalCode: postcode,
         country,
       },
-      name: "All Remotes Warehouse",
     },
     locationTypes: ["WAREHOUSE"],
     merchantLocationStatus: "ENABLED",
