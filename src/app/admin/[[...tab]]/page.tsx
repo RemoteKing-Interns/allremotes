@@ -2553,28 +2553,19 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                   <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Customer & Shipping</h3>
                   <div className="rounded-lg border border-neutral-200 p-3 space-y-1">
                     <p className="font-medium text-sm text-neutral-900">{selectedOrder?.customer?.fullName || 'N/A'}</p>
-                    {selectedOrder?.customer?.email && (
-                      <p className="text-xs text-neutral-600">{selectedOrder.customer.email}</p>
+                    {selectedOrder?.shipping?.address && (
+                      <p className="text-sm text-neutral-900">{selectedOrder.shipping.address}</p>
                     )}
-                    {selectedOrder?.customer?.username && (
-                      <p className="text-xs text-neutral-600">eBay user: {selectedOrder.customer.username}</p>
+                    {selectedOrder?.shipping?.address2 && (
+                      <p className="text-sm text-neutral-900">{selectedOrder.shipping.address2}</p>
                     )}
-                    {selectedOrder?.customer?.phone && (
-                      <p className="text-xs text-neutral-600">📞 {selectedOrder.customer.phone}</p>
+                    <p className="text-xs text-neutral-600">
+                      {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
+                    </p>
+                    <p className="text-xs text-neutral-600">{selectedOrder?.shipping?.country}</p>
+                    {(selectedOrder?.customer?.phone || selectedOrder?.shipping?.phone) && (
+                      <p className="text-xs text-neutral-600">📞 {selectedOrder?.customer?.phone || selectedOrder?.shipping?.phone}</p>
                     )}
-                    <div className="mt-1.5 border-t border-neutral-100 pt-1.5">
-                      <p className="text-sm text-neutral-900">{selectedOrder?.shipping?.address}</p>
-                      {selectedOrder?.shipping?.address2 && (
-                        <p className="text-sm text-neutral-900">{selectedOrder.shipping.address2}</p>
-                      )}
-                      <p className="text-xs text-neutral-600">
-                        {selectedOrder?.shipping?.city}, {selectedOrder?.shipping?.state} {selectedOrder?.shipping?.zipCode}
-                      </p>
-                      <p className="text-xs text-neutral-600">{selectedOrder?.shipping?.country}</p>
-                      {selectedOrder?.shipping?.phone && (
-                        <p className="text-xs text-neutral-600">📞 {selectedOrder.shipping.phone}</p>
-                      )}
-                    </div>
                   </div>
                 </div>
                 <div>
