@@ -132,7 +132,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_AU",
+      locale: "en_US",
       product: {
         title,
         description: payload.description,
@@ -169,7 +169,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
+      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
     });
 
     const offerPayload = {
@@ -190,13 +190,27 @@ export const eBayAdapter: ChannelAdapter = {
       merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
     };
 
-    const offerRes: any = await ebayFetch("/sell/inventory/v1/offer", {
-      method: "POST",
-      accessToken: creds.accessToken,
-      body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
-    });
-    const offerId = offerRes?.offerId;
+    let offerId: string | undefined;
+    try {
+      const offerRes: any = await ebayFetch("/sell/inventory/v1/offer", {
+        method: "POST",
+        accessToken: creds.accessToken,
+        body: JSON.stringify(offerPayload),
+        headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
+      });
+      offerId = offerRes?.offerId;
+    } catch (err: any) {
+      const msg = err?.message || "";
+      const bodyText = msg.replace(/^eBay API error \d+:\s*/, "");
+      try {
+        const data = JSON.parse(bodyText);
+        const error = data?.errors?.[0];
+        if (error?.errorId === 25002) {
+          offerId = error.parameters?.find((p: any) => p.name === "offerId")?.value;
+        }
+      } catch {}
+      if (!offerId) throw err;
+    }
     if (!offerId) throw new Error("eBay did not return an offerId");
 
     const publishRes: any = await ebayFetch(`/sell/inventory/v1/offer/${offerId}/publish`, {
@@ -219,7 +233,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_AU",
+      locale: "en_US",
       product: {
         title,
         description: payload.description,
@@ -252,7 +266,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
+      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
     });
 
     const offerPayload = {
@@ -277,7 +291,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
+      headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
     });
 
     return { externalId: offerId };
@@ -380,7 +394,7 @@ export async function createEbayInventoryLocation(
     method: "POST",
     accessToken,
     body: JSON.stringify(body),
-    headers: { "Content-Language": "en-AU", "Accept-Language": "en-AU" },
+    headers: { "Content-Language": "en-US", "Accept-Language": "en-US" },
   });
 }
 
