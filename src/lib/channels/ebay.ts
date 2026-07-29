@@ -217,6 +217,16 @@ export const eBayAdapter: ChannelAdapter = {
     }
     if (!offerId) throw new Error("eBay did not return an offerId");
 
+    // If offer already existed, update it to pick up latest inventory item aspects
+    try {
+      await ebayFetch(`/sell/inventory/v1/offer/${offerId}`, {
+        method: "PUT",
+        accessToken: creds.accessToken,
+        body: JSON.stringify(offerPayload),
+        headers: { "Content-Language": "en-US" },
+      });
+    } catch {}
+
     const publishRes: any = await ebayFetch(`/sell/inventory/v1/offer/${offerId}/publish`, {
       method: "POST",
       accessToken: creds.accessToken,
