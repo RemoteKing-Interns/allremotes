@@ -2,6 +2,7 @@ import { getAdapter, type ListingPayload } from "@/lib/channels";
 import { getValidCredentials, saveChannelListing, saveChannelOrder, getMarketplaceAccount, getChannelListings } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 import { toPublicImageUrls } from "@/lib/channels/images";
+import { buildFullDescription } from "@/lib/channels/description";
 import { logChannelEvent } from "@/lib/channels/audit";
 import type { ChannelOrder, Marketplace } from "@/lib/channels/core";
 import { NextResponse } from "next/server";
@@ -28,7 +29,7 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
   );
   const title = `${product.brand || "ALLREMOTES"} ${product.model || product.name || sku}`.trim();
   const description =
-    product.description?.trim() ||
+    buildFullDescription(product) ||
     `High-quality ${title}. Professional replacement remote with reliable performance.`;
 
   return {

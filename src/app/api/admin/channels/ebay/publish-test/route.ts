@@ -4,6 +4,7 @@ import { eBayAdapter, guessCategory, getRequiredAspects } from "@/lib/channels/e
 import { getValidCredentials, saveChannelListing } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 import { toPublicImageUrls } from "@/lib/channels/images";
+import { buildFullDescription } from "@/lib/channels/description";
 
 async function buildListingPayload(product: any, suffix?: string) {
   const baseSku = product.sku || getProductSkuForKey(product) || product.id;
@@ -19,7 +20,7 @@ async function buildListingPayload(product: any, suffix?: string) {
   );
   const title = `${product.brand || "ALLREMOTES"} ${product.model || product.name || sku}`.trim();
   const description =
-    product.description?.trim() ||
+    buildFullDescription(product) ||
     `High-quality ${title}. Professional replacement remote with reliable performance.`;
 
   return {
