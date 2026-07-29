@@ -140,7 +140,7 @@ export const eBayAdapter: ChannelAdapter = {
         title,
         description: payload.description,
         imageUrls: payload.images,
-        aspects: {
+        aspects: payload.aspects || {
           Brand: [payload.brand],
           Type: [payload.type || "Remote Control"],
         },

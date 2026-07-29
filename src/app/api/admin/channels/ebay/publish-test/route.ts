@@ -4,8 +4,9 @@ import { eBayAdapter, guessCategory, getRequiredAspects } from "@/lib/channels/e
 import { getValidCredentials, saveChannelListing } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 
-function buildListingPayload(product: any) {
-  const sku = product.sku || getProductSkuForKey(product) || product.id;
+function buildListingPayload(product: any, suffix?: string) {
+  const baseSku = product.sku || getProductSkuForKey(product) || product.id;
+  const sku = suffix ? `${baseSku}-${suffix}` : baseSku;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
   const images =
@@ -75,15 +76,30 @@ export async function GET(request: Request) {
     }
 
     product.marketplaceCategory = { ...product.marketplaceCategory, ebay: categoryId };
-    const payload = buildListingPayload(product);
 
-    // Fetch required aspects for the category and add to payload
+    // Fetch required aspects from eBay Taxonomy API and build a complete aspect map
     const requiredAspects = await getRequiredAspects(categoryId);
-    if (requiredAspects.Type && !payload.type) {
-      payload.type = requiredAspects.Type[0] || "Remote Control";
+    const productAspects: Record<string, string[]> = {};
+    for (const [aspectName, values] of Object.entries(requiredAspects)) {
+      if (aspectName.toLowerCase() === "type") {
+        productAspects[aspectName] = values.length ? [values[0]] : ["Remote Control"];
+      } else if (aspectName.toLowerCase() === "brand") {
+        productAspects[aspectName] = [product.brand || "ALLREMOTES"];
+      } else if (aspectName.toLowerCase() === "mpn") {
+        if (product.mpn) productAspects[aspectName] = [product.mpn];
+        else productAspects[aspectName] = ["Does Not Apply"];
+      } else if (aspectName.toLowerCase() === "model") {
+        productAspects[aspectName] = [product.model || product.name || "Generic"];
+      } else {
+        productAspects[aspectName] = values.length ? [values[0]] : ["Unbranded"];
+      }
     }
 
-    const { externalId, externalUrl } = await eBayAdapter.publishListing(payload, creds);
+    const suffix = Date.now().toString();
+    const payload = buildListingPayload(product, suffix);
+    (payload as any).aspects = productAspects;
+
+    const { externalId, externalUrl } = await eBayAdapter.publishListing(payload as any, creds);
     await saveChannelListing({
       productId,
       sku: payload.sku,
