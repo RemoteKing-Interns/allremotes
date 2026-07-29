@@ -504,8 +504,8 @@ export async function getRequiredAspects(categoryId: string): Promise<Record<str
   );
   const result: Record<string, string[]> = {};
   for (const aspect of aspects?.aspects || []) {
-    if (aspect?.required) {
-      result[aspect.aspectName] = aspect?.aspectValues?.map((v: any) => v.value) || [];
+    if (aspect?.aspectConstraint?.aspectRequired) {
+      result[aspect.localizedAspectName || aspect.aspectName] = aspect?.aspectValues?.map((v: any) => v.localizedValue || v.value) || [];
     }
   }
   return result;
