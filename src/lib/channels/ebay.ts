@@ -102,11 +102,13 @@ export const eBayAdapter: ChannelAdapter = {
 
   async refreshCredentials(credentials) {
     if (!credentials.refreshToken) throw new Error("No refresh token available");
-    const body = new URLSearchParams({
+    const scope = credentials.scopes?.join(" ");
+    const params: Record<string, string> = {
       grant_type: "refresh_token",
       refresh_token: credentials.refreshToken,
-      scope: SCOPES.join(" "),
-    }).toString().replace(/\+/g, "%20");
+    };
+    if (scope) params.scope = scope;
+    const body = new URLSearchParams(params).toString().replace(/\+/g, "%20");
     const res = await fetch(`${EBAY_API_URL}/identity/v1/oauth2/token`, {
       method: "POST",
       headers: {
