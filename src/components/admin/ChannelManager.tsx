@@ -40,10 +40,10 @@ const ALL_FIELDS = [
   { key: "package", label: "Package" },
 ];
 
-const ALL_CHANNELS = ["ebay"];
+const ALL_CHANNELS = ["ebay", "amazon", "temu", "aliexpress"];
 
 export default function ChannelManager() {
-  const [status, setStatus] = useState<{ ebay?: { connected: boolean; updatedAt?: string } }>({});
+  const [status, setStatus] = useState<Record<string, { connected: boolean; updatedAt?: string }>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [listings, setListings] = useState<ChannelListing[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -124,14 +124,14 @@ export default function ChannelManager() {
     );
   };
 
-  const connectEbay = async () => {
+  const connect = async (channel: string) => {
     try {
-      const res = await fetch("/api/channels/ebay/auth");
+      const res = await fetch(`/api/channels/${channel}/auth`);
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else setMessage(data.details || data.error || "No auth URL returned");
+      else setMessage(data.details || data.error || `No auth URL returned for ${channel}`);
     } catch (err: any) {
-      setMessage(`eBay auth failed: ${err?.message || err}`);
+      setMessage(`${channel} auth failed: ${err?.message || err}`);
     }
   };
 
@@ -203,22 +203,25 @@ export default function ChannelManager() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-xl border border-neutral-200 p-4">
-          <h2 className="text-lg font-semibold mb-2">eBay Account</h2>
-          <p className="text-sm text-neutral-600 mb-3">
-            {status.ebay?.connected ? `Connected` : "Not connected"}
-            {status.ebay?.updatedAt ? ` · ${status.ebay.updatedAt}` : ""}
-          </p>
-          <button
-            type="button"
-            onClick={connectEbay}
-            disabled={loading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50"
-          >
-            {status.ebay?.connected ? "Reconnect" : "Connect"}
-          </button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {ALL_CHANNELS.map((channel) => (
+          <div key={channel} className="rounded-xl border border-neutral-200 p-4">
+            <h2 className="text-lg font-semibold mb-2 capitalize">{channel} Account</h2>
+            <p className="text-sm text-neutral-600 mb-3">
+              {status[channel]?.connected ? `Connected` : "Not connected"}
+              {status[channel]?.updatedAt ? ` · ${status[channel].updatedAt}` : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => connect(channel)}
+              disabled={loading}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50"
+            >
+              {status[channel]?.connected ? "Reconnect" : "Connect"}
+            </button>
+          </div>
+        ))}
+      </div>
 
         <div className="rounded-xl border border-neutral-200 p-4 md:col-span-2">
           <h2 className="text-lg font-semibold mb-2">Push Controls</h2>
@@ -272,7 +275,6 @@ export default function ChannelManager() {
             </button>
           </div>
         </div>
-      </div>
 
       <div className="rounded-xl border border-neutral-200 p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
