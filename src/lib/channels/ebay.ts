@@ -205,28 +205,41 @@ export const eBayAdapter: ChannelAdapter = {
       merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
     };
 
+    // eBay inventory item may not be immediately queryable; retry offer creation
     let offerId: string | undefined;
-    try {
-      const offerRes: any = await ebayFetch("/sell/inventory/v1/offer", {
-        method: "POST",
-        accessToken: creds.accessToken,
-        body: JSON.stringify(offerPayload),
-        headers: { "Content-Language": "en-US" },
-      });
-      offerId = offerRes?.offerId;
-    } catch (err: any) {
-      const msg = err?.message || "";
-      const bodyText = msg.replace(/^eBay API error \d+:\s*/, "");
+    let lastOfferError: any;
+    for (let attempt = 0; attempt < 3 && !offerId; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
       try {
-        const data = JSON.parse(bodyText);
-        const error = data?.errors?.[0];
-        if (error?.errorId === 25002) {
-          offerId = error.parameters?.find((p: any) => p.name === "offerId")?.value;
+        const offerRes: any = await ebayFetch("/sell/inventory/v1/offer", {
+          method: "POST",
+          accessToken: creds.accessToken,
+          body: JSON.stringify(offerPayload),
+          headers: { "Content-Language": "en-US" },
+        });
+        offerId = offerRes?.offerId;
+        break;
+      } catch (err: any) {
+        lastOfferError = err;
+        const msg = err?.message || "";
+        const isNotFound = msg.includes("could not be found or is not available");
+        if (!isNotFound) {
+          const bodyText = msg.replace(/^eBay API error \d+:\s*/, "");
+          try {
+            const data = JSON.parse(bodyText);
+            const error = data?.errors?.[0];
+            if (error?.errorId === 25002) {
+              offerId = error.parameters?.find((p: any) => p.name === "offerId")?.value;
+              if (offerId) break;
+            }
+          } catch {}
+          throw err;
         }
-      } catch {}
-      if (!offerId) throw err;
+      }
     }
-    if (!offerId) throw new Error("eBay did not return an offerId");
+    if (!offerId) throw lastOfferError || new Error("eBay did not return an offerId");
 
     // If offer already existed, update it to pick up latest inventory item aspects
     try {
