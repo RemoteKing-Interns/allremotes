@@ -123,11 +123,17 @@ export const eBayAdapter: ChannelAdapter = {
       );
     }
 
+    const title = payload.title.slice(0, 80);
+
+    if (!payload.category || payload.category === "0") {
+      throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
+    }
+
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en-AU",
+      locale: "en_AU",
       product: {
-        title: payload.title,
+        title,
         description: payload.description,
         imageUrls: payload.images,
         aspects: {
@@ -162,6 +168,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
+      headers: { "Content-Language": "en_AU" },
     });
 
     const offerPayload = {
@@ -186,7 +193,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "POST",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-AU" },
+      headers: { "Content-Language": "en_AU" },
     });
     const offerId = offerRes?.offerId;
     if (!offerId) throw new Error("eBay did not return an offerId");
@@ -203,11 +210,17 @@ export const eBayAdapter: ChannelAdapter = {
   },
 
   async updateListing(offerId: string, payload: ListingPayload, creds: ChannelCredentials) {
+    const title = payload.title.slice(0, 80);
+
+    if (!payload.category || payload.category === "0") {
+      throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
+    }
+
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en-AU",
+      locale: "en_AU",
       product: {
-        title: payload.title,
+        title,
         description: payload.description,
         imageUrls: payload.images,
         aspects: { Brand: [payload.brand] },
@@ -238,6 +251,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
+      headers: { "Content-Language": "en_AU" },
     });
 
     const offerPayload = {
@@ -262,7 +276,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-AU" },
+      headers: { "Content-Language": "en_AU" },
     });
 
     return { externalId: offerId };
@@ -365,7 +379,7 @@ export async function createEbayInventoryLocation(
     method: "POST",
     accessToken,
     body: JSON.stringify(body),
-    headers: { "Content-Language": "en-AU" },
+    headers: { "Content-Language": "en_AU" },
   });
 }
 
