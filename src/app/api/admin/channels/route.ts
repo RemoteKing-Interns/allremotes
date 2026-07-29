@@ -2,6 +2,7 @@ import { getAdapter, type ListingPayload } from "@/lib/channels";
 import { getValidCredentials, saveChannelListing, saveChannelOrder, getMarketplaceAccount, getChannelListings } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 import { toPublicImageUrls } from "@/lib/channels/images";
+import { logChannelEvent } from "@/lib/channels/audit";
 import type { ChannelOrder, Marketplace } from "@/lib/channels/core";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongo";
@@ -83,45 +84,53 @@ async function pushToChannel(channel: Marketplace, productId: string, fields: st
     fields.includes("price") &&
     fields.includes("quantity");
 
-  if (existing && onlyInventory) {
-    await getAdapter(channel).updateInventory(payload.sku, payload.price, payload.quantity, creds);
-    await saveChannelListing({
-      productId,
-      sku: payload.sku,
-      channel,
-      externalId: existing.externalId,
-      externalUrl: existing.externalUrl,
-      status: "listed",
-      lastSyncedAt: new Date().toISOString(),
-    });
-    return { productId, channel, externalId: existing.externalId, mode: "inventory" };
-  }
+  try {
+    if (existing && onlyInventory) {
+      await getAdapter(channel).updateInventory(payload.sku, payload.price, payload.quantity, creds);
+      await saveChannelListing({
+        productId,
+        sku: payload.sku,
+        channel,
+        externalId: existing.externalId,
+        externalUrl: existing.externalUrl,
+        status: "listed",
+        lastSyncedAt: new Date().toISOString(),
+      });
+      await logChannelEvent({ channel, action: "updateInventory", productId, sku: payload.sku, result: existing.externalId });
+      return { productId, channel, externalId: existing.externalId, mode: "inventory" };
+    }
 
-  if (existing && getAdapter(channel).updateListing) {
-    const { externalId, externalUrl } = await getAdapter(channel).updateListing(existing.externalId, payload, creds);
+    if (existing && getAdapter(channel).updateListing) {
+      const { externalId, externalUrl } = await getAdapter(channel).updateListing(existing.externalId, payload, creds);
+      await saveChannelListing({
+        productId,
+        sku: payload.sku,
+        channel,
+        externalId,
+        externalUrl: externalUrl || existing.externalUrl,
+        status: "listed",
+        lastSyncedAt: new Date().toISOString(),
+      });
+      await logChannelEvent({ channel, action: "updateListing", productId, sku: payload.sku, result: { externalId, externalUrl } });
+      return { productId, channel, externalId, mode: "update" };
+    }
+
+    const { externalId, externalUrl } = await getAdapter(channel).publishListing(payload, creds);
     await saveChannelListing({
       productId,
       sku: payload.sku,
       channel,
       externalId,
-      externalUrl: externalUrl || existing.externalUrl,
+      externalUrl,
       status: "listed",
       lastSyncedAt: new Date().toISOString(),
     });
-    return { productId, channel, externalId, mode: "update" };
+    await logChannelEvent({ channel, action: "publishListing", productId, sku: payload.sku, result: { externalId, externalUrl } });
+    return { productId, channel, externalId, externalUrl, mode: "publish" };
+  } catch (err: any) {
+    await logChannelEvent({ channel, action: "pushToChannel", productId, sku: payload.sku, error: err?.message || String(err) });
+    throw err;
   }
-
-  const { externalId, externalUrl } = await getAdapter(channel).publishListing(payload, creds);
-  await saveChannelListing({
-    productId,
-    sku: payload.sku,
-    channel,
-    externalId,
-    externalUrl,
-    status: "listed",
-    lastSyncedAt: new Date().toISOString(),
-  });
-  return { productId, channel, externalId, externalUrl, mode: "publish" };
 }
 
 export async function POST(request: Request) {
