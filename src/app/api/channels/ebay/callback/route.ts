@@ -20,11 +20,11 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!code || !state) {
-    return NextResponse.json({ error: "Missing code or state" }, { status: 400 });
+  if (!code) {
+    return NextResponse.json({ error: "Missing authorization code" }, { status: 400 });
   }
 
-  if (!verifyState(state)) {
+  if (state && !verifyState(state)) {
     return NextResponse.json({ error: "Invalid or expired state" }, { status: 403 });
   }
 

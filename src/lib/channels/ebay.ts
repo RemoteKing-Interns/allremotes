@@ -13,10 +13,8 @@ const EBAY_MERCHANT_LOCATION_KEY = process.env.EBAY_MERCHANT_LOCATION_KEY || "";
 
 const SCOPES = [
   "https://api.ebay.com/oauth/api_scope/sell.inventory",
-  "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly",
   "https://api.ebay.com/oauth/api_scope/sell.account",
   "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
-  "https://api.ebay.com/oauth/api_scope/sell.orders",
 ];
 
 function getAuthHeader() {
@@ -57,14 +55,16 @@ export const eBayAdapter: ChannelAdapter = {
     if (!EBAY_APP_ID || !EBAY_REDIRECT_URI) {
       throw new Error("EBAY_APP_ID and EBAY_REDIRECT_URI must be set");
     }
-    const params = new URLSearchParams({
+    const query = Object.entries({
       client_id: EBAY_APP_ID,
       response_type: "code",
       redirect_uri: EBAY_REDIRECT_URI,
       scope: SCOPES.join(" "),
       state,
-    });
-    return `${EBAY_AUTH_URL}?${params.toString()}`;
+    })
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join("&");
+    return `${EBAY_AUTH_URL}?${query}`;
   },
 
   async exchangeCode(code: string) {
@@ -97,7 +97,7 @@ export const eBayAdapter: ChannelAdapter = {
       grant_type: "refresh_token",
       refresh_token: credentials.refreshToken,
       scope: SCOPES.join(" "),
-    });
+    }).toString().replace(/\+/g, "%20");
     const res = await fetch(`${EBAY_API_URL}/identity/v1/oauth2/token`, {
       method: "POST",
       headers: {
