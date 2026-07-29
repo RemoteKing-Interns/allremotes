@@ -1,6 +1,7 @@
 import { getAdapter, type ListingPayload } from "@/lib/channels";
 import { getValidCredentials, saveChannelListing, saveChannelOrder, getMarketplaceAccount, getChannelListings } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
+import { toPublicImageUrls } from "@/lib/channels/images";
 import type { ChannelOrder, Marketplace } from "@/lib/channels/core";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongo";
@@ -17,11 +18,13 @@ function buildListingPayload(product: any): ListingPayload {
   const sku = product.sku || getProductSkuForKey(product) || product.id;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
-  const images = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : product.image
-      ? [product.image]
-      : [];
+  const images = toPublicImageUrls(
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : product.image
+        ? [product.image]
+        : []
+  );
   const title = `${product.brand || "ALLREMOTES"} ${product.model || product.name || sku}`.trim();
   const description =
     product.description?.trim() ||

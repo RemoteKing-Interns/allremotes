@@ -3,18 +3,20 @@ import { getDb } from "@/lib/mongo";
 import { eBayAdapter, guessCategory, getRequiredAspects } from "@/lib/channels/ebay";
 import { getValidCredentials, saveChannelListing } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
+import { toPublicImageUrls } from "@/lib/channels/images";
 
 function buildListingPayload(product: any, suffix?: string) {
   const baseSku = product.sku || getProductSkuForKey(product) || product.id;
   const sku = suffix ? `${baseSku}-${suffix}` : baseSku;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
-  const images =
+  const images = toPublicImageUrls(
     Array.isArray(product.images) && product.images.length > 0
       ? product.images
       : product.image
         ? [product.image]
-        : [];
+        : []
+  );
   const title = `${product.brand || "ALLREMOTES"} ${product.model || product.name || sku}`.trim();
   const description =
     product.description?.trim() ||
