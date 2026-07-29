@@ -1,7 +1,25 @@
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { decrypt, encrypt } from "./crypto";
-import { eBayAdapter } from "./ebay";
+import { aliexpressAdapter } from "./aliexpress";
+import { amazonAdapter } from "./amazon";
 import type { ChannelCredentials, Marketplace, MarketplaceAccount, ChannelListing, ChannelOrder } from "./core";
+import { eBayAdapter } from "./ebay";
+import { temuAdapter } from "./temu";
+
+function getAdapter(channel: Marketplace) {
+  switch (channel) {
+    case "ebay":
+      return eBayAdapter;
+    case "amazon":
+      return amazonAdapter;
+    case "temu":
+      return temuAdapter;
+    case "aliexpress":
+      return aliexpressAdapter;
+    default:
+      throw new Error(`Unknown marketplace: ${channel}`);
+  }
+}
 
 const ACCOUNTS_COLLECTION = "marketplaceAccounts";
 const LISTINGS_COLLECTION = "channelListings";
@@ -94,10 +112,10 @@ export async function getValidCredentials(channel: Marketplace): Promise<Channel
   }
 
   let refreshed: ChannelCredentials;
-  if (channel === "ebay") {
-    refreshed = await eBayAdapter.refreshCredentials(account.credentials);
-  } else {
-    throw new Error(`Refresh not implemented for ${channel}`);
+  try {
+    refreshed = await getAdapter(channel).refreshCredentials(account.credentials);
+  } catch (err) {
+    throw new Error(`Refresh not implemented for ${channel}: ${err}`);
   }
 
   await saveMarketplaceAccount({

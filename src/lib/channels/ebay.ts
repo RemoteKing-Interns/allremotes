@@ -153,6 +153,12 @@ export const eBayAdapter: ChannelAdapter = {
       condition: mapCondition(payload.condition),
       availability: {
         shipToLocationAvailability: {
+          availabilityDistributions: [
+            {
+              merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
+              quantity: payload.quantity,
+            },
+          ],
           quantity: payload.quantity,
         },
       },
