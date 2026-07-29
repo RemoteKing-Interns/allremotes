@@ -78,6 +78,7 @@ export interface ListingPayload {
   category?: string;
   mpn?: string;
   gtin?: string;
+  type?: string;
   packageWeight?: { value: number; unit: string };
   packageDimensions?: { length: number; width: number; height: number; unit: string };
 }
