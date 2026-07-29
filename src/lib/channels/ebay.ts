@@ -23,6 +23,20 @@ function getAuthHeader() {
   return "Basic " + Buffer.from(creds).toString("base64");
 }
 
+function getMarketplaceLocale(): { locale: string; contentLanguage: string } {
+  switch (EBAY_MARKETPLACE_ID) {
+    case "EBAY_AU":
+      return { locale: "en_AU", contentLanguage: "en-AU" };
+    case "EBAY_GB":
+      return { locale: "en_GB", contentLanguage: "en-GB" };
+    case "EBAY_DE":
+      return { locale: "de_DE", contentLanguage: "de-DE" };
+    case "EBAY_US":
+    default:
+      return { locale: "en_US", contentLanguage: "en-US" };
+  }
+}
+
 function mapCondition(condition = ""): string {
   const c = condition.toLowerCase();
   if (c.includes("new")) return "NEW";
@@ -135,6 +149,7 @@ export const eBayAdapter: ChannelAdapter = {
     }
 
     const title = payload.title.slice(0, 80);
+    const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
       throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
@@ -142,7 +157,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_US",
+      locale,
       product: {
         title,
         description: payload.description,
@@ -186,7 +201,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-US" },
+      headers: { "Content-Language": contentLanguage },
     });
 
     const offerPayload = {
@@ -219,7 +234,7 @@ export const eBayAdapter: ChannelAdapter = {
           method: "POST",
           accessToken: creds.accessToken,
           body: JSON.stringify(offerPayload),
-          headers: { "Content-Language": "en-US" },
+          headers: { "Content-Language": contentLanguage },
         });
         offerId = offerRes?.offerId;
         break;
@@ -249,7 +264,7 @@ export const eBayAdapter: ChannelAdapter = {
         method: "PUT",
         accessToken: creds.accessToken,
         body: JSON.stringify(offerPayload),
-        headers: { "Content-Language": "en-US" },
+        headers: { "Content-Language": contentLanguage },
       });
     } catch {}
 
@@ -266,6 +281,7 @@ export const eBayAdapter: ChannelAdapter = {
 
   async updateListing(offerId: string, payload: ListingPayload, creds: ChannelCredentials) {
     const title = payload.title.slice(0, 80);
+    const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
       throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
@@ -273,7 +289,7 @@ export const eBayAdapter: ChannelAdapter = {
 
     const inventoryItem: any = {
       sku: payload.sku,
-      locale: "en_US",
+      locale,
       product: {
         title,
         description: payload.description,
@@ -306,7 +322,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(inventoryItem),
-      headers: { "Content-Language": "en-US" },
+      headers: { "Content-Language": contentLanguage },
     });
 
     const offerPayload = {
@@ -331,7 +347,7 @@ export const eBayAdapter: ChannelAdapter = {
       method: "PUT",
       accessToken: creds.accessToken,
       body: JSON.stringify(offerPayload),
-      headers: { "Content-Language": "en-US" },
+      headers: { "Content-Language": contentLanguage },
     });
 
     return { externalId: offerId };
@@ -417,6 +433,7 @@ export async function createEbayInventoryLocation(
   },
   accessToken: string
 ) {
+  const { contentLanguage } = getMarketplaceLocale();
   const body = {
     location: {
       address: {
@@ -434,7 +451,7 @@ export async function createEbayInventoryLocation(
     method: "POST",
     accessToken,
     body: JSON.stringify(body),
-    headers: { "Content-Language": "en-US" },
+    headers: { "Content-Language": contentLanguage },
   });
 }
 
