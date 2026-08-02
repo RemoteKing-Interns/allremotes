@@ -73,7 +73,7 @@ def build_prompt(product: dict) -> tuple[str, str]:
         "You write accurate, customer-friendly, SEO-aware product content. "
         "Return ONLY a valid JSON object with these five keys: "
         "description, features, specification, compatibility, instructions. "
-        "Use Markdown for formatting. Do not include any text outside the JSON."
+        "Use HTML for formatting. Use tags such as <h2>, <h3>, <ul>, <li>, <table>, <tr>, <th>, <td>, <p>, <strong>. Do not include any text outside the JSON."
     )
 
     user = f"""Product: {name}
@@ -88,65 +88,75 @@ Naturally include these SEO search terms where relevant: {', '.join(terms)}.
 Return a JSON object with this structure:
 {{
   "description": "The customer-friendly intro + what's included + why choose All Remotes. Use short sections with headings.",
-  "features": "Markdown bullet list of key features.",
-  "specification": "Markdown table with Specification | Details columns. Include rows: Brand, Model, Frequency, Coding Type, Number of Buttons, Battery, Battery Included, Dimensions, Colour, Warranty. Use '—' if unknown.",
-  "compatibility": "Markdown bullet list of compatible models, with notes where needed. Use '✅' bullets.",
+  "features": "HTML unordered list (<ul><li>) of key features.",
+  "specification": "HTML table with <table>, <tr>, <th>, <td>. Columns: Specification and Details. Include rows: Brand, Model, Frequency, Coding Type, Number of Buttons, Battery, Battery Included, Dimensions, Colour, Warranty. Use '—' if unknown.",
+  "compatibility": "HTML unordered list (<ul><li>) of compatible models, with notes where needed. Use '✅' inside <li> items.",
   "instructions": "Simple programming / setup steps. If unknown, say 'Programming varies depending on your garage door opener model. Please refer to your opener manual or contact us if you require assistance.'"
 }}
 
 Format to closely follow this example:
 
-Description
+<h2>Introduction</h2>
+<p>A short, customer-friendly introduction explaining what the remote is, who it's for, and why it's a good replacement.</p>
 
-A short, customer-friendly introduction explaining what the remote is, who it's for, and why it's a good replacement.
+<h3>📦 What's Included</h3>
+<ul>
+  <li>1 × Genuine/Compatible Remote</li>
+  <li>Battery Included</li>
+  <li>Key Ring (if included)</li>
+  <li>Programming Instructions (if applicable)</li>
+</ul>
 
-📦 What's Included
-- 1 × Genuine/Compatible Remote
-- Battery Included
-- Key Ring (if included)
-- Programming Instructions (if applicable)
+<h3>⭐ Why choose All Remotes?</h3>
+<ul>
+  <li>🇦🇺 Australian owned & operated</li>
+  <li>🚚 Fast Australia-wide shipping</li>
+  <li>🔋 Battery included</li>
+  <li>⭐ Quality tested products</li>
+  <li>📞 Friendly local support</li>
+</ul>
 
-⭐ Why choose All Remotes?
-- 🇦🇺 Australian owned & operated
-- 🚚 Fast Australia-wide shipping
-- 🔋 Battery included
-- ⭐ Quality tested products
-- 📞 Friendly local support
+<h3>⭐ Features</h3>
+<ul>
+  <li>Genuine or high-quality compatible replacement</li>
+  <li>Secure rolling code/fixed code technology</li>
+  <li>Controls up to X doors</li>
+  <li>Compact, durable design</li>
+  <li>Battery included</li>
+  <li>Easy programming</li>
+  <li>Australian stock</li>
+</ul>
 
-⭐ Features
-- Genuine or high-quality compatible replacement
-- Secure rolling code/fixed code technology
-- Controls up to X doors
-- Compact, durable design
-- Battery included
-- Easy programming
-- Australian stock
+<h3>📋 Specifications</h3>
+<table>
+  <tr><th>Specification</th><th>Details</th></tr>
+  <tr><td>Brand</td><td>...</td></tr>
+  <tr><td>Model</td><td>...</td></tr>
+  <tr><td>Frequency</td><td>...</td></tr>
+  <tr><td>Coding Type</td><td>...</td></tr>
+  <tr><td>Number of Buttons</td><td>...</td></tr>
+  <tr><td>Battery</td><td>...</td></tr>
+  <tr><td>Battery Included</td><td>Yes</td></tr>
+  <tr><td>Dimensions</td><td>...</td></tr>
+  <tr><td>Colour</td><td>...</td></tr>
+  <tr><td>Warranty</td><td>12 Months</td></tr>
+</table>
 
-📋 Specifications
-| Specification | Details |
-| --- | --- |
-| Brand | ... |
-| Model | ... |
-| Frequency | ... |
-| Coding Type | ... |
-| Number of Buttons | ... |
-| Battery | ... |
-| Battery Included | Yes |
-| Dimensions | ... |
-| Colour | ... |
-| Warranty | 12 Months |
+<h3>✔ Compatibility</h3>
+<ul>
+  <li>✅ Compatible model 1 (note)</li>
+  <li>✅ Compatible model 2 (note)</li>
+</ul>
 
-✔ Compatibility
-- ✅ Compatible model 1 (note)
-- ✅ Compatible model 2 (note)
+<h3>📖 Programming Instructions</h3>
+<p>...</p>
 
-📖 Programming Instructions
-...
-
-⚠️ Important Information
-- Please check your garage door opener model before ordering.
-- The appearance of your existing remote does not always determine compatibility.
-- If you're unsure which remote you need, contact our team before purchasing.
+<h3>⚠️ Important Information</h3>
+<ul>
+  <li>Please check your garage door opener model before ordering.</li>
+  <li>The appearance of your existing remote does not always determine compatibility.</li>
+  <li>If you're unsure which remote you need, contact our team before purchasing.</li>
+</ul>
 """
     return system, user
 
