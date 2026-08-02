@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
 Generate product content (Description, Features, Specification, Compatibility, Instructions)
-for All Remotes using any OpenAI-compatible free LLM API (default: Groq).
+for All Remotes using any OpenAI-compatible free LLM API (default: Groq),
+and write the output directly to MongoDB.
 
 Colab usage:
-1. Upload this script and your `allremotes.products.json` to the Colab runtime.
-2. In a cell, set your API key:
-   !export GROQ_API_KEY="gsk_..."
+1. Upload this script to the Colab runtime.
+2. In a cell, install deps and set env vars:
+   !pip install openai pymongo[srv]
+   !export GROQ_API_KEY="gsk_..." MONGODB_URI="mongodb+srv://..." MONGODB_DB="allremotes"
 3. Test on one product:
    !python product_content_generator.py --mode single --index 0
 4. Generate for all products:
    !python product_content_generator.py --mode all
 
-The script writes `product_content_output.json` with the generated fields keyed by product id.
+The script updates each product document with description, features, specification,
+compatibility and instructions fields. It paces calls to respect Groq RPM/TPM limits.
 """
 
 import argparse
@@ -22,16 +25,22 @@ import time
 from typing import Any
 
 try:
-    from openai import OpenAI
+    from openai import OpenAI, RateLimitError
 except ImportError:
-    raise SystemExit(
-        "openai not installed. In Colab run: !pip install openai"
-    )
+    raise SystemExit("openai not installed. In Colab run: !pip install openai")
+
+try:
+    from pymongo import MongoClient, errors as mongo_errors
+except ImportError:
+    raise SystemExit("pymongo not installed. In Colab run: !pip install pymongo[srv]")
 
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
-INPUT_PATH = "allremotes.products.json"
-OUTPUT_PATH = "product_content_output.json"
+DEFAULT_MONGO_URI = os.environ.get("MONGODB_URI", "")
+DEFAULT_DB = os.environ.get("MONGODB_DB", "allremotes")
+DEFAULT_COLLECTION = os.environ.get("MONGODB_COLLECTION", "products")
+DEFAULT_RPM = 30
+DEFAULT_TPM = 14_400
 
 
 def search_terms(product: dict) -> list[str]:
@@ -44,7 +53,8 @@ def search_terms(product: dict) -> list[str]:
         terms.extend([brand, f"{brand} Garage Door Remote", f"{brand} Replacement Remote"])
     if sku:
         terms.append(sku)
-    terms.extend([name.split()[0] + " Remote" if name else ""])
+    if name:
+        terms.append(name.split()[0] + " Remote")
     terms = [t.strip() for t in terms if t.strip()]
     return list(set(terms))
 
@@ -141,8 +151,29 @@ A short, customer-friendly introduction explaining what the remote is, who it's 
     return system, user
 
 
-def generate_content(client: OpenAI, model: str, product: dict, max_retries: int = 3) -> dict[str, Any]:
-    """Call the LLM and return the parsed JSON fields."""
+def _estimate_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def _wait_for_rate_limit(last_call: float, tokens: int, rpm: int, tpm: int) -> float:
+    """Sleep long enough to stay under both RPM and TPM limits."""
+    now = time.time()
+    elapsed = now - last_call
+    rpm_wait = 60.0 / rpm
+    tpm_wait = (tokens / tpm) * 60.0
+    wait = max(rpm_wait, tpm_wait) - elapsed
+    if wait > 0:
+        time.sleep(wait)
+    return time.time()
+
+
+def generate_content(
+    client: OpenAI,
+    model: str,
+    product: dict,
+    max_retries: int = 3,
+) -> tuple[dict[str, Any], int]:
+    """Call the LLM and return (parsed_json, total_tokens_used)."""
     system, user = build_prompt(product)
     for attempt in range(max_retries):
         try:
@@ -157,70 +188,93 @@ def generate_content(client: OpenAI, model: str, product: dict, max_retries: int
                 max_tokens=2000,
             )
             raw = response.choices[0].message.content
-            return json.loads(raw)
+            parsed = json.loads(raw)
+            usage = response.usage
+            tokens = usage.total_tokens if usage else _estimate_tokens(system + user + raw)
+            return parsed, tokens
+        except RateLimitError as e:
+            retry_after = 2 ** attempt
+            if e.response and "retry-after" in e.response.headers:
+                try:
+                    retry_after = float(e.response.headers["retry-after"])
+                except ValueError:
+                    pass
+            print(f"Rate limited for {product.get('name')}: sleeping {retry_after}s")
+            time.sleep(retry_after)
         except Exception as e:
             if attempt == max_retries - 1:
                 print(f"Error generating for {product.get('name')}: {e}")
-                return {}
+                return {}, 0
             time.sleep(2)
-    return {}
+    return {}, 0
 
 
-def load_products(path: str) -> list[dict]:
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, list):
-        raise ValueError("Input JSON must be a list of products")
-    return data
-
-
-def save_results(path: str, results: dict[str, Any]) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+def get_db(uri: str, db_name: str, collection_name: str):
+    client = MongoClient(uri)
+    return client[db_name][collection_name]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate product content with a free LLM")
+    parser = argparse.ArgumentParser(description="Generate product content with a free LLM and save to MongoDB")
     parser.add_argument("--mode", choices=["single", "all"], default="single")
     parser.add_argument("--index", type=int, default=0, help="Product index for single mode")
-    parser.add_argument("--input", default=INPUT_PATH)
-    parser.add_argument("--output", default=OUTPUT_PATH)
+    parser.add_argument("--uri", default=DEFAULT_MONGO_URI)
+    parser.add_argument("--db", default=DEFAULT_DB)
+    parser.add_argument("--collection", default=DEFAULT_COLLECTION)
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--api-key", default=None)
+    parser.add_argument("--rpm", type=int, default=DEFAULT_RPM)
+    parser.add_argument("--tpm", type=int, default=DEFAULT_TPM)
     args = parser.parse_args()
 
     api_key = args.api_key or os.environ.get("GROQ_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise SystemExit(
             "Set GROQ_API_KEY or OPENAI_API_KEY, or pass --api-key. "
-            "In Colab: !export GROQ_API_KEY='...' before running."
+            "In Colab: !export GROQ_API_KEY='...'"
         )
 
-    client = OpenAI(base_url=args.base_url, api_key=api_key)
-    products = load_products(args.input)
+    if not args.uri:
+        raise SystemExit(
+            "Set MONGODB_URI, or pass --uri. "
+            "In Colab: !export MONGODB_URI='...'"
+        )
+
+    llm = OpenAI(base_url=args.base_url, api_key=api_key)
+    products_col = get_db(args.uri, args.db, args.collection)
 
     if args.mode == "single":
-        if not (0 <= args.index < len(products)):
-            raise SystemExit(f"Index out of range. There are {len(products)} products.")
-        product = products[args.index]
+        product = products_col.find_one({}, skip=args.index)
+        if not product:
+            raise SystemExit(f"No product found at index {args.index}")
         print(f"\n=== Testing: {product.get('name')} (index {args.index}) ===")
-        result = generate_content(client, args.model, product)
+        result, _ = generate_content(llm, args.model, product)
         print(json.dumps(result, indent=2, ensure_ascii=False))
+        if result and "_id" in product:
+            products_col.update_one({"_id": product["_id"]}, {"$set": result})
+            print(f"Updated product {product['_id']} in MongoDB.")
         return
 
     # all mode
-    results = {}
-    for i, product in enumerate(products):
-        print(f"[{i+1}/{len(products)}] {product.get('name')}")
-        result = generate_content(client, args.model, product)
-        if result:
-            results[product.get("id", f"index-{i}")] = result
-            save_results(args.output, results)
-        # Stay under 30 RPM free tier
-        time.sleep(max(2.1, 60.0 / 30))
+    last_call = 0.0
+    success = 0
+    failed = 0
+    cursor = products_col.find({})
+    total = products_col.count_documents({})
 
-    print(f"\nDone. Wrote {len(results)} results to {args.output}")
+    for i, product in enumerate(cursor, 1):
+        print(f"[{i}/{total}] {product.get('name')}")
+        last_call = _wait_for_rate_limit(last_call, 0, args.rpm, args.tpm)
+        result, tokens = generate_content(llm, args.model, product)
+        if result and "_id" in product:
+            products_col.update_one({"_id": product["_id"]}, {"$set": result})
+            success += 1
+            last_call = _wait_for_rate_limit(last_call, tokens, args.rpm, args.tpm)
+        else:
+            failed += 1
+
+    print(f"\nDone. Updated {success} products, failed {failed}.")
 
 
 if __name__ == "__main__":
