@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Heart,
   Check,
-  ChevronDown,
 } from "lucide-react";
 import {
   getPriceBreakdown,
@@ -139,7 +138,12 @@ const ProductDetail = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
-  const [activeTab, setActiveTab] = useState("description");
+  const [activeTab, setActiveTab] = useState<string>("description");
+
+  useEffect(() => {
+    setActiveTab(visibleTabs[0]?.id || "description");
+  }, [product?.id]);
+
   const tabSections = [
     {
       id: "description",
@@ -532,97 +536,30 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* TAB NAVIGATION */}
-        <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur">
-          <div className="md:hidden">
-            {visibleTabs.map((section, index) => {
-              const isOpen = activeTab === section.id;
-
-              return (
-                <div
-                  key={section.id}
-                  className={index > 0 ? "border-t border-neutral-200" : ""}
-                >
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
-                    aria-expanded={isOpen}
-                    onClick={() =>
-                      setActiveTab((current) =>
-                        current === section.id ? "" : section.id,
-                      )
-                    }
-                  >
-                    <span
-                      className={`text-sm font-extrabold uppercase tracking-[0.12em] ${
-                        isOpen ? "text-accent-dark" : "text-neutral-700"
-                      }`}
-                    >
-                      {section.label}
-                    </span>
-                    <ChevronDown
-                      size={18}
-                      className={`shrink-0 text-neutral-500 transition-transform ${
-                        isOpen ? "rotate-180 text-accent-dark" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {isOpen && (
-                    <div className="border-t border-neutral-200 px-4 pb-4 pt-3">
-                      <div
-                        className={`text-sm leading-7 text-neutral-700 ${
-                          section.id === "warnings" ? "whitespace-pre-line" : ""
-                        }`}
-                      >
-                        {section.content}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="hidden md:block">
+        {/* PRODUCT INFO SECTIONS */}
+        {visibleTabs.length > 0 && (
+          <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur overflow-hidden">
             <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
               {visibleTabs.map((section) => (
                 <button
                   key={section.id}
                   type="button"
+                  onClick={() => setActiveTab(section.id)}
                   className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
                     activeTab === section.id
                       ? "bg-accent/10 text-accent-dark"
                       : "text-neutral-700 hover:bg-neutral-100"
                   }`}
-                  onClick={() => setActiveTab(section.id)}
                 >
                   {section.label}
                 </button>
               ))}
             </div>
-
             <div className="p-4 sm:p-8">
-              {visibleTabs.map(
-                (section) =>
-                  activeTab === section.id && (
-                    <div key={section.id}>
-                      <h3 className="text-lg font-semibold text-neutral-900">
-                        {section.label}
-                      </h3>
-                      <div className="mt-2 text-sm leading-7 text-neutral-700">
-                        {typeof section.content === "string" ? (
-                          section.content
-                        ) : (
-                          section.content
-                        )}
-                      </div>
-                    </div>
-                  )
-              )}
+              {visibleTabs.find((s) => s.id === activeTab)?.content}
             </div>
           </div>
-        </div>
+        )}
 
         {relatedProducts.length > 0 && (
           <div className="mt-10">
