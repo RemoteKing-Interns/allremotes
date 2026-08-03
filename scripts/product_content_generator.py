@@ -192,17 +192,41 @@ def main():
     cloudflare_account = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     cloudflare_token = os.environ.get("CLOUDFLARE_API_TOKEN")
     response_format = {"type": "json_object"}
-    if cloudflare_account and cloudflare_token:
-        args.base_url = f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account}/ai/v1"
-        if args.model == DEFAULT_MODEL:
+
+    def _resolve_api_key(base_url: str) -> str:
+        if args.api_key:
+            return args.api_key
+        if "mistral" in base_url:
+            return os.environ.get("MISTRAL_API_KEY", "")
+        if "cloudflare" in base_url:
+            return cloudflare_token or ""
+        if "openrouter" in base_url:
+            return os.environ.get("OPENROUTER_API_KEY", "")
+        if "openai" in base_url:
+            return os.environ.get("OPENAI_API_KEY", "")
+        if "groq" in base_url:
+            return os.environ.get("GROQ_API_KEY", "")
+        # Fallback: try any available key
+        return (
+            os.environ.get("MISTRAL_API_KEY", "")
+            or cloudflare_token
+            or os.environ.get("OPENROUTER_API_KEY", "")
+            or os.environ.get("OPENAI_API_KEY", "")
+            or os.environ.get("GROQ_API_KEY", "")
+        )
+
+    api_key = _resolve_api_key(args.base_url)
+
+    # If Cloudflare is explicitly configured, disable JSON response_format
+    if "cloudflare" in args.base_url:
+        if args.model == DEFAULT_MODEL and cloudflare_account:
             args.model = "@cf/meta/llama-3.1-70b-instruct-awq"
         response_format = None
 
-    api_key = args.api_key or os.environ.get("MISTRAL_API_KEY") or cloudflare_token or os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("GROQ_API_KEY")
     print(f"DEBUG: using {args.base_url}, API key found: {bool(api_key)}")
     if not api_key:
         raise SystemExit(
-            "Set MISTRAL_API_KEY, CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN, OPENROUTER_API_KEY, OPENAI_API_KEY or GROQ_API_KEY, or pass --api-key. "
+            "Set the env var for your chosen provider (MISTRAL_API_KEY, CLOUDFLARE_API_TOKEN, OPENROUTER_API_KEY, OPENAI_API_KEY or GROQ_API_KEY), or pass --api-key. "
             "In Colab: !export MISTRAL_API_KEY='...'"
         )
 
