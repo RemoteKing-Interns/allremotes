@@ -112,7 +112,6 @@ const PLACEHOLDERS = [
   "footerText",
   "postageService",
   "buyerPhone",
-  "buyerUsername",
   "displayOrderId",
   "#each items -> index, name, sku, externalId, color, qty, price, lineTotal",
   "Image",

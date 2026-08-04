@@ -110,7 +110,9 @@ export function buildPackingSlipData(order: any): PackingSlipData {
     currency,
     postageService: order.postageService || "",
     footerText:
-      "Users who create a trade account and order via our website receive special discounts.",
+      !order.channel || String(order.channel).toLowerCase() === "website"
+        ? ""
+        : "Users who create a trade account and order via our website receive special discounts.",
   };
 
   return data;
@@ -225,8 +227,7 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
 
   <div class="contact">
     {{buyerPhone}}<br>
-    {{buyerEmail}}<br>
-    Username: {{buyerUsername}}
+    {{buyerEmail}}
   </div>
 
   <div class="order-row">

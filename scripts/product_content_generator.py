@@ -36,6 +36,27 @@ try:
 except ImportError:
     raise SystemExit("pymongo not installed. In Colab run: !pip install pymongo[srv]")
 
+
+def _load_dotenv_local(path: str = ".env.local"):
+    """Load variables from .env.local into os.environ if present."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    full = os.path.join(root, path)
+    if not os.path.exists(full):
+        return
+    with open(full, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_dotenv_local()
+
 DEFAULT_BASE_URL = "https://api.mistral.ai/v1"
 DEFAULT_MODEL = "open-mixtral-8x22b"
 DEFAULT_REFERER = os.environ.get("OPENROUTER_REFERER", "https://allremotes.com.au")
@@ -246,6 +267,19 @@ def _has_bordered_table(product: dict) -> bool:
     return "<table" in spec.lower() and "border" in spec.lower()
 
 
+def _has_proper_description(product: dict) -> bool:
+    """Return True if the description has the expected generated format."""
+    desc = product.get("description", "")
+    if not isinstance(desc, str):
+        return False
+    return "<h1" in desc.lower() and "What's Included" in desc
+
+
+def _needs_content_fix(product: dict) -> bool:
+    """Return True if the product is missing the expected generated style."""
+    return not _has_proper_description(product) or not _has_bordered_table(product)
+
+
 def _update_and_verify(products_col, product: dict, result: dict) -> tuple[bool, int]:
     """Update product and verify the document was actually changed."""
     content_fields = ("description", "features", "specification", "compatibility", "instructions")
@@ -278,7 +312,7 @@ def get_db(uri: str, db_name: str, collection_name: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate product content with a free LLM and save to MongoDB")
-    parser.add_argument("--mode", choices=["single", "all", "check"], default="single")
+    parser.add_argument("--mode", choices=["single", "all", "check", "fix"], default="single")
     parser.add_argument("--index", type=int, default=0, help="Product index for single mode")
     parser.add_argument("--start", type=int, default=0, help="Start index for all mode (resume)")
     parser.add_argument("--checkpoint", default="product_content_checkpoint.txt", help="File to store/restore last processed index")
@@ -417,6 +451,13 @@ def main():
             print("No products missing styled specification tables.")
             return
         print(f"Check mode: {total} product(s) need updates.")
+    if args.mode == "fix":
+        products = [p for p in products if _needs_content_fix(p)]
+        total = len(products)
+        if total == 0:
+            print("No products need content fixes.")
+            return
+        print(f"Fix mode: {total} product(s) need content updates.")
     total = len(products)
     start = max(args.start, _load_checkpoint(args.checkpoint))
     products = products[start:]
@@ -425,6 +466,8 @@ def main():
         print(f"[{i}/{total}] {product.get('name')}")
         last_call = _wait_for_rate_limit(last_call, 0, args.rpm, args.tpm)
         result, tokens, raw = generate_content(llm, args.model, product, response_format=response_format)
+        if result:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
         update_info = {"updated": False, "db_attempts": 0}
         if result and "_id" in product:
             updated, db_attempts = _update_and_verify(products_col, product, result)
