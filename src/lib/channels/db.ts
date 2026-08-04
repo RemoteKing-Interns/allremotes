@@ -107,6 +107,7 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
         shipping: order.shipping,
         items: order.items,
         pricing: order.pricing,
+        shippingNote: order.shippingNote,
         updatedAt: now,
       },
       $setOnInsert: {

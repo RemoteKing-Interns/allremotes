@@ -14,6 +14,12 @@ interface Product {
   condition?: string;
   brand?: string;
   model?: string;
+  marketplaceCategory?: {
+    ebay?: string;
+    amazon?: string;
+    temu?: string;
+    aliexpress?: string;
+  };
 }
 
 interface ChannelListing {
@@ -135,7 +141,7 @@ export default function ChannelManager() {
     }
   };
 
-  const push = async (productIds: string[]) => {
+  const push = async (productIds: string[], preflightMissing?: string[]) => {
     if (productIds.length === 0) return;
     if (selectedChannels.length === 0) {
       setMessage("Select at least one channel");
@@ -146,7 +152,9 @@ export default function ChannelManager() {
       return;
     }
     setLoading(true);
-    setMessage(null);
+    if (preflightMissing?.length) {
+      setMessage(`Skipped ${preflightMissing.length} product(s) without an eBay category:\n\n${preflightMissing.join("\n")}`);
+    }
     try {
       const res = await fetch("/api/admin/channels", {
         method: "POST",
@@ -160,8 +168,10 @@ export default function ChannelManager() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.details || data.error || `HTTP ${res.status}`);
-      const failed = data.results?.filter((r: any) => !r.ok).map((r: any) => `${r.productId}: ${r.error}`).join("; ");
-      setMessage(failed ? `Some failed: ${failed}` : `Pushed ${data.results?.length || 0} product(s)`);
+      const failed = data.results?.filter((r: any) => !r.ok).map((r: any) => `${r.sku ? `SKU ${r.sku}` : r.productId}${r.name ? ` (${r.name})` : ""}: ${r.error}`).join("; ");
+      const missingMsg = preflightMissing?.length ? `Skipped ${preflightMissing.length} product(s) without an eBay category:\n\n${preflightMissing.join("\n")}` : "";
+      const resultMsg = failed ? `Some failed: ${failed}` : `Pushed ${data.results?.length || 0} product(s)`;
+      setMessage([missingMsg, resultMsg].filter(Boolean).join("\n\n"));
       await load();
     } catch (err: any) {
       setMessage(`Push failed: ${err?.message || err}`);
@@ -170,9 +180,34 @@ export default function ChannelManager() {
     }
   };
 
-  const pushSelected = () => push(Array.from(selected));
+  const pushSelected = () => {
+    const selectedProducts = products.filter((p) => selected.has(p.id));
+    const missing: string[] = [];
+    const validIds: string[] = [];
+    for (const p of selectedProducts) {
+      const label = `${p.name || p.title || p.id}${p.sku ? ` (SKU: ${p.sku})` : ""}`;
+      if (!p.marketplaceCategory?.ebay) {
+        missing.push(label);
+      } else {
+        validIds.push(p.id);
+      }
+    }
+    if (validIds.length === 0) {
+      setMessage(`No products have an eBay category set.\n\n${missing.join("\n")}`);
+      return;
+    }
+    push(validIds, missing);
+  };
 
-  const pushSingle = (id: string) => push([id]);
+  const pushSingle = (id: string) => {
+    const p = products.find((x) => x.id === id);
+    const label = `${p?.name || p?.title || id}${p?.sku ? ` (SKU: ${p.sku})` : ""}`;
+    if (!p?.marketplaceCategory?.ebay) {
+      setMessage(`No eBay category set for ${label}`);
+      return;
+    }
+    push([id]);
+  };
 
   const syncOrders = async () => {
     setLoading(true);

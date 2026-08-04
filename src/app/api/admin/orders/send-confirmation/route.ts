@@ -10,11 +10,6 @@ export const dynamic = "force-dynamic";
 const ORDERS_JSON_PATH = path.resolve(process.cwd(), "orders.json");
 const ADMIN_EMAIL = "shane@allremotes.com.au";
 
-function adminAllowed() {
-  if (process.env.ALLOW_ADMIN_ORDERS === "1") return true;
-  return process.env.NODE_ENV !== "production";
-}
-
 function readOrdersFile(): any[] {
   try {
     const raw = fs.readFileSync(ORDERS_JSON_PATH, "utf8");
@@ -35,13 +30,6 @@ async function getOrderById(id: string) {
 }
 
 export async function POST(request: Request) {
-  if (!adminAllowed()) {
-    return NextResponse.json(
-      { error: "Admin orders are disabled in production. Set ALLOW_ADMIN_ORDERS=1 to enable." },
-      { status: 403 }
-    );
-  }
-
   try {
     const { orderId } = await request.json();
     if (!orderId) {

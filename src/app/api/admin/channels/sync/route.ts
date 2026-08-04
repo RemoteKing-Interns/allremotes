@@ -32,7 +32,7 @@ async function syncInventory(channel: Marketplace, since?: Date) {
 
 async function syncOrders(channel: Marketplace, since?: Date) {
   const creds = await getValidCredentials(channel);
-  const orders = await withRetry(() => getAdapter(channel).fetchOrders(since || new Date(Date.now() - 24 * 60 * 60 * 1000), creds));
+  const orders = await withRetry(() => getAdapter(channel).fetchOrders(since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), creds));
   let saved = 0;
   for (const order of orders) {
     await saveChannelOrder(order);

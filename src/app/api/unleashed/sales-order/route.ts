@@ -28,6 +28,8 @@ export async function POST(request: Request) {
   const customerCode = process.env.UNLEASHED_CUSTOMER_CODE || "8071848689959";
   const customerName = process.env.UNLEASHED_CUSTOMER_NAME || "All Remotes";
   const currencyCode = process.env.UNLEASHED_CURRENCY_CODE || "AUD";
+  const taxCode = process.env.UNLEASHED_TAX_CODE || "G.S.T.";
+  const exchangeRate = Number(process.env.UNLEASHED_EXCHANGE_RATE || "1");
 
   if (!apiId || !apiKey) {
     return NextResponse.json(
@@ -65,9 +67,9 @@ export async function POST(request: Request) {
     try {
       const db = await getDb();
       const skus = items.map((i) => i.sku).filter(Boolean);
-      const products = await db.collection("products").find({ sku: { $in: skus } }, { projection: { sku: 1, rk_sku: 1, price: 1 } }).toArray();
+      const products = await db.collection("products").find({ sku: { $in: skus } }, { projection: { sku: 1, rk_sku: 1, unleashed_product_code: 1, price: 1 } }).toArray();
       const productMap: Record<string, { rk_sku?: string; price?: number }> = {};
-      products.forEach((p: any) => { if (p.sku) productMap[p.sku] = { rk_sku: p.rk_sku, price: p.price }; });
+      products.forEach((p: any) => { if (p.sku) productMap[p.sku] = { rk_sku: p.rk_sku || p.unleashed_product_code, price: p.price }; });
       items = items.map((i) => {
         const match = i.sku ? productMap[i.sku] : undefined;
         return {
@@ -93,6 +95,21 @@ export async function POST(request: Request) {
     }
   }
 
+  // Fail early if any item is missing a Unleashed product code
+  const missingProductCodes = items
+    .filter((i) => !i.rk_sku)
+    .map((i) => ({ name: i.name, sku: i.sku, key: i.rk_sku || i.sku || i.name }));
+  if (missingProductCodes.length > 0) {
+    return NextResponse.json(
+      {
+        error: "Some products are missing a Unleashed product code (rk_sku or unleashed_product_code). Product names may also differ (e.g. eBay names may not match All Remotes / Remote King names) — match by SKU.",
+        note: "Product names may differ between eBay, All Remotes, and Remote King. Use the SKU to identify the product and set rk_sku or unleashed_product_code.",
+        missing: missingProductCodes,
+      },
+      { status: 400 }
+    );
+  }
+
   // Generate a unique GUID for each push (timestamp ensures a new SO is created each time)
   const orderGuid = crypto
     .createHash("md5")
@@ -106,8 +123,6 @@ export async function POST(request: Request) {
   const dateLabel = now.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 
   const GST_RATE = 0.1;
-  const GST_CODE = "G.S.T.";
-  const GST_GUID = "1b6da60b-93ef-44cf-acd9-7555da74c7ef"; // IsSalesDefault: true
 
   const salesOrderLines = items.map((item, idx) => {
     const unitPrice = item.unitPrice ?? 0;
@@ -137,6 +152,7 @@ export async function POST(request: Request) {
     SubTotal: subTotal,
     TaxTotal: taxTotal,
     Total: Math.round((subTotal + taxTotal) * 100) / 100,
+    ExchangeRate: exchangeRate,
     Customer: {
       CustomerCode: customerCode,
       CustomerName: customerName,
@@ -148,9 +164,8 @@ export async function POST(request: Request) {
       CurrencyCode: currencyCode,
     },
     Tax: {
-      TaxCode: GST_CODE,
+      TaxCode: taxCode,
       TaxRate: GST_RATE,
-      Guid: GST_GUID,
     },
     DeliveryName: "ALL REMOTES ORDER FROM WEBSITE",
     DeliveryStreetAddress: "ALL REMOTES ORDER FROM WEBSITE — NO NEED TO SHIP IT",
@@ -184,21 +199,26 @@ export async function POST(request: Request) {
     }
 
     const text = await unleashedRes.text();
-    let data: any = null;
+    const details: any = { raw: text };
     try {
-      data = JSON.parse(text);
+      details.parsed = JSON.parse(text);
     } catch {
-      data = { raw: text };
+      /* keep raw text */
     }
 
     if (!unleashedRes.ok) {
+      console.error("Unleashed API error:", {
+        status: unleashedRes.status,
+        url,
+        details,
+      });
       return NextResponse.json(
-        { error: "Unleashed API error", status: unleashedRes.status, details: data },
+        { error: "Unleashed API error", status: unleashedRes.status, details },
         { status: unleashedRes.status }
       );
     }
 
-    orderNumber = data?.OrderNumber ?? data?.SalesOrderNumber ?? data?.orderNumber ?? "";
+    orderNumber = details.parsed?.OrderNumber ?? details.parsed?.SalesOrderNumber ?? details.parsed?.orderNumber ?? "";
     orderUrl = orderNumber
       ? `https://app.unleashedsoftware.com/SalesOrders?searchString=${encodeURIComponent(orderNumber)}`
       : "";

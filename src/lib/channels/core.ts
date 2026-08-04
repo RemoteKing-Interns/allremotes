@@ -55,12 +55,15 @@ export interface ChannelOrder {
     country?: string;
     phone?: string;
   };
+  postageService?: string;
   items: Array<{
     sku: string;
     name: string;
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+    externalId?: string;
+    color?: string;
   }>;
   pricing: {
     currency: string;
@@ -69,6 +72,7 @@ export interface ChannelOrder {
     shipping?: number;
     discountTotal?: number;
   };
+  shippingNote?: string;
 }
 
 export interface ListingPayload {

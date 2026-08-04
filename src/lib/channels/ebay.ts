@@ -152,7 +152,7 @@ export const eBayAdapter: ChannelAdapter = {
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
-      throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
+      throw new Error(`eBay categoryId is required for SKU ${payload.sku} (${payload.title}). Set product.marketplaceCategory.ebay to a valid eBay category ID.`);
     }
 
     const inventoryItem: any = {
@@ -284,7 +284,7 @@ export const eBayAdapter: ChannelAdapter = {
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
-      throw new Error("eBay categoryId is required. Set product.marketplaceCategory.ebay to a valid eBay category ID.");
+      throw new Error(`eBay categoryId is required for SKU ${payload.sku} (${payload.title}). Set product.marketplaceCategory.ebay to a valid eBay category ID.`);
     }
 
     const inventoryItem: any = {
@@ -428,6 +428,8 @@ export const eBayAdapter: ChannelAdapter = {
         quantity: Number(line.quantity || 1),
         unitPrice: Number(line.lineItemCost?.value || 0) / (Number(line.quantity) || 1),
         lineTotal: Number(line.lineItemCost?.value || 0),
+        externalId: line.itemId || line.legacyItemId || undefined,
+        color: line.variationDetails?.["Color"] || line.variationDetails?.["color"] || undefined,
       }));
 
       const lineSubtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
@@ -440,6 +442,11 @@ export const eBayAdapter: ChannelAdapter = {
       const shippingCost = Number(order.pricingSummary?.deliveryCost?.value || 0);
       const discount = Number(order.pricingSummary?.discount?.value || 0);
       const total = Number(order.pricingSummary?.total?.value ?? lineSubtotal + shippingCost - discount);
+
+      const postageService =
+        instruction.shippingStep?.shippingServiceName ||
+        instruction.shippingStep?.shippingServiceCode ||
+        undefined;
 
       return {
         orderId: order.orderId,
@@ -472,6 +479,8 @@ export const eBayAdapter: ChannelAdapter = {
           shipping: shippingCost || undefined,
           discountTotal: discount || undefined,
         },
+        postageService,
+        shippingNote: order.buyerCheckoutNotes || undefined,
       };
     });
   },

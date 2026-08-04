@@ -74,7 +74,7 @@ const WHY_BUY_ICON_MAP = {
   reviews: Star,
 };
 
-const DEFAULT_HERO_IMAGES = ["/images/3.jpg", "/images/1.jpg", "/images/5.png", "/images/2.jpg", "/images/6.png", "/images/4.png", "/images/7.png", "/images/8.png", "/images/9.png", "/images/10.png"];
+const DEFAULT_HERO_IMAGES = ["/images/1.jpg", "/images/2.png", "/images/3.png", "/images/4.png", "/images/5.png", "/images/6.png", "/images/7.png", "/images/8.png", "/images/9.png"];
 
 const Home = () => {
   const { getProducts, getHomeContent, getReviews } = useStore();
@@ -87,9 +87,10 @@ const Home = () => {
 
   const home = mounted ? getHomeContent() : null;
   // Use CMS hero images if available, otherwise fallback to defaults
-  const heroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
+  const rawHeroImages = (home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0)
     ? home.heroImages
     : DEFAULT_HERO_IMAGES;
+  const heroImages = rawHeroImages.filter((img: any) => img && !String(img).toLowerCase().includes("mainlogo"));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -300,7 +301,6 @@ const Home = () => {
                 key={index}
                 src={slide.image}
                 alt={slide.title || "Hero image"}
-                fallbackSrc="/images/mainlogo.png"
                 loading={index === 0 ? "eager" : "lazy"}
                 fill
                 sizes="100vw"

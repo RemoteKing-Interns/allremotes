@@ -268,6 +268,7 @@ export default function AdminUsers() {
     { value: "analytics",  label: "Analytics",     description: "View reports & live visitor view" },
     { value: "admin_users",label: "Admin Users",   description: "Invite & manage admin accounts and logs" },
     { value: "settings",   label: "Settings",      description: "Change store-wide settings" },
+    { value: "channels",   label: "Channels",      description: "Manage marketplace channels (eBay, Amazon, etc.)" },
   ];
 
   if (loading) {

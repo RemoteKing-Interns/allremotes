@@ -10,6 +10,8 @@ import AdminSupportChat from "../../../components/admin/AdminSupportChat";
 import ProductSpreadsheet from "../../../components/admin/ProductSpreadsheet";
 import AdminUsersManager from "../../../components/admin/AdminUsers";
 import AdminLogs from "../../../components/admin/AdminLogs";
+import ChannelManager from "../../../components/admin/ChannelManager";
+import DocumentDesign from "../../../components/admin/DocumentDesign";
 import AdminPrinterSettings from "../../../components/admin/AdminPrinterSettings";
 import LabelTemplatesSection from "../../../components/admin/LabelTemplatesSection";
 import dynamic from "next/dynamic";
@@ -20,6 +22,7 @@ import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
 import ProductImage from "../../../components/images/ProductImage";
 import MediaPickerModal from "../../../components/images/MediaPickerModal";
 import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
+import { buildPackingSlipData, renderPackingSlipHtml } from "../../../lib/packingSlip";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   LayoutDashboard,
@@ -111,7 +114,8 @@ const navGroupDefinitions = [
   { label: 'Marketing', icon: Megaphone,    ids: ['promotions', 'discounts'] },
   { label: 'Content',   icon: FileText,     ids: ['home', 'navigation', 'content'] },
   { label: 'Analytics', icon: BarChart3,    ids: ['analytics', 'live_view'] },
-  { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'printers', 'labels', 'settings'] },
+  { label: 'Channels',  icon: Globe,        ids: ['channels'] },
+  { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'printers', 'labels', 'document_design', 'settings'] },
 ];
 
 const isRecord = (value: any): value is Record<string, any> => {
@@ -905,7 +909,9 @@ const AdminContent = () => {
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
     { id: 'printers',       label: 'Printer Setup',       icon: Printer,            perm: 'settings' },
     { id: 'labels',         label: 'Label Templates',     icon: Tags,               perm: 'settings' },
+    { id: 'document_design', label: 'Document Design',    icon: FileText,           perm: 'settings' },
     { id: 'settings',       label: 'Settings',            icon: Settings,           perm: 'settings' },
+    { id: 'channels',       label: 'Channels',            icon: Globe,              perm: 'channels' },
   ];
   const navItems = allNavItems.filter(item => hasPermission(item.perm));
 
@@ -1210,7 +1216,7 @@ const AdminContent = () => {
           {hasPermission('products')    && <div className={activeTab === 'products'        ? '' : 'hidden'}><AdminProducts /></div>}
           {hasPermission('products')    && <div className={activeTab === 'categories'      ? '' : 'hidden'}><CategoriesBrandsSection /></div>}
           {hasPermission('products')    && <div className={activeTab === 'inventory'       ? '' : 'hidden'}><InventorySection /></div>}
-          {hasPermission('orders')      && <div className={activeTab === 'orders'          ? '' : 'hidden'}><AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} /></div>}
+          {hasPermission('orders')      && <div className={activeTab === 'orders'          ? '' : 'hidden'}><AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} activeTab={activeTab} /></div>}
           {hasPermission('orders')      && <div className={activeTab === 'returns'         ? '' : 'hidden'}><AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} /></div>}
           {hasPermission('orders')      && <div className={activeTab === 'abandoned_carts' ? '' : 'hidden'}><AdminAbandonedCarts /></div>}
           {hasPermission('content')     && <div className={activeTab === 'home'            ? '' : 'hidden'}><AdminHome /></div>}
@@ -1222,7 +1228,9 @@ const AdminContent = () => {
           {hasPermission('customers')   && <div className={activeTab === 'messages'        ? '' : 'hidden'}><AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} /></div>}
           {hasPermission('settings')    && <div className={activeTab === 'printers'        ? '' : 'hidden'}><AdminPrinterSettings /></div>}
           {hasPermission('settings')    && <div className={activeTab === 'labels'          ? '' : 'hidden'}><LabelTemplatesSection /></div>}
+          {hasPermission('settings')    && <div className={activeTab === 'document_design' ? '' : 'hidden'}><DocumentDesign /></div>}
           {hasPermission('settings')    && <div className={activeTab === 'settings'        ? '' : 'hidden'}><AdminSettings /></div>}
+          {hasPermission('channels')    && <div className={activeTab === 'channels'        ? '' : 'hidden'}><ChannelManager /></div>}
           <div className={activeTab === 'profile' ? '' : 'hidden'}><AdminProfile /></div>
         </main>
       </div>
@@ -1334,12 +1342,13 @@ type UnleashedPushState = {
 
 const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/LabelCanvasEditor"), { ssr: false });
 
-function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void }) {
+function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void; activeTab: string }) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
+  const [otherActionsOpen, setOtherActionsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
   const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
@@ -1388,6 +1397,51 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [allGroupStock, setAllGroupStock] = useState<Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>>>({});
   const [modalStock, setModalStock] = useState<Record<string, { unleashedQty: number | null; newStock: number | null }>>({});
   const [loadingStock, setLoadingStock] = useState(false);
+
+  const printPackingSlips = async (ordersToPrint: any[]) => {
+    if (ordersToPrint.length === 0) return;
+    let template: string;
+    try {
+      const res = await fetch("/api/admin/document-templates?key=packing-slip");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.html !== "string") throw new Error("Could not load packing slip template");
+      template = data.html;
+    } catch (err: any) {
+      alert(err.message || "Failed to load packing slip template.");
+      return;
+    }
+    const win = window.open("", "_blank", "width=800,height=600");
+    if (!win) {
+      alert("Could not open print window — check your browser's pop-up blocker.");
+      return;
+    }
+    const slips = ordersToPrint
+      .map((o) => renderPackingSlipHtml(template, buildPackingSlipData(o)))
+      .join("");
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Packing Slips</title>
+          <style>
+            body { font-family: system-ui, sans-serif; margin: 0; padding: 0; }
+            .no-print { position: fixed; top: 12px; right: 12px; z-index: 1000; }
+            @media print { .no-print, button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="no-print"><button onclick="window.print()">Print packing slips</button></div>
+          ${slips}
+        </body>
+      </html>
+    `;
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => {
+      win.focus();
+      win.print();
+    }, 500);
+  };
 
   // Auto-open order modal when viewOrderId is set
   useEffect(() => {
@@ -1542,7 +1596,76 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
     }
   };
 
-  const load = async () => {
+  const printAllDymoLabels = async (ordersToPrint: any[]) => {
+    if (ordersToPrint.length === 0) return;
+    try {
+      let savedTemplates: any[] = [];
+      const res = await fetch('/api/admin/label-templates');
+      const data = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(data)) savedTemplates = data;
+      const { loadDymoFramework, getSelectedDymoPrinter, getSelectedLabelTemplateId, printLabel } = await import('../../../lib/dymo');
+      await loadDymoFramework();
+      const printerName = getSelectedDymoPrinter();
+      const defaultId = getSelectedLabelTemplateId();
+      const template = savedTemplates.find((t: any) => t.id === defaultId) || savedTemplates[0] || defaultLabelTemplate;
+      let printed = 0;
+      const errors: string[] = [];
+      for (const order of ordersToPrint) {
+        const fields: Record<string, string> = {
+          customerName: order.customer?.fullName || order.customer?.email || 'Guest',
+          customerEmail: order.customer?.email || '',
+          customerPhone: order.shipping?.phone || order.customer?.phone || '',
+          address: order.shipping?.address || '',
+          suburb: order.shipping?.city || '',
+          state: order.shipping?.state || '',
+          postcode: order.shipping?.zipCode || '',
+          orderId: order.id,
+          items: (order.items || []).map((i: any) => `${i.quantity}x ${i.name}`).join(', '),
+        };
+        try {
+          const result = await printLabel({ ...buildLabelOptions(order, fields, template), printerName });
+          if (result && result.status) printed++;
+          else errors.push(`${order.id}: ${result?.message || 'Unknown'}`);
+        } catch (err: any) {
+          errors.push(`${order.id}: ${err.message}`);
+        }
+      }
+      alert(`Printed ${printed} of ${ordersToPrint.length} labels.${errors.length ? '\n\nErrors:\n' + errors.join('\n') : ''}`);
+    } catch (err: any) {
+      alert(`Failed to print labels: ${err.message}`);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!selectedOrder) return;
+    setSendingConfirmation(true);
+    try {
+      const resp = await fetch("/api/admin/orders/send-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: selectedOrder.id }),
+      });
+      const data = await resp.json().catch(() => ({} as any));
+      if (!resp.ok) throw new Error(data.error || "Failed to resend confirmation");
+      if (data.customerEmailSent) {
+        alert("Order confirmation resent to customer.");
+      } else {
+        alert(`Customer confirmation could not be sent: ${data.customerEmailError || "unknown"}`);
+      }
+    } catch (err: any) {
+      console.error("Resend confirmation error:", err);
+      alert(`Resend failed: ${err.message}`);
+    } finally {
+      setSendingConfirmation(false);
+    }
+  };
+
+  const handleSendPaymentLink = () => {
+    if (!selectedOrder) return;
+    setPaymentLinkModal({ order: selectedOrder, message: "", sending: false, previewHtml: "", previewLoading: true });
+  };
+
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -1619,11 +1742,12 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (activeTab !== "orders") return;
     load();
-  }, []);
+  }, [activeTab, load]);
 
   const getDateGroup = (dateString: string) => {
     const date = new Date(dateString);
@@ -1940,6 +2064,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
         <strong>Grouping:</strong> Orders are grouped from 12PM to 12PM (noon to noon)
       </div>
 
+
       {error && (
         <div className="mb-6 rounded-lg border border-primary/20 bg-primary/10 p-4 text-sm font-semibold text-primary-dark">
           {error}
@@ -2069,6 +2194,47 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                         </span>
                       )}
                     </button>
+
+                    {/* Print packing slips */}
+                    {(() => {
+                      const packingOrders = groupOrders.filter((o: any) => selection.has(o.id));
+                      return (
+                        <button
+                          type="button"
+                          disabled={packingOrders.length === 0}
+                          onClick={() => printPackingSlips(packingOrders)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Print Packing Slips
+                          {packingOrders.length > 0 && (
+                            <span className="ml-0.5 rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                              {packingOrders.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
+                    {/* Print Dymo labels */}
+                    {(() => {
+                      const labelOrders = groupOrders.filter((o: any) => selection.has(o.id));
+                      return (
+                        <button
+                          type="button"
+                          disabled={labelOrders.length === 0}
+                          onClick={() => printAllDymoLabels(labelOrders)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Print Dymo labels
+                          {labelOrders.length > 0 && (
+                            <span className="ml-0.5 rounded-full bg-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-800">
+                              {labelOrders.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -2629,35 +2795,6 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
               </button>
               <button
                 onClick={async () => {
-                  if (!selectedOrder) return;
-                  setSendingConfirmation(true);
-                  try {
-                    const resp = await fetch("/api/admin/orders/send-confirmation", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ orderId: selectedOrder.id }),
-                    });
-                    const data = await resp.json().catch(() => ({} as any));
-                    if (!resp.ok) throw new Error(data.error || "Failed to resend confirmation");
-                    if (data.customerEmailSent) {
-                      alert("Order confirmation resent to customer.");
-                    } else {
-                      alert(`Customer confirmation could not be sent: ${data.customerEmailError || "unknown"}`);
-                    }
-                  } catch (err: any) {
-                    console.error("Resend confirmation error:", err);
-                    alert(`Resend failed: ${err.message}`);
-                  } finally {
-                    setSendingConfirmation(false);
-                  }
-                }}
-                disabled={sendingConfirmation}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sendingConfirmation ? "Resending..." : "Resend Confirmation"}
-              </button>
-              <button
-                onClick={async () => {
                   setPushingStarshipit(true);
                   try {
                     const resp = await fetch("/api/orders/starshipit", {
@@ -2697,12 +2834,37 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
               >
                 Print Label
               </button>
-              <button
-                onClick={() => setPaymentLinkModal({ order: selectedOrder, message: "", sending: false, previewHtml: "", previewLoading: true })}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
-              >
-                Send Payment Link
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOtherActionsOpen((v) => !v)}
+                  disabled={sendingConfirmation}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Other actions
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                {otherActionsOpen && (
+                  <div className="absolute right-0 z-50 mt-1 w-48 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setOtherActionsOpen(false); void handleResendConfirmation(); }}
+                      disabled={sendingConfirmation || selectedOrder?.channel === "ebay"}
+                      title={selectedOrder?.channel === "ebay" ? "Cannot resend confirmation for eBay orders" : undefined}
+                      className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {sendingConfirmation ? "Resending..." : "Resend Confirmation"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOtherActionsOpen(false); handleSendPaymentLink(); }}
+                      className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                    >
+                      Send Payment Link
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
