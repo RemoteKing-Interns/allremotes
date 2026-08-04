@@ -1339,6 +1339,7 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [sendingConfirmation, setSendingConfirmation] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
   const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
@@ -2625,6 +2626,35 @@ function AdminOrders({ viewOrderId, setViewOrderId }: { viewOrderId: string | nu
                 className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
               >
                 Close
+              </button>
+              <button
+                onClick={async () => {
+                  if (!selectedOrder) return;
+                  setSendingConfirmation(true);
+                  try {
+                    const resp = await fetch("/api/admin/orders/send-confirmation", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderId: selectedOrder.id }),
+                    });
+                    const data = await resp.json().catch(() => ({} as any));
+                    if (!resp.ok) throw new Error(data.error || "Failed to resend confirmation");
+                    if (data.customerEmailSent) {
+                      alert("Order confirmation resent to customer.");
+                    } else {
+                      alert(`Customer confirmation could not be sent: ${data.customerEmailError || "unknown"}`);
+                    }
+                  } catch (err: any) {
+                    console.error("Resend confirmation error:", err);
+                    alert(`Resend failed: ${err.message}`);
+                  } finally {
+                    setSendingConfirmation(false);
+                  }
+                }}
+                disabled={sendingConfirmation}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {sendingConfirmation ? "Resending..." : "Resend Confirmation"}
               </button>
               <button
                 onClick={async () => {
@@ -6695,6 +6725,17 @@ function AdminProducts() {
                       placeholder="12 months"
                       className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                     />
+                  </div>
+                  <div className="pt-4 border-t border-neutral-100">
+                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Last Updated</label>
+                    <p className="text-sm text-neutral-900">
+                      {productForEdit.lastUpdated
+                        ? new Date(productForEdit.lastUpdated).toLocaleString()
+                        : '—'}
+                      {productForEdit.lastUpdatedBy && (
+                        <span className="text-neutral-500 ml-2">by {productForEdit.lastUpdatedBy}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>

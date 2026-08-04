@@ -4,6 +4,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
 import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
+import { sendOrderConfirmationEmail, sendNewOrderNotification } from "../../../lib/email";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -163,6 +164,61 @@ export async function POST(request: Request) {
         } else {
           console.error(`[SMS] Failed to send confirmation for order ${order.id}:`, result.error);
         }
+      });
+    }
+
+    // Send order confirmation emails (non-blocking)
+    const customerEmail = order.customer?.email;
+    const customerName = order.customer?.fullName || order.customer?.name;
+    if (customerEmail && customerName && Array.isArray(order.items) && order.items.length > 0) {
+      const shippingAddress = [
+        order.shipping?.address,
+        [order.shipping?.city, order.shipping?.state, order.shipping?.zipCode]
+          .filter(Boolean)
+          .join(" "),
+        order.shipping?.country,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const emailItems = order.items.map((item: any) => ({
+        name: String(item.name),
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.price ?? item.unitPrice ?? 0),
+      }));
+
+      const orderTotal = Number(order.pricing?.total ?? order.total ?? 0);
+
+      Promise.all([
+        sendOrderConfirmationEmail({
+          to: customerEmail,
+          orderId: order.id,
+          customerName,
+          items: emailItems,
+          total: orderTotal,
+          shippingAddress,
+        }),
+        sendNewOrderNotification({
+          to: "shane@allremotes.com.au",
+          orderId: order.id,
+          customerName,
+          customerEmail,
+          total: orderTotal,
+          items: order.items.map((item: any) => `${item.name} x${item.quantity || 1}`),
+        }),
+      ]).then(([customerResult, adminResult]) => {
+        if (!customerResult.success) {
+          console.error(`[Email] Customer confirmation failed for ${order.id}:`, customerResult.error);
+        } else {
+          console.log(`[Email] Customer confirmation sent for order ${order.id}`);
+        }
+        if (!adminResult.success) {
+          console.error(`[Email] Admin notification failed for ${order.id}:`, adminResult.error);
+        } else {
+          console.log(`[Email] Admin notification sent for order ${order.id}`);
+        }
+      }).catch((emailError) => {
+        console.error(`[Email] Order email error for ${order.id}:`, emailError);
       });
     }
 
