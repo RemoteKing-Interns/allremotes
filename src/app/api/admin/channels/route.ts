@@ -1,4 +1,5 @@
 import { getAdapter, type ListingPayload } from "@/lib/channels";
+import { guessCategory } from "@/lib/channels/ebay";
 import { getValidCredentials, saveChannelListing, saveChannelOrder, getMarketplaceAccount, getChannelListings } from "@/lib/channels/db";
 import { getProductSkuForKey } from "@/lib/products-import";
 import { toPublicImageUrls } from "@/lib/channels/images";
@@ -32,6 +33,19 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
     buildFullDescription(product) ||
     `High-quality ${title}. Professional replacement remote with reliable performance.`;
 
+  let categoryId = product.marketplaceCategory?.ebay;
+  if (!categoryId || categoryId === "0") {
+    categoryId = await guessCategory(product.name || product.sku || product.id);
+    if (categoryId) {
+      const db = await getDb();
+      const filter = product._id ? { _id: product._id } : { id: product.id };
+      await db
+        .collection("products")
+        .updateOne(filter, { $set: { "marketplaceCategory.ebay": categoryId } });
+      product.marketplaceCategory = { ...product.marketplaceCategory, ebay: categoryId };
+    }
+  }
+
   return {
     sku,
     title,
@@ -42,7 +56,7 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
     currency: process.env.DEFAULT_CURRENCY || "AUD",
     quantity,
     images,
-    category: product.marketplaceCategory?.ebay,
+    category: categoryId,
     mpn: product.mpn,
     gtin: product.gtin,
     packageWeight: product.packageWeight,

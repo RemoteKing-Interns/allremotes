@@ -19,9 +19,13 @@ compatibility and instructions fields. It paces calls to respect provider RPM/TP
 """
 
 import argparse
+import atexit
 import json
 import os
 import re
+import subprocess
+import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -103,6 +107,9 @@ def build_prompt(product: dict) -> tuple[str, str]:
         "Use HTML tags such as <h1>, <h2>, <h3>, <h4>, <ul>, <li>, <ol>, <table>, <tr>, <th>, <td>, <p>, <strong>, <br/>. "
         "Be specific and technical where the product title, brand or existing data allows; use '—' for unknown values. "
         "Naturally weave the provided SEO search terms into the text. "
+        "Do not use emojis, checkmarks, warning symbols, or decorative characters. "
+        "Use clean, minimal HTML with <h2> for section headings, <ul>/<li> for lists, and <p> for paragraphs. "
+        "Avoid <br/> chains and inline styles. "
         "The store is now called All Remotes. "
         "Do not use 'Remote King', 'RemoteKing', 'RK', or any abbreviation of the old brand. "
         "Do not omit keys. Do not return empty values. Do not include any text outside the JSON."
@@ -119,24 +126,24 @@ SEO search terms: {', '.join(terms)}.
 Generate a JSON object with these 5 HTML fields. Follow the exact structure below.
 
 1. "description": Start with <h1>[Product full name]</h1>. Then a short customer-friendly intro paragraph. Then:
-   <h3>📦 What's Included</h3> <ul> (1 × Genuine/Compatible Remote, Battery Included, Key Ring if applicable, Programming Instructions if applicable).
-   <h3>⚠️ Important Information</h3> <ul> (check model before ordering, appearance does not determine compatibility, contact team if unsure).
-   <h3>Why Choose All Remotes?</h3> <ul> (Australian owned, fast shipping, battery included, quality tested, friendly local support).
+   <h2>What's Included</h2> <ul> (1 × Genuine/Compatible Remote, Battery Included, Key Ring if applicable, Programming Instructions if applicable).
+   <h2>Important Information</h2> <ul> (check model before ordering, appearance does not determine compatibility, contact team if unsure).
+   <h2>Why Choose All Remotes?</h2> <ul> (Australian owned, fast shipping, battery included, quality tested, friendly local support).
 
 2. "features": Do NOT include a "Features" heading. Just a <ul> of concrete product-specific features (genuine/compatible, rolling/fixed code, controls X doors, compact durable, battery included, easy programming, Australian stock).
 
 3. "specification": Do NOT include a "Specifications" heading. Just a <table> with columns Specification | Details. Rows exactly: Brand, Model, Remote Series, Frequency, Number of Buttons, Operating Modes, Coding Type, Battery, Battery Included, Dimensions, Colour, Warranty. Use '—' if unknown.
 
-4. "compatibility": Do NOT include a "Compatibility" heading. Just an intro <p> then a clean <ul> with ✅ items. Highlight important notes with ⚠️ <strong>Important:</strong>.
+4. "compatibility": Do NOT include a "Compatibility" heading. Just an intro <p> then a clean <ul> with plain list items. Highlight important notes with <strong>Important:</strong>.
 
 5. "instructions": Do NOT include a "Programming Instructions" heading. Just <h4> sub-sections and numbered <ol> steps if known. Otherwise use the fallback: "Programming varies depending on your garage door opener model. Please refer to your opener manual or contact us if you require assistance."
 
 Return only:
 {{
-  "description": "<h1>...</h1>...<h3>What's Included</h3>...",
+  "description": "<h1>...</h1>...<h2>What's Included</h2>...",
   "features": "<ul><li>...<li></ul>",
   "specification": "<table>...</table>",
-  "compatibility": "<p>...</p><ul><li>✅ ...</li>...</ul>",
+  "compatibility": "<p>...</p><ul><li>...</li>...</ul>",
   "instructions": "<h4>...</h4><ol><li>...</li>...</ol>"
 }}"""
     return system, user
@@ -310,6 +317,49 @@ def get_db(uri: str, db_name: str, collection_name: str):
     return client[db_name][collection_name]
 
 
+def _is_process_alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        try:
+            res = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                capture_output=True,
+                text=True,
+            )
+            return str(pid) in res.stdout
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ProcessLookupError):
+        return False
+
+
+def _acquire_instance_lock(force: bool = False) -> str:
+    lock_path = os.path.join(tempfile.gettempdir(), "product_content_generator.lock")
+    if os.path.exists(lock_path) and not force:
+        try:
+            with open(lock_path, "r") as f:
+                pid = int(f.read().strip())
+            if pid != os.getpid() and _is_process_alive(pid):
+                print(f"Another instance is already running (PID {pid}). Use --force to override.")
+                raise SystemExit(1)
+        except ValueError:
+            pass
+    with open(lock_path, "w") as f:
+        f.write(str(os.getpid()))
+    atexit.register(_release_instance_lock, lock_path)
+    return lock_path
+
+
+def _release_instance_lock(lock_path: str):
+    try:
+        if os.path.exists(lock_path):
+            os.remove(lock_path)
+    except OSError:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate product content with a free LLM and save to MongoDB")
     parser.add_argument("--mode", choices=["single", "all", "check", "fix"], default="single")
@@ -326,7 +376,10 @@ def main():
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--rpm", type=int, default=DEFAULT_RPM)
     parser.add_argument("--tpm", type=int, default=DEFAULT_TPM)
+    parser.add_argument("--force", action="store_true", help="Force run even if another instance appears to be running")
     args = parser.parse_args()
+
+    _acquire_instance_lock(args.force)
 
     cloudflare_account = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     cloudflare_token = os.environ.get("CLOUDFLARE_API_TOKEN")

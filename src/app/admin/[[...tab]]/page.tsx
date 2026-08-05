@@ -1347,6 +1347,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
   const [otherActionsOpen, setOtherActionsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -1744,6 +1745,32 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     }
   }, []);
 
+  const syncOrders = async () => {
+    setSyncing(true);
+    setError("");
+    try {
+      const resp = await fetch("/api/admin/orders/sync?sinceDays=7", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Sync failed");
+      const total = Object.values<any>(data.results || {}).reduce(
+        (sum, r) => sum + (r.imported || 0),
+        0
+      );
+      if (total > 0) {
+        await load();
+      } else {
+        setError("No new channel orders to sync.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to sync orders");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== "orders") return;
     load();
@@ -2050,14 +2077,24 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">Orders</h1>
           <p className="mt-1 text-sm text-neutral-500">Manage and track customer orders.</p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50"
-          onClick={load}
-          disabled={loading}
-        >
-          <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={syncOrders}
+            disabled={syncing || loading}
+          >
+            <span className={syncing ? "animate-spin" : ""}>🔄</span> {syncing ? "Syncing..." : "Sync orders"}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50"
+            onClick={load}
+            disabled={loading}
+          >
+            <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">

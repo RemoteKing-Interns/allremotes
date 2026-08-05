@@ -22,6 +22,8 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
   const hamburgerRef = useRef(null);
@@ -81,9 +83,17 @@ const Header = () => {
   }, [pathname]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     const list = getProducts() || [];
-    if (searchQuery.trim().length > 0) {
-      const query = searchQuery.toLowerCase();
+    const query = debouncedQuery.trim();
+    if (query.length > 0) {
+      const q = query.toLowerCase();
       const filtered = list.filter((product) => {
         const searchableText = [
           product.name,
@@ -101,7 +111,7 @@ const Header = () => {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        return searchableText.includes(query);
+        return searchableText.includes(q);
       });
       setSearchResults(filtered.slice(0, 8));
       setShowSearchResults(true);
@@ -109,10 +119,17 @@ const Header = () => {
       setSearchResults([]);
       setShowSearchResults(false);
     }
-  }, [searchQuery, getProducts]);
+    setIsSearching(false);
+  }, [debouncedQuery, getProducts]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+    setIsSearching(true);
+    if (e.target.value.trim()) {
+      setShowSearchResults(true);
+    } else {
+      setShowSearchResults(false);
+    }
   };
 
   const handleSearchSubmit = (e) => {
@@ -122,6 +139,14 @@ const Header = () => {
       setSearchQuery("");
       setShowSearchResults(false);
     }
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery("");
+    setDebouncedQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setIsSearching(false);
   };
 
   const handleProductClick = () => {
@@ -173,6 +198,7 @@ const Header = () => {
         searchQuery={searchQuery}
         searchResults={searchResults}
         showSearchResults={showSearchResults}
+        isSearching={isSearching}
         showAccountMenu={showAccountMenu}
         setShowSearchResults={setShowSearchResults}
         searchRef={searchRef}
@@ -181,6 +207,7 @@ const Header = () => {
         mobileDrawerOpen={mobileDrawerOpen}
         handleSearchSubmit={handleSearchSubmit}
         handleSearchChange={handleSearchChange}
+        handleSearchClear={handleSearchClear}
         handleProductClick={handleProductClick}
         openAccountMenu={openAccountMenu}
         scheduleAccountMenuClose={scheduleAccountMenuClose}

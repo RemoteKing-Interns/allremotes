@@ -181,31 +181,11 @@ export default function ChannelManager() {
   };
 
   const pushSelected = () => {
-    const selectedProducts = products.filter((p) => selected.has(p.id));
-    const missing: string[] = [];
-    const validIds: string[] = [];
-    for (const p of selectedProducts) {
-      const label = `${p.name || p.title || p.id}${p.sku ? ` (SKU: ${p.sku})` : ""}`;
-      if (!p.marketplaceCategory?.ebay) {
-        missing.push(label);
-      } else {
-        validIds.push(p.id);
-      }
-    }
-    if (validIds.length === 0) {
-      setMessage(`No products have an eBay category set.\n\n${missing.join("\n")}`);
-      return;
-    }
-    push(validIds, missing);
+    const selectedIds = products.filter((p) => selected.has(p.id)).map((p) => p.id);
+    push(selectedIds);
   };
 
   const pushSingle = (id: string) => {
-    const p = products.find((x) => x.id === id);
-    const label = `${p?.name || p?.title || id}${p?.sku ? ` (SKU: ${p.sku})` : ""}`;
-    if (!p?.marketplaceCategory?.ebay) {
-      setMessage(`No eBay category set for ${label}`);
-      return;
-    }
     push([id]);
   };
 

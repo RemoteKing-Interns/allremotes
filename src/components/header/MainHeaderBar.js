@@ -7,6 +7,33 @@ import ProductImage from "../images/ProductImage";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
 
+function HighlightText({ text, query }) {
+  if (!query) return text;
+  const q = query.toLowerCase();
+  const t = String(text || "");
+  const lower = t.toLowerCase();
+  const parts = [];
+  let i = 0;
+  while (i < t.length) {
+    const idx = lower.indexOf(q, i);
+    if (idx === -1) {
+      parts.push(t.slice(i));
+      break;
+    }
+    if (idx > i) parts.push(t.slice(i, idx));
+    parts.push(
+      <span
+        key={idx}
+        className="rounded bg-accent/20 px-0.5 font-semibold text-accent-dark"
+      >
+        {t.slice(idx, idx + query.length)}
+      </span>
+    );
+    i = idx + query.length;
+  }
+  return <>{parts}</>;
+}
+
 const MainHeaderBar = ({
   user,
   promotions,
@@ -22,6 +49,8 @@ const MainHeaderBar = ({
   mobileDrawerOpen,
   handleSearchSubmit,
   handleSearchChange,
+  handleSearchClear,
+  isSearching,
   handleProductClick,
   openAccountMenu,
   scheduleAccountMenuClose,
@@ -56,11 +85,24 @@ const MainHeaderBar = ({
               <input
                 type="text"
                 placeholder="Search remote, brand, or model"
-                className="h-12 w-full rounded-lg border border-neutral-300 bg-white pl-5 pr-12 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/50 focus:ring-1 focus:ring-accent/20 focus:outline-none transition-colors"
+                className="h-12 w-full rounded-lg border border-neutral-300 bg-white pl-5 pr-20 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/50 focus:ring-1 focus:ring-accent/20 focus:outline-none transition-colors"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onFocus={() => searchQuery && setShowSearchResults(true)}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleSearchClear}
+                  className="absolute right-11 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-400 transition hover:text-neutral-600"
+                  aria-label="Clear search"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              )}
               <button
                 type="submit"
                 className="absolute right-1.5 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-accent text-white transition hover:bg-accent-dark"
@@ -73,84 +115,96 @@ const MainHeaderBar = ({
               </button>
             </form>
 
-            {showSearchResults && searchResults.length > 0 && (
+            {showSearchResults && searchQuery.trim().length > 0 && (
               <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong">
                 <div className="flex flex-wrap items-center justify-between gap-1 border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
-                  <span>Search Results ({searchResults.length})</span>
-                  <span className="text-neutral-400">Top matches</span>
+                  <span>
+                    {isSearching
+                      ? 'Searching for "' + searchQuery + '"...'
+                      : searchResults.length > 0
+                        ? 'Search Results for "' + searchQuery + '" (' + searchResults.length + ')'
+                        : 'No products found for "' + searchQuery + '"'}
+                  </span>
+                  {!isSearching && searchResults.length > 0 && (
+                    <span className="text-neutral-400">Top matches</span>
+                  )}
                 </div>
-                <div className="max-h-[22rem] overflow-auto">
-                  {searchResults.map((product) => {
-                    const pricing = getPriceBreakdown(product.price, hasDiscount, {
-                      promotions,
-                      product,
-                    });
 
-                    return (
-                      <Link
-                        key={product.id}
-                        href={`/product/${encodeURIComponent(String(product.id))}`}
-                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
-                        onClick={handleProductClick}
-                      >
-                        <div className="relative h-12 w-12 shrink-0">
-                          <ProductImage
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            sizes="48px"
-                            className="rounded-lg border border-neutral-200 bg-white object-contain p-1"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-neutral-900">
-                            {product.name}
-                          </div>
-                          <div className="mt-1 flex items-baseline gap-2">
-                            {pricing.hasDiscount && (
-                              <span className="text-xs text-neutral-400 line-through">
-                                AU${pricing.originalPrice.toFixed(2)}
-                              </span>
-                            )}
-                            <span className="text-sm font-extrabold text-neutral-900">
-                              AU${pricing.finalPrice.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-xs font-semibold text-neutral-500">
-                            {product.category === "car"
-                              ? "Automotive Remote"
-                              : "Garage & Gate Remote"}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-                {searchResults.length >= 8 && (
-                  <div className="border-t border-neutral-200 p-3">
-                    <button
-                      type="button"
-                      onClick={handleSearchSubmit}
-                      className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
-                    >
-                      View All Results
-                    </button>
+                {isSearching ? (
+                  <div className="p-4">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-accent" />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <div className="max-h-[22rem] overflow-auto">
+                      {searchResults.map((product) => {
+                        const pricing = getPriceBreakdown(product.price, hasDiscount, {
+                          promotions,
+                          product,
+                        });
+
+                        return (
+                          <Link
+                            key={product.id}
+                            href={`/product/${encodeURIComponent(String(product.id))}`}
+                            className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
+                            onClick={handleProductClick}
+                          >
+                            <div className="relative h-12 w-12 shrink-0">
+                              <ProductImage
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                sizes="48px"
+                                className="rounded-lg border border-neutral-200 bg-white object-contain p-1"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-semibold text-neutral-900">
+                                <HighlightText text={product.name} query={searchQuery} />
+                              </div>
+                              <div className="mt-1 flex items-baseline gap-2">
+                                {pricing.hasDiscount && (
+                                  <span className="text-xs text-neutral-400 line-through">
+                                    AU${pricing.originalPrice.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="text-sm font-extrabold text-neutral-900">
+                                  AU${pricing.finalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs font-semibold text-neutral-500">
+                                {product.category === "car"
+                                  ? "Automotive Remote"
+                                  : "Garage & Gate Remote"}
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    {searchResults.length >= 8 && (
+                      <div className="border-t border-neutral-200 p-3">
+                        <button
+                          type="button"
+                          onClick={handleSearchSubmit}
+                          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
+                        >
+                          View All Results
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="p-4">
+                    <p className="text-sm text-neutral-600">
+                      Try searching for <span className="font-semibold">car</span>,{" "}
+                      <span className="font-semibold">garage</span>, or{" "}
+                      <span className="font-semibold">remote</span>.
+                    </p>
                   </div>
                 )}
-              </div>
-            )}
-
-            {showSearchResults && searchQuery.trim().length > 0 && searchResults.length === 0 && (
-              <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] rounded-lg border border-neutral-200 bg-white p-4 shadow-strong">
-                <p className="text-sm font-semibold text-neutral-900">
-                  No products found for &quot;{searchQuery}&quot;
-                </p>
-                <p className="mt-1 text-sm text-neutral-600">
-                  Try searching for <span className="font-semibold">car</span>,{" "}
-                  <span className="font-semibold">garage</span>, or{" "}
-                  <span className="font-semibold">remote</span>.
-                </p>
               </div>
             )}
           </div>

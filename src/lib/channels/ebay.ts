@@ -37,6 +37,16 @@ function getMarketplaceLocale(): { locale: string; contentLanguage: string } {
   }
 }
 
+function normalizeEbayDescription(description: string | undefined): string {
+  const html = String(description || "").trim();
+  if (html.length <= 4000) return html;
+  const text = html
+    .replace(/<[^>]*>?/gm, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length <= 4000 ? text : text.slice(0, 3997) + "...";
+}
+
 function mapCondition(condition = ""): string {
   const c = condition.toLowerCase();
   if (c.includes("new")) return "NEW";
@@ -149,6 +159,7 @@ export const eBayAdapter: ChannelAdapter = {
     }
 
     const title = payload.title.slice(0, 80);
+    const description = normalizeEbayDescription(payload.description);
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
@@ -160,7 +171,7 @@ export const eBayAdapter: ChannelAdapter = {
       locale,
       product: {
         title,
-        description: payload.description,
+        description,
         imageUrls: payload.images,
         aspects: payload.aspects || {
           Brand: [payload.brand],
@@ -210,7 +221,7 @@ export const eBayAdapter: ChannelAdapter = {
       format: "FIXED_PRICE",
       availableQuantity: payload.quantity,
       categoryId: payload.category || "0",
-      listingDescription: payload.description,
+      listingDescription: description,
       pricingSummary: {
         price: { currency: payload.currency, value: payload.price.toFixed(2) },
       },
@@ -268,19 +279,33 @@ export const eBayAdapter: ChannelAdapter = {
       });
     } catch {}
 
-    const publishRes: any = await ebayFetch(`/sell/inventory/v1/offer/${offerId}/publish`, {
-      method: "POST",
-      accessToken: creds.accessToken,
-    });
+    let listingId: string | undefined;
+    try {
+      const publishRes: any = await ebayFetch(`/sell/inventory/v1/offer/${offerId}/publish`, {
+        method: "POST",
+        accessToken: creds.accessToken,
+      });
+      listingId = publishRes?.listingId;
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (!/already\s*(?:been\s*)?published/i.test(msg)) throw err;
+      // Already live — try to fetch the listing id so we can return the URL
+      const existing: any = await ebayFetch(`/sell/inventory/v1/offer/${offerId}`, {
+        method: "GET",
+        accessToken: creds.accessToken,
+      }).catch(() => null);
+      listingId = existing?.listingId;
+    }
 
     return {
       externalId: offerId,
-      externalUrl: publishRes?.listingId ? `https://www.ebay.com.au/itm/${publishRes.listingId}` : undefined,
+      externalUrl: listingId ? `https://www.ebay.com.au/itm/${listingId}` : undefined,
     };
   },
 
   async updateListing(offerId: string, payload: ListingPayload, creds: ChannelCredentials) {
     const title = payload.title.slice(0, 80);
+    const description = normalizeEbayDescription(payload.description);
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
@@ -292,7 +317,7 @@ export const eBayAdapter: ChannelAdapter = {
       locale,
       product: {
         title,
-        description: payload.description,
+        description,
         imageUrls: payload.images,
         aspects: { Brand: [payload.brand] },
       },
@@ -331,7 +356,7 @@ export const eBayAdapter: ChannelAdapter = {
       format: "FIXED_PRICE",
       availableQuantity: payload.quantity,
       categoryId: payload.category || "0",
-      listingDescription: payload.description,
+      listingDescription: description,
       pricingSummary: {
         price: { currency: payload.currency, value: payload.price.toFixed(2) },
       },

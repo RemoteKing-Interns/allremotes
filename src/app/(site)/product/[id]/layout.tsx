@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { getPublicProducts } from "@/lib/public-site";
 import { enrichProductWithS3Images } from "@/lib/products-json";
 import { getSiteUrl } from "@/lib/site-url";
+import { notFound } from "next/navigation";
 
 const SITE_NAME = "ALLREMOTES Australia";
 
@@ -168,6 +169,8 @@ export default async function ProductLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const product = await getProductCached(id);
+  if (!product) notFound();
   return (
     <>
       {children}
