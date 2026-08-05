@@ -34,7 +34,9 @@ function escapeXml(str: string): string {
 
 function getProductImage(product: Product): string {
   const primary = getPrimaryImage(product);
-  return primary || `${BASE_URL}/images/mainlogo.png`;
+  if (!primary) return `${BASE_URL}/images/mainlogo.png`;
+  if (/^https?:\/\//i.test(primary)) return primary;
+  return `${BASE_URL}${primary.startsWith("/") ? "" : "/"}${primary}`;
 }
 
 function getProductTitle(product: Product): string {
@@ -87,15 +89,8 @@ function generateProductXml(product: Product): string {
     <g:brand>${brand}</g:brand>
     <g:condition>new</g:condition>
     <g:sku>${sku}</g:sku>
-    ${product.category ? `<g:product_category>${escapeXml(product.category)}</g:product_category>` : ""}
-    <g:return_policy>
-      <g:country>AU</g:country>
-      <g:policy_label>all_remotes_policy</g:policy_label>
-      <g:return_method>return</g:return_method>
-      <g:return_time>365</g:return_time>
-      <g:return_shipping_fees>customer</g:return_shipping_fees>
-      <g:return_description>${returnPolicy}</g:return_description>
-    </g:return_policy>
+    ${product.category ? `<g:product_type>${escapeXml(product.category)}</g:product_type>` : ""}
+    <g:return_policy>${returnPolicy}</g:return_policy>
   </item>`;
 }
 
