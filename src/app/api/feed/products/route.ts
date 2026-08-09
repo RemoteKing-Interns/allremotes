@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
 import { getPrimaryImage } from "@/lib/images";
+import { mongoEnabled, getDb } from "@/lib/mongo";
+import { readProductsJson, enrichProductsWithS3Images } from "@/lib/products-json";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://allremotes.com.au";
-const PRODUCTS_JSON_PATH = path.resolve(process.cwd(), "public/allremotes.products.json");
 
 interface Product {
   id: string;
@@ -96,9 +95,20 @@ function generateProductXml(product: Product): string {
 
 export async function GET() {
   try {
-    const raw = await fs.readFile(PRODUCTS_JSON_PATH, "utf8");
-    const products = JSON.parse(raw);
-    const productsArray = Array.isArray(products) ? products : [];
+    let productsArray: any[] = [];
+    if (mongoEnabled()) {
+      try {
+        const db = await getDb();
+        const col = db.collection("products");
+        const mongoProducts = await col.find({}).toArray();
+        productsArray = enrichProductsWithS3Images(mongoProducts);
+      } catch (mongoErr) {
+        console.error("MongoDB feed read failed, falling back to JSON:", mongoErr);
+        productsArray = await readProductsJson();
+      }
+    } else {
+      productsArray = await readProductsJson();
+    }
     
     const items = productsArray
       .filter((p: Product) => p && p.id && p.price)
