@@ -516,45 +516,50 @@ def main():
     products = products[start:]
 
     for i, product in enumerate(products, start + 1):
-        print(f"[{i}/{total}] {product.get('name')}")
-        last_call = _wait_for_rate_limit(last_call, 0, args.rpm, args.tpm)
-        result, tokens, raw = generate_content(llm, args.model, product, response_format=response_format)
-        if result:
-            print(json.dumps(result, indent=2, ensure_ascii=False))
-        update_info = {"updated": False, "db_attempts": 0}
-        if result and "_id" in product:
-            updated, db_attempts = _update_and_verify(products_col, product, result)
-            update_info = {
-                "updated": updated,
-                "db_attempts": db_attempts,
-            }
-            if updated:
-                success += 1
-                _save_checkpoint(args.checkpoint, i)
+        try:
+            print(f"[{i}/{total}] {product.get('name')}")
+            last_call = _wait_for_rate_limit(last_call, 0, args.rpm, args.tpm)
+            result, tokens, raw = generate_content(llm, args.model, product, response_format=response_format)
+            if result:
+                print(json.dumps(result, indent=2, ensure_ascii=False))
+            update_info = {"updated": False, "db_attempts": 0}
+            if result and "_id" in product:
+                updated, db_attempts = _update_and_verify(products_col, product, result)
+                update_info = {
+                    "updated": updated,
+                    "db_attempts": db_attempts,
+                }
+                if updated:
+                    success += 1
+                    _save_checkpoint(args.checkpoint, i)
+                    print(f"[ok] product {i} ({product.get('name')}) updated.")
+                else:
+                    failed += 1
+                    print(f"[warn] product {i} ({product.get('name')}) DB verification failed after {db_attempts} attempts, continuing.")
                 last_call = _wait_for_rate_limit(last_call, tokens, args.rpm, args.tpm)
             else:
                 failed += 1
-                print(f"[stop] product {i} ({product.get('name')}) failed DB verification after {db_attempts} attempts.")
-                _log_output(
-                    args.log,
-                    {
-                        "mode": args.mode,
-                        "index": i,
-                        "product_id": str(product.get("_id", "")),
-                        "name": product.get("name"),
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "success": False,
-                        "tokens": tokens,
-                        "raw": raw,
-                        "result": result,
-                        "update_info": update_info,
-                        "error": f"DB verification failed after {db_attempts} attempts",
-                    },
-                )
-                break
-        else:
+                print(f"[warn] product {i} ({product.get('name')}) no LLM result, continuing.")
+
+            _log_output(
+                args.log,
+                {
+                    "mode": args.mode,
+                    "index": i,
+                    "product_id": str(product.get("_id", "")),
+                    "name": product.get("name"),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "success": bool(result and update_info.get("updated")),
+                    "tokens": tokens,
+                    "raw": raw,
+                    "result": result,
+                    "update_info": update_info,
+                    "error": None if (result and update_info.get("updated")) else (update_info.get("error") or "failed"),
+                },
+            )
+        except Exception as err:
             failed += 1
-            print(f"[stop] product {i} ({product.get('name')}) failed after retries. Checkpoint saved at {i - 1}.")
+            print(f"[error] product {i} ({product.get('name')}) raised {type(err).__name__}: {err}")
             _log_output(
                 args.log,
                 {
@@ -564,30 +569,14 @@ def main():
                     "name": product.get("name"),
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "success": False,
-                    "tokens": tokens,
-                    "raw": raw,
-                    "result": result,
-                    "update_info": update_info,
-                    "error": "LLM generation failed after retries",
+                    "tokens": 0,
+                    "raw": "",
+                    "result": None,
+                    "update_info": {"updated": False, "db_attempts": 0},
+                    "error": f"{type(err).__name__}: {err}",
                 },
             )
-            break
 
-        _log_output(
-            args.log,
-            {
-                "mode": args.mode,
-                "index": i,
-                "product_id": str(product.get("_id", "")),
-                "name": product.get("name"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "success": True,
-                "tokens": tokens,
-                "raw": raw,
-                "result": result,
-                "update_info": update_info,
-            },
-        )
         if args.delay:
             time.sleep(args.delay)
 
