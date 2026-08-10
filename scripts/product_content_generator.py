@@ -377,6 +377,7 @@ def main():
     parser.add_argument("--rpm", type=int, default=DEFAULT_RPM)
     parser.add_argument("--tpm", type=int, default=DEFAULT_TPM)
     parser.add_argument("--force", action="store_true", help="Force run even if another instance appears to be running")
+    parser.add_argument("--batch-size", type=int, default=0, help="Max products to process this run (0 = all). Uses checkpoint to resume.")
     args = parser.parse_args()
 
     _acquire_instance_lock(args.force)
@@ -514,6 +515,9 @@ def main():
     total = len(products)
     start = max(args.start, _load_checkpoint(args.checkpoint))
     products = products[start:]
+    if args.batch_size and args.batch_size > 0:
+        products = products[:args.batch_size]
+        print(f"Batch mode: processing up to {args.batch_size} products (starting from index {start}).")
 
     for i, product in enumerate(products, start + 1):
         try:
