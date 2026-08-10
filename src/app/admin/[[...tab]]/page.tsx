@@ -4631,6 +4631,7 @@ function InventorySection() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingStock, setLoadingStock] = useState<Set<string>>(new Set());
+  const [loadingAll, setLoadingAll] = useState(false);
   const [sortColumn, setSortColumn] = useState<'name' | 'quantity' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -4715,6 +4716,14 @@ function InventorySection() {
     loadProducts();
   }, []);
 
+  const loadAllStock = async () => {
+    setLoadingAll(true);
+    for (const product of products) {
+      await loadProductStock(product);
+    }
+    setLoadingAll(false);
+  };
+
   const lowStock = products.filter((p) => typeof p.quantity === "number" && p.quantity > 0 && p.quantity < 10);
   const outOfStock = products.filter((p) => p.quantity === 0);
 
@@ -4739,6 +4748,15 @@ function InventorySection() {
           <h2 className="text-2xl font-bold text-neutral-900">Inventory</h2>
           <p className="text-sm text-neutral-500 mt-1">Load current stock and location from Unleashed only when needed.</p>
         </div>
+        <button
+          type="button"
+          onClick={loadAllStock}
+          disabled={loadingAll || products.length === 0}
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={loadingAll ? "animate-spin" : ""} />
+          {loadingAll ? `Loading... (${products.length - loadingStock.size}/${products.length})` : "Load All Stock"}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
