@@ -1,0 +1,460 @@
+{
+  "total": 91,
+  "products": [
+    {
+      "sku": "AR-R4D2",
+      "name": "4D Doors R4D2 Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RME04",
+      "name": "Elsema Pentafob 433MHz 5Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG50",
+      "name": "Gliderol TM390 390MHz 3Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-FHRX2-PC",
+      "name": "6-pin harness power-cable to use with receiver. ",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCMPCV1",
+      "name": "Merlin E964M 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-UNIWP-B",
+      "name": "Universal UNIWP-B Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RMH19",
+      "name": "Nice ECCO5 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RH02",
+      "name": "Hills S1890A 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-MYQ-B",
+      "name": "Merlin MYQ-B Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-EKX1M",
+      "name": "GFA EKX1M 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-SKX1HD",
+      "name": "GFA SKX1 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-SKX2GS",
+      "name": "GFA SKX2GS 434MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-SKX1GS",
+      "name": "GFA SKX1GS 434MHz 1Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-SMART-HUB",
+      "name": "ATA SMART-HUB Phone Control Kit",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RMDB04",
+      "name": "B&D 433mhz 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-c",
+      "name": "B&D WTB-6 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ZTR",
+      "name": "Steel-line SD800 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-HT133",
+      "name": "2Button Marantec HT133 Garage Door Opener Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ZTWB",
+      "name": "Steel-line SD800 433MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-DE231",
+      "name": "Marantec DE231 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-DE4",
+      "name": "Guardian DE4 433MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-WB1",
+      "name": "Steel-line WB1 433MHz 1Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-OX2",
+      "name": "Nice OX2 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-FLORE4",
+      "name": "Nice FLO4RE 920MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-FLORE2",
+      "name": "Nice FLO2RE 920MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ONE9",
+      "name": "Nice ON9E 92MHz 9Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ONE4",
+      "name": "Nice ON4E 92MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-INTI2Y",
+      "name": "Nice INTI2Y 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-INTI2G",
+      "name": "Nice INTI2G 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-INTI2L",
+      "name": "Nice INTI2L 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-INTI2B",
+      "name": "Nice INTI2B 434MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RME02WP",
+      "name": "Elsema Pentafob 433MHz 5Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ZIG4B",
+      "name": "4Button DEA Ziggy Garage Door Opener Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ETKP1",
+      "name": "Entrematic, Ditec ETKP1 Rolling Code 433MHz Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-GF002",
+      "name": "G-Force 433mhz 433MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-BEN04",
+      "name": "Beninca 433Mhz 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSGKP",
+      "name": "FAAC RSGKP Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RNG02",
+      "name": "Centsys RNG02 434MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RNG01",
+      "name": "Centsys RNG01 434MHz 1Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RME62",
+      "name": "Elsema 102A 27MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSL03B",
+      "name": "Steel-line/Boss F2F 310MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-ZT07",
+      "name": "Steel-Line ZT07 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RB-MLT",
+      "name": "Universal RB-MLT 868MHz Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-F2F-CAR",
+      "name": "Universal F2F 879MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-CSV02",
+      "name": "Universal 5cm Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG15",
+      "name": "ATA RCG15 Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG14",
+      "name": "ATA RCG14 Remote Control",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RLA238",
+      "name": "Liftaway RLA238 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-F2F-6",
+      "name": "Universal F2F-6 879MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCM50",
+      "name": "Chamberlain MC100AML Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "CMT-RSL04E",
+      "name": "Boss RSL04G 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "CMT-RCM21E",
+      "name": "Merlin 3btn 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "CMT-RSL02E",
+      "name": "Steel-line/Boss 2btn 304MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "CMT-RCG01E",
+      "name": "Gliderol 3btn 315MHz 3Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "CMT-RMDB01E",
+      "name": "B&D 4btn 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA07",
+      "name": "TAU REA07 433MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA05",
+      "name": "RIB REA05 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA06",
+      "name": "SEA 433mhz 433MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RGS18",
+      "name": "Genius RGS18 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCD22",
+      "name": "ACDC RCD22 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RGB04B",
+      "name": "Domino 4Btn 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REC03",
+      "name": "Eco ECO4 92MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RFAC6",
+      "name": "FAAC XT2 434MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RFS06",
+      "name": "Vicway F2F 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSL04G",
+      "name": "Steel-line/Boss RSL04G 433MHz 3Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG40",
+      "name": "Gliderol TM390 390MHz 3Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RMN02",
+      "name": "Marantec HT384 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA04B",
+      "name": "ECA REA04B 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG04B",
+      "name": "ATA F2F Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RAC04B",
+      "name": "Hills F2F 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSA04",
+      "name": "ASA 434mhz 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RNG04",
+      "name": "Centsys TX4 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RBT02B",
+      "name": "BFT RBT02B 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RGP04B",
+      "name": "Gryphon/Seip 4btn 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSO25B",
+      "name": "Smart Opener 434mh 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RSS01B",
+      "name": "Superlift/Avanti TX4 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA02",
+      "name": "DEA GTI2B 434MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RGF04",
+      "name": "G-Force AP009 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RTAM01",
+      "name": "Tilt-a-matic RTAM01 302MHz 1Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RMPC3",
+      "name": "B&D MPC3 318MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCD21",
+      "name": "ACDC 434mhz 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-FHCRX2",
+      "name": "ATA FHCRX2 2Channel Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-REA04",
+      "name": "ECA 434mhz 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RFAC4",
+      "name": "FAAC XT4 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCM11B",
+      "name": "Merlin M842 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RNF01",
+      "name": "Nice FLO4R 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCD19",
+      "name": "ACDC RD30 434MHz 4Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCR11",
+      "name": "Remocon RCR11 Garage Gate Remote",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCM13",
+      "name": "Merlin M802 40MHz 2Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RCG01",
+      "name": "Gliderol TM305C 315MHz 3Button Transmitter",
+      "status": "template-style"
+    },
+    {
+      "sku": "AR-RET04",
+      "name": "Elvox Miniature transmitter for ET Door Range, 4 Button, 433MHz",
+      "status": "template-style"
+    }
+  ]
+}

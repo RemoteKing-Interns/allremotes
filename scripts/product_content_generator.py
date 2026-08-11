@@ -364,6 +364,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate product content with a free LLM and save to MongoDB")
     parser.add_argument("--mode", choices=["single", "all", "check", "fix"], default="single")
     parser.add_argument("--index", type=int, default=0, help="Product index for single mode")
+    parser.add_argument("--name", default=None, help="Product name (or partial) for single mode")
     parser.add_argument("--start", type=int, default=0, help="Start index for all mode (resume)")
     parser.add_argument("--checkpoint", default="product_content_checkpoint.txt", help="File to store/restore last processed index")
     parser.add_argument("--delay", type=float, default=0.0, help="Extra seconds to sleep between products")
@@ -447,9 +448,16 @@ def main():
     products_col = get_db(args.uri, args.db, args.collection)
 
     if args.mode == "single":
-        product = products_col.find_one({}, skip=args.index)
-        if not product:
-            raise SystemExit(f"No product found at index {args.index}")
+        if args.name:
+            import re
+            pattern = re.compile(re.escape(args.name), re.IGNORECASE)
+            product = products_col.find_one({"name": {"$regex": pattern}})
+            if not product:
+                raise SystemExit(f"No product found matching name '{args.name}'")
+        else:
+            product = products_col.find_one({}, skip=args.index)
+            if not product:
+                raise SystemExit(f"No product found at index {args.index}")
         print(f"\n=== Testing: {product.get('name')} (index {args.index}) ===")
         result, _, raw = generate_content(llm, args.model, product, response_format=response_format)
         print(json.dumps(result, indent=2, ensure_ascii=False))

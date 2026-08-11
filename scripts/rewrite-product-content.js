@@ -14,6 +14,7 @@ const DB_NAME = process.env.MONGODB_DB || "allremotes";
 
 const CHECKPOINT_FILE = path.join(__dirname, "product-content-checkpoint.json");
 const LOG_FILE = path.join(__dirname, "content-rewrite-log.json");
+const PRODUCTS_JSON_FILE = path.join(__dirname, "..", "public", "allremotes.products.json");
 
 const REQUIRED_FIELDS = ["description", "features", "specification", "compatibility", "instructions"];
 const REWRITE_MARKERS = [
@@ -205,6 +206,10 @@ async function main() {
   const db = client.db(DB_NAME);
   const col = db.collection("products");
 
+  // Also support products that only exist in the public JSON fallback.
+  const productsJson = loadJson(PRODUCTS_JSON_FILE, []);
+  let productsJsonDirty = false;
+
   let targetSkus = [];
   if (sku) {
     targetSkus = [sku];
@@ -225,7 +230,12 @@ async function main() {
   let updated = 0;
 
   for (const s of targetSkus) {
-    const product = await col.findOne({ sku: s });
+    let product = await col.findOne({ sku: s });
+    let source = "mongo";
+    if (!product) {
+      product = productsJson.find((p) => p.sku === s);
+      source = "json";
+    }
     if (!product) {
       console.log(`${s}: not found`);
       continue;
@@ -236,12 +246,17 @@ async function main() {
 
     if (needsUpdate) {
       if (apply) {
-        await col.updateOne({ _id: product._id }, { $set: newContent });
+        if (source === "mongo") {
+          await col.updateOne({ _id: product._id }, { $set: newContent });
+        } else {
+          Object.assign(product, newContent);
+          productsJsonDirty = true;
+        }
       }
       updated++;
       runLog.skus.push(s);
-      runLog.changes.push({ sku: s, updated: true });
-      console.log(`${apply ? "Updated" : "[dry-run]"} ${s}`);
+      runLog.changes.push({ sku: s, source, updated: true });
+      console.log(`${apply ? "Updated" : "[dry-run]"} ${s} (${source})`);
     } else {
       console.log(`${s}: already in template`);
     }
@@ -260,6 +275,9 @@ async function main() {
     saveJson(LOG_FILE, log);
     checkpoint.lastUpdated = new Date().toISOString();
     saveJson(CHECKPOINT_FILE, checkpoint);
+    if (productsJsonDirty) {
+      saveJson(PRODUCTS_JSON_FILE, productsJson);
+    }
   }
 
   await client.close();

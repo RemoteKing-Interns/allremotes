@@ -19,6 +19,7 @@ import CustomerManagement from "../../../components/admin/CustomerManagement";
 import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
+import ProductImageGen from "../../../components/admin/ProductImageGen";
 import ProductImage from "../../../components/images/ProductImage";
 import MediaPickerModal from "../../../components/images/MediaPickerModal";
 import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
@@ -97,6 +98,7 @@ import {
   ChevronLeft,
   PanelLeftClose,
   PanelLeft,
+  Wand2,
 } from "lucide-react";
 
 const STORAGE_KEYS = {
@@ -109,7 +111,7 @@ const STORAGE_KEYS = {
 
 const navGroupDefinitions = [
   { label: 'Sales',     icon: ShoppingCart, ids: ['orders', 'returns', 'abandoned_carts'] },
-  { label: 'Catalog',   icon: Package,      ids: ['products', 'categories', 'inventory'] },
+  { label: 'Catalog',   icon: Package,      ids: ['products', 'categories', 'inventory', 'image_gen'] },
   { label: 'Customers', icon: Users,        ids: ['customers', 'reviews', 'messages'] },
   { label: 'Marketing', icon: Megaphone,    ids: ['promotions', 'discounts'] },
   { label: 'Content',   icon: FileText,     ids: ['home', 'navigation', 'content'] },
@@ -453,7 +455,7 @@ const AdminContent = () => {
       { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
       { id: 'returns', perm: 'orders' }, { id: 'abandoned_carts', perm: 'orders' },
       { id: 'products', perm: 'products' }, { id: 'categories', perm: 'products' },
-      { id: 'inventory', perm: 'products' }, { id: 'customers', perm: 'customers' },
+      { id: 'inventory', perm: 'products' }, { id: 'image_gen', perm: 'products' }, { id: 'customers', perm: 'customers' },
       { id: 'reviews', perm: 'customers' }, { id: 'messages', perm: 'customers' },
       { id: 'promotions', perm: 'marketing' }, { id: 'discounts', perm: 'marketing' },
       { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' }, { id: 'content', perm: 'content' },
@@ -692,6 +694,7 @@ const AdminContent = () => {
       { id: 'products', label: 'Products' },
       { id: 'categories', label: 'Categories & Brands' },
       { id: 'inventory', label: 'Inventory' },
+      { id: 'image_gen', label: 'AI Image Generator' },
       { id: 'customers', label: 'Customers' },
       { id: 'reviews', label: 'Reviews' },
       { id: 'messages', label: 'Messages/Queries' },
@@ -895,6 +898,7 @@ const AdminContent = () => {
     { id: 'products',       label: 'Products',            icon: Package,            perm: 'products' },
     { id: 'categories',     label: 'Categories & Brands', icon: Tags,               perm: 'products' },
     { id: 'inventory',      label: 'Inventory',           icon: Layers,             perm: 'products' },
+    { id: 'image_gen',      label: 'AI Image Generator',  icon: Wand2,              perm: 'products' },
     { id: 'customers',      label: 'Customers',           icon: Users,              perm: 'customers' },
     { id: 'reviews',        label: 'Reviews',             icon: Star,               perm: 'customers' },
     { id: 'messages',       label: 'Messages/Queries',    icon: MessageSquareText,  perm: 'customers' },
@@ -1216,6 +1220,7 @@ const AdminContent = () => {
           {hasPermission('products')    && <div className={activeTab === 'products'        ? '' : 'hidden'}><AdminProducts /></div>}
           {hasPermission('products')    && <div className={activeTab === 'categories'      ? '' : 'hidden'}><CategoriesBrandsSection /></div>}
           {hasPermission('products')    && <div className={activeTab === 'inventory'       ? '' : 'hidden'}><InventorySection /></div>}
+          {hasPermission('products')    && <div className={activeTab === 'image_gen'       ? '' : 'hidden'}><ProductImageGen /></div>}
           {hasPermission('orders')      && <div className={activeTab === 'orders'          ? '' : 'hidden'}><AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} activeTab={activeTab} /></div>}
           {hasPermission('orders')      && <div className={activeTab === 'returns'         ? '' : 'hidden'}><AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} /></div>}
           {hasPermission('orders')      && <div className={activeTab === 'abandoned_carts' ? '' : 'hidden'}><AdminAbandonedCarts /></div>}

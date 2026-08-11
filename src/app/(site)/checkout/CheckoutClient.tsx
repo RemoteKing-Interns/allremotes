@@ -792,9 +792,15 @@ const Checkout = () => {
               <h2>Place Order</h2>
               <div className="order-summary">
                 <p>Review your order and click below to confirm.</p>
+                {selectedShipping && (
+                  <div className="summary-shipping">
+                    <span>Shipping ({selectedShipping.name})</span>
+                    <span>AU${shippingCost.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="order-total-line">
                   <span>Total Amount:</span>
-                  <strong>AU${discountedTotal.toFixed(2)}</strong>
+                  <strong>AU${finalTotal.toFixed(2)}</strong>
                 </div>
                 <p className="mt-2 text-sm text-neutral-500">{settings.gstStatement}</p>
               </div>
@@ -832,7 +838,7 @@ const Checkout = () => {
                     Processing...
                   </>
                 ) : (
-                  <>Place Order - AU${discountedTotal.toFixed(2)}</>
+                  <>Place Order - AU${finalTotal.toFixed(2)}</>
                 )}
               </button>
             </div>

@@ -1,6 +1,36 @@
 {
   "runs": [
     {
+      "startedAt": "2026-08-10T22:49:04.902Z",
+      "apply": true,
+      "skus": [
+        "AR-RET04"
+      ],
+      "changes": [
+        {
+          "sku": "AR-RET04",
+          "source": "mongo",
+          "updated": true
+        }
+      ],
+      "finishedAt": "2026-08-10T22:49:04.963Z"
+    },
+    {
+      "startedAt": "2026-08-10T22:40:18.509Z",
+      "apply": true,
+      "skus": [
+        "RET04"
+      ],
+      "changes": [
+        {
+          "sku": "RET04",
+          "source": "json",
+          "updated": true
+        }
+      ],
+      "finishedAt": "2026-08-10T22:40:18.532Z"
+    },
+    {
       "startedAt": "2026-07-27T03:35:58.328Z",
       "apply": true,
       "skus": [
