@@ -1,8 +1,17 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import ProductListClient from "../_components/ProductListClient";
 import { getCategoryPageTitle } from "@/lib/category";
 import { getSiteUrl } from "@/lib/site-url";
+
+const REMOVED_CATEGORIES = new Set(["car", "automotive", "auto", "vehicle"]);
+
+function redirectIfRemoved(category: string) {
+  if (REMOVED_CATEGORIES.has(category.toLowerCase())) {
+    redirect("/products/all");
+  }
+}
 
 function getCategoryDescription(category: string) {
   const descriptions: Record<string, string> = {
@@ -25,6 +34,7 @@ export async function generateMetadata({
   params: Promise<{ category: string }>;
 }): Promise<Metadata> {
   const { category } = await params;
+  redirectIfRemoved(category);
   const display = getCategoryPageTitle(category);
   const description = getCategoryDescription(category);
   const title = `${display} Remotes for Sale Australia | ALLREMOTES`;
@@ -105,6 +115,7 @@ export default async function ProductsCategoryPage({
   params: Promise<{ category: string }>;
 }) {
   const { category } = await params;
+  redirectIfRemoved(category);
   return (
     <>
       <Suspense

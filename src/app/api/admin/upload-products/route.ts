@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { parseCsvText, rowsToRecords, upsertProductsFromCsvRecords } from "@/lib/products-import";
-import { readProductsJson, writeProductsJson } from "@/lib/products-json";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -59,31 +58,24 @@ export async function POST(request: Request) {
     const rows = parseCsvText(csvText);
     const { records, headers, headerRowIndex } = rowsToRecords(rows);
 
-    let productsCol: any = null;
-    if (mongoEnabled()) {
-      const db = await getDb();
-      productsCol = db.collection("products");
-      await productsCol.createIndex({ id: 1 }, { unique: true });
-      await productsCol.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured. CSV upload requires MongoDB." },
+        { status: 503, headers: CORS_HEADERS }
+      );
     }
 
-    const jsonStore = productsCol
-      ? null
-      : {
-          read: readProductsJson,
-          write: writeProductsJson,
-        };
+    const db = await getDb();
+    const productsCol = db.collection("products");
+    await productsCol.createIndex({ id: 1 }, { unique: true });
+    await productsCol.createIndex({ skuKey: 1 }, { unique: true, sparse: true });
 
     const result = await upsertProductsFromCsvRecords({
       records,
       headers,
       headerRowIndex,
-      mongo: productsCol
-        ? {
-            productsCol,
-          }
-        : null,
-      jsonStore,
+      mongo: { productsCol },
+      jsonStore: null,
     });
 
     return NextResponse.json(result.body, { 

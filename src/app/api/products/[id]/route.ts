@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { readProductsJson, enrichProductWithS3Images } from "@/lib/products-json";
+import { enrichProductWithS3Images } from "@/lib/products-json";
 
 const CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
 
@@ -41,29 +41,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  let mongoError: unknown = null;
 
   try {
-    let product: any = null;
-    let source = "json";
-
-    if (mongoEnabled()) {
-      try {
-        const db = await getDb();
-        const col = db.collection("products");
-        product = await col.findOne({ id });
-        source = "mongo";
-      } catch (err) {
-        mongoError = err;
-        product = null;
-      }
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured." },
+        { status: 503, headers: CORS_HEADERS }
+      );
     }
 
-    if (!product) {
-      const products = await readProductsJson();
-      product = products.find((p: any) => p.id === id);
-      source = "json-fallback";
-    }
+    const db = await getDb();
+    const col = db.collection("products");
+    const product = await col.findOne({ id });
 
     if (!product) {
       return NextResponse.json(
@@ -72,23 +61,20 @@ export async function GET(
       );
     }
 
-    product = enrichProductWithS3Images(product);
-
-    return NextResponse.json(product, {
+    return NextResponse.json(enrichProductWithS3Images(product), {
       headers: {
         "Cache-Control": CACHE_CONTROL,
-        "X-Product-Source": source,
+        "X-Product-Source": "mongodb",
         "X-S3-Images-Enriched": "true",
         ...CORS_HEADERS,
       },
     });
   } catch (err: any) {
-    const relevantError = mongoError || err;
-    const hint = mongoTroubleshootingHint(relevantError);
+    const hint = mongoTroubleshootingHint(err);
     return NextResponse.json(
       {
         error: "Failed to load product",
-        details: (relevantError as any)?.message || String(relevantError),
+        details: err?.message || String(err),
         ...(hint ? { hint } : null),
       },
       {

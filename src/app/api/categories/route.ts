@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { readProductsJson } from "@/lib/products-json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,21 +22,15 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
 
 export async function GET() {
   try {
-    let mongoProducts: any[] = [];
-    let jsonProducts: any[] = [];
-
-    // Always load the JSON file as a baseline
-    try { jsonProducts = await readProductsJson(); } catch { /* ignore */ }
-
-    if (mongoEnabled()) {
-      try {
-        const db = await getDb();
-        mongoProducts = await db.collection("products").find({}).toArray();
-      } catch { /* fall through to JSON */ }
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured." },
+        { status: 503 }
+      );
     }
 
-    // Prefer mongo if it has products, else use JSON
-    const products = mongoProducts.length > 0 ? mongoProducts : jsonProducts;
+    const db = await getDb();
+    const products = await db.collection("products").find({}).toArray();
 
     const countMap: Record<string, number> = {};
     products.forEach((p) => {
@@ -45,15 +38,6 @@ export async function GET() {
       const key = normaliseCategory(raw);
       if (key) countMap[key] = (countMap[key] || 0) + 1;
     });
-
-    // If mongo had no category data, fall back to JSON counts
-    if (Object.keys(countMap).length === 0 && jsonProducts.length > 0) {
-      jsonProducts.forEach((p) => {
-        const raw = p.category || p.cat1 || "";
-        const key = normaliseCategory(raw);
-        if (key) countMap[key] = (countMap[key] || 0) + 1;
-      });
-    }
 
     const categories = Object.entries(countMap)
       .map(([key, count]) => ({

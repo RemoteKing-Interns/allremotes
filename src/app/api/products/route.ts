@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { readProductsJson, enrichProductsWithS3Images } from "@/lib/products-json";
+import { enrichProductsWithS3Images } from "@/lib/products-json";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
@@ -36,46 +36,17 @@ function mongoTroubleshootingHint(err: unknown) {
 }
 
 export async function GET() {
-  let mongoError: unknown = null;
-
   try {
-    let products: any[] = [];
-    let source = "json";
-
-    // ✅ LOCAL MOCK (uncomment to use when testing, comment out for production)
-
-    // products = [
-    //   {
-    //     id: 1,
-    //     skuKey: "MOCK-001",
-    //     title: "Mock Product",
-    //     brand: "Test Brand",
-    //     description: "This is a local mock product for testing.",
-    //     price: 49.99,
-    //     stock: 10,
-    //     image: "/public/images/hero.jpg",
-    //     category: "all",
-    //   },
-    // ];
-    // return NextResponse.json(products, {
-    //   headers: { "Cache-Control": "no-store" },
-    // });
-
-    if (mongoEnabled()) {
-      try {
-        const db = await getDb();
-        const col = db.collection("products");
-        products = await col.find({}).toArray();
-        source = "mongo";
-      } catch (err) {
-        // Keep API available by falling back to JSON when MongoDB is unreachable.
-        mongoError = err;
-        products = await readProductsJson();
-        source = "json-fallback";
-      }
-    } else {
-      products = await readProductsJson();
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured." },
+        { status: 503, headers: CORS_HEADERS }
+      );
     }
+
+    const db = await getDb();
+    const col = db.collection("products");
+    let products: any[] = await col.find({}).toArray();
 
     // Enrich products with S3 image URLs based on SKU
     // Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-N.png
@@ -84,18 +55,17 @@ export async function GET() {
     return NextResponse.json(products, {
       headers: { 
         "Cache-Control": "no-store",
-        "X-Products-Source": source,
+        "X-Products-Source": "mongodb",
         "X-S3-Images-Enriched": "true",
         ...CORS_HEADERS 
       },
     });
   } catch (err: any) {
-    const relevantError = mongoError || err;
-    const hint = mongoTroubleshootingHint(relevantError);
+    const hint = mongoTroubleshootingHint(err);
     return NextResponse.json(
       {
         error: "Failed to load products",
-        details: (relevantError as any)?.message || String(relevantError),
+        details: err?.message || String(err),
         ...(hint ? { hint } : null),
       },
       { 

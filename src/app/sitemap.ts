@@ -19,7 +19,6 @@ const PRIORITY_BRANDS = [
 const STATIC_ROUTES = [
   "/",
   "/garage-gate",
-  "/automotive",
   "/for-the-home",
   "/locksmithing",
   "/shop-by-brand",
@@ -32,7 +31,6 @@ const STATIC_ROUTES = [
   "/return-policy",
   "/products/all",
   "/products/garage",
-  "/products/car",
 ] as const;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -112,7 +110,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
     const category = normalizeCategory(product.category);
-    if (!category || !updatedAt) return;
+    if (!category || category === "car" || !updatedAt) return;
 
     const current = categoryLastModified.get(category);
     if (!current || updatedAt.getTime() > current.getTime()) {

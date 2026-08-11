@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPrimaryImage } from "@/lib/images";
+import { getCategoryPageTitle } from "@/lib/category";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { readProductsJson, enrichProductsWithS3Images } from "@/lib/products-json";
+import { enrichProductsWithS3Images } from "@/lib/products-json";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://allremotes.com.au";
 
@@ -31,6 +32,15 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
+function stripHtml(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getProductImage(product: Product): string {
   const primary = getPrimaryImage(product);
   if (!primary) return `${BASE_URL}/images/mainlogo.png`;
@@ -40,15 +50,25 @@ function getProductImage(product: Product): string {
 
 function getProductTitle(product: Product): string {
   const brand = product.brand?.trim() || "ALLREMOTES";
-  const model = product.model?.trim() || product.name?.trim() || "Replacement Remote";
-  return `${brand} ${model}`;
+  const name = product.name?.trim() || "";
+  if (name.toLowerCase().startsWith(brand.toLowerCase())) return name;
+  const model = product.model?.trim();
+  if (model) return `${brand} ${model}`;
+  if (name) return `${brand} ${name}`;
+  return `${brand} Replacement Remote`;
 }
 
 function getProductDescription(product: Product): string {
-  return (
+  const raw =
     product.description?.trim() ||
-    `High-quality ${getProductTitle(product)}. Professional replacement remote with reliable performance.`
-  );
+    product.model?.trim() ||
+    product.name?.trim() ||
+    "";
+  const text = stripHtml(raw);
+  if (text) {
+    return `${text} High-quality professional replacement remote with reliable performance. Free shipping Australia-wide, 30-day returns and 12-month warranty.`;
+  }
+  return `High-quality ${getProductTitle(product)}. Professional replacement remote with reliable performance.`;
 }
 
 function getAvailability(product: Product): string {
@@ -57,11 +77,28 @@ function getAvailability(product: Product): string {
 }
 
 function getReturnPolicy(): string {
-  return `12-month warranty on all products for faulty or stopped-working items. No change of mind returns. Buyer pays return shipping. Returns only accepted within Australia.`;
+  return `Returns accepted within 30 days. Must be in original, resaleable condition. Buyer pays return shipping. Returns only accepted within Australia. Certain items (motor parts, control boards, etc.) are non-returnable.`;
 }
 
 function formatPrice(price: number): string {
   return `${price.toFixed(2)} AUD`;
+}
+
+function getAdditionalImageLinks(product: Product): string {
+  const allImages = Array.isArray(product.images) ? product.images : [];
+  return allImages
+    .slice(1, 5)
+    .map((img) => {
+      const absolute = /^https?:\/\//i.test(img)
+        ? img
+        : `${BASE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
+      return `<g:additional_image_link>${escapeXml(absolute)}</g:additional_image_link>`;
+    })
+    .join("\n    ");
+}
+
+function getProductType(product: Product): string {
+  return getCategoryPageTitle(product.category || "all");
 }
 
 function generateProductXml(product: Product): string {
@@ -74,7 +111,10 @@ function generateProductXml(product: Product): string {
   const price = formatPrice(product.price);
   const brand = escapeXml(product.brand?.trim() || "ALLREMOTES");
   const sku = escapeXml(product.sku?.trim() || product.id);
+  const mpn = escapeXml(product.sku?.trim() || product.id);
+  const productType = escapeXml(getProductType(product));
   const returnPolicy = escapeXml(getReturnPolicy());
+  const additionalImages = getAdditionalImageLinks(product);
 
   return `
   <item>
@@ -83,32 +123,30 @@ function generateProductXml(product: Product): string {
     <g:description>${description}</g:description>
     <link>${link}</link>
     <g:image_link>${imageLink}</g:image_link>
-    <g:availability>${availability}</g:availability>
+    ${additionalImages ? `${additionalImages}\n    ` : ""}<g:availability>${availability}</g:availability>
     <g:price>${price}</g:price>
     <g:brand>${brand}</g:brand>
     <g:condition>new</g:condition>
     <g:sku>${sku}</g:sku>
-    ${product.category ? `<g:product_type>${escapeXml(product.category)}</g:product_type>` : ""}
+    <g:mpn>${mpn}</g:mpn>
+    <g:product_type>${productType}</g:product_type>
     <g:return_policy>${returnPolicy}</g:return_policy>
   </item>`;
 }
 
 export async function GET() {
   try {
-    let productsArray: any[] = [];
-    if (mongoEnabled()) {
-      try {
-        const db = await getDb();
-        const col = db.collection("products");
-        const mongoProducts = await col.find({}).toArray();
-        productsArray = enrichProductsWithS3Images(mongoProducts);
-      } catch (mongoErr) {
-        console.error("MongoDB feed read failed, falling back to JSON:", mongoErr);
-        productsArray = await readProductsJson();
-      }
-    } else {
-      productsArray = await readProductsJson();
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured. Feed requires MongoDB." },
+        { status: 503 }
+      );
     }
+
+    const db = await getDb();
+    const col = db.collection("products");
+    const mongoProducts = await col.find({}).toArray();
+    const productsArray = enrichProductsWithS3Images(mongoProducts);
     
     const items = productsArray
       .filter((p: Product) => p && p.id && p.price)

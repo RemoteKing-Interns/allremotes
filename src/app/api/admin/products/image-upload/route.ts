@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { readProductsJson, writeProductsJson } from "@/lib/products-json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,34 +69,29 @@ export async function POST(request: NextRequest) {
     const publicUrl = buildPublicUrl(config.bucket, config.region, key);
 
     // Persist on the product record: add to images[], set as primary if none set.
-    if (mongoEnabled()) {
-      const db = await getDb();
-      const col = db.collection("products");
-      const product = await col.findOne({ id: productId });
-      const existingImages: string[] = Array.isArray(product?.images) ? product.images : [];
-      const images = Array.from(new Set([...existingImages, publicUrl]));
-      await col.updateOne(
-        { id: productId },
-        {
-          $set: {
-            images,
-            image: publicUrl,
-            lastUpdated: new Date(),
-            lastUpdatedBy: "puter-ai-image",
-          },
-        }
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured. Image uploads require MongoDB." },
+        { status: 503 }
       );
-    } else {
-      const products = await readProductsJson();
-      const idx = products.findIndex((p: any) => p.id === productId);
-      if (idx >= 0) {
-        const existingImages: string[] = Array.isArray(products[idx].images) ? products[idx].images : [];
-        products[idx].images = Array.from(new Set([...existingImages, publicUrl]));
-        products[idx].image = publicUrl;
-        products[idx].lastUpdatedBy = "puter-ai-image";
-        await writeProductsJson(products);
-      }
     }
+
+    const db = await getDb();
+    const col = db.collection("products");
+    const product = await col.findOne({ id: productId });
+    const existingImages: string[] = Array.isArray(product?.images) ? product.images : [];
+    const images = Array.from(new Set([...existingImages, publicUrl]));
+    await col.updateOne(
+      { id: productId },
+      {
+        $set: {
+          images,
+          image: publicUrl,
+          lastUpdated: new Date(),
+          lastUpdatedBy: "puter-ai-image",
+        },
+      }
+    );
 
     return NextResponse.json({ url: publicUrl, key }, { status: 200 });
   } catch (err: any) {

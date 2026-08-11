@@ -98,3 +98,14 @@ export function getFallbackLetter(product: any): string {
   const fallback = brand || name || "R";
   return fallback.charAt(0).toUpperCase();
 }
+
+/**
+ * Convert a product image URL to an absolute URL.
+ * Preserves fully-qualified URLs and resolves local paths against the site URL.
+ */
+export function toAbsoluteImageUrl(url: string, siteUrl: string): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) return `${siteUrl.replace(/\/$/, "")}${url}`;
+  return `${siteUrl.replace(/\/$/, "")}/${url}`;
+}

@@ -1,7 +1,6 @@
 import { navigationMenu as defaultNavigationMenu } from "@/data/navigation";
 import { readContentJson } from "@/lib/content-json";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { readProductsJson } from "@/lib/products-json";
 import { getSiteUrl } from "@/lib/site-url";
 
 type NavigationItem = {
@@ -150,17 +149,16 @@ async function readContentDoc(key: string): Promise<ContentDoc> {
 }
 
 export async function getPublicProducts(): Promise<ProductRecord[]> {
-  if (mongoEnabled()) {
-    const db = await getDb();
-    const products = await db
-      .collection("products")
-      .find({})
-      .toArray();
-
-    return Array.isArray(products) ? (products as ProductRecord[]) : [];
+  if (!mongoEnabled()) {
+    throw new Error("MongoDB is not configured. Public products require MongoDB.");
   }
 
-  const products = await readProductsJson();
+  const db = await getDb();
+  const products = await db
+    .collection("products")
+    .find({})
+    .toArray();
+
   return Array.isArray(products) ? (products as ProductRecord[]) : [];
 }
 

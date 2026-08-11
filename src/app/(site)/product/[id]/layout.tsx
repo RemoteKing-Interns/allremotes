@@ -4,19 +4,14 @@ import { unstable_cache } from "next/cache";
 import { getPublicProducts } from "@/lib/public-site";
 import { enrichProductWithS3Images } from "@/lib/products-json";
 import { getSiteUrl } from "@/lib/site-url";
+import { toAbsoluteImageUrl } from "@/lib/images";
+import { getCategoryPageTitle } from "@/lib/category";
 import { notFound } from "next/navigation";
 
 const SITE_NAME = "ALLREMOTES Australia";
 
 function getCategoryDisplayName(category: string) {
-  const names: Record<string, string> = {
-    garage: "Garage & Gate",
-    car: "Car",
-    home: "For The Home",
-    locksmith: "Locksmithing",
-    all: "All",
-  };
-  return names[category] || category;
+  return getCategoryPageTitle(category || "all");
 }
 
 const getProductCached = unstable_cache(
@@ -42,18 +37,19 @@ export async function generateMetadata({
     return { title: "Product not found | ALLREMOTES" };
   }
 
-  const title = `${product.name || "Product"}${
-    product.brand ? ` - ${product.brand}` : ""
-  } Remote | ALLREMOTES Australia`;
+  const siteUrl = getSiteUrl();
+  const title = `Buy ${product.name || "Product"} | ALLREMOTES Australia`;
   const description = `Buy ${product.name || ""} ${
-    product.brand ?? ""
-  } remote at ALLREMOTES Australia. SKU: ${
+    product.brand ? `by ${product.brand}` : ""
+  } at ALLREMOTES Australia. SKU: ${
     product.sku || product.rk_sku || ""
-  }. Compatible replacement with fast shipping, warranty and expert support.`;
+  }. Compatible replacement with fast shipping, 30-day returns and expert support.`;
   const canonical = `/product/${encodeURIComponent(id)}`;
-  const images = product.image
-    ? [{ url: product.image }]
-    : [{ url: "/images/3.jpg" }];
+  const primaryImage = toAbsoluteImageUrl(
+    product.image || "/images/3.jpg",
+    siteUrl,
+  );
+  const images = [{ url: primaryImage }];
 
   return {
     title,
@@ -61,7 +57,9 @@ export async function generateMetadata({
     keywords: [
       product.name || "",
       product.brand || "",
+      product.sku || product.rk_sku || "",
       `${product.brand || ""} remote`,
+      `${product.name || ""} remote`,
       "remote control",
       "replacement remote",
       "Australia",
@@ -87,30 +85,54 @@ export async function generateMetadata({
 
 function buildProductJsonLd(product: any, siteUrl: string) {
   const id = String(product.id || "");
+  const allImages = Array.isArray(product.images)
+    ? product.images.filter((img: any) => typeof img === "string")
+    : product.image
+      ? [product.image]
+      : [];
+  const imageUrls = allImages.length
+    ? allImages.map((img: string) => toAbsoluteImageUrl(img, siteUrl))
+    : [toAbsoluteImageUrl("/images/3.jpg", siteUrl)];
+
+  const offer = {
+    "@type": "Offer" as const,
+    url: `${siteUrl}/product/${encodeURIComponent(id)}`,
+    priceCurrency: "AUD",
+    price: product.price ? Number(product.price).toFixed(2) : "0.00",
+    availability:
+      product.inStock !== false
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+    itemCondition: "https://schema.org/NewCondition",
+    priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  };
+
+  const aggregateRating =
+    product.ratingValue && product.reviewCount
+      ? {
+          "@type": "AggregateRating" as const,
+          ratingValue: Number(product.ratingValue).toFixed(1),
+          reviewCount: Number(product.reviewCount),
+        }
+      : undefined;
+
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name || "",
-    image: Array.isArray(product.images)
-      ? product.images.filter((img: any) => typeof img === "string")
-      : product.image
-        ? [product.image]
-        : [],
+    image: imageUrls,
+    description:
+      product.description ||
+      product.short_description ||
+      `Buy ${product.name || ""} at ALLREMOTES Australia.`,
+    url: `${siteUrl}/product/${encodeURIComponent(id)}`,
     sku: product.sku || product.rk_sku || "",
+    mpn: product.sku || product.rk_sku || "",
     brand: product.brand
       ? { "@type": "Brand", name: product.brand }
       : undefined,
-    offers: {
-      "@type": "Offer",
-      url: `${siteUrl}/product/${encodeURIComponent(id)}`,
-      priceCurrency: "AUD",
-      price: product.price ? Number(product.price).toFixed(2) : "0.00",
-      availability:
-        product.inStock !== false
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-      itemCondition: "https://schema.org/NewCondition",
-    },
+    ...(aggregateRating ? { aggregateRating } : {}),
+    offers: offer,
   };
 }
 
@@ -132,7 +154,7 @@ function buildBreadcrumbJsonLd(product: any, siteUrl: string) {
       {
         "@type": "ListItem",
         position: 2,
-        name: categoryDisplay || "Products",
+        name: categoryDisplay,
         item: `${siteUrl}/products/${category || "all"}`,
       },
       {
@@ -145,9 +167,7 @@ function buildBreadcrumbJsonLd(product: any, siteUrl: string) {
   };
 }
 
-async function ProductJsonLd({ id }: { id: string }) {
-  const product = await getProductCached(id);
-  if (!product) return null;
+function ProductJsonLd({ product }: { product: any }) {
   const siteUrl = getSiteUrl();
   const schemas = [
     buildProductJsonLd(product, siteUrl),
@@ -174,7 +194,7 @@ export default async function ProductLayout({
   return (
     <>
       {children}
-      <ProductJsonLd id={id} />
+      <ProductJsonLd product={product} />
     </>
   );
 }

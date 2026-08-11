@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { resetOrdersJson } from "@/lib/orders-json";
-import { writeProductsJson } from "@/lib/products-json";
 import { resetContentJson } from "@/lib/content-json";
 
 const CORS_HEADERS = {
@@ -33,16 +32,20 @@ export async function POST() {
   }
 
   try {
-    if (mongoEnabled()) {
-      const db = await getDb();
-      await db.collection("products").deleteMany({});
-      await db.collection("orders").deleteMany({});
-      await db
-        .collection<{ _id: string }>("content")
-        .deleteMany({ _id: { $in: CONTENT_KEYS } });
+    if (!mongoEnabled()) {
+      return NextResponse.json(
+        { error: "MongoDB is not configured. Reset requires MongoDB." },
+        { status: 503, headers: CORS_HEADERS }
+      );
     }
 
-    await writeProductsJson([]);
+    const db = await getDb();
+    await db.collection("products").deleteMany({});
+    await db.collection("orders").deleteMany({});
+    await db
+      .collection<{ _id: string }>("content")
+      .deleteMany({ _id: { $in: CONTENT_KEYS } });
+
     await resetOrdersJson();
     await resetContentJson(CONTENT_KEYS);
 

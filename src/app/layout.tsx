@@ -15,16 +15,19 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title:
-    "ALLREMOTES | Garage, Gate & Car Remotes",
+    "ALLREMOTES | Garage, Gate & Home Remotes",
   description:
-    "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+    "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
   keywords: [
     "garage door remote",
     "gate remote",
     "remote control",
     "replacement remote",
     "garage motor remote",
-    "remote accessories",
+    "home automation remote",
+    "TV remote",
+    "air conditioner remote",
+    "locksmithing tools",
     "Australia",
   ],
   robots: {
@@ -40,9 +43,9 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     title:
-      "ALLREMOTES | Garage, Gate & Car Remotes",
+      "ALLREMOTES | Garage, Gate & Home Remotes",
     description:
-      "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+      "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
     url: "/",
     images: [
       {
@@ -56,9 +59,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title:
-      "ALLREMOTES | Garage, Gate & Car Remotes",
+      "ALLREMOTES | Garage, Gate & Home Remotes",
     description:
-      "Shop replacement car remotes, garage door remotes, gate controls, smart keys and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+      "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
     images: [
       {
         url: "/images/3.jpg",
