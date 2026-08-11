@@ -1428,7 +1428,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Packing Slips</title>
+          <title>Invoices</title>
           <style>
             body { font-family: system-ui, sans-serif; margin: 0; padding: 0; }
             .no-print { position: fixed; top: 12px; right: 12px; z-index: 1000; }
@@ -1436,7 +1436,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           </style>
         </head>
         <body>
-          <div class="no-print"><button onclick="window.print()">Print packing slips</button></div>
+          <div class="no-print"><button onclick="window.print()">Print invoices</button></div>
           ${slips}
         </body>
       </html>
@@ -2237,7 +2237,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       )}
                     </button>
 
-                    {/* Print packing slips */}
+                    {/* Print invoices */}
                     {(() => {
                       const packingOrders = groupOrders.filter((o: any) => selection.has(o.id));
                       return (
@@ -2248,7 +2248,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Printer className="h-3.5 w-3.5" />
-                          Print Packing Slips
+                          Print Invoices
                           {packingOrders.length > 0 && (
                             <span className="ml-0.5 rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
                               {packingOrders.length}

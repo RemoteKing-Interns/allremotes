@@ -43,6 +43,7 @@ export interface PackingSlipData {
   currency: string;
   postageService: string;
   footerText: string;
+  abn: string;
 }
 
 export function escapeHtml(str: string): string {
@@ -82,6 +83,7 @@ export function buildPackingSlipData(order: any): PackingSlipData {
   const data: PackingSlipData = {
     storeName: "All Remotes",
     storeUrl: "https://www.allremotes.com.au",
+    abn: "23 679 611 351",
     orderId: String(order.id || ""),
     displayOrderId: order.externalOrderId ? String(order.externalOrderId) : String(order.id || ""),
     externalOrderId: order.externalOrderId ? String(order.externalOrderId) : undefined,
@@ -164,6 +166,7 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
   .packing-label h1 { font-size: 18px; color: #9a9a9a; font-weight: 400; margin: 0 0 4px; text-transform: uppercase; }
   .packing-label p { font-size: 12px; color: #9a9a9a; margin: 0; }
   .store { text-align: center; flex: 1; }
+  .store-abn { font-size: 12px; color: #555; margin-top: 4px; }
   .store-logo img { height: 48px; width: auto; }
   .store-url { font-size: 13px; color: #1a1a1a; }
   .qr { text-align: right; }
@@ -191,7 +194,7 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
   .totals { width: 260px; margin-left: auto; margin-top: 16px; font-size: 14px; }
   .totals .row { display: flex; justify-content: space-between; padding: 4px 0; }
   .totals .row.total { font-weight: 700; }
-  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #555; text-align: center; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 18px; font-weight: 700; color: #1a1a1a; text-align: center; }
   @media print { .no-print, button { display: none; } body { padding: 0; } }
 </style>
 <div class="slip">
@@ -199,10 +202,10 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
     <div class="store">
       <div class="store-logo"><img src="/images/mainlogo.png" alt="{{storeName}}"></div>
       <div class="store-url">{{storeUrl}}</div>
+      <div class="store-abn">ABN: {{abn}}</div>
     </div>
     <div class="packing-label">
-      <h1>PACKING SLIP</h1>
-      <p>This is not an invoice.</p>
+      <h1>INVOICE</h1>
     </div>
   </div>
 
@@ -276,6 +279,7 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
     <div class="row"><span>Postage</span><span>{{currency}} \${{shippingCost}}</span></div>
     <div class="row"><span>Discount</span><span>{{currency}} \${{discount}}</span></div>
     <div class="row total"><span>Order total</span><span>{{currency}} \${{total}}</span></div>
+    <div class="row" style="font-size: 11px; color: #555; justify-content: flex-end; padding-top: 4px;">All prices inclusive of GST</div>
   </div>
 
   <div class="footer">{{footerText}}</div>

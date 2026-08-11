@@ -230,7 +230,7 @@ export default function DocumentDesign() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-neutral-900">Document Design</h2>
-          <p className="text-sm text-neutral-500">Edit the packing-slip HTML template. Use placeholders to render order data.</p>
+          <p className="text-sm text-neutral-500">Edit the invoice HTML template. Use placeholders to render order data.</p>
         </div>
         <div className="flex items-center gap-3">
           <span className={`text-xs font-medium ${hasChanges ? "text-amber-600" : "text-emerald-600"}`}>
@@ -336,8 +336,8 @@ export default function DocumentDesign() {
           )}
 
           <iframe
-            title="Packing slip preview"
-            srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Packing Slip Preview</title></head><body>${preview}</body></html>`}
+            title="Invoice preview"
+            srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice Preview</title></head><body>${preview}</body></html>`}
             className="h-[600px] w-full rounded-lg border border-neutral-300 bg-white"
           />
         </div>
