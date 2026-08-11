@@ -59,7 +59,6 @@ export function generateNavigationFromProducts(products = []) {
   // Map raw category values to friendly display names
   const categoryDisplayNames = {
     'garage': 'Garage & Gate',
-    'car': 'Automotive',
     'all': 'General',
   };
 
@@ -303,110 +302,6 @@ export const navigationMenu = {
             name: "Shop All",
             path: "/garage-gate/gate-hardware",
             icon: getIcon(0),
-            isShopAll: true,
-          },
-        ],
-      },
-    ],
-  },
-  automotive: {
-    title: "Automotive",
-    path: "/automotive",
-    columns: [
-      {
-        title: "Keys & Remotes",
-        items: [
-          {
-            name: "Key Shells",
-            path: "/automotive/keys/key-shells",
-            icon: getIcon(1),
-          },
-          {
-            name: "Complete Keys",
-            path: "/automotive/keys/complete-keys",
-            icon: getIcon(2),
-          },
-          {
-            name: "Replacement Buttons",
-            path: "/automotive/keys/replacement-buttons",
-            icon: getIcon(3),
-          },
-          {
-            name: "Key Sleeves",
-            path: "/automotive/keys/key-sleeves",
-            icon: getIcon(4),
-          },
-          {
-            name: "Batteries",
-            path: "/automotive/keys/batteries",
-            icon: getIcon(5),
-          },
-          {
-            name: "Shop All",
-            path: "/automotive/keys",
-            icon: getIcon(6),
-            isShopAll: true,
-          },
-        ],
-      },
-      {
-        title: "Key Blades",
-        items: [
-          {
-            name: "Universal Blades",
-            path: "/automotive/blades/universal",
-            icon: getIcon(7),
-          },
-          {
-            name: "Smart Blades",
-            path: "/automotive/blades/smart",
-            icon: getIcon(8),
-          },
-          {
-            name: "Other Blades",
-            path: "/automotive/blades/other",
-            icon: getIcon(9),
-          },
-          {
-            name: "Multi-Function Keys",
-            path: "/automotive/blades/multi-function",
-            icon: getIcon(10),
-          },
-          {
-            name: "Shop All",
-            path: "/automotive/blades",
-            icon: getIcon(11),
-            isShopAll: true,
-          },
-        ],
-      },
-      {
-        title: "Automotive Tools",
-        items: [
-          {
-            name: "Battery Tools",
-            path: "/automotive/tools/battery-tools",
-            icon: getIcon(12),
-          },
-          {
-            name: "Diagnostic Tools",
-            path: "/automotive/tools/diagnostic",
-            icon: getIcon(13),
-          },
-          {
-            name: "Key Cutting Machines",
-            path: "/automotive/tools/key-cutting",
-            icon: getIcon(14),
-          },
-          {
-            name: "Key Programmers",
-            path: "/automotive/tools/key-programmers",
-            icon: getIcon(15),
-          },
-          {
-            name: "Shop All",
-            path: "/automotive/tools",
-            icon: getIcon(16),
             isShopAll: true,
           },
         ],
@@ -686,16 +581,6 @@ export const navigationMenu = {
             name: "Remote Battery Videos",
             path: "/support/videos/batteries",
             icon: getIcon(0),
-          },
-          {
-            name: "Car Key Shell Videos",
-            path: "/support/videos/key-shells",
-            icon: getIcon(1),
-          },
-          {
-            name: "Car Key Battery Videos",
-            path: "/support/videos/key-batteries",
-            icon: getIcon(2),
           },
         ],
       },

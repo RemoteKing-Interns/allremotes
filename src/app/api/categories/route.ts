@@ -10,7 +10,6 @@ function normaliseCategory(raw: string): string | null {
   const s = raw.trim().toLowerCase();
   if (!s || s === "all") return null;
   if (s.includes("garage") || s.includes("gate") || s.includes("door")) return "garage";
-  if (s.includes("car") || s.includes("auto") || s.includes("vehicle")) return "car";
   if (s.includes("home") || s.includes("house")) return "home";
   if (s.includes("lock")) return "locksmith";
   return s;
@@ -18,7 +17,6 @@ function normaliseCategory(raw: string): string | null {
 
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   garage: "Garage & Gate",
-  car: "Automotive",
   home: "For The Home",
   locksmith: "Locksmithing",
 };

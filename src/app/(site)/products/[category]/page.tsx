@@ -8,8 +8,6 @@ function getCategoryDescription(category: string) {
   const descriptions: Record<string, string> = {
     garage:
       "Find garage door remotes, gate remotes, receivers and opener accessories for all major brands.",
-    car:
-      "Shop replacement car remotes, key fobs, transponder keys and key shells for popular vehicles.",
     home:
       "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more.",
     locksmith:

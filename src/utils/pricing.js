@@ -99,9 +99,11 @@ export const getDiscountedPrice = (price, userOrEligible, options = {}) => {
 export const getPriceBreakdown = (price, userOrEligible, options = {}) => {
   const product = options?.product;
   const basePrice = roundCurrency(price);
-  // Use comparePrice (Maximum Retail Price) as original price if set
-  const comparePrice = product?.comparePrice ? roundCurrency(product.comparePrice) : null;
-  const originalPrice = comparePrice || basePrice;
+  // Use comparePrice as original RRP only when it is higher than the base price.
+  // Some products store the discounted/member price in comparePrice, which would
+  // hide the discount if used as the original.
+  const compare = product?.comparePrice ? roundCurrency(product.comparePrice) : null;
+  const originalPrice = compare > basePrice ? compare : basePrice;
   const finalPrice = getDiscountedPrice(basePrice, userOrEligible, options);
   const discountAmount = roundCurrency(originalPrice - finalPrice);
 

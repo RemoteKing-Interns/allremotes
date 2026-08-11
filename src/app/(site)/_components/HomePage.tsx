@@ -89,12 +89,6 @@ const DEFAULT_HERO_IMAGES = [
 
 const DEFAULT_FEATURES = [
   {
-    icon: "CR",
-    title: "Car Remotes",
-    description: "Universal and brand-specific car remotes with advanced security features",
-    path: "/products/car",
-  },
-  {
     icon: "GG",
     title: "Garage Remotes",
     description: "Reliable garage door and gate remotes for all your home automation needs",
@@ -134,11 +128,11 @@ const DEFAULT_WHY_BUY = [
 const DEFAULT_HERO = {
   title: "Garage Door & Gate Remotes",
   subtitle: "Quality is Guaranteed",
-  description: "Your trusted source for premium car and garage remotes. Browse reliable replacements and accessories.",
-  primaryCta: "Shop Car Remotes",
-  primaryCtaPath: "/products/car",
-  secondaryCta: "Shop Garage Remotes",
-  secondaryCtaPath: "/products/garage",
+  description: "Your trusted source for premium garage remotes. Browse reliable replacements and accessories.",
+  primaryCta: "Shop Garage Remotes",
+  primaryCtaPath: "/products/garage",
+  secondaryCta: "Shop All Products",
+  secondaryCtaPath: "/products/all",
 };
 
 const DEFAULT_CTA = {
@@ -167,12 +161,11 @@ function resolveWhyBuyIcon(card: any, index: number) {
 }
 
 function getFeatureImage(title: string) {
-  const map: Record<string, string> = {
-    "Car Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
+  const DEFAULT_FEATURE_IMAGES = {
     "Garage Remotes": "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-RC01-1.png",
     "Quality Guaranteed": "/images/mainlogo.webp",
   };
-  return map[title] || "/images/mainlogo.webp";
+  return DEFAULT_FEATURE_IMAGES[title] || "/images/mainlogo.webp";
 }
 
 function SectionHeader({ eyebrow, title, body, action }: { eyebrow?: string; title: string; body?: string; action?: React.ReactNode }) {
@@ -229,14 +222,25 @@ export default function HomePage() {
 
   const popularProducts = useMemo(() => {
     const saving = (p: any) => (Number(p?.comparePrice) || 0) - (Number(p?.price) || 0);
-    const inStock = [...products].filter((p) => p?.inStock);
+    const productsList = [...products].filter(Boolean);
+    const zt07 = productsList.find((p) => String(p?.name).toLowerCase().includes("zt07"));
+    const inStock = productsList.filter((p) => p?.inStock);
+    const merlinOrder = ["E8003", "E960M", "E964M", "E970M", "E980M"];
+    const getMerlinPin = (p: any) => {
+      const name = String(p?.name).toLowerCase();
+      for (let i = 0; i < merlinOrder.length; i++) {
+        if (name.includes(merlinOrder[i].toLowerCase())) return i;
+      }
+      return merlinOrder.length;
+    };
     const merlin = inStock
-      .filter((p) => String(p?.brand).toLowerCase() === "merlin")
-      .sort((a, b) => saving(b) - saving(a));
+      .filter((p) => String(p?.name).toLowerCase().includes("merlin") && getMerlinPin(p) < merlinOrder.length)
+      .sort((a, b) => getMerlinPin(a) - getMerlinPin(b));
+    const usedIds = new Set([zt07?.id, ...merlin.map((m) => m.id)].filter(Boolean));
     const rest = inStock
-      .filter((p) => String(p?.brand).toLowerCase() !== "merlin")
+      .filter((p) => !usedIds.has(p.id))
       .sort((a, b) => saving(b) - saving(a));
-    return [...merlin, ...rest].slice(0, 8);
+    return [zt07, ...merlin, ...rest].filter(Boolean).slice(0, 8);
   }, [products]);
 
   const categories = useMemo(() => {
@@ -328,7 +332,7 @@ export default function HomePage() {
               className="mt-6 max-w-xl text-lg leading-relaxed text-white/80 sm:text-xl"
             >
               {hero.description ||
-                "Your trusted source for premium car and garage remotes. Browse reliable replacements and accessories."}
+                "Your trusted source for premium garage remotes. Browse reliable replacements and accessories."}
             </motion.p>
 
             <motion.div
@@ -337,17 +341,17 @@ export default function HomePage() {
               className="mt-8 flex flex-col gap-3 sm:flex-row"
             >
               <Link
-                href={hero.primaryCtaPath || "/products/car"}
+                href={hero.primaryCtaPath || "/products/garage"}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.98]"
               >
-                {hero.primaryCta || "Shop Car Remotes"}
+                {hero.primaryCta || "Shop Garage Remotes"}
                 <ArrowRight size={16} strokeWidth={2} />
               </Link>
               <Link
-                href={hero.secondaryCtaPath || "/products/garage"}
+                href={hero.secondaryCtaPath || "/products/all"}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-7 py-3.5 text-sm font-extrabold text-white backdrop-blur transition hover:bg-white/15 active:scale-[0.98]"
               >
-                {hero.secondaryCta || "Shop Garage Remotes"}
+                {hero.secondaryCta || "Shop All Products"}
               </Link>
             </motion.div>
           </div>

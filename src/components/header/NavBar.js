@@ -7,7 +7,6 @@ import { ChevronDown } from "lucide-react";
 
 const CATEGORY_DISPLAY_NAMES = {
   garage: 'Garage & Gate',
-  car: 'Automotive',
   home: 'For The Home',
   locksmith: 'Locksmithing',
 };

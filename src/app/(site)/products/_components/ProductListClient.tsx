@@ -492,6 +492,21 @@ export default function ProductListClient({
 
     // Sorting
     result = [...result].sort((a, b) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (query === "merlin") {
+        const pinOrder = ["E8003", "E960M", "E964M", "E970M", "E980M"];
+        const getPin = (p: any) => {
+          const name = String(p.name || "").toLowerCase();
+          for (let i = 0; i < pinOrder.length; i++) {
+            if (name.includes(pinOrder[i].toLowerCase())) return i;
+          }
+          return pinOrder.length;
+        };
+        const diff = getPin(a) - getPin(b);
+        if (diff !== 0) return diff;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      }
+
       switch (sortBy) {
         case "price-asc":
           return (Number(a.price) || 0) - (Number(b.price) || 0);

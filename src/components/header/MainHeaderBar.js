@@ -184,7 +184,7 @@ const MainHeaderBar = ({
                         );
                       })}
                     </div>
-                    {searchResults.length >= 8 && (
+                    {searchResults.length > 0 && (
                       <div className="border-t border-neutral-200 p-3">
                         <button
                           type="button"
