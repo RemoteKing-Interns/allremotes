@@ -79,12 +79,15 @@ const WHY_BUY_ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const DEFAULT_HERO_IMAGES = [
-  "/images/1.jpg",
-  "/images/4.png",
-  "/images/5.png",
-  "/images/6.png",
-  "/images/7.png",
-  "/images/8.png",
+  "/slider/1.jpg",
+  "/slider/2.png",
+  "/slider/3.png",
+  "/slider/4.png",
+  "/slider/5.png",
+  "/slider/6.png",
+  "/slider/7.png",
+  "/slider/8.png",
+  "/slider/9.png",
 ];
 
 const DEFAULT_FEATURES = [
@@ -128,7 +131,7 @@ const DEFAULT_WHY_BUY = [
 const DEFAULT_HERO = {
   title: "Garage Door & Gate Remotes",
   subtitle: "Quality is Guaranteed",
-  description: "Your trusted source for premium garage remotes. Browse reliable replacements and accessories.",
+  description: "Your trusted source for premium garage and gate remotes. Browse reliable replacements and accessories.",
   primaryCta: "Shop Garage Remotes",
   primaryCtaPath: "/products/garage",
   secondaryCta: "Shop All Products",
@@ -195,6 +198,7 @@ export default function HomePage() {
   const reviews = getReviews() || [];
   const [mounted, setMounted] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setMounted(true);
@@ -203,22 +207,54 @@ export default function HomePage() {
   const home = mounted ? getHomeContent() : null;
 
   const heroImages = useMemo(() => {
-    const raw =
-      home?.heroImages && Array.isArray(home.heroImages) && home.heroImages.length > 0
-        ? home.heroImages
-        : DEFAULT_HERO_IMAGES;
-    return raw.filter((img: any) => img && !String(img).toLowerCase().includes("mainlogo"));
-  }, [home?.heroImages]);
+    // Always prefer the public/slider folder images
+    const raw = DEFAULT_HERO_IMAGES;
+    const filtered = raw.filter(
+      (img: any) => img && typeof img === "string" && img.trim().length > 0 && !brokenImages.has(String(img))
+    );
+    return filtered.length > 0 ? filtered : DEFAULT_HERO_IMAGES;
+  }, [brokenImages]);
 
   useEffect(() => {
     if (!heroImages.length) return;
+    if (currentSlide >= heroImages.length) {
+      setCurrentSlide(0);
+    }
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [heroImages.length]);
+  }, [heroImages.length, currentSlide]);
 
-  const hero = home?.hero || DEFAULT_HERO;
+  const hero = useMemo(() => {
+    const h = home?.hero;
+    if (!h || typeof h !== "object") return DEFAULT_HERO;
+    const hasCar = (str: string) => /\bcar\b/i.test(str) || str.toLowerCase().includes("/products/car");
+    const primaryPath = String(h.primaryCtaPath || "");
+    const secondaryPath = String(h.secondaryCtaPath || "");
+
+    const primaryCta = hasCar(primaryPath) ? DEFAULT_HERO.primaryCta : h.primaryCta;
+    const primaryCtaPath = hasCar(primaryPath) ? DEFAULT_HERO.primaryCtaPath : h.primaryCtaPath;
+    let secondaryCta = hasCar(secondaryPath) ? DEFAULT_HERO.secondaryCta : h.secondaryCta;
+    let secondaryCtaPath = hasCar(secondaryPath) ? DEFAULT_HERO.secondaryCtaPath : h.secondaryCtaPath;
+
+    // Avoid two identical garage buttons
+    if (String(secondaryCta).toLowerCase() === String(primaryCta).toLowerCase() ||
+        String(secondaryCtaPath).toLowerCase() === String(primaryCtaPath).toLowerCase()) {
+      secondaryCta = DEFAULT_HERO.secondaryCta;
+      secondaryCtaPath = DEFAULT_HERO.secondaryCtaPath;
+    }
+
+    return {
+      title: h.title || DEFAULT_HERO.title,
+      subtitle: h.subtitle || DEFAULT_HERO.subtitle,
+      description: hasCar(String(h.description || "")) ? DEFAULT_HERO.description : h.description,
+      primaryCta,
+      primaryCtaPath,
+      secondaryCta,
+      secondaryCtaPath,
+    };
+  }, [home?.hero]);
 
   const popularProducts = useMemo(() => {
     const saving = (p: any) => (Number(p?.comparePrice) || 0) - (Number(p?.price) || 0);
@@ -245,7 +281,12 @@ export default function HomePage() {
 
   const categories = useMemo(() => {
     const list = home?.features?.length ? home.features : DEFAULT_FEATURES;
-    return list.map((f: any) => ({
+    const filtered = list.filter((f: any) => {
+      const title = String(f?.title || "");
+      const path = String(f?.path || "");
+      return !/\bcar\b/i.test(title) && !path.toLowerCase().includes("/products/car");
+    });
+    return (filtered.length > 0 ? filtered : DEFAULT_FEATURES).map((f: any) => ({
       ...f,
       image: f.image || getFeatureImage(f.title),
     }));
@@ -301,6 +342,13 @@ export default function HomePage() {
                 sizes="100vw"
                 loading={index === 0 ? "eager" : "lazy"}
                 className="object-cover"
+                onError={() =>
+                  setBrokenImages((prev) => {
+                    const next = new Set(prev);
+                    next.add(src);
+                    return next;
+                  })
+                }
               />
             </div>
           ))}
@@ -486,7 +534,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="Full Range"
             title="Every remote in one place"
-            body="From automotive smart keys to gate and garage openers, filter by brand, model, or frequency."
+            body="From gate and garage openers to smart access controls, filter by brand, model, or frequency."
           />
           {products.length === 0 ? (
             <div className="rounded-2xl border border-neutral-200 bg-white/70 p-8 text-sm font-semibold text-neutral-700">
@@ -517,7 +565,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="Reviews"
             title="Trusted by homeowners, workshops, and trade buyers"
-            body="Real feedback from customers ordering replacement remotes, smart keys, and access-control products."
+            body="Real feedback from customers ordering replacement remotes and access-control products."
           />
           <div className="feedback-marquee -mx-4 mt-10 px-4" aria-live="polite">
             <div className="feedback-marquee-track flex gap-4">

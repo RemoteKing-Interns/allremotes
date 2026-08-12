@@ -103,20 +103,19 @@ const STORAGE_KEYS = {
 };
 
 const defaultHomeContent = {
-  heroImages: [getS3UrlForLocalPath("/images/hero.jpg"), getS3UrlForLocalPath("/images/heroimg.jpg")],
+  heroImages: [getS3UrlForLocalPath("/images/hero.jpg")],
   hero: {
     title: 'Garage Door & Gate Remotes',
     subtitle: 'Quality is Guaranteed',
-    description: 'Your trusted source for premium car and garage remotes. Browse our extensive collection of high-quality remote controls designed to meet all your automation needs.',
-    primaryCta: 'Shop Car Remotes',
-    primaryCtaPath: '/products/car',
-    secondaryCta: 'Shop Garage Remotes',
-    secondaryCtaPath: '/products/garage',
+    description: 'Your trusted source for premium garage and gate remotes. Browse our extensive collection of high-quality remote controls designed to meet all your automation needs.',
+    primaryCta: 'Shop Garage Remotes',
+    primaryCtaPath: '/products/garage',
+    secondaryCta: 'Shop All Products',
+    secondaryCtaPath: '/products/all',
   },
   features: [
-    { icon: 'CR', title: 'Car Remotes', description: 'Universal and brand-specific car remotes with advanced security features', path: '/products/car', linkText: 'Explore →' },
     { icon: 'GG', title: 'Garage Remotes', description: 'Reliable garage door and gate remotes for all your home automation needs', path: '/products/garage', linkText: 'Explore →' },
-    { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products come with quality assurance and customer support', path: '', linkText: '' },
+    { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products come with quality assurance and customer support', path: '/products/all', linkText: 'Explore →' },
   ],
   whyBuy: [
     { icon: 'QA', title: 'Quality Guaranteed', description: 'All our products are genuine and come with quality assurance. We stand behind every product we sell.' },

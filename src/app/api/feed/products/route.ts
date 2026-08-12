@@ -101,6 +101,27 @@ function getProductType(product: Product): string {
   return getCategoryPageTitle(product.category || "all");
 }
 
+function getGoogleProductCategory(): string {
+  return "Electronics > Accessories & Supplies > Remote Controls";
+}
+
+function getShippingXml(): string {
+  return `
+    <g:shipping>
+      <g:country>AU</g:country>
+      <g:service>Standard</g:service>
+      <g:price>0.00 AUD</g:price>
+    </g:shipping>`;
+}
+
+function hasRealIdentifiers(product: Product): boolean {
+  const mpn = String(product.sku?.trim() || "");
+  const gtin = String((product as any).gtin?.trim() || "");
+  // Treat the SKU as an MPN only if it looks like a real manufacturer code
+  const looksLikeSku = mpn.length >= 3 && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(mpn);
+  return Boolean(gtin) || looksLikeSku;
+}
+
 function generateProductXml(product: Product): string {
   const id = escapeXml(product.id);
   const title = escapeXml(getProductTitle(product));
@@ -111,10 +132,19 @@ function generateProductXml(product: Product): string {
   const price = formatPrice(product.price);
   const brand = escapeXml(product.brand?.trim() || "ALLREMOTES");
   const sku = escapeXml(product.sku?.trim() || product.id);
-  const mpn = escapeXml(product.sku?.trim() || product.id);
   const productType = escapeXml(getProductType(product));
+  const googleProductCategory = escapeXml(getGoogleProductCategory());
   const returnPolicy = escapeXml(getReturnPolicy());
   const additionalImages = getAdditionalImageLinks(product);
+  const shipping = getShippingXml();
+
+  const realIdentifiers = hasRealIdentifiers(product);
+  const mpn = realIdentifiers ? escapeXml(product.sku?.trim() || product.id) : "";
+  const gtin = escapeXml(String((product as any).gtin?.trim() || ""));
+  const identifierExists = realIdentifiers ? "yes" : "no";
+
+  const idBlock = realIdentifiers && mpn ? `\n    <g:mpn>${mpn}</g:mpn>` : "";
+  const gtinBlock = gtin ? `\n    <g:gtin>${gtin}</g:gtin>` : "";
 
   return `
   <item>
@@ -124,12 +154,16 @@ function generateProductXml(product: Product): string {
     <link>${link}</link>
     <g:image_link>${imageLink}</g:image_link>
     ${additionalImages ? `${additionalImages}\n    ` : ""}<g:availability>${availability}</g:availability>
+    <g:availability_date>${new Date().toISOString()}</g:availability_date>
     <g:price>${price}</g:price>
     <g:brand>${brand}</g:brand>
     <g:condition>new</g:condition>
     <g:sku>${sku}</g:sku>
-    <g:mpn>${mpn}</g:mpn>
+    <g:google_product_category>${googleProductCategory}</g:google_product_category>
     <g:product_type>${productType}</g:product_type>
+    ${idBlock}${gtinBlock}
+    <g:identifier_exists>${identifierExists}</g:identifier_exists>
+    ${shipping}
     <g:return_policy>${returnPolicy}</g:return_policy>
   </item>`;
 }

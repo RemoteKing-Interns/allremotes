@@ -71,7 +71,41 @@ export async function PUT(request: Request) {
       console.warn("Failed to create skuKey index (may already exist):", indexErr);
     }
 
-    const ops: any[] = normalized.map((doc) => ({
+    // Deduplicate by skuKey, then id
+    const seen = new Map<string, any>();
+    const unique: any[] = [];
+    for (const doc of normalized) {
+      const key = doc.skuKey ? String(doc.skuKey) : String(doc.id);
+      if (!seen.has(key)) {
+        unique.push(doc);
+      } else {
+        const idx = unique.findIndex((d) => (d.skuKey ? String(d.skuKey) : String(d.id)) === key);
+        if (idx !== -1) unique[idx] = doc;
+      }
+      seen.set(key, doc);
+    }
+
+    // Reconcile saved ids so updates target the correct SKU
+    const skuKeys = unique.map((d) => d.skuKey).filter(Boolean);
+    const existingBySku = new Map<string, any>();
+    if (skuKeys.length > 0) {
+      const existing = await col
+        .find({ skuKey: { $in: skuKeys } })
+        .project({ _id: 1, id: 1, skuKey: 1 })
+        .toArray();
+      for (const e of existing) {
+        if (e.skuKey) existingBySku.set(String(e.skuKey), e);
+      }
+    }
+
+    for (const doc of unique) {
+      const existing = doc.skuKey ? existingBySku.get(String(doc.skuKey)) : null;
+      if (existing && existing.id) {
+        doc.id = existing.id;
+      }
+    }
+
+    const ops: any[] = unique.map((doc) => ({
       updateOne: {
         filter: { id: doc.id },
         update: { $set: doc },
