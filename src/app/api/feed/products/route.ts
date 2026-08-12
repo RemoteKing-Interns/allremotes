@@ -41,7 +41,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif"];
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"];
 
 function isValidImageUrl(url: string): boolean {
   if (!url) return false;
