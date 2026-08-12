@@ -118,9 +118,9 @@ export default function AdminInvoicesPage() {
   };
 
   const removeInvoice = async (id: string) => {
-    if (!confirm(`Delete invoice ${id}?`)) return;
+    if (!confirm(`Delete ${id}?`)) return;
     try {
-      const res = await fetch(`/api/admin/invoices/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/orders/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       setInvoices((prev) => prev.filter((inv) => inv.id !== id));
       if (selected?.id === id) setSelected(null);
@@ -396,13 +396,6 @@ export default function AdminInvoicesPage() {
                     </div>
                   </div>
                 </div>
-
-                {selected.notes && (
-                  <div className="mt-8 text-sm text-neutral-600">
-                    <p className="font-semibold text-neutral-900">Notes</p>
-                    <p>{selected.notes}</p>
-                  </div>
-                )}
 
                 <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">
                   <p className="font-semibold text-neutral-900">Terms</p>

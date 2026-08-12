@@ -80,7 +80,6 @@ export default function AdminInvoicePage() {
     },
   ]);
 
-  const [notes, setNotes] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -183,7 +182,6 @@ export default function AdminInvoicePage() {
       });
       if (loaded.length === 0) throw new Error("No items found in order");
       setItems(loaded);
-      setNotes(`Invoice generated from order ${orderNumber}` + (o.notes ? `. ${o.notes}` : ""));
     } catch (err: any) {
       setError(err?.message || "Failed to load order");
     } finally {
@@ -222,18 +220,18 @@ export default function AdminInvoicePage() {
           discountTotal: 0,
           total: totals.total,
         },
-        notes,
       };
 
-      const res = await fetch("/api/admin/invoices", {
-        method: "POST",
+      const updating = Boolean(invoice?.id);
+      const res = await fetch(`/api/admin/invoices${updating ? `/${invoice!.id}` : ""}`, {
+        method: updating ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.order) {
-        throw new Error(data?.error || data?.details || "Failed to create invoice");
+        throw new Error(data?.error || data?.details || (updating ? "Failed to update invoice" : "Failed to create invoice"));
       }
 
       setInvoice(data.order as InvoiceData);
@@ -450,17 +448,6 @@ export default function AdminInvoicePage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-panel">
-            <label className="mb-1 block text-sm font-semibold text-neutral-700">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 focus:border-primary focus:outline-none"
-              rows={3}
-              placeholder="Optional invoice notes"
-            />
-          </section>
-
           <div className="flex justify-end">
             <button
               type="submit"
@@ -468,7 +455,7 @@ export default function AdminInvoicePage() {
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark disabled:opacity-60"
             >
               <FileText size={18} />
-              {loading ? "Creating..." : "Generate Unpaid Invoice"}
+              {loading ? (invoice ? "Updating..." : "Creating...") : (invoice ? "Update Invoice" : "Generate Unpaid Invoice")}
             </button>
           </div>
         </form>
@@ -571,13 +558,6 @@ export default function AdminInvoicePage() {
                 </div>
               </div>
             </div>
-
-            {invoice.notes && (
-              <div className="mt-8 text-sm text-neutral-600">
-                <p className="font-semibold text-neutral-900">Notes</p>
-                <p>{invoice.notes}</p>
-              </div>
-            )}
 
             <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">
               <p className="font-semibold text-neutral-900">Terms</p>

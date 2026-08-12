@@ -3,7 +3,7 @@ import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
-  "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -97,6 +97,72 @@ export async function PATCH(
       .findOneAndUpdate({ id, type: "invoice" }, update, {
         returnDocument: "after",
       });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "Invoice not found" },
+        { status: 404, headers: CORS_HEADERS }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: true, order: result },
+      { headers: CORS_HEADERS }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to update invoice", details: err?.message || String(err) },
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!mongoEnabled()) {
+    return NextResponse.json(
+      { error: "MongoDB is not configured." },
+      { status: 503, headers: CORS_HEADERS }
+    );
+  }
+
+  try {
+    const { id } = await params;
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Invalid body" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "At least one item is required" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    const now = new Date().toISOString();
+    const update = {
+      customer: body.customer,
+      shipping: body.shipping,
+      items,
+      pricing: body.pricing,
+      updatedAt: now,
+    };
+
+    const db = await getDb();
+    const result = await db
+      .collection("orders")
+      .findOneAndUpdate(
+        { id, type: "invoice" },
+        { $set: update },
+        { returnDocument: "after" }
+      );
 
     if (!result) {
       return NextResponse.json(
