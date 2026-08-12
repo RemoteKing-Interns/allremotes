@@ -104,10 +104,6 @@ function getAdditionalImageLinks(product: Product): string {
     .join("\n    ");
 }
 
-function getProductType(product: Product): string {
-  return getCategoryPageTitle(product.category || "all");
-}
-
 const BLOCKED_TERMS = [
   "clone",
   "cloning",
@@ -141,8 +137,8 @@ function isBlockedProduct(product: Product): boolean {
   return BLOCKED_TERMS.some((term) => text.includes(term));
 }
 
-function getGoogleProductCategory(): string {
-  return "Electronics > Accessories & Supplies > Remote Controls";
+function getProductType(product: Product): string {
+  return getCategoryPageTitle(product.category || "all");
 }
 
 function getShippingXml(): string {
@@ -173,7 +169,6 @@ function generateProductXml(product: Product): string {
   const brand = escapeXml(product.brand?.trim() || "All Remotes");
   const sku = escapeXml(product.sku?.trim() || product.id);
   const productType = escapeXml(getProductType(product));
-  const googleProductCategory = escapeXml(getGoogleProductCategory());
   const additionalImages = getAdditionalImageLinks(product);
   const shipping = getShippingXml();
 
@@ -197,10 +192,11 @@ function generateProductXml(product: Product): string {
     <g:brand>${brand}</g:brand>
     <g:condition>new</g:condition>
     <g:sku>${sku}</g:sku>
-    <g:google_product_category>${googleProductCategory}</g:google_product_category>
     <g:product_type>${productType}</g:product_type>
     ${idBlock}${gtinBlock}
     <g:identifier_exists>${identifierExists}</g:identifier_exists>
+    <g:excluded_destination>local_inventory_ads</g:excluded_destination>
+    <g:excluded_destination>free_local_listings</g:excluded_destination>
     ${shipping}
   </item>`;
 }
