@@ -41,6 +41,14 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+function stripEmojis(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{2300}-\u{23FF}\u{25A0}-\u{25FF}\u{2190}-\u{21FF}\u{2700}-\u{27BF}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"];
 
 function isValidImageUrl(url: string): boolean {
@@ -51,18 +59,27 @@ function isValidImageUrl(url: string): boolean {
   return ALLOWED_IMAGE_EXTS.some((ext) => path.endsWith(ext));
 }
 
+const S3_BUCKET = "https://allremotes.s3.ap-southeast-2.amazonaws.com";
+
+function proxyS3Url(url: string): string {
+  if (url.startsWith(S3_BUCKET)) {
+    return `${BASE_URL}/api/image/${url.slice(S3_BUCKET.length + 1)}`;
+  }
+  return url;
+}
+
 function getProductImage(product: Product): string {
   const primary = getPrimaryImage(product);
   if (!primary || !isValidImageUrl(primary)) return `${BASE_URL}/images/mainlogo.png`;
-  if (/^https?:\/\//i.test(primary)) return primary;
+  if (/^https?:\/\//i.test(primary)) return proxyS3Url(primary);
   return `${BASE_URL}${primary.startsWith("/") ? "" : "/"}${primary}`;
 }
 
 function getProductTitle(product: Product): string {
   const brand = product.brand?.trim() || "All Remotes";
-  const name = product.name?.trim() || "";
+  const name = stripEmojis(product.name?.trim() || "");
   if (name.toLowerCase().startsWith(brand.toLowerCase())) return name;
-  const model = product.model?.trim();
+  const model = stripEmojis(product.model?.trim() || "");
   if (model) return `${brand} ${model}`;
   if (name) return `${brand} ${name}`;
   return `${brand} Replacement Remote`;
@@ -74,7 +91,7 @@ function getProductDescription(product: Product): string {
     product.model?.trim() ||
     product.name?.trim() ||
     "";
-  const text = stripHtml(raw);
+  const text = stripEmojis(stripHtml(raw));
   if (text) {
     return `${text} High-quality professional replacement remote with reliable performance. Free shipping Australia-wide, 30-day returns and 12-month warranty.`;
   }
@@ -97,7 +114,7 @@ function getAdditionalImageLinks(product: Product): string {
     .filter(isValidImageUrl)
     .map((img) => {
       const absolute = /^https?:\/\//i.test(img)
-        ? img
+        ? proxyS3Url(img)
         : `${BASE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
       return `<g:additional_image_link>${escapeXml(absolute)}</g:additional_image_link>`;
     })
