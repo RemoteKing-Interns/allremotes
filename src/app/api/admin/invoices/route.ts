@@ -18,7 +18,7 @@ async function makeInvoiceId(): Promise<string> {
     { upsert: true, returnDocument: "after" }
   );
   const seq: number = (result as any)?.seq ?? (result as any)?.value?.seq ?? 1;
-  return `ARSO-${String(seq).padStart(6, "0")}`;
+  return `ARSO-${String(seq).padStart(6, "0")}_unpaid_invoice`;
 }
 
 function roundMoney(n: number): number {
@@ -74,7 +74,9 @@ export async function POST(request: Request) {
 
     const subtotal = roundMoney(normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0));
     const discountTotal = roundMoney(Number(body.pricing?.discountTotal) || 0);
-    const total = roundMoney(subtotal - discountTotal);
+    const gstIncluded = Boolean(body.pricing?.gstIncluded);
+    const gst = gstIncluded ? roundMoney(subtotal * 0.1) : 0;
+    const total = roundMoney(subtotal + gst - discountTotal);
 
     const now = new Date().toISOString();
     const doc: Record<string, any> = {
@@ -102,10 +104,11 @@ export async function POST(request: Request) {
       pricing: {
         currency: "AUD",
         subtotal,
+        gst,
+        gstIncluded,
         discountTotal,
         total,
       },
-      notes: String(body.notes || "").trim(),
       createdAt: now,
       updatedAt: now,
     };

@@ -41,6 +41,8 @@ interface Invoice {
   pricing: {
     currency: string;
     subtotal: number;
+    gst?: number;
+    gstIncluded?: boolean;
     discountTotal: number;
     total: number;
   };
@@ -137,8 +139,9 @@ export default function AdminInvoicesPage() {
     if (!selected) return null;
     const subtotal = selected.items.reduce((sum, item) => sum + item.lineTotal, 0);
     const discountTotal = selected.pricing?.discountTotal || 0;
-    const total = subtotal - discountTotal;
-    return { subtotal, discountTotal, total };
+    const gst = selected.pricing?.gst || 0;
+    const total = selected.pricing?.total ?? (subtotal + gst - discountTotal);
+    return { subtotal, discountTotal, gst, total };
   }, [selected]);
 
   return (
@@ -390,17 +393,17 @@ export default function AdminInvoicesPage() {
                         <span>-${(totals?.discountTotal || 0).toFixed(2)}</span>
                       </div>
                     )}
+                    {(totals?.gst || 0) > 0 && (
+                      <div className="flex justify-between text-neutral-600">
+                        <span>GST (10%)</span>
+                        <span>${(totals?.gst || 0).toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-neutral-200 pt-2 text-lg font-bold text-neutral-900">
                       <span>Total</span>
                       <span>${(totals?.total || 0).toFixed(2)}</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">
-                  <p className="font-semibold text-neutral-900">Terms</p>
-                  <p className="mt-1 text-neutral-600">All prices include GST.</p>
-                  <p className="text-neutral-600">Australia-wide shipping only.</p>
                 </div>
 
                 <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">

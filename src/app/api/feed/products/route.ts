@@ -49,7 +49,7 @@ function getProductImage(product: Product): string {
 }
 
 function getProductTitle(product: Product): string {
-  const brand = product.brand?.trim() || "ALLREMOTES";
+  const brand = product.brand?.trim() || "All Remotes";
   const name = product.name?.trim() || "";
   if (name.toLowerCase().startsWith(brand.toLowerCase())) return name;
   const model = product.model?.trim();
@@ -76,10 +76,6 @@ function getAvailability(product: Product): string {
   return inStock ? "in stock" : "out of stock";
 }
 
-function getReturnPolicy(): string {
-  return `Returns accepted within 30 days. Must be in original, resaleable condition. Buyer pays return shipping. Returns only accepted within Australia. Certain items (motor parts, control boards, etc.) are non-returnable.`;
-}
-
 function formatPrice(price: number): string {
   return `${price.toFixed(2)} AUD`;
 }
@@ -99,6 +95,39 @@ function getAdditionalImageLinks(product: Product): string {
 
 function getProductType(product: Product): string {
   return getCategoryPageTitle(product.category || "all");
+}
+
+const BLOCKED_TERMS = [
+  "clone",
+  "cloning",
+  "duplicator",
+  "universal",
+  "hacking",
+  "hack",
+  "tracker",
+  "tracking",
+  "surveillance",
+  "spy",
+  "spying",
+  "gps",
+  "monitor",
+  "monitoring",
+];
+
+function isBlockedProduct(product: Product): boolean {
+  const text = [
+    product.name,
+    product.model,
+    product.description,
+    product.sku,
+    product.category,
+    (product as any).seo_title,
+    (product as any).tags,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return BLOCKED_TERMS.some((term) => text.includes(term));
 }
 
 function getGoogleProductCategory(): string {
@@ -130,11 +159,10 @@ function generateProductXml(product: Product): string {
   const imageLink = escapeXml(getProductImage(product));
   const availability = getAvailability(product);
   const price = formatPrice(product.price);
-  const brand = escapeXml(product.brand?.trim() || "ALLREMOTES");
+  const brand = escapeXml(product.brand?.trim() || "All Remotes");
   const sku = escapeXml(product.sku?.trim() || product.id);
   const productType = escapeXml(getProductType(product));
   const googleProductCategory = escapeXml(getGoogleProductCategory());
-  const returnPolicy = escapeXml(getReturnPolicy());
   const additionalImages = getAdditionalImageLinks(product);
   const shipping = getShippingXml();
 
@@ -154,7 +182,6 @@ function generateProductXml(product: Product): string {
     <link>${link}</link>
     <g:image_link>${imageLink}</g:image_link>
     ${additionalImages ? `${additionalImages}\n    ` : ""}<g:availability>${availability}</g:availability>
-    <g:availability_date>${new Date().toISOString()}</g:availability_date>
     <g:price>${price}</g:price>
     <g:brand>${brand}</g:brand>
     <g:condition>new</g:condition>
@@ -164,7 +191,6 @@ function generateProductXml(product: Product): string {
     ${idBlock}${gtinBlock}
     <g:identifier_exists>${identifierExists}</g:identifier_exists>
     ${shipping}
-    <g:return_policy>${returnPolicy}</g:return_policy>
   </item>`;
 }
 
@@ -183,7 +209,7 @@ export async function GET() {
     const productsArray = enrichProductsWithS3Images(mongoProducts);
     
     const items = productsArray
-      .filter((p: Product) => p && p.id && p.price)
+      .filter((p: Product) => p && p.id && p.price && !isBlockedProduct(p))
       .map((p: Product) => generateProductXml(p))
       .join("\n");
 

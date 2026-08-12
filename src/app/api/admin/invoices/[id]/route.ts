@@ -77,6 +77,8 @@ export async function PATCH(
       update.$set["payment.status"] = "succeeded";
       update.$set["payment.method"] = "bank transfer";
       update.$set.paidAt = now;
+      const base = id.replace(/_unpaid_invoice$/, "").replace(/_invoice$/, "");
+      update.$set.id = `${base}_invoice`;
     } else if (action === "shipped") {
       update.$set.status = "shipped";
       update.$set.shippedAt = now;
@@ -84,6 +86,8 @@ export async function PATCH(
       update.$set.status = "unpaid";
       update.$set["payment.status"] = "unpaid";
       update.$set["payment.method"] = "invoice";
+      const base = id.replace(/_unpaid_invoice$/, "").replace(/_invoice$/, "");
+      update.$set.id = `${base}_unpaid_invoice`;
     } else {
       return NextResponse.json(
         { error: "Invalid action" },

@@ -37,6 +37,8 @@ interface InvoiceData {
   pricing: {
     currency: string;
     subtotal: number;
+    gst?: number;
+    gstIncluded?: boolean;
     discountTotal: number;
     total: number;
   };
@@ -85,6 +87,7 @@ export default function AdminInvoicePage() {
   const [error, setError] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [loadingOrder, setLoadingOrder] = useState(false);
+  const [includeGst, setIncludeGst] = useState(false);
 
   useEffect(() => {
     refreshProductsFromServer().catch(() => {});
@@ -182,6 +185,12 @@ export default function AdminInvoicePage() {
       });
       if (loaded.length === 0) throw new Error("No items found in order");
       setItems(loaded);
+      setIncludeGst(Boolean(o.pricing?.gstIncluded));
+      if (o.type === "invoice") {
+        setInvoice(o as InvoiceData);
+      } else {
+        setInvoice(null);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to load order");
     } finally {
@@ -191,13 +200,13 @@ export default function AdminInvoicePage() {
 
   const totals = useMemo(() => {
     const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0));
-    return { subtotal, total: subtotal };
-  }, [items]);
+    const gst = includeGst ? roundMoney(subtotal * 0.1) : 0;
+    return { subtotal, gst, total: roundMoney(subtotal + gst) };
+  }, [items, includeGst]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setInvoice(null);
 
     if (!customer.fullName.trim()) {
       setError("Customer name is required");
@@ -217,6 +226,8 @@ export default function AdminInvoicePage() {
         pricing: {
           currency: "AUD",
           subtotal: totals.subtotal,
+          gst: totals.gst,
+          gstIncluded: includeGst,
           discountTotal: 0,
           total: totals.total,
         },
@@ -446,6 +457,23 @@ export default function AdminInvoicePage() {
               <span className="text-sm font-semibold text-neutral-600">Total:</span>
               <span className="text-xl font-bold text-primary">${totals.total.toFixed(2)} AUD</span>
             </div>
+            <div className="mt-4 flex items-center gap-3 border-t border-neutral-100 pt-4">
+              <input
+                id="includeGst"
+                type="checkbox"
+                checked={includeGst}
+                onChange={(e) => setIncludeGst(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300 text-primary focus:ring-primary"
+              />
+              <label htmlFor="includeGst" className="text-sm font-semibold text-neutral-700">
+                Include GST (10%)
+              </label>
+              {totals.gst > 0 && (
+                <span className="ml-auto text-sm font-medium text-neutral-600">
+                  GST: ${totals.gst.toFixed(2)}
+                </span>
+              )}
+            </div>
           </section>
 
           <div className="flex justify-end">
@@ -552,17 +580,17 @@ export default function AdminInvoicePage() {
                     <span>-${invoice.pricing.discountTotal.toFixed(2)}</span>
                   </div>
                 )}
+                {invoice.pricing.gst > 0 && (
+                  <div className="flex justify-between text-neutral-600">
+                    <span>GST (10%)</span>
+                    <span>${invoice.pricing.gst.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-neutral-200 pt-2 text-lg font-bold text-neutral-900">
                   <span>Total</span>
                   <span>${invoice.pricing.total.toFixed(2)}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">
-              <p className="font-semibold text-neutral-900">Terms</p>
-              <p className="mt-1 text-neutral-600">All prices include GST.</p>
-              <p className="text-neutral-600">Australia-wide shipping only.</p>
             </div>
 
             <div className="mt-8 border-t border-neutral-200 pt-6 text-sm">
