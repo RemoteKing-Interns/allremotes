@@ -41,9 +41,19 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"];
+
+function isValidImageUrl(url: string): boolean {
+  if (!url) return false;
+  const absoluteOrRelative = /^https?:\/\//i.test(url) || url.startsWith("/");
+  if (!absoluteOrRelative) return false;
+  const path = url.split("?")[0].toLowerCase();
+  return ALLOWED_IMAGE_EXTS.some((ext) => path.endsWith(ext));
+}
+
 function getProductImage(product: Product): string {
   const primary = getPrimaryImage(product);
-  if (!primary) return `${BASE_URL}/images/mainlogo.png`;
+  if (!primary || !isValidImageUrl(primary)) return `${BASE_URL}/images/mainlogo.png`;
   if (/^https?:\/\//i.test(primary)) return primary;
   return `${BASE_URL}${primary.startsWith("/") ? "" : "/"}${primary}`;
 }
@@ -84,6 +94,7 @@ function getAdditionalImageLinks(product: Product): string {
   const allImages = Array.isArray(product.images) ? product.images : [];
   return allImages
     .slice(1, 5)
+    .filter(isValidImageUrl)
     .map((img) => {
       const absolute = /^https?:\/\//i.test(img)
         ? img
