@@ -18,6 +18,7 @@ const PRIORITY_BRANDS = [
 
 const STATIC_ROUTES = [
   "/",
+  "/about",
   "/garage-gate",
   "/for-the-home",
   "/locksmithing",
@@ -28,7 +29,12 @@ const STATIC_ROUTES = [
   "/support/ata-vs-merlin-remote",
   "/support/replace-lost-gate-remote",
   "/contact",
+  "/about",
   "/return-policy",
+  "/terms-conditions",
+  "/privacy-policy",
+  "/shipping-delivery",
+  "/payment-options",
   "/products/all",
   "/products/garage",
 ] as const;

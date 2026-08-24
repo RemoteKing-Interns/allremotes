@@ -6,9 +6,11 @@ import Link from "next/link";
 import { useStore } from "../context/StoreContext";
 
 const policyItems = [
+  { href: "/about", label: "About Us" },
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/shipping-delivery", label: "Shipping & Delivery" },
   { href: "/return-policy", label: "Return Policy" },
+  { href: "/terms-conditions", label: "Terms & Conditions" },
   { href: "/payment-options", label: "Payment Options" },
 ];
 
