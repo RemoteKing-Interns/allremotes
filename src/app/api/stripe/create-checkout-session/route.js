@@ -15,7 +15,7 @@ function getStripeClient() {
 export async function POST(request) {
   try {
     const stripe = getStripeClient();
-    const { amount, items, customer_email } = await request.json();
+    const { amount, items, customer_email, shippingCost, shippingName } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -36,6 +36,20 @@ export async function POST(request) {
       },
       quantity: item.quantity,
     }));
+
+    // Add shipping as a line item if there's a shipping cost
+    if (shippingCost && shippingCost > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'aud',
+          product_data: {
+            name: shippingName || 'Shipping',
+          },
+          unit_amount: Math.round(shippingCost * 100),
+        },
+        quantity: 1,
+      });
+    }
 
     // Order validation and fraud checks
     const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);

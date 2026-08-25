@@ -2784,18 +2784,32 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       <span className="text-neutral-600">Subtotal</span>
                       <span>AU${Number(selectedOrder?.pricing?.subtotal || 0).toFixed(2)}</span>
                     </div>
-                    {selectedOrder?.pricing?.shipping > 0 && (
-                      <div className="flex justify-between py-0.5 text-sm text-neutral-600">
-                        <span>Shipping</span>
-                        <span>AU${Number(selectedOrder.pricing.shipping).toFixed(2)}</span>
+                    {selectedOrder?.pricing?.hasMemberDiscount && (
+                      <div className="flex justify-between py-0.5 text-sm text-violet-600">
+                        <span>Member Discount ({Math.round((selectedOrder?.pricing?.memberDiscountRate || 0) * 100)}%)</span>
+                        <span>-AU${Number(selectedOrder?.pricing?.discountTotal || 0).toFixed(2)}</span>
                       </div>
                     )}
-                    {selectedOrder?.pricing?.discountTotal > 0 && (
+                    {!selectedOrder?.pricing?.hasMemberDiscount && (selectedOrder?.pricing?.discountTotal || 0) > 0 && (
                       <div className="flex justify-between py-0.5 text-sm text-emerald-600">
                         <span>Discount</span>
                         <span>-AU${Number(selectedOrder.pricing.discountTotal).toFixed(2)}</span>
                       </div>
                     )}
+                    {(selectedOrder?.pricing?.couponDiscount || 0) > 0 && (
+                      <div className="flex justify-between py-0.5 text-sm text-emerald-600">
+                        <span>Coupon Discount</span>
+                        <span>-AU${Number(selectedOrder.pricing.couponDiscount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between py-0.5 text-sm text-neutral-600">
+                      <span>Shipping ({(() => {
+                        const sm = selectedOrder?.shippingMethod || selectedOrder?.pricing?.shippingMethod || 'untracked';
+                        const labels: Record<string, string> = { 'untracked': 'Free Untracked', 'tracked': 'Tracked', 'express': 'Express' };
+                        return labels[sm] || sm;
+                      })()})</span>
+                      <span>AU${Number(selectedOrder?.pricing?.shipping || 0).toFixed(2)}</span>
+                    </div>
                     <div className="mt-1.5 flex justify-between border-t border-neutral-200 pt-1.5">
                       <span className="font-bold text-sm text-neutral-900">Total</span>
                       <span className="font-bold text-sm text-neutral-900">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</span>

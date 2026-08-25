@@ -284,7 +284,8 @@ const Checkout = () => {
         currency: "AUD",
         subtotal: originalTotal,
         discountTotal,
-        total: discountedTotal,
+        shipping: shippingCost,
+        total: finalTotal,
         hasMemberDiscount: Boolean(hasDiscount),
         memberDiscountRate: Number(discountRate || 0),
       };
@@ -318,6 +319,8 @@ const Checkout = () => {
         items,
         pricing,
         shipping,
+        shippingMethod: selectedShipping?.id || 'untracked',
+        postageService: selectedShipping?.name || 'Free Untracked Shipping',
         payment: {
           method: 'stripe',
           paymentIntentId: paymentIntent.id,
@@ -364,6 +367,7 @@ const Checkout = () => {
         currency: "AUD",
         subtotal: originalTotal,
         discountTotal,
+        shipping: shippingCost,
         total: finalTotal,
         hasMemberDiscount: Boolean(hasDiscount),
         memberDiscountRate: Number(discountRate || 0),
@@ -400,6 +404,8 @@ const Checkout = () => {
         items,
         pricing,
         shipping,
+        shippingMethod: selectedShipping?.id || 'untracked',
+        postageService: selectedShipping?.name || 'Free Untracked Shipping',
         payment: {
           method: 'stripe',
           status: 'succeeded',
@@ -416,6 +422,8 @@ const Checkout = () => {
           amount: finalTotal,
           items,
           customer_email: customer.email,
+          shippingCost,
+          shippingName: selectedShipping?.name || 'Shipping',
         }),
       });
       const stripeData = await stripeResp.json().catch(() => null);
