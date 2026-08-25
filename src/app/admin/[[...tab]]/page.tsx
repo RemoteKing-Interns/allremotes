@@ -15,6 +15,9 @@ import DocumentDesign from "../../../components/admin/DocumentDesign";
 import AdminPrinterSettings from "../../../components/admin/AdminPrinterSettings";
 import LabelTemplatesSection from "../../../components/admin/LabelTemplatesSection";
 import dynamic from "next/dynamic";
+import AdminSidebar from "../../../components/admin/shell/AdminSidebar";
+import AdminHeader from "../../../components/admin/shell/AdminHeader";
+import AdminCommandPalette from "../../../components/admin/shell/AdminCommandPalette";
 import CustomerManagement from "../../../components/admin/CustomerManagement";
 import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
@@ -43,9 +46,9 @@ import {
   Link2,
   Trash2,
   RotateCcw,
+  Store,
   ChevronDown,
   ChevronRight,
-  Store,
   Tag,
   Percent,
   FileText,
@@ -92,12 +95,8 @@ import {
   Inbox,
   Printer,
   FolderOpen,
-  HelpCircle,
-  LogOut,
   User,
   ChevronLeft,
-  PanelLeftClose,
-  PanelLeft,
   Wand2,
 } from "lucide-react";
 
@@ -432,10 +431,6 @@ const AdminContent = () => {
 
   // ── Global command palette (⌘K / Ctrl+K)
   const [cmdkOpen, setCmdkOpen] = useState(false);
-  const [cmdkQuery, setCmdkQuery] = useState("");
-  const [cmdkResults, setCmdkResults] = useState<{ type: string; label: string; sub?: string; action: () => void }[]>([]);
-  const [cmdkIndex, setCmdkIndex] = useState(0);
-  const cmdkInputRef = useRef<HTMLInputElement>(null);
 
   // Sync logged-in user into activity logger
   useEffect(() => {
@@ -490,7 +485,6 @@ const AdminContent = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
   const [viewOrderId, setViewOrderId] = useState<string | null>(() =>
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('order') : null
   );
@@ -648,118 +642,18 @@ const AdminContent = () => {
     return () => clearInterval(interval);
   }, [isAdmin]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // ── ⌘K / Ctrl+K global keyboard shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCmdkOpen((v) => !v);
-        setCmdkQuery("");
-        setCmdkIndex(0);
       }
       if (e.key === 'Escape') setCmdkOpen(false);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  // Focus input when palette opens
-  useEffect(() => {
-    if (cmdkOpen) setTimeout(() => cmdkInputRef.current?.focus(), 50);
-  }, [cmdkOpen]);
-
-  // Build results whenever query changes
-  useEffect(() => {
-    if (!cmdkOpen) return;
-    const q = cmdkQuery.toLowerCase().trim();
-
-    const results: { type: string; label: string; sub?: string; action: () => void }[] = [];
-
-    // Nav items
-    const navDefs = [
-      { id: 'dashboard', label: 'Home' },
-      { id: 'orders', label: 'Orders' },
-      { id: 'returns', label: 'Returns' },
-      { id: 'abandoned_carts', label: 'Abandoned Carts' },
-      { id: 'products', label: 'Products' },
-      { id: 'categories', label: 'Categories & Brands' },
-      { id: 'inventory', label: 'Inventory' },
-      { id: 'image_gen', label: 'AI Image Generator' },
-      { id: 'customers', label: 'Customers' },
-      { id: 'reviews', label: 'Reviews' },
-      { id: 'messages', label: 'Messages/Queries' },
-      { id: 'promotions', label: 'Promotions' },
-      { id: 'discounts', label: 'Discounts' },
-      { id: 'home', label: 'Homepage' },
-      { id: 'navigation', label: 'Navigation' },
-      { id: 'analytics', label: 'Reports' },
-      { id: 'live_view', label: 'Live View' },
-      { id: 'admin_users', label: 'Admin Users' },
-      { id: 'admin_logs', label: 'Logs' },
-      { id: 'printers', label: 'Printer Setup' },
-      { id: 'settings', label: 'Settings' },
-    ];
-
-    navDefs.forEach(({ id, label }) => {
-      if (q === "" || label.toLowerCase().includes(q) || id.includes(q)) {
-        results.push({ type: 'nav', label, sub: 'Go to page', action: () => { setActiveTab(id); setCmdkOpen(false); } });
-      }
-    });
-
-    // Fetch-based search (orders + products) — only when there's a query
-    if (q.length >= 2) {
-      fetch(`/api/orders?limit=200`, { cache: 'no-store' })
-        .then(r => r.json()).then((data: any[]) => {
-          if (!Array.isArray(data)) return;
-          const matches = data.filter((o: any) => {
-            const txt = [o.id, o.customer?.email, o.customer?.fullName, o.status].filter(Boolean).join(' ').toLowerCase();
-            return txt.includes(q);
-          }).slice(0, 5);
-          if (matches.length === 0) return;
-          setCmdkResults(prev => [
-            ...prev.filter(r => r.type !== 'order'),
-            ...matches.map((o: any) => ({
-              type: 'order',
-              label: `Order #${o.id}`,
-              sub: `${o.customer?.email || 'Guest'} · ${o.status}`,
-              action: () => { setActiveTab('orders'); setViewOrderId(o.id); setCmdkOpen(false); },
-            })),
-          ]);
-        }).catch(() => null);
-
-      fetch(`/api/products`, { cache: 'no-store' })
-        .then(r => r.json()).then((data: any[]) => {
-          if (!Array.isArray(data)) return;
-          const matches = data.filter((p: any) => {
-            const txt = [p.name, p.sku, p.rk_sku, p.brand, p.category].filter(Boolean).join(' ').toLowerCase();
-            return txt.includes(q);
-          }).slice(0, 5);
-          if (matches.length === 0) return;
-          setCmdkResults(prev => [
-            ...prev.filter(r => r.type !== 'product'),
-            ...matches.map((p: any) => ({
-              type: 'product',
-              label: p.name,
-              sub: `${p.sku || p.rk_sku || ''} · ${p.category || ''}`,
-              action: () => { setActiveTab('products'); setCmdkOpen(false); },
-            })),
-          ]);
-        }).catch(() => null);
-    }
-
-    setCmdkResults(results);
-    setCmdkIndex(0);
-  }, [cmdkQuery, cmdkOpen]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -919,289 +813,39 @@ const AdminContent = () => {
   ];
   const navItems = allNavItems.filter(item => hasPermission(item.perm));
 
-  const groupedIds = new Set(navGroupDefinitions.flatMap(g => g.ids));
-  const navGroups = navGroupDefinitions.map(g => ({
-    ...g,
-    items: g.ids.map(id => navItems.find(item => item.id === id)).filter(Boolean) as typeof navItems,
-  })).filter(g => g.items.length > 0);
-
   return (
     <div className="flex h-screen bg-[#f6f6f7]">
-      {/* Shopify-style Sidebar */}
-      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-60'} flex-shrink-0 bg-[#1a1a1a] text-white transition-all duration-300 flex flex-col`}>
-        {/* Logo Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                <Store size={18} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">All Remotes</p>
-                <p className="text-xs text-neutral-400">Admin</p>
-              </div>
-            </div>
-          )}
-          <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
-          >
-            {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-          </button>
-        </div>
-
-        {/* Search */}
-        {!sidebarCollapsed && (
-          <div className="px-3 py-3">
-            <button
-              onClick={() => { setCmdkOpen(true); setCmdkQuery(""); setCmdkIndex(0); }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-neutral-400 text-sm hover:bg-white/10 hover:text-neutral-200 transition-colors cursor-pointer"
-            >
-              <Search size={16} />
-              <span>Search</span>
-              <span className="ml-auto text-xs bg-white/10 px-1.5 py-0.5 rounded">⌘K</span>
-            </button>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-2 py-2">
-          <div className="space-y-0.5">
-            {sidebarCollapsed ? (
-              navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                const showBadge = item.id === 'messages' && unreadMessageCount > 0;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      isActive
-                        ? 'bg-white/10 text-white'
-                        : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                    title={item.label}
-                  >
-                    <div className="relative">
-                      <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
-                      {showBadge && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                          {unreadMessageCount}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            ) : (
-              <>
-                {/* Top-level items that are not part of a group */}
-                {navItems.filter((item) => !groupedIds.has(item.id)).map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-white/10 text-white'
-                          : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-
-                {/* Grouped dropdowns */}
-                {navGroups.map((group) => {
-                  const isExpanded = expandedGroups.includes(group.label);
-                  const groupActive = group.items.some((item) => item.id === activeTab);
-                  return (
-                    <div key={group.label} className="space-y-0.5">
-                      <button
-                        onClick={() =>
-                          setExpandedGroups((prev) =>
-                            prev.includes(group.label)
-                              ? prev.filter((l) => l !== group.label)
-                              : [...prev, group.label]
-                          )
-                        }
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          groupActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                        }`}
-                      >
-                        <group.icon size={18} className={groupActive ? 'text-emerald-400' : ''} />
-                        <span className="flex-1 text-left">{group.label}</span>
-                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                      </button>
-                      {isExpanded && (
-                        <div className="pl-8 space-y-0.5">
-                          {group.items.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = activeTab === item.id;
-                            const showBadge = item.id === 'messages' && unreadMessageCount > 0;
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => setActiveTab(item.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                  isActive
-                                    ? 'bg-white/10 text-white'
-                                    : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                                }`}
-                              >
-                                <div className="relative">
-                                  <Icon size={18} className={isActive ? 'text-emerald-400' : ''} />
-                                  {showBadge && (
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                                      {unreadMessageCount}
-                                    </span>
-                                  )}
-                                </div>
-                                <span>{item.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-        </nav>
-
-        {/* User Section */}
-        <div className="border-t border-white/10 p-3">
-          <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} rounded-lg p-1 hover:bg-white/10 transition-colors`}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-white truncate">{user?.name || 'Admin'}</p>
-                <p className="text-xs text-neutral-400 truncate">{user?.email}</p>
-              </div>
-            )}
-          </button>
-          {!sidebarCollapsed && (
-            <div className="mt-3 flex gap-2">
-              <Link 
-                href="/" 
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-medium transition-colors"
-              >
-                <ExternalLink size={14} />
-                View Store
-              </Link>
-            </div>
-          )}
-        </div>
-      </aside>
+      <AdminSidebar
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        expandedGroups={expandedGroups}
+        setExpandedGroups={setExpandedGroups}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        unreadMessageCount={unreadMessageCount}
+        user={user}
+        hasPermission={hasPermission}
+        onOpenSearch={() => { setCmdkOpen(true); }}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-neutral-900 capitalize">
-              {activeTab === 'dashboard' ? 'Home' : activeTab.replace('_', ' ')}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => { setNotifOpen(o => !o); if (!notifOpen) fetchNotifications(); }}
-                className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors relative"
-              >
-                <Bell size={20} />
-                {notifications.length > 0 && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                    {notifications.length > 9 ? '9+' : notifications.length}
-                  </span>
-                )}
-              </button>
+        <AdminHeader
+          activeTab={activeTab}
+          notifOpen={notifOpen}
+          setNotifOpen={setNotifOpen}
+          notifications={notifications}
+          notifLoading={notifLoading}
+          fetchNotifications={fetchNotifications}
+          onNotifClick={(n) => {
+            setNotifOpen(false);
+            if (n.threadId) setOpenThreadId(n.threadId);
+            setActiveTab(n.tab);
+          }}
+          onLogout={() => { logout(); router.push("/admin"); }}
+        />
 
-              {notifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 rounded-xl border border-neutral-200 bg-white shadow-xl z-50 overflow-hidden">
-                  <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-                    <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
-                    <span className="text-xs text-neutral-500">{notifications.length} items</span>
-                  </div>
-
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <span className="text-sm text-neutral-500">Loading…</span>
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <Bell size={28} className="mb-2 text-neutral-300" />
-                        <p className="text-sm font-medium text-neutral-600">All clear!</p>
-                        <p className="text-xs text-neutral-400 mt-1">No pending notifications</p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => (
-                        <button
-                          key={n.id}
-                          onClick={() => {
-                            setNotifOpen(false);
-                            if (n.threadId) setOpenThreadId(n.threadId);
-                            setActiveTab(n.tab);
-                          }}
-                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-neutral-50 border-b border-neutral-100 last:border-0 text-left transition-colors"
-                        >
-                          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                            n.type === 'order' ? 'bg-blue-100 text-blue-600' :
-                            n.type === 'return' ? 'bg-amber-100 text-amber-600' :
-                            n.type === 'chat' ? 'bg-emerald-100 text-emerald-600' :
-                            'bg-neutral-100 text-neutral-500'
-                          }`}>
-                            {n.type === 'order' ? '🛒' : n.type === 'return' ? '↩' : n.type === 'chat' ? '💬' : '🔔'}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-neutral-900">{n.title}</p>
-                            <p className="text-xs text-neutral-600 truncate mt-0.5">{n.body}</p>
-                            <p className="text-xs text-neutral-400 mt-1">
-                              {new Date(n.time).toLocaleString('en-AU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="border-t border-neutral-200 px-4 py-2">
-                    <button
-                      onClick={() => { fetchNotifications(); }}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      {notifLoading ? 'Refreshing…' : 'Refresh'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <button className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors">
-              <HelpCircle size={20} />
-            </button>
-            <button
-              onClick={() => { logout(); router.push("/admin"); }}
-              className="p-2 rounded-lg hover:bg-red-50 text-neutral-500 hover:text-red-600 transition-colors"
-              title="Logout"
-            >
-              <LogOut size={20} />
-            </button>
-          </div>
-        </header>
-
-        {/* Page Content — tabs are kept mounted and hidden so data is never lost on switch */}
+        {/* Page Content — only the active tab is mounted; inactive tabs are unmounted to save DOM nodes and API calls */}
         <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-6">
           {/* Permission guard fallback */}
           {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
@@ -1211,125 +855,41 @@ const AdminContent = () => {
               <p className="text-sm text-neutral-500 mt-2">You don&apos;t have permission to view this section.</p>
             </div>
           )}
-          {hasPermission('dashboard')   && <div className={activeTab === 'dashboard'       ? '' : 'hidden'}><AdminDashboard onNavigateTab={setActiveTab} /></div>}
-          {hasPermission('analytics')   && <div className={activeTab === 'analytics'       ? '' : 'hidden'}><AdminAnalytics /></div>}
-          {hasPermission('analytics')   && <div className={activeTab === 'live_view'       ? '' : 'hidden'}><LiveViewSection /></div>}
-          {hasPermission('customers')   && <div className={activeTab === 'customers'       ? '' : 'hidden'}><CustomerManagement /></div>}
-          {isSuperUser                  && <div className={activeTab === 'admin_users'     ? '' : 'hidden'}><AdminUsersManager /></div>}
-          {hasPermission('admin_users') && <div className={activeTab === 'admin_logs'      ? '' : 'hidden'}><AdminLogs /></div>}
-          {hasPermission('products')    && <div className={activeTab === 'products'        ? '' : 'hidden'}><AdminProducts /></div>}
-          {hasPermission('products')    && <div className={activeTab === 'categories'      ? '' : 'hidden'}><CategoriesBrandsSection /></div>}
-          {hasPermission('products')    && <div className={activeTab === 'inventory'       ? '' : 'hidden'}><InventorySection /></div>}
-          {hasPermission('products')    && <div className={activeTab === 'image_gen'       ? '' : 'hidden'}><ProductImageGen /></div>}
-          {hasPermission('orders')      && <div className={activeTab === 'orders'          ? '' : 'hidden'}><AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} activeTab={activeTab} /></div>}
-          {hasPermission('orders')      && <div className={activeTab === 'returns'         ? '' : 'hidden'}><AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} /></div>}
-          {hasPermission('orders')      && <div className={activeTab === 'abandoned_carts' ? '' : 'hidden'}><AdminAbandonedCarts /></div>}
-          {hasPermission('content')     && <div className={activeTab === 'home'            ? '' : 'hidden'}><AdminHome /></div>}
-          {hasPermission('marketing')   && <div className={activeTab === 'promotions'      ? '' : 'hidden'}><AdminPromotions /></div>}
-          {hasPermission('marketing')   && <div className={activeTab === 'discounts'       ? '' : 'hidden'}><DiscountsSection /></div>}
-          {hasPermission('content')     && <div className={activeTab === 'navigation'      ? '' : 'hidden'}><AdminNavigation /></div>}
-          {hasPermission('content')     && <div className={activeTab === 'content'         ? '' : 'hidden'}><AdminMediaLibrary /></div>}
-          {hasPermission('customers')   && <div className={activeTab === 'reviews'         ? '' : 'hidden'}><AdminReviews /></div>}
-          {hasPermission('customers')   && <div className={activeTab === 'messages'        ? '' : 'hidden'}><AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} /></div>}
-          {hasPermission('settings')    && <div className={activeTab === 'printers'        ? '' : 'hidden'}><AdminPrinterSettings /></div>}
-          {hasPermission('settings')    && <div className={activeTab === 'labels'          ? '' : 'hidden'}><LabelTemplatesSection /></div>}
-          {hasPermission('settings')    && <div className={activeTab === 'document_design' ? '' : 'hidden'}><DocumentDesign /></div>}
-          {hasPermission('settings')    && <div className={activeTab === 'settings'        ? '' : 'hidden'}><AdminSettings /></div>}
-          {hasPermission('channels')    && <div className={activeTab === 'channels'        ? '' : 'hidden'}><ChannelManager /></div>}
-          <div className={activeTab === 'profile' ? '' : 'hidden'}><AdminProfile /></div>
+          {activeTab === 'dashboard'       && hasPermission('dashboard')   && <AdminDashboard onNavigateTab={setActiveTab} />}
+          {activeTab === 'analytics'       && hasPermission('analytics')   && <AdminAnalytics />}
+          {activeTab === 'live_view'       && hasPermission('analytics')   && <LiveViewSection />}
+          {activeTab === 'customers'       && hasPermission('customers')   && <CustomerManagement />}
+          {activeTab === 'admin_users'     && isSuperUser                  && <AdminUsersManager />}
+          {activeTab === 'admin_logs'      && hasPermission('admin_users') && <AdminLogs />}
+          {activeTab === 'products'        && hasPermission('products')    && <AdminProducts />}
+          {activeTab === 'categories'      && hasPermission('products')    && <CategoriesBrandsSection />}
+          {activeTab === 'inventory'       && hasPermission('products')    && <InventorySection />}
+          {activeTab === 'image_gen'       && hasPermission('products')    && <ProductImageGen />}
+          {activeTab === 'orders'          && hasPermission('orders')      && <AdminOrders viewOrderId={viewOrderId} setViewOrderId={setViewOrderId} activeTab={activeTab} />}
+          {activeTab === 'returns'         && hasPermission('orders')      && <AdminReturns viewReturnId={viewReturnId} setViewReturnId={setViewReturnId} />}
+          {activeTab === 'abandoned_carts' && hasPermission('orders')      && <AdminAbandonedCarts />}
+          {activeTab === 'home'            && hasPermission('content')     && <AdminHome />}
+          {activeTab === 'promotions'      && hasPermission('marketing')   && <AdminPromotions />}
+          {activeTab === 'discounts'       && hasPermission('marketing')   && <DiscountsSection />}
+          {activeTab === 'navigation'      && hasPermission('content')     && <AdminNavigation />}
+          {activeTab === 'content'         && hasPermission('content')     && <AdminMediaLibrary />}
+          {activeTab === 'reviews'         && hasPermission('customers')   && <AdminReviews />}
+          {activeTab === 'messages'        && hasPermission('customers')   && <AdminMessages openThreadId={openThreadId ?? undefined} onThreadOpened={() => setOpenThreadId(null)} />}
+          {activeTab === 'printers'        && hasPermission('settings')    && <AdminPrinterSettings />}
+          {activeTab === 'labels'          && hasPermission('settings')    && <LabelTemplatesSection />}
+          {activeTab === 'document_design' && hasPermission('settings')    && <DocumentDesign />}
+          {activeTab === 'settings'        && hasPermission('settings')    && <AdminSettings />}
+          {activeTab === 'channels'        && hasPermission('channels')    && <ChannelManager />}
+          {activeTab === 'profile'         && <AdminProfile />}
         </main>
       </div>
 
-      {/* ── Global Command Palette ─────────────────────────────────── */}
-      {cmdkOpen && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
-          onClick={() => setCmdkOpen(false)}
-        >
-          <div
-            className="w-full max-w-xl mx-4 rounded-xl bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') { e.preventDefault(); setCmdkIndex(i => Math.min(i + 1, cmdkResults.length - 1)); }
-              if (e.key === 'ArrowUp') { e.preventDefault(); setCmdkIndex(i => Math.max(i - 1, 0)); }
-              if (e.key === 'Enter' && cmdkResults[cmdkIndex]) { cmdkResults[cmdkIndex].action(); }
-              if (e.key === 'Escape') setCmdkOpen(false);
-            }}
-          >
-            {/* Input */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100">
-              <Search size={18} className="text-neutral-400 shrink-0" />
-              <input
-                ref={cmdkInputRef}
-                type="text"
-                placeholder="Search orders, products, pages…"
-                value={cmdkQuery}
-                onChange={(e) => setCmdkQuery(e.target.value)}
-                className="flex-1 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none bg-transparent"
-              />
-              {cmdkQuery && (
-                <button onClick={() => setCmdkQuery("")} className="text-neutral-400 hover:text-neutral-600">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              )}
-              <kbd className="text-[11px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded font-mono">ESC</kbd>
-            </div>
-
-            {/* Results */}
-            <div className="max-h-[50vh] overflow-y-auto py-2">
-              {cmdkResults.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-neutral-400">No results found</p>
-              ) : (
-                (() => {
-                  const typeOrder = ['nav', 'order', 'product'];
-                  const typeLabel: Record<string, string> = { nav: 'Pages', order: 'Orders', product: 'Products' };
-                  let lastType = '';
-                  return cmdkResults.map((r, i) => {
-                    const showHeading = r.type !== lastType;
-                    lastType = r.type;
-                    return (
-                      <div key={i}>
-                        {showHeading && (
-                          <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                            {typeLabel[r.type] || r.type}
-                          </p>
-                        )}
-                        <button
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${i === cmdkIndex ? 'bg-violet-50 text-violet-900' : 'hover:bg-neutral-50 text-neutral-800'}`}
-                          onClick={r.action}
-                          onMouseEnter={() => setCmdkIndex(i)}
-                        >
-                          <span className={`shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
-                            r.type === 'order' ? 'bg-blue-100 text-blue-700' :
-                            r.type === 'product' ? 'bg-emerald-100 text-emerald-700' :
-                            'bg-neutral-100 text-neutral-500'
-                          }`}>
-                            {r.type === 'order' ? '#' : r.type === 'product' ? 'P' : '→'}
-                          </span>
-                          <span className="flex-1 min-w-0">
-                            <span className="block text-sm font-medium truncate">{r.label}</span>
-                            {r.sub && <span className="block text-xs text-neutral-400 truncate">{r.sub}</span>}
-                          </span>
-                          {i === cmdkIndex && (
-                            <kbd className="text-[10px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded font-mono shrink-0">↵</kbd>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  });
-                })()
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center gap-3 px-4 py-2 border-t border-neutral-100 text-[11px] text-neutral-400">
-              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">↑↓</kbd> navigate</span>
-              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">↵</kbd> select</span>
-              <span><kbd className="bg-neutral-100 px-1 rounded font-mono">ESC</kbd> close</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <AdminCommandPalette
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        setActiveTab={setActiveTab}
+        setViewOrderId={setViewOrderId}
+      />
     </div>
   );
 };

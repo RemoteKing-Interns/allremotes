@@ -59,6 +59,7 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
     category: categoryId,
     mpn: product.mpn,
     gtin: product.gtin,
+    type: product.type,
     packageWeight: product.packageWeight,
     packageDimensions: product.packageDimensions,
   };
