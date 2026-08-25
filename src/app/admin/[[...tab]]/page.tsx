@@ -7749,7 +7749,7 @@ function AdminHome() {
             <div className="space-y-3">
               {(content.heroImages || []).map((img: string, i: number) => (
                 <div key={i} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
+                  <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
                     {img ? (
                       <ProductImage
                         src={img}
