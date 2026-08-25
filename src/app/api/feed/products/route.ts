@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getPrimaryImage } from "@/lib/images";
 import { getCategoryPageTitle } from "@/lib/category";
 import { mongoEnabled, getDb } from "@/lib/mongo";
@@ -60,18 +62,50 @@ function isValidImageUrl(url: string): boolean {
 }
 
 const S3_BUCKET = "https://allremotes.s3.ap-southeast-2.amazonaws.com";
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || "allremotes";
+const S3_REGION = process.env.AWS_REGION || "ap-southeast-2";
 
-function proxyS3Url(url: string): string {
-  if (url.startsWith(S3_BUCKET)) {
-    return `${BASE_URL}/api/image/${url.slice(S3_BUCKET.length + 1)}`;
+let s3Client: S3Client | null = null;
+function getS3Client() {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: S3_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      },
+    });
   }
-  return url;
+  return s3Client;
 }
 
-function getProductImage(product: Product): string {
+const presignCache = new Map<string, { url: string; expires: number }>();
+const PRESIGN_TTL = 6 * 24 * 60 * 60 * 1000; // 6 days (URLs valid for 7)
+
+async function presignS3Url(url: string): Promise<string> {
+  if (!url.startsWith(S3_BUCKET)) return url;
+  const key = url.slice(S3_BUCKET.length + 1).split("?")[0];
+
+  const cached = presignCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.url;
+
+  try {
+    const signedUrl = await getSignedUrl(
+      getS3Client(),
+      new GetObjectCommand({ Bucket: S3_BUCKET_NAME, Key: key }),
+      { expiresIn: 604800 }
+    );
+    presignCache.set(key, { url: signedUrl, expires: Date.now() + PRESIGN_TTL });
+    return signedUrl;
+  } catch {
+    return `${BASE_URL}/images/mainlogo.png`;
+  }
+}
+
+async function getProductImage(product: Product): Promise<string> {
   const primary = getPrimaryImage(product);
   if (!primary || !isValidImageUrl(primary)) return `${BASE_URL}/images/mainlogo.png`;
-  if (/^https?:\/\//i.test(primary)) return proxyS3Url(primary);
+  if (/^https?:\/\//i.test(primary)) return presignS3Url(primary);
   return `${BASE_URL}${primary.startsWith("/") ? "" : "/"}${primary}`;
 }
 
@@ -107,46 +141,37 @@ function formatPrice(price: number): string {
   return `${price.toFixed(2)} AUD`;
 }
 
-function getAdditionalImageLinks(product: Product): string {
+async function getAdditionalImageLinks(product: Product): Promise<string> {
   const allImages = Array.isArray(product.images) ? product.images : [];
-  return allImages
-    .slice(1, 5)
-    .filter(isValidImageUrl)
-    .map((img) => {
+  const images = allImages.slice(1, 5).filter(isValidImageUrl);
+  const results = await Promise.all(
+    images.map(async (img) => {
       const absolute = /^https?:\/\//i.test(img)
-        ? proxyS3Url(img)
+        ? await presignS3Url(img)
         : `${BASE_URL}${img.startsWith("/") ? "" : "/"}${img}`;
       return `<g:additional_image_link>${escapeXml(absolute)}</g:additional_image_link>`;
     })
-    .join("\n    ");
+  );
+  return results.join("\n    ");
 }
 
 const BLOCKED_TERMS = [
   "clone",
   "cloning",
   "duplicator",
-  "universal",
   "hacking",
   "hack",
-  "tracker",
-  "tracking",
   "surveillance",
   "spy",
   "spying",
   "gps",
-  "monitor",
-  "monitoring",
 ];
 
 function isBlockedProduct(product: Product): boolean {
   const text = [
     product.name,
-    product.model,
-    product.description,
     product.sku,
     product.category,
-    (product as any).seo_title,
-    (product as any).tags,
   ]
     .filter(Boolean)
     .join(" ")
@@ -175,18 +200,18 @@ function hasRealIdentifiers(product: Product): boolean {
   return Boolean(gtin) || looksLikeSku;
 }
 
-function generateProductXml(product: Product): string {
+async function generateProductXml(product: Product): Promise<string> {
   const id = escapeXml(product.id);
   const title = escapeXml(getProductTitle(product));
   const description = escapeXml(getProductDescription(product));
   const link = escapeXml(`${BASE_URL}/product/${id}`);
-  const imageLink = escapeXml(getProductImage(product));
+  const imageLink = escapeXml(await getProductImage(product));
   const availability = getAvailability(product);
   const price = formatPrice(product.price);
   const brand = escapeXml(product.brand?.trim() || "All Remotes");
   const sku = escapeXml(product.sku?.trim() || product.id);
   const productType = escapeXml(getProductType(product));
-  const additionalImages = getAdditionalImageLinks(product);
+  const additionalImages = await getAdditionalImageLinks(product);
   const shipping = getShippingXml();
 
   const realIdentifiers = hasRealIdentifiers(product);
@@ -232,10 +257,8 @@ export async function GET() {
     const mongoProducts = await col.find({}).toArray();
     const productsArray = enrichProductsWithS3Images(mongoProducts);
     
-    const items = productsArray
-      .filter((p: Product) => p && p.id && p.price && !isBlockedProduct(p))
-      .map((p: Product) => generateProductXml(p))
-      .join("\n");
+    const filtered = productsArray.filter((p: Product) => p && p.id && p.price && !isBlockedProduct(p));
+    const items = (await Promise.all(filtered.map((p: Product) => generateProductXml(p)))).join("\n");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
