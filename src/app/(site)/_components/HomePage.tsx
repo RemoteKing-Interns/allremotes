@@ -444,7 +444,7 @@ export default function HomePage() {
           {[
             { icon: Truck, title: "Fast Shipping", body: "Australia-wide dispatch" },
             { icon: ShieldCheck, title: "12-Month Warranty", body: "On every remote" },
-            { icon: RotateCcw, title: "30-Day Returns", body: "Change of mind OK" },
+            { icon: RotateCcw, title: "30-Day Returns", body: "Faulty & defective items" },
             { icon: CreditCard, title: "Secure Checkout", body: "SSL encrypted payments" },
             { icon: Headset, title: "Local Support", body: "Real remote experts" },
           ].map((item, index) => (
