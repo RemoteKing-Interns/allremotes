@@ -796,7 +796,7 @@ const AdminContent = () => {
         <div className="container py-10 sm:py-14">
           <div className="mx-auto grid w-full max-w-5xl items-stretch gap-8 lg:grid-cols-2">
             <div className="rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-panel backdrop-blur sm:p-8">
-              <img src="/images/mainlogo.png" alt="ALLREMOTES" className="h-10 w-auto" />
+              <img src="/images/mainlogo.png" alt="ALLREMOTES" width={180} height={71} className="h-10 w-auto" />
               <div className="mt-6">
                 <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">
                   Admin
