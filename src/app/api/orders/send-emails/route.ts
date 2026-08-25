@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, sendShippingUpdateEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,8 +40,33 @@ interface OrderEmailRequest {
 
 export async function POST(request: Request) {
   try {
-    const body: OrderEmailRequest = await request.json();
-    const { orderId, customerEmail, orderDetails } = body;
+    const body = await request.json();
+
+    // Handle shipping notification emails
+    if (body.type === 'shipping') {
+      const { orderId, customerEmail, customerName, trackingNumber, carrier, trackingLink } = body;
+      if (!orderId || !customerEmail) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+
+      const result = await sendShippingUpdateEmail({
+        to: customerEmail,
+        orderId,
+        customerName: customerName || 'Customer',
+        trackingNumber: trackingNumber || undefined,
+        carrier: carrier || undefined,
+        status: 'Shipped',
+        trackingLink: trackingLink || undefined,
+      });
+
+      return NextResponse.json({
+        success: result.success,
+        emailSent: result.success,
+        error: result.success ? undefined : result.error,
+      });
+    }
+
+    const { orderId, customerEmail, orderDetails } = body as OrderEmailRequest;
 
     if (!orderId || !customerEmail) {
       return NextResponse.json(

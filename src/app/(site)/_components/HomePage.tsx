@@ -440,10 +440,12 @@ export default function HomePage() {
 
       {/* TRUST BAR */}
       <section className="border-b border-neutral-200 bg-white">
-        <div className="container grid grid-cols-1 gap-px divide-x divide-neutral-200 sm:grid-cols-3">
+        <div className="container grid grid-cols-2 gap-px divide-x divide-neutral-200 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { icon: Truck, title: "Fast Shipping", body: "Australia-wide dispatch" },
             { icon: ShieldCheck, title: "12-Month Warranty", body: "On every remote" },
+            { icon: RotateCcw, title: "30-Day Returns", body: "Change of mind OK" },
+            { icon: CreditCard, title: "Secure Checkout", body: "SSL encrypted payments" },
             { icon: Headset, title: "Local Support", body: "Real remote experts" },
           ].map((item, index) => (
             <div

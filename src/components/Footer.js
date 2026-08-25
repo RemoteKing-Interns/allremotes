@@ -17,7 +17,7 @@ const policyItems = [
 const supportItems = [
   { href: "/support", label: "Support Center" },
   { href: "/contact", label: "Contact Us" },
-  { href: "mailto:info@allremotes.com.au", label: "info@allremotes.com.au" },
+  { href: "mailto:shane@allremotes.com.au", label: "shane@allremotes.com.au" },
 ];
 
 function FooterItem({ href, label }) {
@@ -95,7 +95,7 @@ const Footer = () => {
             <span>ABN: {settings.abn}</span>
             <span>{settings.businessAddress}</span>
             <span>{settings.gstStatement}</span>
-            <a href="mailto:info@allremotes.com.au" className="underline hover:text-white">info@allremotes.com.au</a>
+            <a href="mailto:shane@allremotes.com.au" className="underline hover:text-white">shane@allremotes.com.au</a>
             <span>Australia-wide shipping only</span>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">

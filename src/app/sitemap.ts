@@ -29,7 +29,6 @@ const STATIC_ROUTES = [
   "/support/ata-vs-merlin-remote",
   "/support/replace-lost-gate-remote",
   "/contact",
-  "/about",
   "/return-policy",
   "/terms-conditions",
   "/privacy-policy",

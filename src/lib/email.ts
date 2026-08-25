@@ -199,6 +199,7 @@ export async function sendShippingUpdateEmail({
   carrier,
   status,
   estimatedDelivery,
+  trackingLink,
 }: {
   to: string;
   orderId: string;
@@ -207,7 +208,12 @@ export async function sendShippingUpdateEmail({
   carrier?: string;
   status: string;
   estimatedDelivery?: string;
+  trackingLink?: string;
 }) {
+  const trackUrl = trackingLink || (trackingNumber
+    ? `https://www.google.com/search?q=${encodeURIComponent(trackingNumber + ' ' + (carrier || ''))}`
+    : undefined);
+
   const content = `
     <h2>Shipping Update for Order #${orderId}</h2>
     <p>Hi ${customerName},</p>
@@ -219,8 +225,8 @@ export async function sendShippingUpdateEmail({
       ${estimatedDelivery ? `<strong>Estimated Delivery:</strong> ${estimatedDelivery}<br>` : ''}
     </div>
     
-    ${trackingNumber ? `
-      <a href="https://www.google.com/search?q=${encodeURIComponent(trackingNumber + ' ' + (carrier || ''))}" class="button">
+    ${trackUrl ? `
+      <a href="${trackUrl}" class="button">
         Track Package
       </a>
     ` : ''}

@@ -1357,6 +1357,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [otherActionsOpen, setOtherActionsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
+  const [shipOrderModal, setShipOrderModal] = useState<{ order: any; trackingNumber: string; carrier: string; trackingLink: string; sending: boolean } | null>(null);
   const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
@@ -2754,6 +2755,27 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     <span className="text-xs text-neutral-400">Not pushed</span>
                   )}
                 </div>
+                {selectedOrder.trackingNumber && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Tracking</p>
+                    <div className="flex flex-col gap-0.5">
+                      {selectedOrder.carrier && (
+                        <span className="text-xs text-neutral-700">{selectedOrder.carrier}</span>
+                      )}
+                      <span className="font-mono text-xs text-neutral-900">{selectedOrder.trackingNumber}</span>
+                      {selectedOrder.trackingLink && (
+                        <a
+                          href={selectedOrder.trackingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Track package →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Customer + Shipping + Pricing row */}
@@ -2917,6 +2939,22 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
                     >
                       Send Payment Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtherActionsOpen(false);
+                        setShipOrderModal({
+                          order: selectedOrder,
+                          trackingNumber: selectedOrder?.trackingNumber || "",
+                          carrier: selectedOrder?.carrier || "",
+                          trackingLink: selectedOrder?.trackingLink || "",
+                          sending: false,
+                        });
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                    >
+                      Mark as Shipped
                     </button>
                   </div>
                 )}
@@ -3383,6 +3421,120 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Shipped Modal */}
+      {shipOrderModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => !shipOrderModal.sending && setShipOrderModal(null)}>
+          <div className="max-w-md w-full rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-neutral-900 mb-1">Mark Order as Shipped</h3>
+            <p className="text-sm text-neutral-500 mb-4">Order #{shipOrderModal.order.id}</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1">Carrier</label>
+                <input
+                  type="text"
+                  value={shipOrderModal.carrier}
+                  onChange={(e) => setShipOrderModal({ ...shipOrderModal, carrier: e.target.value })}
+                  placeholder="e.g. Australia Post, StarTrack, Sendle"
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1">Tracking Number</label>
+                <input
+                  type="text"
+                  value={shipOrderModal.trackingNumber}
+                  onChange={(e) => setShipOrderModal({ ...shipOrderModal, trackingNumber: e.target.value })}
+                  placeholder="e.g. 1Z9999999999999999"
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1">Tracking Link <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input
+                  type="url"
+                  value={shipOrderModal.trackingLink}
+                  onChange={(e) => setShipOrderModal({ ...shipOrderModal, trackingLink: e.target.value })}
+                  placeholder="https://auspost.com.au/track/..."
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-neutral-400">If left blank, a Google search link will be generated from the tracking number.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShipOrderModal(null)}
+                disabled={shipOrderModal.sending}
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShipOrderModal({ ...shipOrderModal, sending: true });
+                  try {
+                    const trackingLink = shipOrderModal.trackingLink.trim() ||
+                      (shipOrderModal.trackingNumber.trim()
+                        ? `https://www.google.com/search?q=${encodeURIComponent(shipOrderModal.trackingNumber.trim() + ' ' + shipOrderModal.carrier.trim())}`
+                        : '');
+
+                    const resp = await fetch(`/api/orders/${shipOrderModal.order.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        status: 'shipped',
+                        trackingNumber: shipOrderModal.trackingNumber.trim(),
+                        carrier: shipOrderModal.carrier.trim(),
+                        trackingLink,
+                        shippedAt: new Date().toISOString(),
+                      }),
+                    });
+                    if (!resp.ok) throw new Error('Failed to update order');
+
+                    // Send shipping email
+                    const emailResp = await fetch('/api/orders/send-emails', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'shipping',
+                        orderId: shipOrderModal.order.id,
+                        customerEmail: shipOrderModal.order.customer?.email,
+                        customerName: shipOrderModal.order.customer?.fullName,
+                        trackingNumber: shipOrderModal.trackingNumber.trim(),
+                        carrier: shipOrderModal.carrier.trim(),
+                        trackingLink,
+                      }),
+                    });
+
+                    // Update local state
+                    const updated = {
+                      ...shipOrderModal.order,
+                      status: 'shipped',
+                      trackingNumber: shipOrderModal.trackingNumber.trim(),
+                      carrier: shipOrderModal.carrier.trim(),
+                      trackingLink,
+                      shippedAt: new Date().toISOString(),
+                    };
+                    setOrders(orders.map(o => o.id === shipOrderModal.order.id ? updated : o));
+                    setSelectedOrder(updated);
+                    setShipOrderModal(null);
+                    alert('Order marked as shipped and tracking email sent to customer.');
+                  } catch (err: any) {
+                    alert('Failed to mark as shipped: ' + (err?.message || 'Unknown error'));
+                    setShipOrderModal({ ...shipOrderModal, sending: false });
+                  }
+                }}
+                disabled={shipOrderModal.sending}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {shipOrderModal.sending ? 'Sending...' : 'Mark as Shipped & Email Customer'}
+              </button>
+            </div>
           </div>
         </div>
       )}

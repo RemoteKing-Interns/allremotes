@@ -43,11 +43,53 @@ function OrganizationJsonLd() {
     },
     sameAs: [siteUrl],
   };
+  const website = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "ALLREMOTES Australia",
+    url: siteUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${siteUrl}/products/all?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+  const store = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: "All Remotes",
+    legalName: "ALL REMOTES PTY LTD",
+    image: `${siteUrl}/images/mainlogo.png`,
+    url: siteUrl,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "32 Bell Street",
+      addressLocality: "Yarra Glen",
+      addressRegion: "Victoria",
+      postalCode: "3775",
+      addressCountry: "AU",
+    },
+    email: "shane@allremotes.com.au",
+    priceRange: "$$",
+    currenciesAccepted: "AUD",
+    paymentAccepted: "Credit Card, Debit Card, Apple Pay, Google Pay",
+    areaServed: "AU",
+  };
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(org).replace(/</g, "\\u003C") }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(org).replace(/</g, "\\u003C") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(website).replace(/</g, "\\u003C") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(store).replace(/</g, "\\u003C") }}
+      />
+    </>
   );
 }
 
