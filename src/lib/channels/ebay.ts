@@ -39,12 +39,8 @@ function getMarketplaceLocale(): { locale: string; contentLanguage: string } {
 
 function normalizeEbayDescription(description: string | undefined): string {
   const html = String(description || "").trim();
-  if (html.length <= 4000) return html;
-  const text = html
-    .replace(/<[^>]*>?/gm, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length <= 4000 ? text : text.slice(0, 3997) + "...";
+  if (html.length <= 500000) return html;
+  return html.slice(0, 499997) + "...";
 }
 
 function mapCondition(condition = ""): string {
