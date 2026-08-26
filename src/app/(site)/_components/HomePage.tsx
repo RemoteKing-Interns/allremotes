@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -199,6 +199,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -216,7 +217,7 @@ export default function HomePage() {
   }, [brokenImages]);
 
   useEffect(() => {
-    if (!heroImages.length) return;
+    if (!heroImages.length || isDragging) return;
     if (currentSlide >= heroImages.length) {
       setCurrentSlide(0);
     }
@@ -224,7 +225,7 @@ export default function HomePage() {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [heroImages.length, currentSlide]);
+  }, [heroImages.length, currentSlide, isDragging]);
 
   const hero = useMemo(() => {
     const h = home?.hero;
@@ -322,18 +323,53 @@ export default function HomePage() {
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroImages.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
 
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+
+  const onHeroPointerDown = (e: React.PointerEvent) => {
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    setIsDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onHeroPointerUp = (e: React.PointerEvent) => {
+    if (!dragStart.current) return;
+    const offset = e.clientX - dragStart.current.x;
+    const threshold = 50;
+    if (offset < -threshold) nextSlide();
+    else if (offset > threshold) prevSlide();
+    dragStart.current = null;
+    setIsDragging(false);
+  };
+
+  const onHeroPointerCancel = () => {
+    dragStart.current = null;
+    setIsDragging(false);
+  };
+
   return (
     <main className="animate-fadeIn">
       {/* HERO */}
-      <section className="relative min-h-[100dvh] max-h-[900px] overflow-hidden bg-neutral-900">
+      <section
+        className="relative min-h-[100dvh] max-h-[900px] overflow-hidden bg-neutral-900 touch-pan-y"
+        onPointerDown={onHeroPointerDown}
+        onPointerUp={onHeroPointerUp}
+        onPointerCancel={onHeroPointerCancel}
+      >
         {/* Background carousel */}
         <div className="absolute inset-0">
           {heroImages.map((src: string, index: number) => (
-            <div
+            <motion.div
               key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === currentSlide ? "opacity-100" : "opacity-0"
-              }`}
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: index === currentSlide ? 1 : 0,
+                scale: index === currentSlide ? 1 : 1.05,
+              }}
+              transition={{
+                opacity: { type: "spring", bounce: 0, duration: 0.5 },
+                scale: { type: "spring", bounce: 0, duration: 0.6 },
+              }}
             >
               <ProductImage
                 src={src}
@@ -350,7 +386,7 @@ export default function HomePage() {
                   })
                 }
               />
-            </div>
+            </motion.div>
           ))}
           <div className="absolute inset-0 bg-gradient-to-r from-neutral-900/90 via-neutral-900/70 to-neutral-900/40" />
         </div>

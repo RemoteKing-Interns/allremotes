@@ -55,7 +55,7 @@ const Header = () => {
     accountMenuCloseTimeoutRef.current = window.setTimeout(() => {
       setShowAccountMenu(false);
       accountMenuCloseTimeoutRef.current = null;
-    }, 180);
+    }, 80);
   };
 
   const cancelAccountMenuClose = () => {
@@ -85,7 +85,7 @@ const Header = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 250);
+    }, 0);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 

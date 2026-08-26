@@ -76,9 +76,11 @@ const ProductCard = ({
     if (!product.inStock) return;
     if (typeof onAddToCart === "function") {
       onAddToCart(product);
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
       return;
     }
     addToCart(product);
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
   };
 
   const toggleWishlist = (event) => {
@@ -97,13 +99,14 @@ const ProductCard = ({
     } catch {}
 
     setIsWishlisted(next.includes(id));
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
   };
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-strong"
+      transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-shadow duration-300 hover:shadow-strong"
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
