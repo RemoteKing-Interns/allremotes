@@ -28,7 +28,11 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
         ? [product.image]
         : []
   );
-  const title = `${product.brand || "ALLREMOTES"} ${product.model || product.name || sku}`.trim();
+  const brand = (product.brand || "ALLREMOTES").trim();
+  const name = (product.model || product.name || sku || "").trim();
+  const title = name.toLowerCase().startsWith(brand.toLowerCase())
+    ? name
+    : `${brand} ${name}`;
   const description =
     buildFullDescription(product) ||
     `High-quality ${title}. Professional replacement remote with reliable performance.`;

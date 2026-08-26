@@ -43,6 +43,18 @@ function normalizeEbayDescription(description: string | undefined): string {
   return html.slice(0, 499997) + "...";
 }
 
+function shortEbayDescription(description: string | undefined): string {
+  const text = String(description || "")
+    .replace(/<[^>]*>?/gm, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length <= 3990 ? text : text.slice(0, 3987) + "...";
+}
+
 function mapCondition(condition = ""): string {
   const c = condition.toLowerCase();
   if (c.includes("new")) return "NEW";
@@ -155,7 +167,8 @@ export const eBayAdapter: ChannelAdapter = {
     }
 
     const title = payload.title.slice(0, 80);
-    const description = normalizeEbayDescription(payload.description);
+    const fullDescription = normalizeEbayDescription(payload.description);
+    const shortDescription = shortEbayDescription(payload.description);
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
@@ -167,7 +180,7 @@ export const eBayAdapter: ChannelAdapter = {
       locale,
       product: {
         title,
-        description,
+        description: shortDescription,
         imageUrls: payload.images,
         aspects: payload.aspects || {
           Brand: [payload.brand],
@@ -217,7 +230,7 @@ export const eBayAdapter: ChannelAdapter = {
       format: "FIXED_PRICE",
       availableQuantity: payload.quantity,
       categoryId: payload.category || "0",
-      listingDescription: description,
+      listingDescription: fullDescription,
       pricingSummary: {
         price: { currency: payload.currency, value: payload.price.toFixed(2) },
       },
@@ -301,7 +314,8 @@ export const eBayAdapter: ChannelAdapter = {
 
   async updateListing(offerId: string, payload: ListingPayload, creds: ChannelCredentials) {
     const title = payload.title.slice(0, 80);
-    const description = normalizeEbayDescription(payload.description);
+    const fullDescription = normalizeEbayDescription(payload.description);
+    const shortDescription = shortEbayDescription(payload.description);
     const { locale, contentLanguage } = getMarketplaceLocale();
 
     if (!payload.category || payload.category === "0") {
@@ -313,7 +327,7 @@ export const eBayAdapter: ChannelAdapter = {
       locale,
       product: {
         title,
-        description,
+        description: shortDescription,
         imageUrls: payload.images,
         aspects: payload.aspects || {
           Brand: [payload.brand],
@@ -355,7 +369,7 @@ export const eBayAdapter: ChannelAdapter = {
       format: "FIXED_PRICE",
       availableQuantity: payload.quantity,
       categoryId: payload.category || "0",
-      listingDescription: description,
+      listingDescription: fullDescription,
       pricingSummary: {
         price: { currency: payload.currency, value: payload.price.toFixed(2) },
       },

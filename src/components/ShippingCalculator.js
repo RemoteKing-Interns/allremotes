@@ -128,9 +128,15 @@ const ShippingCalculator = ({ address, onShippingSelect, selectedShipping, items
                   </div>
                 </div>
                 
+                {!rate.tracking && rate.price === 0 && (
+                  <div className="tracking-info" style={{ color: '#856404' }}>
+                    No tracking provided — upgrade to tracked for delivery updates
+                  </div>
+                )}
+
                 {rate.tracking && (
                   <div className="tracking-info">
-                    📍 Includes tracking
+                    Includes tracking
                   </div>
                 )}
               </div>
