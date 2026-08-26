@@ -269,7 +269,7 @@ export async function POST(request: Request) {
               </ul>
             </div>
 
-            <p style="font-size:13px;color:#6b7280;margin:0;">Questions? Reply to this email or contact us at <a href="mailto:info@allremotes.com.au" style="color:#C0392B;">info@allremotes.com.au</a></p>
+            <p style="font-size:13px;color:#6b7280;margin:0;">Questions? Reply to this email or contact us at <a href="mailto:shane@allremotes.com.au" style="color:#C0392B;">shane@allremotes.com.au</a></p>
           </div>
         </div>
       `,

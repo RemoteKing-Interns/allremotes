@@ -16,7 +16,8 @@ import {
   Users,
 } from "lucide-react";
 import { useStore } from "../../../context/StoreContext";
-import ProductCard from "../../../components/ProductCard";
+import ProductCard from "@/components/ProductCard";
+import HomeSeoContent from "./HomeSeoContent";
 import ProductImage from "../../../components/images/ProductImage";
 
 const DEFAULT_FEEDBACK_REVIEWS = [
@@ -192,9 +193,9 @@ function SectionHeader({ eyebrow, title, body, action }: { eyebrow?: string; tit
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ initialProducts }: { initialProducts?: any[] }) {
   const { getProducts, getHomeContent, getReviews } = useStore();
-  const products = getProducts() || [];
+  const [products, setProductsState] = useState(initialProducts || []);
   const reviews = getReviews() || [];
   const [mounted, setMounted] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -226,6 +227,13 @@ export default function HomePage() {
     }, 6000);
     return () => clearInterval(interval);
   }, [heroImages.length, currentSlide, isDragging]);
+
+  useEffect(() => {
+    const storeProducts = getProducts() || [];
+    if (storeProducts.length > 0) {
+      setProductsState(storeProducts);
+    }
+  }, [getProducts]);
 
   const hero = useMemo(() => {
     const h = home?.hero;
@@ -633,6 +641,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* SEO CONTENT */}
+      <HomeSeoContent />
 
       {/* CTA */}
       <section className="container py-16 sm:py-20 lg:py-24">

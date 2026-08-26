@@ -347,9 +347,11 @@ function FiltersPanel({
 export default function ProductListClient({
   routeCategory,
   routeBrand,
+  initialProducts,
 }: {
   routeCategory: string;
   routeBrand?: string;
+  initialProducts?: any[];
 }) {
   const { getProducts } = useStore();
   const { addToCart } = useCart();
@@ -357,7 +359,7 @@ export default function ProductListClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const products = getProducts() || [];
+  const [products, setProductsState] = useState(initialProducts || []);
   const initialSearch = searchParams.get("search") || "";
   const initialCategoryFromUrl = resolveProductCategory(
     searchParams.get("category") || "all",
@@ -650,9 +652,9 @@ export default function ProductListClient({
     }
 
     const descriptions: Record<string, string> = {
-      all: "Browse our complete range of remotes and accessories.",
+      all: "Browse our complete range of replacement remotes, receivers and accessories. Compatible with all major garage and gate motor brands, in stock and ready to ship Australia-wide.",
       garage:
-        "Find garage door remotes, gate remotes, receivers and opener accessories for all major brands.",
+        "Shop replacement garage door remotes and gate remotes for Merlin, B&D, ATA, Chamberlain, Gliderol, Steel-Line and more. All remotes are quality-tested, come with a 12-month warranty, and ship Australia-wide with fast dispatch. Use our compatibility guide to find the right remote for your motor model.",
       car:
         "Shop replacement car remotes, key fobs, transponder keys and key shells for popular vehicles.",
       home:

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { trackPurchase } from '../../../lib/gtag';
 
 const OrderSuccessContent = () => {
   const searchParams = useSearchParams();
@@ -61,6 +62,9 @@ const OrderSuccessContent = () => {
             }
             sessionStorage.removeItem(`pendingOrder_${sessionId}`);
             setOrderDetails({ paymentMethod: 'stripe', sessionId, status: 'succeeded', orderId: data?.id });
+            if (data?.id) {
+              trackPurchase(data.id, 0, []);
+            }
           }
         } catch (err) {
           console.error('Order creation error:', err);

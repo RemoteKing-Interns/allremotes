@@ -22,9 +22,10 @@ type ContentDoc<T = any> = {
   updatedAt: string | null;
 };
 
-type ProductRecord = {
+export type ProductRecord = {
   id?: string | number;
   sku?: string;
+  rk_sku?: string;
   brand?: string;
   name?: string;
   category?: string | null;

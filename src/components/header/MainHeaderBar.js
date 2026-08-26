@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { generateProductSlugUrl } from "../../lib/product-slugs";
 import ProductImage from "../images/ProductImage";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
@@ -146,7 +147,7 @@ const MainHeaderBar = ({
                         return (
                           <Link
                             key={product.id}
-                            href={`/product/${encodeURIComponent(String(product.id))}`}
+                            href={generateProductSlugUrl(String(product.id), String(product.name || ""), product.sku || product.rk_sku)}
                             className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
                             onClick={handleProductClick}
                           >

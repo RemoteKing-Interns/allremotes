@@ -5,6 +5,7 @@ import { getPrimaryImage } from "@/lib/images";
 import { getCategoryPageTitle } from "@/lib/category";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { enrichProductsWithS3Images } from "@/lib/products-json";
+import { generateProductSlugUrl } from "@/lib/server-products";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://allremotes.com.au";
 
@@ -14,8 +15,9 @@ interface Product {
   model?: string;
   description?: string;
   price: number;
-  comparePrice?: number; // Maximum Retail Price (strikethrough price)
+  comparePrice?: number;
   sku?: string;
+  rk_sku?: string;
   brand?: string;
   images?: string[];
   image?: string;
@@ -204,7 +206,7 @@ async function generateProductXml(product: Product): Promise<string> {
   const id = escapeXml(product.id);
   const title = escapeXml(getProductTitle(product));
   const description = escapeXml(getProductDescription(product));
-  const link = escapeXml(`${BASE_URL}/product/${id}`);
+  const link = escapeXml(`${BASE_URL}${generateProductSlugUrl(id, product.name || "", product.sku || product.rk_sku)}`);
   const imageLink = escapeXml(await getProductImage(product));
   const availability = getAvailability(product);
   const price = formatPrice(product.price);

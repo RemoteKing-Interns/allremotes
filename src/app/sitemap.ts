@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getNavigationPaths, getPublicProducts } from "@/lib/public-site";
 import { getSiteUrl } from "@/lib/site-url";
+import { generateProductSlugUrl } from "@/lib/server-products";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ const PRIORITY_BRANDS = [
   "Elsema",
   "Centurion",
   "Hormann",
+  "Steel-Line",
 ] as const;
 
 const STATIC_ROUTES = [
@@ -36,6 +38,14 @@ const STATIC_ROUTES = [
   "/payment-options",
   "/products/all",
   "/products/garage",
+  "/garage-door-remotes",
+  "/gate-remotes",
+  "/replacement-garage-remotes",
+  "/garage-remotes-melbourne",
+  "/garage-remotes-sydney",
+  "/garage-remotes-brisbane",
+  "/gate-remotes-perth",
+  "/gate-remotes-adelaide",
 ] as const;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -108,7 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!productId) return;
 
     const updatedAt = getLatestDate(product.updatedAt, product.createdAt);
-    upsertEntry(entries, `/product/${encodeURIComponent(productId)}`, {
+    upsertEntry(entries, generateProductSlugUrl(productId, String(product.name || ""), product.sku || product.rk_sku), {
       lastModified: updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,

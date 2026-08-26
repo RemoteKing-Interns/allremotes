@@ -6,7 +6,8 @@ import { enrichProductWithS3Images } from "@/lib/products-json";
 import { getSiteUrl } from "@/lib/site-url";
 import { toAbsoluteImageUrl } from "@/lib/images";
 import { getCategoryPageTitle } from "@/lib/category";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { isUuid, extractIdFromSlugParam, generateProductSlugUrl } from "@/lib/server-products";
 
 const SITE_NAME = "ALLREMOTES Australia";
 
@@ -30,7 +31,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = extractIdFromSlugParam(rawId);
   const product = await getProductCached(id);
 
   if (!product) {
@@ -44,7 +46,7 @@ export async function generateMetadata({
   } at ALLREMOTES Australia. SKU: ${
     product.sku || product.rk_sku || ""
   }. Compatible replacement with fast shipping, 30-day returns and expert support.`;
-  const canonical = `/product/${encodeURIComponent(id)}`;
+  const canonical = generateProductSlugUrl(id, product.name || "", product.sku || product.rk_sku);
   const primaryImage = toAbsoluteImageUrl(
     product.image || "/images/3.jpg",
     siteUrl,
@@ -96,7 +98,7 @@ function buildProductJsonLd(product: any, siteUrl: string) {
 
   const offer = {
     "@type": "Offer" as const,
-    url: `${siteUrl}/product/${encodeURIComponent(id)}`,
+    url: `${siteUrl}${generateProductSlugUrl(id, product.name || "", product.sku || product.rk_sku)}`,
     priceCurrency: "AUD",
     price: product.price ? Number(product.price).toFixed(2) : "0.00",
     availability:
@@ -125,7 +127,7 @@ function buildProductJsonLd(product: any, siteUrl: string) {
       product.description ||
       product.short_description ||
       `Buy ${product.name || ""} at ALLREMOTES Australia.`,
-    url: `${siteUrl}/product/${encodeURIComponent(id)}`,
+    url: `${siteUrl}${generateProductSlugUrl(id, product.name || "", product.sku || product.rk_sku)}`,
     sku: product.sku || product.rk_sku || "",
     mpn: product.sku || product.rk_sku || "",
     brand: product.brand
@@ -161,7 +163,7 @@ function buildBreadcrumbJsonLd(product: any, siteUrl: string) {
         "@type": "ListItem",
         position: 3,
         name: product.name || "Product",
-        item: `${siteUrl}/product/${encodeURIComponent(productId)}`,
+        item: `${siteUrl}${generateProductSlugUrl(productId, product.name || "", product.sku || product.rk_sku)}`,
       },
     ],
   };
@@ -172,6 +174,52 @@ function ProductJsonLd({ product }: { product: any }) {
   const schemas = [
     buildProductJsonLd(product, siteUrl),
     buildBreadcrumbJsonLd(product, siteUrl),
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Is this remote compatible with my motor?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: `Yes, this ${product.name || "remote"} is a compatible replacement for the motor models listed in the product description. Check the compatibility list above or contact us if you're unsure.`,
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How long does shipping take?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Orders placed before 2pm AEST ship the same business day. Standard delivery takes 2-5 business days to most Australian addresses. Express shipping is available at checkout.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does this remote come with a warranty?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes, all remotes come with a 12-month warranty. If your remote stops working within the warranty period, contact us for a replacement.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I program this remote myself?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes, most remotes can be programmed in under five minutes. Programming instructions are included with every remote. Check our support guides for step-by-step videos.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "What is your return policy?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We offer a 30-day return policy. Items must be in original, resaleable condition. Buyer pays return shipping. Returns are only accepted within Australia.",
+          },
+        },
+      ],
+    },
   ];
   return (
     <script
@@ -188,9 +236,16 @@ export default async function ProductLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = extractIdFromSlugParam(rawId);
   const product = await getProductCached(id);
   if (!product) notFound();
+
+  if (isUuid(rawId)) {
+    const slugUrl = generateProductSlugUrl(id, product.name || "", product.sku || product.rk_sku);
+    redirect(slugUrl);
+  }
+
   return (
     <>
       {children}

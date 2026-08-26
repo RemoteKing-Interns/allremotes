@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import HomePage from "./_components/HomePage";
 import { getSiteUrl } from "@/lib/site-url";
+import { getServerProducts } from "@/lib/server-products";
 
 export const metadata: Metadata = {
   title: "ALLREMOTES Australia | Garage, Gate & Home Replacement Remotes",
@@ -93,11 +94,12 @@ function OrganizationJsonLd() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const initialProducts = await getServerProducts();
   return (
     <>
       <OrganizationJsonLd />
-      <HomePage />
+      <HomePage initialProducts={initialProducts} />
     </>
   );
 }

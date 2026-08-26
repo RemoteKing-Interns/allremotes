@@ -223,7 +223,7 @@ export default function GuestReturnsPage() {
 
             <p className="mt-4 text-xs text-neutral-400 text-center">
               Can&apos;t find your order? Email us at{" "}
-              <a href="mailto:info@allremotes.com.au" className="text-accent-dark hover:underline">info@allremotes.com.au</a>
+              <a href="mailto:shane@allremotes.com.au" className="text-accent-dark hover:underline">shane@allremotes.com.au</a>
             </p>
           </div>
         )}

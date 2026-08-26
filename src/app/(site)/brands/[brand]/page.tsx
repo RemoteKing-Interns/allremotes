@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProductListClient from "../../products/_components/ProductListClient";
 import { getSiteUrl } from "@/lib/site-url";
+import { getServerProducts } from "@/lib/server-products";
 
 const PRIORITY_BRANDS = [
   "Merlin",
@@ -13,6 +14,7 @@ const PRIORITY_BRANDS = [
   "Elsema",
   "Centurion",
   "Hormann",
+  "Steel-Line",
 ];
 
 function normalizeBrandParam(value: string) {
@@ -28,7 +30,31 @@ function getBrandTitle(brand: string) {
 }
 
 function getBrandDescription(brand: string) {
-  return `Shop ${brand} garage door and gate remote controls at ALLREMOTES Australia. Find compatible ${brand} remote replacements with fast local shipping, warranty and expert support.`;
+  const brandSeoCopy: Record<string, string> = {
+    Merlin:
+      "Buy Merlin garage door remotes online in Australia. Compatible replacement remotes for Merlin E960M, E970M, E964M, E8003 and Merlin+ range. 433MHz, 12-month warranty, fast shipping.",
+    ATA:
+      "Buy ATA garage door remotes online in Australia. Compatible replacement remotes for ATA PTX5, PTX4, PTX6 and SecuraCode openers. Rolling code, 12-month warranty, fast shipping.",
+    "B&D":
+      "Buy B&D garage door remotes online in Australia. Compatible replacement remotes for B&D TriTran, TriTran+ and Controll-A-Door openers. 12-month warranty, fast shipping nationwide.",
+    Chamberlain:
+      "Buy Chamberlain garage door remotes online in Australia. Compatible replacement remotes for Chamberlain, LiftMaster and MotorLift openers. 12-month warranty, fast shipping.",
+    Gliderol:
+      "Buy Gliderol garage door remotes online in Australia. Compatible replacement remotes for Gliderol GTS, GTA and GRD series openers. 12-month warranty, fast shipping nationwide.",
+    Steel_Line:
+      "Buy Steel-Line garage door remotes online in Australia. Compatible replacement remotes for Steel-Line openers. 12-month warranty, fast shipping nationwide.",
+    Elsema:
+      "Buy Elsema gate and garage remotes online in Australia. Compatible replacement remotes for Elsema 433MHz receivers. 12-month warranty, fast shipping.",
+    Centurion:
+      "Buy Centurion gate remotes online in Australia. Compatible replacement remotes for Centurion sliding and swing gate motors. 12-month warranty, fast shipping.",
+    Hormann:
+      "Buy Hormann garage door remotes online in Australia. Compatible replacement remotes for Hormann openers. 12-month warranty, fast shipping nationwide.",
+  };
+  const key = brand.replace(/[^a-zA-Z&]/g, "").replace(/&/g, "D");
+  return (
+    brandSeoCopy[key] ||
+    `Shop ${brand} garage door and gate remote controls at ALLREMOTES Australia. Find compatible ${brand} remote replacements with fast local shipping, warranty and expert support.`
+  );
 }
 
 export async function generateMetadata({
@@ -123,6 +149,8 @@ export default async function BrandPage({
     notFound();
   }
 
+  const initialProducts = await getServerProducts();
+
   return (
     <>
       <Suspense
@@ -142,6 +170,7 @@ export default async function BrandPage({
         <ProductListClient
           routeCategory="all"
           routeBrand={validatedBrand}
+          initialProducts={initialProducts}
         />
       </Suspense>
       <BrandJsonLd brand={brand} />

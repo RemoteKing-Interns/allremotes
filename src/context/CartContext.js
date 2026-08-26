@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { useAuth } from "./AuthContext";
 import { useStore } from "./StoreContext";
+import { trackAddToCart } from "../lib/gtag";
 import {
   getMemberDiscountRate,
   getLineTotal,
@@ -312,6 +313,14 @@ export const CartProvider = ({ children }) => {
         icon: "🛒",
       });
     }
+
+    trackAddToCart({
+      id: String(product.id || ""),
+      name: String(product.name || ""),
+      price: Number(product.price || 0),
+      quantity: qtyToAdd,
+      category: String(product.category || ""),
+    });
   };
 
   const removeFromCart = (productId) => {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
+import { generateProductSlugUrl } from "../../../lib/product-slugs";
 
 const Cart = () => {
   const {
@@ -103,7 +104,10 @@ const Cart = () => {
     return value || "Brand New";
   };
 
-  const getProductHref = (id) => `/product/${encodeURIComponent(String(id))}`;
+  const getProductHref = (id) => {
+    const item = cart.find((i) => String(i.id) === String(id));
+    return generateProductSlugUrl(String(id), String(item?.name || ""), item?.sku || item?.rk_sku);
+  };
 
   const originalTotal = getCartOriginalTotal();
   const discountedTotal = getCartTotal();

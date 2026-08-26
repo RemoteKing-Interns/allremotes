@@ -140,10 +140,10 @@ export default function ReturnPolicyPage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-4">
                 <a
-                  href="mailto:info@allremotes.com.au"
+                  href="mailto:shane@allremotes.com.au"
                   className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 transition"
                 >
-                  info@allremotes.com.au
+                  shane@allremotes.com.au
                 </a>
                 <Link
                   href="/returns"

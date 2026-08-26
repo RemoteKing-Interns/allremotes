@@ -9,6 +9,7 @@ import { combineAddressUnit } from "../../../lib/utils";
 import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
 import ShippingCalculator from "../../../components/ShippingCalculator";
 import OrderSuccessAnimation from "../../../components/checkout/OrderSuccessAnimation";
+import { trackBeginCheckout, trackPurchase } from "../../../lib/gtag";
 
 const Checkout = () => {
   const {
@@ -68,9 +69,9 @@ const Checkout = () => {
   const shouldRedirectToCart = cart.length === 0 && !orderPlaced;
 
   useEffect(() => {
-    return () => {
-      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-    };
+    if (cart.length > 0 && !orderPlaced && !showAnimation) {
+      trackBeginCheckout(finalTotal, cart.map((i) => ({ id: String(i.id), name: String(i.name), price: Number(i.price || 0), quantity: i.quantity })));
+    }
   }, []);
 
   const normalizedAddressQuery = useMemo(() => formData.address.trim(), [formData.address]);
@@ -341,6 +342,7 @@ const Checkout = () => {
       setPlacedOrderId(data?.id || null);
       setShowAnimation(true);
       clearCart();
+      trackPurchase(data?.id || "", finalTotal, items.map((i) => ({ id: String(i.id), name: String(i.name), price: Number(i.unitPrice || 0), quantity: i.quantity })));
     } catch (err: any) {
       setPlaceError(err?.message || "Failed to place order");
     } finally {

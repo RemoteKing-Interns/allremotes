@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import ProductListClient from "../_components/ProductListClient";
 import { getSiteUrl } from "@/lib/site-url";
+import { getServerProducts } from "@/lib/server-products";
 
 export const metadata: Metadata = {
   title: "All Remotes for Sale Australia | ALLREMOTES",
@@ -76,7 +77,8 @@ function AllProductsJsonLd() {
   );
 }
 
-export default function ProductsAllPage() {
+export default async function ProductsAllPage() {
+  const initialProducts = await getServerProducts();
   return (
     <>
       <Suspense
@@ -93,7 +95,7 @@ export default function ProductsAllPage() {
           </div>
         }
       >
-        <ProductListClient routeCategory="all" />
+        <ProductListClient routeCategory="all" initialProducts={initialProducts} />
       </Suspense>
       <AllProductsJsonLd />
     </>

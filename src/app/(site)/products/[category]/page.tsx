@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import ProductListClient from "../_components/ProductListClient";
 import { getCategoryPageTitle } from "@/lib/category";
 import { getSiteUrl } from "@/lib/site-url";
+import { getServerProducts } from "@/lib/server-products";
 
 const REMOVED_CATEGORIES = new Set(["car", "automotive", "auto", "vehicle"]);
 
@@ -16,15 +17,15 @@ function redirectIfRemoved(category: string) {
 function getCategoryDescription(category: string) {
   const descriptions: Record<string, string> = {
     garage:
-      "Find garage door remotes, gate remotes, receivers and opener accessories for all major brands.",
+      "Shop replacement garage door remotes and gate remotes for Merlin, B&D, ATA, Chamberlain, Gliderol, Steel-Line and more. Quality-tested with 12-month warranty, fast Australia-wide shipping.",
     home:
-      "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more.",
+      "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more at ALLREMOTES Australia.",
     locksmith:
-      "Browse locksmith tools, key programmers, picks, decoders and key-cutting accessories.",
+      "Browse locksmith tools, key programmers, picks, decoders and key-cutting accessories at ALLREMOTES Australia.",
   };
   return (
     descriptions[category] ||
-    "Shop compatible replacement remotes and accessories at ALLREMOTES Australia."
+    "Browse our complete range of replacement remotes, receivers and accessories at ALLREMOTES Australia."
   );
 }
 
@@ -116,6 +117,7 @@ export default async function ProductsCategoryPage({
 }) {
   const { category } = await params;
   redirectIfRemoved(category);
+  const initialProducts = await getServerProducts();
   return (
     <>
       <Suspense
@@ -132,7 +134,7 @@ export default async function ProductsCategoryPage({
           </div>
         }
       >
-        <ProductListClient routeCategory={category} />
+        <ProductListClient routeCategory={category} initialProducts={initialProducts} />
       </Suspense>
       <CategoryJsonLd category={category} />
     </>

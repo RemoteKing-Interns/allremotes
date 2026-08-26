@@ -5,7 +5,7 @@ import { sendEmail } from '../../../lib/email';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ADMIN_EMAIL = 'info@allremotes.com.au';
+const ADMIN_EMAIL = 'shane@allremotes.com.au';
 
 export async function POST(request: Request) {
   try {

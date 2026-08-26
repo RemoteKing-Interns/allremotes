@@ -97,10 +97,35 @@ const SITE_NAME = "ALLREMOTES Australia";
 const structuredData = [
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "LocalBusiness",
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/favicon.png`,
+    image: `${SITE_URL}/images/3.jpg`,
+    telephone: "+61 3 9999 9999",
+    email: "shane@allremotes.com.au",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Yarra Glen",
+      addressRegion: "VIC",
+      postalCode: "3775",
+      addressCountry: "AU",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: -37.6596,
+      longitude: 145.3743,
+    },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        opens: "09:00",
+        closes: "17:00",
+      },
+    ],
+    areaServed: "AU",
+    priceRange: "$$",
   },
   {
     "@context": "https://schema.org",

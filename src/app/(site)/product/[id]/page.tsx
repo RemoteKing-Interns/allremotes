@@ -18,6 +18,7 @@ import {
 } from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
 import ImageGallery from "../../../../components/images/ImageGallery";
+import { extractIdFromSlugParam } from "../../../../lib/product-slugs";
 
 // Helper to clean HTML description - remove font styles but preserve colors/bold/italic
 const sanitizeDescription = (html: string): string => {
@@ -73,7 +74,8 @@ All trademarks, brand names, and product names remain the property of their resp
 
 const ProductDetail = () => {
   const params = useParams<{ id: string }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = extractIdFromSlugParam(rawId);
   const router = useRouter();
   const { getProducts, getPromotions } = useStore();
   const { user } = useAuth();

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { generateProductSlugUrl } from "../lib/product-slugs";
 import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -113,7 +114,7 @@ const ProductCard = ({
     >
       {/* Make whole card clickable (buttons stopPropagation) */}
       <Link
-        href={`/product/${encodeURIComponent(String(product.id))}`}
+        href={generateProductSlugUrl(String(product.id), String(product.name || ""), product.sku || product.rk_sku)}
         aria-label={`View details for ${productLabel}`}
         className="absolute inset-0 z-10"
       >
