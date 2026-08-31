@@ -928,6 +928,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [otherActionsOpen, setOtherActionsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
+  const [bulkShipping, setBulkShipping] = useState(false);
+  const [bulkShipModal, setBulkShipModal] = useState<{
+    untrackedOrders: any[];
+    trackedOrders: any[];
+    trackingEntries: Record<string, { carrier: string; trackingNumber: string; trackingLink: string }>;
+    fetchingTracking: boolean;
+  } | null>(null);
   const [shipOrderModal, setShipOrderModal] = useState<{ order: any; trackingNumber: string; carrier: string; trackingLink: string; sending: boolean } | null>(null);
   const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
 
@@ -1844,6 +1851,88 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           {labelOrders.length > 0 && (
                             <span className="ml-0.5 rounded-full bg-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-800">
                               {labelOrders.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
+
+                    {/* Bulk Mark as Shipped */}
+                    {(() => {
+                      const shipOrders = groupOrders.filter((o: any) => selection.has(o.id) && String(o.status || '').toLowerCase() !== 'shipped');
+                      const websiteOrders = shipOrders.filter((o: any) => o.channel !== 'ebay');
+                      return (
+                        <button
+                          type="button"
+                          disabled={websiteOrders.length === 0 || bulkShipping}
+                          onClick={async () => {
+                            const untrackedOrders = websiteOrders.filter((o: any) => {
+                              const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
+                              return sm === 'untracked';
+                            });
+                            const trackedOrders = websiteOrders.filter((o: any) => {
+                              const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
+                              return sm === 'tracked' || sm === 'express';
+                            });
+
+                            if (trackedOrders.length > 0) {
+                              // Open modal for tracked orders — user enters carrier + tracking
+                              const entries: Record<string, { carrier: string; trackingNumber: string; trackingLink: string }> = {};
+                              for (const o of trackedOrders) {
+                                entries[o.id] = { carrier: o.carrier || '', trackingNumber: o.trackingNumber || '', trackingLink: o.trackingLink || '' };
+                              }
+                              setBulkShipModal({
+                                untrackedOrders,
+                                trackedOrders,
+                                trackingEntries: entries,
+                                fetchingTracking: false,
+                              });
+                            } else {
+                              // All untracked — ship directly
+                              if (!confirm(`Mark ${untrackedOrders.length} untracked order${untrackedOrders.length !== 1 ? 's' : ''} as shipped? Customers will be emailed.`)) return;
+                              setBulkShipping(true);
+                              let shippedCount = 0;
+                              for (const order of untrackedOrders) {
+                                try {
+                                  const now = new Date().toISOString();
+                                  await fetch(`/api/orders/${order.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ status: 'shipped', shippedAt: now }),
+                                  });
+                                  await fetch('/api/orders/send-emails', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      type: 'shipping',
+                                      orderId: order.id,
+                                      customerEmail: order.customer?.email,
+                                      customerName: order.customer?.fullName,
+                                      status: 'Shipped',
+                                      estimatedDelivery: '6-8 business days',
+                                    }),
+                                  }).catch(() => {});
+                                  shippedCount++;
+                                } catch (err) {
+                                  console.error(`Failed to ship order ${order.id}:`, err);
+                                }
+                              }
+                              await load();
+                              setBulkShipping(false);
+                              if (shippedCount > 0) {
+                                activityLogger.action('orders_bulk_shipped', { count: shippedCount, groupLabel });
+                                alert(`${shippedCount} order${shippedCount !== 1 ? 's' : ''} marked as shipped and emailed.`);
+                              }
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition-all hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          title={shipOrders.some(o => o.channel === 'ebay') ? 'eBay orders are skipped (handled in eBay)' : undefined}
+                        >
+                          <Truck className="h-3.5 w-3.5" />
+                          {bulkShipping ? 'Shipping...' : 'Mark All Shipped'}
+                          {!bulkShipping && websiteOrders.length > 0 && (
+                            <span className="ml-0.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                              {websiteOrders.length}
                             </span>
                           )}
                         </button>
@@ -3104,6 +3193,257 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {shipOrderModal.sending ? 'Sending...' : 'Mark as Shipped & Email Customer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Ship Modal — for tracked/express orders */}
+      {bulkShipModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => !bulkShipping && setBulkShipModal(null)}>
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-neutral-900 mb-1">Mark Orders as Shipped</h3>
+            <p className="text-sm text-neutral-500 mb-4">
+              {bulkShipModal.untrackedOrders.length > 0 && `${bulkShipModal.untrackedOrders.length} untracked order(s) will be shipped automatically. `}
+              {bulkShipModal.trackedOrders.length > 0 && `${bulkShipModal.trackedOrders.length} tracked/express order(s) need tracking details.`}
+            </p>
+
+            {/* Fetch from Starshipit button */}
+            {bulkShipModal.trackedOrders.length > 0 && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  disabled={bulkShipModal.fetchingTracking}
+                  onClick={async () => {
+                    setBulkShipModal((prev) => prev ? { ...prev, fetchingTracking: true } : prev);
+                    const updatedEntries = { ...bulkShipModal.trackingEntries };
+                    for (const order of bulkShipModal.trackedOrders) {
+                      try {
+                        const resp = await fetch(`/api/orders/starshipit/tracking?order_number=${encodeURIComponent(order.id)}`);
+                        if (resp.ok) {
+                          const data = await resp.json();
+                          if (data?.tracking) {
+                            updatedEntries[order.id] = {
+                              carrier: data.tracking.carrier_name || '',
+                              trackingNumber: data.tracking.tracking_number || '',
+                              trackingLink: data.tracking.tracking_url || '',
+                            };
+                          }
+                        }
+                      } catch (err) {
+                        console.error(`Failed to fetch tracking for ${order.id}:`, err);
+                      }
+                    }
+                    setBulkShipModal((prev) => prev ? { ...prev, trackingEntries: updatedEntries, fetchingTracking: false } : prev);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${bulkShipModal.fetchingTracking ? 'animate-spin' : ''}`} />
+                  {bulkShipModal.fetchingTracking ? 'Fetching from Starshipit...' : 'Fetch tracking from Starshipit'}
+                </button>
+              </div>
+            )}
+
+            {/* Tracked orders — tracking input fields */}
+            {bulkShipModal.trackedOrders.length > 0 && (
+              <div className="space-y-3 mb-4">
+                <h4 className="text-sm font-bold text-neutral-700">Tracked / Express Orders</h4>
+                {bulkShipModal.trackedOrders.map((order) => {
+                  const entry = bulkShipModal.trackingEntries[order.id] || { carrier: '', trackingNumber: '', trackingLink: '' };
+                  const sm = order?.shippingMethod || order?.pricing?.shippingMethod || 'tracked';
+                  return (
+                    <div key={order.id} className="rounded-lg border border-neutral-200 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-neutral-900">{order.id}</span>
+                        <span className={`text-xs rounded px-2 py-0.5 ${sm === 'express' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {sm === 'express' ? 'Express' : 'Tracked'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-neutral-500 mb-2">{order.customer?.fullName || order.customer?.email || 'Unknown'}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-neutral-600 mb-1">Carrier</label>
+                          <select
+                            value={entry.carrier}
+                            onChange={(e) => {
+                              setBulkShipModal((prev) => {
+                                if (!prev) return prev;
+                                const updated = { ...prev.trackingEntries };
+                                updated[order.id] = { ...updated[order.id], carrier: e.target.value };
+                                return { ...prev, trackingEntries: updated };
+                              });
+                            }}
+                            className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs"
+                          >
+                            <option value="">Select carrier</option>
+                            <option value="Australia Post">Australia Post</option>
+                            <option value="StarTrack">StarTrack</option>
+                            <option value="Sendle">Sendle</option>
+                            <option value="Toll">Toll</option>
+                            <option value="DHL">DHL</option>
+                            <option value="CouriersPlease">CouriersPlease</option>
+                            <option value="Fastway">Fastway</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-neutral-600 mb-1">Tracking #</label>
+                          <input
+                            type="text"
+                            value={entry.trackingNumber}
+                            onChange={(e) => {
+                              setBulkShipModal((prev) => {
+                                if (!prev) return prev;
+                                const updated = { ...prev.trackingEntries };
+                                updated[order.id] = { ...updated[order.id], trackingNumber: e.target.value };
+                                return { ...prev, trackingEntries: updated };
+                              });
+                            }}
+                            placeholder="Consignment #"
+                            className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-neutral-600 mb-1">Tracking Link</label>
+                          <input
+                            type="url"
+                            value={entry.trackingLink}
+                            onChange={(e) => {
+                              setBulkShipModal((prev) => {
+                                if (!prev) return prev;
+                                const updated = { ...prev.trackingEntries };
+                                updated[order.id] = { ...updated[order.id], trackingLink: e.target.value };
+                                return { ...prev, trackingEntries: updated };
+                              });
+                            }}
+                            placeholder="(auto if empty)"
+                            className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Untracked orders summary */}
+            {bulkShipModal.untrackedOrders.length > 0 && (
+              <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <h4 className="text-sm font-bold text-neutral-700 mb-1">Untracked Orders (auto-shipped)</h4>
+                <p className="text-xs text-neutral-500">Customers will receive: "Your order has been shipped and will reach you in 6-8 business days."</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {bulkShipModal.untrackedOrders.map((o) => (
+                    <span key={o.id} className="text-xs rounded bg-slate-200 px-2 py-0.5 text-slate-700">{o.id}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setBulkShipModal(null)}
+                disabled={bulkShipping}
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  // Validate tracked orders have carrier + tracking number
+                  for (const order of bulkShipModal.trackedOrders) {
+                    const entry = bulkShipModal.trackingEntries[order.id];
+                    if (!entry?.carrier) {
+                      alert(`Please select a carrier for order ${order.id}`);
+                      return;
+                    }
+                    if (!entry?.trackingNumber) {
+                      alert(`Please enter a tracking number for order ${order.id}`);
+                      return;
+                    }
+                  }
+                  setBulkShipping(true);
+                  let shippedCount = 0;
+
+                  // Ship untracked orders
+                  for (const order of bulkShipModal.untrackedOrders) {
+                    try {
+                      const now = new Date().toISOString();
+                      await fetch(`/api/orders/${order.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'shipped', shippedAt: now }),
+                      });
+                      await fetch('/api/orders/send-emails', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'shipping',
+                          orderId: order.id,
+                          customerEmail: order.customer?.email,
+                          customerName: order.customer?.fullName,
+                          status: 'Shipped',
+                          estimatedDelivery: '6-8 business days',
+                        }),
+                      }).catch(() => {});
+                      shippedCount++;
+                    } catch (err) {
+                      console.error(`Failed to ship order ${order.id}:`, err);
+                    }
+                  }
+
+                  // Ship tracked orders
+                  for (const order of bulkShipModal.trackedOrders) {
+                    try {
+                      const entry = bulkShipModal.trackingEntries[order.id];
+                      const trackingLink = entry.trackingLink.trim() ||
+                        (entry.trackingNumber.trim()
+                          ? `https://www.google.com/search?q=${encodeURIComponent(entry.trackingNumber.trim() + ' ' + entry.carrier.trim())}`
+                          : '');
+                      const now = new Date().toISOString();
+                      await fetch(`/api/orders/${order.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          status: 'shipped',
+                          shippedAt: now,
+                          trackingNumber: entry.trackingNumber.trim(),
+                          carrier: entry.carrier.trim(),
+                          trackingLink,
+                        }),
+                      });
+                      await fetch('/api/orders/send-emails', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'shipping',
+                          orderId: order.id,
+                          customerEmail: order.customer?.email,
+                          customerName: order.customer?.fullName,
+                          status: 'Shipped',
+                          trackingNumber: entry.trackingNumber.trim(),
+                          carrier: entry.carrier.trim(),
+                          trackingLink,
+                        }),
+                      }).catch(() => {});
+                      shippedCount++;
+                    } catch (err) {
+                      console.error(`Failed to ship order ${order.id}:`, err);
+                    }
+                  }
+
+                  await load();
+                  setBulkShipping(false);
+                  setBulkShipModal(null);
+                  if (shippedCount > 0) {
+                    activityLogger.action('orders_bulk_shipped', { count: shippedCount });
+                    alert(`${shippedCount} order${shippedCount !== 1 ? 's' : ''} marked as shipped and emailed.`);
+                  }
+                }}
+                disabled={bulkShipping}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {bulkShipping ? 'Shipping...' : `Ship ${bulkShipModal.untrackedOrders.length + bulkShipModal.trackedOrders.length} Order${(bulkShipModal.untrackedOrders.length + bulkShipModal.trackedOrders.length) !== 1 ? 's' : ''}`}
               </button>
             </div>
           </div>

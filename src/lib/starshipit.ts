@@ -271,3 +271,36 @@ export async function pushOrderToStarshipit(
   const result = await createStarshipitOrder(payload);
   return { order: result?.order, created: true, alreadyExists: false };
 }
+
+export async function getStarshipitTracking(orderNumber: string) {
+  const url = new URL(`${STARSHIPIT_BASE}/api/track`);
+  url.searchParams.set("order_number", orderNumber);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: starshipitHeaders(),
+  });
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!res.ok) {
+    throw new Error(`Starshipit tracking error: ${res.status} ${data?.errors?.map((e: any) => e.message).join(", ") || data?.message || text}`);
+  }
+
+  return data?.results as {
+    order_number: string;
+    order_status: string;
+    carrier_name: string;
+    carrier_service: string;
+    tracking_number: string;
+    tracking_url: string;
+    shipment_date: string;
+    tracking_status: string;
+  } | null;
+}

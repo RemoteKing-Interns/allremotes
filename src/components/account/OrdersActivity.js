@@ -248,6 +248,15 @@ const OrdersActivity = () => {
                     )
                   )}
 
+                  {status === "shipped" && order.trackingLink && (
+                    <div className="mt-2">
+                      <a href={order.trackingLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-dark hover:underline">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Track your package
+                      </a>
+                    </div>
+                  )}
+
                   {expandedId === order.id && (
                     <div className="mt-3 space-y-3">
                       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
@@ -261,6 +270,16 @@ const OrdersActivity = () => {
                           <div><strong>Total:</strong> AU${Number(order?.pricing?.total || 0).toFixed(2)}</div>
                           {(order.shippedAt || order.shippedDate) && (
                             <div><strong>Shipped:</strong> {new Date(order.shippedAt || order.shippedDate).toLocaleDateString()}</div>
+                          )}
+                          {order.trackingNumber && (
+                            <div><strong>Tracking:</strong> {order.carrier ? `${order.carrier} — ` : ''}{order.trackingNumber}</div>
+                          )}
+                          {order.trackingLink && (
+                            <div>
+                              <a href={order.trackingLink} target="_blank" rel="noopener noreferrer" className="text-accent-dark hover:underline font-semibold">
+                                Track your package →
+                              </a>
+                            </div>
                           )}
                           {(order.deliveredAt || order.deliveredDate) && (
                             <div><strong>Delivered:</strong> {new Date(order.deliveredAt || order.deliveredDate).toLocaleDateString()}</div>
