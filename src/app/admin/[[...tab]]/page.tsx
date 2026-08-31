@@ -918,6 +918,22 @@ type UnleashedPushState = {
 
 const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/LabelCanvasEditor"), { ssr: false });
 
+const CARRIER_TRACKING_PREFIXES: Record<string, string> = {
+  'Australia Post': 'https://auspost.com.au/mypost/track/details/',
+  'StarTrack': 'https://startrack.com.au/track/',
+  'Sendle': 'https://track.sendle.com/tracking?ref=',
+  'Toll': 'https://track.toll.com.au/track?Connote=',
+  'DHL': 'https://www.dhl.com/au-en/home/tracking/tracking-express.html?submit=1&tracking-id=',
+  'CouriersPlease': 'https://www.couriersplease.com.au/track?ConsignmentNumber=',
+  'Fastway': 'https://www.fastway.com.au/courier-services/track?l=',
+};
+
+function buildTrackingLink(carrier: string, trackingNumber: string): string {
+  const prefix = CARRIER_TRACKING_PREFIXES[carrier];
+  if (prefix && trackingNumber.trim()) return prefix + encodeURIComponent(trackingNumber.trim());
+  return '';
+}
+
 function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void; activeTab: string }) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1865,13 +1881,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           type="button"
                           disabled={shipOrders.length === 0 || bulkShipping}
                           onClick={async () => {
-                            const untrackedOrders = shipOrders.filter((o: any) => {
-                              const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
-                              return sm === 'untracked' || sm === 'free';
-                            });
                             const trackedOrders = shipOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
                               return sm === 'tracked' || sm === 'express';
+                            });
+                            const untrackedOrders = shipOrders.filter((o: any) => {
+                              const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
+                              return sm !== 'tracked' && sm !== 'express';
                             });
 
                             if (trackedOrders.length > 0) {
@@ -3121,34 +3137,50 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-1">Carrier</label>
-                <input
-                  type="text"
+                <select
                   value={shipOrderModal.carrier}
-                  onChange={(e) => setShipOrderModal({ ...shipOrderModal, carrier: e.target.value })}
-                  placeholder="e.g. Australia Post, StarTrack, Sendle"
+                  onChange={(e) => {
+                    const carrier = e.target.value;
+ const tn = shipOrderModal.trackingNumber.trim();
+ const link = tn ? buildTrackingLink(carrier, tn) : '';
+ setShipOrderModal({ ...shipOrderModal, carrier, trackingLink: link });
+                  }}
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select carrier</option>
+                  <option value="Australia Post">Australia Post</option>
+                  <option value="StarTrack">StarTrack</option>
+                  <option value="Sendle">Sendle</option>
+                  <option value="Toll">Toll</option>
+                  <option value="DHL">DHL</option>
+                  <option value="CouriersPlease">CouriersPlease</option>
+                  <option value="Fastway">Fastway</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-1">Tracking Number</label>
                 <input
                   type="text"
                   value={shipOrderModal.trackingNumber}
-                  onChange={(e) => setShipOrderModal({ ...shipOrderModal, trackingNumber: e.target.value })}
+                  onChange={(e) => {
+                    const tn = e.target.value;
+ const link = tn.trim() ? buildTrackingLink(shipOrderModal.carrier, tn.trim()) : '';
+ setShipOrderModal({ ...shipOrderModal, trackingNumber: tn, trackingLink: link });
+                  }}
                   placeholder="e.g. 1Z9999999999999999"
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-1">Tracking Link <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1">Tracking Link <span className="text-neutral-400 font-normal">(auto-filled)</span></label>
                 <input
                   type="url"
                   value={shipOrderModal.trackingLink}
                   onChange={(e) => setShipOrderModal({ ...shipOrderModal, trackingLink: e.target.value })}
-                  placeholder="https://auspost.com.au/track/..."
+                  placeholder="Auto-generated from carrier + tracking number"
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-xs text-neutral-400">If left blank, a Google search link will be generated from the tracking number.</p>
+                <p className="mt-1 text-xs text-neutral-400">Auto-generated based on carrier. You can override if needed.</p>
               </div>
             </div>
 
@@ -3165,9 +3197,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   setShipOrderModal({ ...shipOrderModal, sending: true });
                   try {
                     const trackingLink = shipOrderModal.trackingLink.trim() ||
-                      (shipOrderModal.trackingNumber.trim()
-                        ? `https://www.google.com/search?q=${encodeURIComponent(shipOrderModal.trackingNumber.trim() + ' ' + shipOrderModal.carrier.trim())}`
-                        : '');
+                      buildTrackingLink(shipOrderModal.carrier, shipOrderModal.trackingNumber);
 
                     const isAlreadyShipped = shipOrderModal.order.status === 'shipped';
                     const isEbay = shipOrderModal.order.channel === 'ebay';
@@ -3302,10 +3332,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           <select
                             value={entry.carrier}
                             onChange={(e) => {
+                              const carrier = e.target.value;
                               setBulkShipModal((prev) => {
                                 if (!prev) return prev;
                                 const updated = { ...prev.trackingEntries };
-                                updated[order.id] = { ...updated[order.id], carrier: e.target.value };
+ const tn = (updated[order.id]?.trackingNumber || '').trim();
+ const link = tn ? buildTrackingLink(carrier, tn) : '';
+                                updated[order.id] = { ...updated[order.id], carrier, trackingLink: link };
                                 return { ...prev, trackingEntries: updated };
                               });
                             }}
@@ -3327,10 +3360,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             type="text"
                             value={entry.trackingNumber}
                             onChange={(e) => {
+                              const tn = e.target.value;
                               setBulkShipModal((prev) => {
                                 if (!prev) return prev;
                                 const updated = { ...prev.trackingEntries };
-                                updated[order.id] = { ...updated[order.id], trackingNumber: e.target.value };
+ const carrier = updated[order.id]?.carrier || '';
+ const link = tn.trim() ? buildTrackingLink(carrier, tn.trim()) : '';
+                                updated[order.id] = { ...updated[order.id], trackingNumber: tn, trackingLink: link };
                                 return { ...prev, trackingEntries: updated };
                               });
                             }}
@@ -3435,9 +3471,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     try {
                       const entry = bulkShipModal.trackingEntries[order.id];
                       const trackingLink = entry.trackingLink.trim() ||
-                        (entry.trackingNumber.trim()
-                          ? `https://www.google.com/search?q=${encodeURIComponent(entry.trackingNumber.trim() + ' ' + entry.carrier.trim())}`
-                          : '');
+                        buildTrackingLink(entry.carrier, entry.trackingNumber);
                       const now = new Date().toISOString();
                       await fetch(`/api/orders/${order.id}`, {
                         method: 'PATCH',
