@@ -1868,7 +1868,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           onClick={async () => {
                             const untrackedOrders = websiteOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
-                              return sm === 'untracked';
+                              return sm === 'untracked' || sm === 'free';
                             });
                             const trackedOrders = websiteOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
@@ -1887,7 +1887,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                 trackingEntries: entries,
                                 fetchingTracking: false,
                               });
-                            } else {
+                            } else if (untrackedOrders.length > 0) {
                               // All untracked — ship directly
                               if (!confirm(`Mark ${untrackedOrders.length} untracked order${untrackedOrders.length !== 1 ? 's' : ''} as shipped? Customers will be emailed.`)) return;
                               setBulkShipping(true);
@@ -1923,6 +1923,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                 activityLogger.action('orders_bulk_shipped', { count: shippedCount, groupLabel });
                                 alert(`${shippedCount} order${shippedCount !== 1 ? 's' : ''} marked as shipped and emailed.`);
                               }
+                            } else {
+                              alert('No website orders to ship. eBay orders are handled separately — select website orders to use this feature.');
                             }
                           }}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition-all hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
@@ -2003,6 +2005,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                 const shippingMethod = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
                                 const methodConfig: Record<string, { label: string; color: string }> = {
                                   'untracked': { label: 'Free Untracked', color: 'bg-slate-100 text-slate-700' },
+                                  'free': { label: 'Free Untracked', color: 'bg-slate-100 text-slate-700' },
                                   'tracked': { label: 'Tracked', color: 'bg-blue-100 text-blue-700' },
                                   'express': { label: 'Express', color: 'bg-emerald-100 text-emerald-700' },
                                 };
