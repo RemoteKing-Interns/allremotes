@@ -1860,17 +1860,16 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     {/* Bulk Mark as Shipped */}
                     {(() => {
                       const shipOrders = groupOrders.filter((o: any) => selection.has(o.id) && String(o.status || '').toLowerCase() !== 'shipped');
-                      const websiteOrders = shipOrders.filter((o: any) => o.channel !== 'ebay');
                       return (
                         <button
                           type="button"
-                          disabled={websiteOrders.length === 0 || bulkShipping}
+                          disabled={shipOrders.length === 0 || bulkShipping}
                           onClick={async () => {
-                            const untrackedOrders = websiteOrders.filter((o: any) => {
+                            const untrackedOrders = shipOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
                               return sm === 'untracked' || sm === 'free';
                             });
-                            const trackedOrders = websiteOrders.filter((o: any) => {
+                            const trackedOrders = shipOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
                               return sm === 'tracked' || sm === 'express';
                             });
@@ -1889,7 +1888,12 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                               });
                             } else if (untrackedOrders.length > 0) {
                               // All untracked — ship directly
-                              if (!confirm(`Mark ${untrackedOrders.length} untracked order${untrackedOrders.length !== 1 ? 's' : ''} as shipped? Customers will be emailed.`)) return;
+                              const ebayCount = untrackedOrders.filter((o: any) => o.channel === 'ebay').length;
+                              const webCount = untrackedOrders.length - ebayCount;
+                              const msg = ebayCount > 0
+                                ? `Mark ${untrackedOrders.length} orders as shipped?\n(${webCount} website — email sent, ${ebayCount} eBay — no notification)`
+                                : `Mark ${untrackedOrders.length} untracked order${untrackedOrders.length !== 1 ? 's' : ''} as shipped? Customers will be emailed.`;
+                              if (!confirm(msg)) return;
                               setBulkShipping(true);
                               let shippedCount = 0;
                               for (const order of untrackedOrders) {
@@ -1900,18 +1904,21 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ status: 'shipped', shippedAt: now }),
                                   });
-                                  await fetch('/api/orders/send-emails', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      type: 'shipping',
-                                      orderId: order.id,
-                                      customerEmail: order.customer?.email,
-                                      customerName: order.customer?.fullName,
-                                      status: 'Shipped',
-                                      estimatedDelivery: '6-8 business days',
-                                    }),
-                                  }).catch(() => {});
+                                  // Only email website orders, not eBay
+                                  if (order.channel !== 'ebay') {
+                                    await fetch('/api/orders/send-emails', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        type: 'shipping',
+                                        orderId: order.id,
+                                        customerEmail: order.customer?.email,
+                                        customerName: order.customer?.fullName,
+                                        status: 'Shipped',
+                                        estimatedDelivery: '6-8 business days',
+                                      }),
+                                    }).catch(() => {});
+                                  }
                                   shippedCount++;
                                 } catch (err) {
                                   console.error(`Failed to ship order ${order.id}:`, err);
@@ -1921,20 +1928,19 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                               setBulkShipping(false);
                               if (shippedCount > 0) {
                                 activityLogger.action('orders_bulk_shipped', { count: shippedCount, groupLabel });
-                                alert(`${shippedCount} order${shippedCount !== 1 ? 's' : ''} marked as shipped and emailed.`);
+                                alert(`${shippedCount} order${shippedCount !== 1 ? 's' : ''} marked as shipped.`);
                               }
                             } else {
-                              alert('No website orders to ship. eBay orders are handled separately — select website orders to use this feature.');
+                              alert('No orders to ship. Select orders that are not already shipped.');
                             }
                           }}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition-all hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
-                          title={shipOrders.some(o => o.channel === 'ebay') ? 'eBay orders are skipped (handled in eBay)' : undefined}
                         >
                           <Truck className="h-3.5 w-3.5" />
                           {bulkShipping ? 'Shipping...' : 'Mark All Shipped'}
-                          {!bulkShipping && websiteOrders.length > 0 && (
+                          {!bulkShipping && shipOrders.length > 0 && (
                             <span className="ml-0.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
-                              {websiteOrders.length}
+                              {shipOrders.length}
                             </span>
                           )}
                         </button>
@@ -2436,6 +2442,21 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           Track package →
                         </a>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShipOrderModal({
+                            order: selectedOrder,
+                            trackingNumber: selectedOrder?.trackingNumber || "",
+                            carrier: selectedOrder?.carrier || "",
+                            trackingLink: selectedOrder?.trackingLink || "",
+                            sending: false,
+                          });
+                        }}
+                        className="mt-1 text-xs text-blue-600 hover:text-blue-800 underline w-fit"
+                      >
+                        Edit tracking
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2617,7 +2638,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
                     >
-                      Mark as Shipped
+                      {selectedOrder?.status === 'shipped' ? 'Edit Tracking' : 'Mark as Shipped'}
                     </button>
                   </div>
                 )}
@@ -3088,11 +3109,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         </div>
       )}
 
-      {/* Mark as Shipped Modal */}
+      {/* Mark as Shipped / Edit Tracking Modal */}
       {shipOrderModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => !shipOrderModal.sending && setShipOrderModal(null)}>
           <div className="max-w-md w-full rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-neutral-900 mb-1">Mark Order as Shipped</h3>
+            <h3 className="text-lg font-bold text-neutral-900 mb-1">
+              {shipOrderModal.order.status === 'shipped' ? 'Edit Tracking Info' : 'Mark Order as Shipped'}
+            </h3>
             <p className="text-sm text-neutral-500 mb-4">Order #{shipOrderModal.order.id}</p>
 
             <div className="space-y-4">
@@ -3146,56 +3169,65 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         ? `https://www.google.com/search?q=${encodeURIComponent(shipOrderModal.trackingNumber.trim() + ' ' + shipOrderModal.carrier.trim())}`
                         : '');
 
+                    const isAlreadyShipped = shipOrderModal.order.status === 'shipped';
+                    const isEbay = shipOrderModal.order.channel === 'ebay';
+
+                    const patchBody: Record<string, any> = {
+                      trackingNumber: shipOrderModal.trackingNumber.trim(),
+                      carrier: shipOrderModal.carrier.trim(),
+                      trackingLink,
+                    };
+                    if (!isAlreadyShipped) {
+                      patchBody.status = 'shipped';
+                      patchBody.shippedAt = new Date().toISOString();
+                    }
+
                     const resp = await fetch(`/api/orders/${shipOrderModal.order.id}`, {
                       method: 'PATCH',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        status: 'shipped',
-                        trackingNumber: shipOrderModal.trackingNumber.trim(),
-                        carrier: shipOrderModal.carrier.trim(),
-                        trackingLink,
-                        shippedAt: new Date().toISOString(),
-                      }),
+                      body: JSON.stringify(patchBody),
                     });
                     if (!resp.ok) throw new Error('Failed to update order');
 
-                    // Send shipping email
-                    const emailResp = await fetch('/api/orders/send-emails', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        type: 'shipping',
-                        orderId: shipOrderModal.order.id,
-                        customerEmail: shipOrderModal.order.customer?.email,
-                        customerName: shipOrderModal.order.customer?.fullName,
-                        trackingNumber: shipOrderModal.trackingNumber.trim(),
-                        carrier: shipOrderModal.carrier.trim(),
-                        trackingLink,
-                      }),
-                    });
+                    // Send shipping email only for new ship + non-eBay
+                    if (!isAlreadyShipped && !isEbay) {
+                      await fetch('/api/orders/send-emails', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'shipping',
+                          orderId: shipOrderModal.order.id,
+                          customerEmail: shipOrderModal.order.customer?.email,
+                          customerName: shipOrderModal.order.customer?.fullName,
+                          trackingNumber: shipOrderModal.trackingNumber.trim(),
+                          carrier: shipOrderModal.carrier.trim(),
+                          trackingLink,
+                        }),
+                      }).catch(() => {});
+                    }
 
                     // Update local state
                     const updated = {
                       ...shipOrderModal.order,
-                      status: 'shipped',
-                      trackingNumber: shipOrderModal.trackingNumber.trim(),
-                      carrier: shipOrderModal.carrier.trim(),
-                      trackingLink,
-                      shippedAt: new Date().toISOString(),
+                      ...patchBody,
                     };
                     setOrders(orders.map(o => o.id === shipOrderModal.order.id ? updated : o));
                     setSelectedOrder(updated);
                     setShipOrderModal(null);
-                    alert('Order marked as shipped and tracking email sent to customer.');
+                    alert(isAlreadyShipped
+                      ? 'Tracking info updated.'
+                      : isEbay
+                        ? 'Order marked as shipped (no email — eBay order).'
+                        : 'Order marked as shipped and tracking email sent to customer.');
                   } catch (err: any) {
-                    alert('Failed to mark as shipped: ' + (err?.message || 'Unknown error'));
+                    alert('Failed to update: ' + (err?.message || 'Unknown error'));
                     setShipOrderModal({ ...shipOrderModal, sending: false });
                   }
                 }}
                 disabled={shipOrderModal.sending}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {shipOrderModal.sending ? 'Sending...' : 'Mark as Shipped & Email Customer'}
+                {shipOrderModal.sending ? 'Saving...' : shipOrderModal.order.status === 'shipped' ? 'Save Tracking' : 'Mark as Shipped & Email Customer'}
               </button>
             </div>
           </div>
@@ -3377,18 +3409,21 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'shipped', shippedAt: now }),
                       });
-                      await fetch('/api/orders/send-emails', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          type: 'shipping',
-                          orderId: order.id,
-                          customerEmail: order.customer?.email,
-                          customerName: order.customer?.fullName,
-                          status: 'Shipped',
-                          estimatedDelivery: '6-8 business days',
-                        }),
-                      }).catch(() => {});
+                      // Only email website orders, not eBay
+                      if (order.channel !== 'ebay') {
+                        await fetch('/api/orders/send-emails', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            type: 'shipping',
+                            orderId: order.id,
+                            customerEmail: order.customer?.email,
+                            customerName: order.customer?.fullName,
+                            status: 'Shipped',
+                            estimatedDelivery: '6-8 business days',
+                          }),
+                        }).catch(() => {});
+                      }
                       shippedCount++;
                     } catch (err) {
                       console.error(`Failed to ship order ${order.id}:`, err);
@@ -3415,20 +3450,23 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           trackingLink,
                         }),
                       });
-                      await fetch('/api/orders/send-emails', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          type: 'shipping',
-                          orderId: order.id,
-                          customerEmail: order.customer?.email,
-                          customerName: order.customer?.fullName,
-                          status: 'Shipped',
-                          trackingNumber: entry.trackingNumber.trim(),
-                          carrier: entry.carrier.trim(),
-                          trackingLink,
-                        }),
-                      }).catch(() => {});
+                      // Only email website orders, not eBay
+                      if (order.channel !== 'ebay') {
+                        await fetch('/api/orders/send-emails', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            type: 'shipping',
+                            orderId: order.id,
+                            customerEmail: order.customer?.email,
+                            customerName: order.customer?.fullName,
+                            status: 'Shipped',
+                            trackingNumber: entry.trackingNumber.trim(),
+                            carrier: entry.carrier.trim(),
+                            trackingLink,
+                          }),
+                        }).catch(() => {});
+                      }
                       shippedCount++;
                     } catch (err) {
                       console.error(`Failed to ship order ${order.id}:`, err);
