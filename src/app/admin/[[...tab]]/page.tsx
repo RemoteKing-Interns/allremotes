@@ -437,6 +437,14 @@ const AdminContent = () => {
     if (user?.email) activityLogger.setUser(user.email, user.id);
   }, [user]);
 
+  // Trigger once-daily inventory sync from Unleashed (fire-and-forget)
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch('/api/inventory/sync-daily', { method: 'POST' })
+      .then((res) => res.json())
+      .catch(() => {});
+  }, [isAdmin]);
+
   // Redirect to first permitted tab if current tab is inaccessible
   useEffect(() => {
     if (!isAdmin) return;

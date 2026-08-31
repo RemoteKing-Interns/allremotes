@@ -206,6 +206,12 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    fetch('/api/inventory/sync-daily', { method: 'POST' })
+      .then((res) => res.json())
+      .catch(() => {});
+  }, []);
+
   const home = mounted ? getHomeContent() : null;
 
   const heroImages = useMemo(() => {

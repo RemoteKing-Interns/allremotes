@@ -106,6 +106,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (!product?.id || !product?.rk_sku) return;
+    if (typeof product.stock === 'number' && product.stock >= 10) return;
 
     fetch('/api/inventory/stock', {
       method: 'POST',
@@ -122,7 +123,7 @@ const ProductDetail = () => {
         } : current);
       })
       .catch(() => {});
-  }, [product?.id, product?.rk_sku]);
+  }, [product?.id, product?.rk_sku, product?.stock]);
 
   const relatedProducts = products
     .filter(
