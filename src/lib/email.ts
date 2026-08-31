@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { buildTrackingLink } from './tracking';
 
 // Email configuration from environment variables
 const SMTP_HOST = process.env.SMTP_HOST || '';
@@ -26,7 +27,7 @@ const createTransporter = () => {
   });
 };
 
-// Base email template — branded with website color palette
+// Base email template — branded, table-based layout for email client compatibility
 const baseTemplate = (content: string, title: string) => {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
   return `<!DOCTYPE html>
@@ -36,49 +37,52 @@ const baseTemplate = (content: string, title: string) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.65; color: #34525a; margin: 0; padding: 0; background-color: #fbf8f5; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #1A7A6E 0%, #0F4F47 100%); padding: 32px 20px; text-align: center; border-radius: 14px 14px 0 0; position: relative; overflow: hidden; }
-    .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%); animation: shimmer 6s ease-in-out infinite; }
-    @keyframes shimmer { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .header img { max-width: 180px; height: auto; margin-bottom: 8px; position: relative; z-index: 1; }
-    .header h1 { color: white; margin: 0; font-size: 22px; font-weight: 700; position: relative; z-index: 1; letter-spacing: 0.5px; }
-    .content { background: #ffffff; padding: 40px 30px; border: 1px solid #eee8e1; border-top: none; border-radius: 0 0 14px 14px; animation: fadeInUp 0.6s ease-out; }
-    .content h2 { color: #C0392B; font-size: 24px; font-weight: 700; margin: 0 0 16px; }
-    .content h3 { color: #17353a; font-size: 18px; font-weight: 600; margin: 24px 0 10px; }
-    .content p { color: #34525a; font-size: 15px; margin: 12px 0; }
-    .content a { color: #1A7A6E; }
-    .footer { text-align: center; padding: 28px 20px; color: #67777d; font-size: 13px; }
-    .footer a { color: #1A7A6E; text-decoration: none; }
-    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #C0392B 0%, #A02D23 100%); color: white; text-decoration: none; border-radius: 10px; margin: 16px 0; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(192, 57, 43, 0.35); transition: transform 0.2s, box-shadow 0.2s; }
-    .button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192, 57, 43, 0.45); }
-    .info-box { background: #f4efe8; border-left: 4px solid #1A7A6E; padding: 18px 20px; border-radius: 8px; margin: 20px 0; }
-    .info-box strong { color: #1A7A6E; }
-    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee8e1; font-size: 14px; }
-    th { font-weight: 600; background: #fbf8f5; color: #17353a; }
-    .divider { height: 1px; background: linear-gradient(90deg, transparent, #eee8e1, transparent); margin: 24px 0; border: none; }
-    .contact-section { background: #fbf8f5; padding: 18px; border-radius: 10px; margin-top: 24px; text-align: center; }
-    .contact-section a { color: #1A7A6E; font-weight: 600; text-decoration: none; }
+    body { margin: 0; padding: 0; background-color: #f4efe8; -webkit-text-size-adjust: 100%; }
+    table { border-collapse: collapse; }
+    h2 { color: #17353a; font-size: 26px; font-weight: 800; margin: 0 0 18px; line-height: 1.3; }
+    h3 { color: #17353a; font-size: 18px; font-weight: 700; margin: 26px 0 12px; }
+    p { color: #34525a; font-size: 16px; line-height: 1.7; margin: 14px 0; }
+    a { color: #1A7A6E; }
+    .content-table th, .content-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee8e1; font-size: 15px; color: #34525a; }
+    .content-table th { font-weight: 700; background: #f4efe8; color: #17353a; }
+    .button { display: inline-block; padding: 16px 40px; background-color: #C0392B; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 17px; }
+    .info-box { background: #f4efe8; border-left: 5px solid #1A7A6E; padding: 20px 22px; border-radius: 10px; margin: 22px 0; color: #17353a; font-size: 16px; line-height: 1.8; }
+    .info-box strong { color: #0F4F47; }
+    .divider { height: 1px; background: #eee8e1; margin: 28px 0; border: none; }
+    .contact-section { background: #f4efe8; padding: 20px; border-radius: 10px; margin-top: 26px; text-align: center; }
+    .contact-section p { margin: 6px 0; color: #17353a; }
+    .contact-section a { color: #0F4F47; font-weight: 700; text-decoration: none; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" />
-      <h1>${title}</h1>
-    </div>
-    <div class="content">
-      ${content}
-    </div>
-    <div class="footer">
-      <p>This email was sent from <a href="${siteUrl}">All Remotes</a>.</p>
-      <p>&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
-      <p><a href="${siteUrl}">${siteUrl}</a></p>
-    </div>
-  </div>
+<body style="margin:0;padding:0;background-color:#f4efe8;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4efe8;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:94%;">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#0F4F47;padding:36px 24px;border-radius:16px 16px 0 0;">
+              <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" width="190" style="display:block;max-width:190px;height:auto;margin:0 auto 12px;" />
+              <div style="color:#ffffff;font-size:24px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:0.3px;">${title}</div>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="background-color:#ffffff;padding:40px 36px;border:1px solid #dfd7cf;border-top:none;border-radius:0 0 16px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.7;color:#34525a;">
+              ${content}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:28px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <p style="margin:4px 0;color:#67777d;font-size:13px;">&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
+              <p style="margin:4px 0;"><a href="${siteUrl}" style="color:#0F4F47;font-weight:600;text-decoration:none;font-size:13px;">allremotes.com.au</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 };
@@ -158,10 +162,10 @@ export async function sendOrderConfirmationEmail({
 }) {
   const itemsHtml = items.map(item => `
     <tr>
-      <td>${item.name}</td>
-      <td>${item.quantity}</td>
-      <td>AU$${item.price.toFixed(2)}</td>
-      <td>AU$${(item.quantity * item.price).toFixed(2)}</td>
+      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">${item.name}</td>
+      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">${item.quantity}</td>
+      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">AU$${item.price.toFixed(2)}</td>
+      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">AU$${(item.quantity * item.price).toFixed(2)}</td>
     </tr>
   `).join('');
 
@@ -169,19 +173,19 @@ export async function sendOrderConfirmationEmail({
     <h2>Thank you for your order, ${customerName}!</h2>
     <p>Your order has been received and is being processed.</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Order ID:</strong> #${orderId}<br>
       <strong>Order Date:</strong> ${new Date().toLocaleDateString('en-AU')}
     </div>
     
     <h3>Order Summary</h3>
-    <table>
+    <table width="100%" style="width:100%;border-collapse:collapse;margin:16px 0;">
       <thead>
         <tr>
-          <th>Product</th>
-          <th>Qty</th>
-          <th>Price</th>
-          <th>Total</th>
+          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Product</th>
+          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Qty</th>
+          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Price</th>
+          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -196,10 +200,10 @@ export async function sendOrderConfirmationEmail({
     <h3>Shipping Address</h3>
     <p>${shippingAddress.replace(/\n/g, '<br>')}</p>
     
-    <hr class="divider" />
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         View Order Details
       </a>
     </center>
@@ -232,16 +236,14 @@ export async function sendShippingUpdateEmail({
   estimatedDelivery?: string;
   trackingLink?: string;
 }) {
-  const trackUrl = trackingLink || (trackingNumber
-    ? `https://www.google.com/search?q=${encodeURIComponent(trackingNumber + ' ' + (carrier || ''))}`
-    : undefined);
+  const trackUrl = trackingLink || buildTrackingLink(carrier || '', trackingNumber || '');
 
   const content = `
     <h2>Shipping Update for Order #${orderId}</h2>
     <p>Hi ${customerName},</p>
     <p>Great news! Your order status has been updated to: <strong style="color:#C0392B;">${status}</strong></p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       ${trackingNumber ? `<strong>Tracking Number:</strong> ${trackingNumber}<br>` : ''}
       ${carrier ? `<strong>Carrier:</strong> ${carrier}<br>` : ''}
       ${estimatedDelivery ? `<strong>Estimated Delivery:</strong> ${estimatedDelivery}<br>` : ''}
@@ -249,13 +251,13 @@ export async function sendShippingUpdateEmail({
     
     ${trackUrl ? `
       <center>
-        <a href="${trackUrl}" class="button">Track Package</a>
+        <a href="${trackUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Track Package</a>
       </center>
     ` : ''}
     
-    <hr class="divider" />
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
-    <div class="contact-section">
+    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
       <p>Questions about your order? We're here to help!</p>
       <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
     </div>
@@ -285,19 +287,19 @@ export async function sendOrderDeliveredEmail({
     <p>Hi ${customerName},</p>
     <p>Great news! Your order #${orderId} has been delivered on <strong style="color:#C0392B;">${deliveredDate}</strong>.</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       We hope you enjoy your purchase! If you have any issues with your order, please contact us — all products are covered by our 12-month warranty.
     </div>
     
-    <hr class="divider" />
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Leave a Review
       </a>
     </center>
     
-    <div class="contact-section">
+    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
       <p>Need help? We're here for you!</p>
       <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
     </div>
@@ -434,7 +436,7 @@ export async function sendPasswordResetEmail({
       <p>We received a request to reset your password for your All Remotes account. Click the button below to set a new password:</p>
       
       <center>
-        <a href="${resetUrl}" class="button">Reset My Password</a>
+        <a href="${resetUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Reset My Password</a>
       </center>
       
       <p style="text-align: center; font-size: 14px; color: #67777d;">
@@ -602,7 +604,7 @@ export async function sendWelcomeEmail({
       <p>Hi ${customerName},</p>
       <p>Thank you for creating an account with us. We're excited to have you on board!</p>
       
-      <div class="info-box">
+      <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
         <strong>What you can do now:</strong>
         <ul>
           <li>Browse our extensive collection of remotes</li>
@@ -613,12 +615,12 @@ export async function sendWelcomeEmail({
       </div>
       
       <center>
-        <a href="${siteUrl}/products/all" class="button">
+        <a href="${siteUrl}/products/all" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
           Start Shopping
         </a>
       </center>
       
-      <div class="contact-section">
+      <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
         <p>Questions? We're here to help!</p>
         <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
       </div>
@@ -656,14 +658,14 @@ export async function sendLowStockNotification({
     <h2>Low Stock Alert</h2>
     <p>The following product is running low on stock:</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Product:</strong> ${productName}<br>
       <strong>SKU:</strong> ${sku}<br>
       <strong>Current Stock:</strong> ${currentStock}<br>
     </div>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Manage Inventory
       </a>
     </center>
@@ -696,7 +698,7 @@ export async function sendReturnRequestEmail({
     <h2>New Return Request</h2>
     <p>A customer has submitted a return request:</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Order ID:</strong> #${orderId}<br>
       <strong>Customer:</strong> ${customerName}<br>
       <strong>Email:</strong> ${customerEmail}<br>
@@ -709,7 +711,7 @@ export async function sendReturnRequestEmail({
     </ul>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Process Return
       </a>
     </center>
@@ -742,7 +744,7 @@ export async function sendNewOrderNotification({
     <h2>New Order Received!</h2>
     <p>You have received a new order:</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Order ID:</strong> #${orderId}<br>
       <strong>Customer:</strong> ${customerName}<br>
       <strong>Email:</strong> ${customerEmail}<br>
@@ -755,7 +757,7 @@ export async function sendNewOrderNotification({
     </ul>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         View Order
       </a>
     </center>
@@ -787,19 +789,19 @@ export async function sendVerificationEmail({
     <p>Hi ${customerName},</p>
     <p>Thank you for registering with All Remotes! Please verify your email address to complete your registration.</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Why verify?</strong><br>
       Verifying your email helps us ensure the security of your account and allows you to receive important notifications about your orders.
     </div>
     
     <center>
-      <a href="${verificationUrl}" class="button">Verify Email Address</a>
+      <a href="${verificationUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Verify Email Address</a>
     </center>
     
     <p style="margin-top: 20px; font-size: 13px; color: #67777d;">Or copy and paste this link into your browser:</p>
     <p style="word-break: break-all; font-size: 12px; color: #67777d;">${verificationUrl}</p>
     
-    <hr class="divider" />
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <p style="font-size: 13px; color: #67777d;">
       This link will expire in 24 hours. If you didn't create an account with All Remotes, please ignore this email.
@@ -828,7 +830,7 @@ export function getPaymentRequestEmailHtml({
   message?: string;
 }) {
   const noteHtml = message?.trim()
-    ? `<div class="info-box" style="background: #e8f5f3; border-left: 4px solid #1A7A6E;"><strong>Message from All Remotes:</strong><br>${message.replace(/\n/g, '<br>')}</div>`
+    ? `<div class="info-box" style="background:#e8f5f3;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;"><strong>Message from All Remotes:</strong><br>${message.replace(/\n/g, '<br>')}</div>`
     : '';
 
   const content = `
@@ -836,7 +838,7 @@ export function getPaymentRequestEmailHtml({
     <p>Hi ${customerName},</p>
     <p>We are ready to process your order. Please complete payment using the secure link below:</p>
     
-    <div class="info-box">
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
       <strong>Order ID:</strong> #${orderId}<br>
       <strong>Amount Due:</strong> AU$${total.toFixed(2)}
     </div>
@@ -844,16 +846,16 @@ export function getPaymentRequestEmailHtml({
     ${noteHtml}
     
     <center>
-      <a href="${paymentUrl}" class="button">Pay AU$${total.toFixed(2)} Now</a>
+      <a href="${paymentUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Pay AU$${total.toFixed(2)} Now</a>
     </center>
     
-    <hr class="divider" />
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <p style="word-break: break-all; font-size: 12px; color: #67777d;">
       If the button does not work, copy this link:<br>${paymentUrl}
     </p>
     
-    <div class="contact-section">
+    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
       <p>Questions? We're here to help!</p>
       <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
     </div>

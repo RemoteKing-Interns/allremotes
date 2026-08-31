@@ -27,6 +27,7 @@ import ProductImage from "../../../components/images/ProductImage";
 import MediaPickerModal from "../../../components/images/MediaPickerModal";
 import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
 import { buildPackingSlipData, renderPackingSlipHtml } from "../../../lib/packingSlip";
+import { buildTrackingLink } from "../../../lib/tracking";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   LayoutDashboard,
@@ -917,22 +918,6 @@ type UnleashedPushState = {
 };
 
 const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/LabelCanvasEditor"), { ssr: false });
-
-const CARRIER_TRACKING_PREFIXES: Record<string, string> = {
-  'Australia Post': 'https://auspost.com.au/mypost/track/details/',
-  'StarTrack': 'https://startrack.com.au/track/',
-  'Sendle': 'https://track.sendle.com/tracking?ref=',
-  'Toll': 'https://track.toll.com.au/track?Connote=',
-  'DHL': 'https://www.dhl.com/au-en/home/tracking/tracking-express.html?submit=1&tracking-id=',
-  'CouriersPlease': 'https://www.couriersplease.com.au/track?ConsignmentNumber=',
-  'Fastway': 'https://www.fastway.com.au/courier-services/track?l=',
-};
-
-function buildTrackingLink(carrier: string, trackingNumber: string): string {
-  const prefix = CARRIER_TRACKING_PREFIXES[carrier];
-  if (prefix && trackingNumber.trim()) return prefix + encodeURIComponent(trackingNumber.trim());
-  return '';
-}
 
 function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void; activeTab: string }) {
   const [orders, setOrders] = useState<any[]>([]);
