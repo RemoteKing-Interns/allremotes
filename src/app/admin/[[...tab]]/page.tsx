@@ -98,6 +98,7 @@ import {
   User,
   ChevronLeft,
   Wand2,
+  Target,
 } from "lucide-react";
 
 const STORAGE_KEYS = {
@@ -114,7 +115,7 @@ const navGroupDefinitions = [
   { label: 'Customers', icon: Users,        ids: ['customers', 'reviews', 'messages'] },
   { label: 'Marketing', icon: Megaphone,    ids: ['promotions', 'discounts'] },
   { label: 'Content',   icon: FileText,     ids: ['home', 'navigation', 'content'] },
-  { label: 'Analytics', icon: BarChart3,    ids: ['analytics', 'live_view'] },
+  { label: 'Analytics', icon: BarChart3,    ids: ['analytics', 'live_view', 'seo'] },
   { label: 'Channels',  icon: Globe,        ids: ['channels'] },
   { label: 'Admin',     icon: Settings,     ids: ['admin_users', 'admin_logs', 'printers', 'labels', 'document_design', 'settings'] },
 ];
@@ -458,7 +459,7 @@ const AdminContent = () => {
       { id: 'dashboard', perm: 'dashboard' }, { id: 'orders', perm: 'orders' },
       { id: 'returns', perm: 'orders' }, { id: 'abandoned_carts', perm: 'orders' },
       { id: 'products', perm: 'products' }, { id: 'categories', perm: 'products' },
-      { id: 'inventory', perm: 'products' }, { id: 'image_gen', perm: 'products' }, { id: 'customers', perm: 'customers' },
+      { id: 'inventory', perm: 'products' }, { id: 'image_gen', perm: 'products' }, { id: 'customers', perm: 'customers' }, { id: 'seo', perm: 'analytics' },
       { id: 'reviews', perm: 'customers' }, { id: 'messages', perm: 'customers' },
       { id: 'promotions', perm: 'marketing' }, { id: 'discounts', perm: 'marketing' },
       { id: 'home', perm: 'content' }, { id: 'navigation', perm: 'content' }, { id: 'content', perm: 'content' },
@@ -811,6 +812,7 @@ const AdminContent = () => {
     { id: 'content',        label: 'Content',             icon: Image,              perm: 'content' },
     { id: 'analytics',      label: 'Reports',             icon: BarChart3,          perm: 'analytics' },
     { id: 'live_view',      label: 'Live View',           icon: Eye,                perm: 'analytics' },
+    { id: 'seo',            label: 'SEO / GSC',           icon: Search,             perm: 'analytics' },
     { id: 'admin_users',    label: 'Admin Users',         icon: Users,              perm: 'superuser' },
     { id: 'admin_logs',     label: 'Logs',                icon: FileText,           perm: 'admin_users' },
     { id: 'printers',       label: 'Printer Setup',       icon: Printer,            perm: 'settings' },
@@ -866,6 +868,7 @@ const AdminContent = () => {
           {activeTab === 'dashboard'       && hasPermission('dashboard')   && <AdminDashboard onNavigateTab={setActiveTab} />}
           {activeTab === 'analytics'       && hasPermission('analytics')   && <AdminAnalytics />}
           {activeTab === 'live_view'       && hasPermission('analytics')   && <LiveViewSection />}
+          {activeTab === 'seo'            && hasPermission('analytics')   && <SeoSection />}
           {activeTab === 'customers'       && hasPermission('customers')   && <CustomerManagement />}
           {activeTab === 'admin_users'     && isSuperUser                  && <AdminUsersManager />}
           {activeTab === 'admin_logs'      && hasPermission('admin_users') && <AdminLogs />}
@@ -4360,6 +4363,197 @@ function CustomersSection() {
             </table>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SeoSection() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadGsc = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/gsc');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load GSC data');
+      setData(json);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadGsc(); }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-neutral-900">SEO / Google Search Console</h2>
+        <div className="h-64 rounded-2xl bg-neutral-100 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-neutral-900">SEO / Google Search Console</h2>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-amber-600 mt-0.5 shrink-0" size={20} />
+            <div>
+              <h3 className="font-semibold text-amber-900">GSC not connected</h3>
+              <p className="mt-1 text-sm text-amber-800">{error}</p>
+              <p className="mt-3 text-sm text-amber-700">
+                To enable: download the service account JSON from Google Cloud Console and place it at the path specified in <code className="bg-amber-100 px-1 rounded">GSC_SERVICE_ACCOUNT_FILE</code> in <code className="bg-amber-100 px-1 rounded">.env.local</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const summary = data?.summary || {};
+  const quickWins = data?.quickWins || [];
+  const queries = data?.queries || [];
+  const pages = data?.pages || [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-900">SEO / Google Search Console</h2>
+          <p className="text-sm text-neutral-500 mt-1">
+            Last 28 days{data?.dateRange ? ` (${data.dateRange.startDate} to ${data.dateRange.endDate})` : ''}
+          </p>
+        </div>
+        <button
+          onClick={loadGsc}
+          className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 transition"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total Clicks</p>
+          <p className="mt-2 text-2xl font-extrabold text-neutral-900">{summary.totalClicks ?? 0}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Impressions</p>
+          <p className="mt-2 text-2xl font-extrabold text-neutral-900">{(summary.totalImpressions ?? 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Avg Position</p>
+          <p className="mt-2 text-2xl font-extrabold text-neutral-900">{summary.avgPosition ?? '—'}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Queries Tracked</p>
+          <p className="mt-2 text-2xl font-extrabold text-neutral-900">{summary.totalQueries ?? 0}</p>
+        </div>
+      </div>
+
+      {/* Quick wins — keywords at positions 8-20 */}
+      {quickWins.length > 0 && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="text-emerald-600" size={20} />
+            <h3 className="text-lg font-bold text-neutral-900">Quick Wins — keywords at positions 8-20</h3>
+          </div>
+          <p className="text-sm text-neutral-600 mb-4">
+            These queries are close to page 1. Small content/link improvements could push them onto page 1.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <th className="pb-2 pr-4">Query</th>
+                  <th className="pb-2 pr-4 text-right">Impressions</th>
+                  <th className="pb-2 pr-4 text-right">Clicks</th>
+                  <th className="pb-2 pr-4 text-right">Position</th>
+                  <th className="pb-2 text-right">CTR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quickWins.map((q: any, i: number) => (
+                  <tr key={i} className="border-b border-neutral-100 last:border-0">
+                    <td className="py-2 pr-4 font-medium text-neutral-900">{q.query}</td>
+                    <td className="py-2 pr-4 text-right text-neutral-700">{q.impressions}</td>
+                    <td className="py-2 pr-4 text-right text-neutral-700">{q.clicks}</td>
+                    <td className="py-2 pr-4 text-right font-semibold text-emerald-700">{q.position.toFixed(1)}</td>
+                    <td className="py-2 text-right text-neutral-500">{(q.ctr * 100).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Top queries */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-neutral-900 mb-4">Top Queries by Clicks</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <th className="pb-2 pr-4">Query</th>
+                  <th className="pb-2 pr-4 text-right">Clicks</th>
+                  <th className="pb-2 pr-4 text-right">Impr.</th>
+                  <th className="pb-2 text-right">Pos.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {queries.slice(0, 15).map((q: any, i: number) => (
+                  <tr key={i} className="border-b border-neutral-100 last:border-0">
+                    <td className="py-2 pr-4 font-medium text-neutral-900">{q.query}</td>
+                    <td className="py-2 pr-4 text-right text-neutral-700">{q.clicks}</td>
+                    <td className="py-2 pr-4 text-right text-neutral-500">{q.impressions}</td>
+                    <td className="py-2 text-right text-neutral-500">{q.position.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-neutral-900 mb-4">Top Pages by Clicks</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <th className="pb-2 pr-4">Page</th>
+                  <th className="pb-2 pr-4 text-right">Clicks</th>
+                  <th className="pb-2 pr-4 text-right">Impr.</th>
+                  <th className="pb-2 text-right">Pos.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pages.slice(0, 15).map((p: any, i: number) => (
+                  <tr key={i} className="border-b border-neutral-100 last:border-0">
+                    <td className="py-2 pr-4 font-medium text-neutral-900 truncate max-w-xs">
+                      {p.url.replace(/^https?:\/\/[^/]+/, '')}
+                    </td>
+                    <td className="py-2 pr-4 text-right text-neutral-700">{p.clicks}</td>
+                    <td className="py-2 pr-4 text-right text-neutral-500">{p.impressions}</td>
+                    <td className="py-2 text-right text-neutral-500">{p.position.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

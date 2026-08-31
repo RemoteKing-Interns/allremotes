@@ -5,12 +5,15 @@ import { getSiteUrl } from "@/lib/site-url";
 
 type FAQ = { question: string; answer: string };
 
+type HowToStep = { name: string; text: string };
+
 type SupportArticle = {
   title: string;
   description: string;
   keywords: string[];
   Component: () => React.ReactNode;
   faqs?: FAQ[];
+  howToSteps?: HowToStep[];
 };
 
 function WhichRemoteArticle() {
@@ -62,8 +65,15 @@ function MerlinTroubleshootingArticle() {
         "Yes, typically a CR2032 coin cell. Always check the battery markings inside the remote casing.",
     },
   ];
+  const howToSteps: HowToStep[] = [
+    { name: "Replace the battery", text: "Replace the remote battery with a fresh CR2032 coin cell." },
+    { name: "Stand close to the motor", text: "Stand within one metre of the motor when programming." },
+    { name: "Press the learn button", text: "Press and release the learn button on the motor, then press the remote button within the timeout window." },
+    { name: "Clear old remotes", text: "Clear old remotes from the motor if memory is full." },
+    { name: "Check antenna", text: "Check for antenna damage or interference that could block the signal." },
+  ];
   return (
-    <SupportArticleLayout title="Merlin Remote Won't Program?" faqs={faqs}>
+    <SupportArticleLayout title="Merlin Remote Won't Program?" faqs={faqs} howToSteps={howToSteps}>
       <p className="mb-4 text-neutral-700">
         A Merlin remote that refuses to program is usually a quick fix. Before assuming a faulty remote, work through the checklist below.
       </p>
@@ -121,8 +131,15 @@ function LostGateRemoteArticle() {
         "Yes. Erasing lost remotes from the motor memory prevents the missing remote from opening your gate.",
     },
   ];
+  const howToSteps: HowToStep[] = [
+    { name: "Locate the motor box", text: "Locate the motor box and note the brand and model number." },
+    { name: "Count the buttons", text: "Count the buttons you need (one per gate or pedestrian access)." },
+    { name: "Order a compatible remote", text: "Order a compatible remote from our brand pages matching your motor model." },
+    { name: "Program the new remote", text: "Program the new remote using the motor's learn button." },
+    { name: "Erase the lost remote", text: "Erase the lost remote from motor memory for security." },
+  ];
   return (
-    <SupportArticleLayout title="How to Replace a Lost Gate Remote" faqs={faqs}>
+    <SupportArticleLayout title="How to Replace a Lost Gate Remote" faqs={faqs} howToSteps={howToSteps}>
       <p className="mb-4 text-neutral-700">
         Losing a gate remote is frustrating, but replacing it is straightforward once you identify your motor system.
       </p>
@@ -255,14 +272,37 @@ function FaqJsonLd({ faqs }: { faqs: FAQ[] }) {
   );
 }
 
+function HowToJsonLd({ steps, title }: { steps: HowToStep[]; title: string }) {
+  const siteUrl = getSiteUrl();
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: title,
+    step: steps.map((step, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 function SupportArticleLayout({
   title,
   children,
   faqs,
+  howToSteps,
 }: {
   title: string;
   children: React.ReactNode;
   faqs?: FAQ[];
+  howToSteps?: HowToStep[];
 }) {
   return (
     <article className="min-h-screen bg-gradient-to-b from-neutral-50 to-white pb-16">
@@ -291,6 +331,7 @@ function SupportArticleLayout({
             <FaqJsonLd faqs={faqs} />
           </section>
         )}
+        {howToSteps && howToSteps.length > 0 && <HowToJsonLd steps={howToSteps} title={title} />}
       </div>
     </article>
   );

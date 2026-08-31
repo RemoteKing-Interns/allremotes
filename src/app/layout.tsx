@@ -157,6 +157,8 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" className={plusJakartaSans.variable}>
       <head>
+        <link rel="preconnect" href="https://s3.ap-southeast-2.amazonaws.com" />
+        <link rel="dns-prefetch" href="https://s3.ap-southeast-2.amazonaws.com" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18410791303"
           strategy="afterInteractive"

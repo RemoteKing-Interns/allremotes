@@ -1,0 +1,617 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useStore } from "../../../../context/StoreContext";
+import { useCart } from "../../../../context/CartContext";
+import { useAuth } from "../../../../context/AuthContext";
+import {
+  ShoppingCart,
+  ArrowLeft,
+  Heart,
+  Check,
+} from "lucide-react";
+import {
+  getPriceBreakdown,
+  isDiscountEligible,
+} from "../../../../utils/pricing";
+import ProductCard from "../../../../components/ProductCard";
+import ImageGallery from "../../../../components/images/ImageGallery";
+import { extractIdFromSlugParam } from "../../../../lib/product-slugs";
+
+// Helper to clean HTML description - remove font styles but preserve colors/bold/italic
+const sanitizeDescription = (html: string): string => {
+  if (!html) return '';
+  return html
+    // Remove font-family and font-size styles
+    .replace(/font-family:\s*[^;"']+;?/gi, '')
+    .replace(/font-size:\s*[^;"']+;?/gi, '')
+    .replace(/white-space:\s*[^;"']+;?/gi, '')
+    .replace(/style="\s*"/gi, '')
+    .replace(/style='\s*'/gi, '')
+    // Remove old font tags with face/size attributes
+    .replace(/<span[^>]*face="[^"]*"[^>]*>/gi, '<span>')
+    .replace(/<font[^>]*>/gi, '')
+    .replace(/<\/font>/gi, '')
+    // Bold text ending with colon (Features:, Compatibility:, etc.)
+    // Match complete words/phrases: start with uppercase, min 3 chars before colon
+    .replace(/(<[^>]+>)?\b([A-Z][a-zA-Z]{2,}[a-zA-Z\s]*:)\s*(<\/[^>]+>)?/g, (match, openTag, text, closeTag) => {
+      // Don't modify if already in a bold tag
+      if (openTag && /<b>|<strong>/i.test(openTag)) return match;
+      return `<strong>${text}</strong>${closeTag || ' '}`;
+    });
+};
+
+// Helper to format category display names
+const getCategoryDisplayName = (category: string): string => {
+  const displayNames: Record<string, string> = {
+    'garage': 'Garage & Gate',
+    'car': 'Car Remotes',
+    'home': 'For The Home',
+    'locksmith': 'Locksmithing',
+    'all': 'All Products',
+  };
+  return displayNames[category] || category;
+};
+
+const HARD_CODED_WARNINGS = `WARNING: This product may contain a button/coin cell battery. To reduce the risk of SERIOUS INJURY or DEATH:
+
+Keep new and used batteries out of reach of children at all times.
+Do not use this product if the battery compartment is damaged or does not close securely.
+Dispose of used batteries immediately and safely - even flat batteries can still cause harm.
+Do not ingest the battery. Chemical burn hazard.
+Act immediately if you suspect a battery has been swallowed or inserted - severe or fatal injuries can occur within 2 hours.
+Seek urgent medical attention or call:
+- Australia: Poisons Information Centre on 13 11 26
+- New Zealand: National Poisons Centre on 0800 764 766
+
+ALLREMOTES Australia supplies aftermarket products intended to be compatible with a wide range of original brands. Unless a product is expressly stated as genuine, all items sold on this website are aftermarket products and are not manufactured, authorised, endorsed, or approved by the original equipment manufacturers (OEMs).
+
+Any references to brand names, trademarks, or model numbers are used only to describe compatibility or suitability with relevant equipment. ALLREMOTES Australia is not affiliated with, sponsored by, or associated with these brand owners, and no OEM approval or endorsement is implied.
+
+All trademarks, brand names, and product names remain the property of their respective owners. ALLREMOTES Australia distributes a range of aftermarket products, including (but not limited to) remote controls compatible with garage and gate motors and receivers from other manufacturers, as well as substitute automotive keys, remote controls, and casings designed to be compatible with vehicles made by other manufacturers.`;
+
+const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
+  const params = useParams<{ id: string }>();
+  const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = extractIdFromSlugParam(rawId);
+  const router = useRouter();
+  const { getProducts, getPromotions } = useStore();
+  const { user } = useAuth();
+  const promotions = getPromotions();
+  const products = getProducts() || [];
+  const [product, setProduct] = useState(() => initialProduct || products.find((p) => p.id === id));
+  const [productLoading, setProductLoading] = useState(!initialProduct);
+
+  // Fetch fresh product data from API to ensure latest data including instructionsPdf
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setProductLoading(true);
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const freshProduct = await res.json();
+        if (freshProduct && !freshProduct.error) {
+          setProduct(freshProduct);
+        }
+      } catch (err) {
+        console.error('Failed to fetch product data:', err);
+      } finally {
+        setProductLoading(false);
+      }
+    };
+    if (id) fetchProduct();
+  }, [id]);
+
+  useEffect(() => {
+    if (!product?.id || !product?.rk_sku) return;
+    if (typeof product.stock === 'number' && product.stock >= 10) return;
+
+    fetch('/api/inventory/stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: product.id, rk_sku: product.rk_sku }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.product) return;
+        setProduct((current: any) => current ? {
+          ...current,
+          stock: data.product.quantity ?? current.stock,
+          binLocation: data.product.binLocation ?? current.binLocation,
+        } : current);
+      })
+      .catch(() => {});
+  }, [product?.id, product?.rk_sku, product?.stock]);
+
+  const relatedProducts = products
+    .filter(
+      (item) => (product?.cat1 && item.cat1 === product.cat1) || 
+                (product?.cat2 && item.cat2 === product.cat2)
+    )
+    .filter((item) => item.id !== product?.id)
+    .slice(0, 4);
+  const { addToCart } = useCart();
+  const hasDiscount = isDiscountEligible(user);
+  const pricing = getPriceBreakdown(product?.price || 0, hasDiscount, {
+    promotions,
+    product,
+  });
+
+  const [quantity, setQuantity] = useState(1);
+  const [inWishlist, setInWishlist] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("description");
+
+  useEffect(() => {
+    setActiveTab(visibleTabs[0]?.id || "description");
+  }, [product?.id]);
+
+  const tabSections = [
+    {
+      id: "description",
+      label: "Description",
+      content: product?.descriptionPdf ? (
+        <div className="space-y-4">
+          {product?.description && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.description) }} />
+          )}
+          <a
+            href={product.descriptionPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.descriptionPdf.split('/').pop() || 'description.pdf')}
+          </a>
+        </div>
+      ) : (product?.description ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.description) }} />
+      ) : null),
+    },
+    {
+      id: "features",
+      label: "Features",
+      content: product?.featuresPdf ? (
+        <div className="space-y-4">
+          {(product?.features || product?.feature) && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.features || product.feature) }} />
+          )}
+          <a
+            href={product.featuresPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.featuresPdf.split('/').pop() || 'features.pdf')}
+          </a>
+        </div>
+      ) : ((product?.features || product?.feature) ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.features || product.feature) }} />
+      ) : null),
+    },
+    {
+      id: "specification",
+      label: "Specification",
+      content: product?.specificationPdf ? (
+        <div className="space-y-4">
+          {product?.specification && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.specification) }} />
+          )}
+          <a
+            href={product.specificationPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.specificationPdf.split('/').pop() || 'specification.pdf')}
+          </a>
+        </div>
+      ) : (product?.specification ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.specification) }} />
+      ) : null),
+    },
+    {
+      id: "compatibility",
+      label: "Compatibility",
+      content: product?.compatibilityPdf ? (
+        <div className="space-y-4">
+          {product?.compatibility && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.compatibility) }} />
+          )}
+          <a
+            href={product.compatibilityPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.compatibilityPdf.split('/').pop() || 'compatibility.pdf')}
+          </a>
+        </div>
+      ) : (product?.compatibility ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.compatibility) }} />
+      ) : null),
+    },
+    {
+      id: "instructions",
+      label: "Instructions",
+      content: product?.instructionsPdf ? (
+        <div className="space-y-4">
+          {product?.instructions && (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.instructions) }} />
+          )}
+          <a
+            href={product.instructionsPdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v-1a2 2 0 0 1 2-2h1"/><path d="M14 13h-2a2 2 0 0 0-2 2 v1a2 2 0 0 0 2 2h2"/><path d="M10 17h4"/></svg>
+            {decodeURIComponent(product.instructionsPdf.split('/').pop() || 'instructions.pdf')}
+          </a>
+        </div>
+      ) : (product?.instructions ? (
+        <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.instructions) }} />
+      ) : null),
+    },
+    {
+      id: "warnings",
+      label: "Warnings & Disclaimers",
+      content: (
+        <div>
+          <img src="/uploads/images/Warnings.png" alt="Warnings" className="w-full mb-4" />
+          {product?.warnings && <div dangerouslySetInnerHTML={{ __html: sanitizeDescription(product.warnings) }} />}
+        </div>
+      ),
+    },
+  ];
+
+  // Filter tabs to only show those with content
+  const visibleTabs = tabSections.filter((section) => {
+    const content = section.content;
+    if (typeof content === 'string' && content) {
+      return (content as string).trim() !== '' && content !== 'No description provided.';
+    }
+    if (React.isValidElement(content)) {
+      // For JSX elements, always show them if they exist
+      return true;
+    }
+    return !!content;
+  });
+
+  const userKey = useMemo(() => user?.id || user?.email || "guest", [user]);
+  const wishlistKey = useMemo(
+    () => `allremotes_wishlist_${userKey}`,
+    [userKey],
+  );
+  const recentlyKey = useMemo(
+    () => `allremotes_recently_viewed_${userKey}`,
+    [userKey],
+  );
+
+  const readJsonArray = (key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeJsonArray = (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value || []));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const wished = readJsonArray(wishlistKey);
+    setInWishlist(wished.some((x) => String(x) === String(product.id)));
+  }, [wishlistKey, product?.id]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const existing = readJsonArray(recentlyKey).map((x) => String(x));
+    const next = [
+      String(product.id),
+      ...existing.filter((x) => x !== String(product.id)),
+    ].slice(0, 12);
+    writeJsonArray(recentlyKey, next);
+  }, [recentlyKey, product?.id]);
+
+  const toggleWishlist = () => {
+    if (!product?.id) return;
+    const existing = readJsonArray(wishlistKey).map((x) => String(x));
+    const idStr = String(product.id);
+    const next = existing.includes(idStr)
+      ? existing.filter((x) => x !== idStr)
+      : [idStr, ...existing];
+    writeJsonArray(wishlistKey, next);
+    setInWishlist(next.includes(idStr));
+  };
+
+  if (productLoading) {
+    return (
+      <div className="container py-8 sm:py-10 animate-pulse">
+        <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
+          <div className="aspect-square rounded-2xl bg-neutral-200" />
+          <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 sm:p-8 space-y-6 shadow-panel backdrop-blur">
+            <div className="h-6 w-1/3 rounded bg-neutral-200" />
+            <div className="h-4 w-1/2 rounded bg-neutral-200" />
+            <div className="h-10 w-32 rounded bg-neutral-200" />
+          </div>
+        </div>
+        <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 p-6 sm:p-8 shadow-panel backdrop-blur">
+          <div className="flex flex-wrap gap-2 border-b border-neutral-200 pb-3">
+            <div className="h-8 w-24 rounded-full bg-neutral-200" />
+            <div className="h-8 w-28 rounded-full bg-neutral-200" />
+            <div className="h-8 w-28 rounded-full bg-neutral-200" />
+            <div className="h-8 w-28 rounded-full bg-neutral-200" />
+          </div>
+          <div className="mt-6 space-y-3">
+            <div className="h-4 w-full rounded bg-neutral-200" />
+            <div className="h-4 w-5/6 rounded bg-neutral-200" />
+            <div className="h-4 w-4/6 rounded bg-neutral-200" />
+            <div className="h-32 w-full rounded bg-neutral-200" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container py-12 text-center">
+        <h2>Product not found</h2>
+        <button onClick={() => router.push("/")} className="btn btn-primary">
+          Go Home
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fadeIn">
+      <div className="container py-8 sm:py-10">
+        <Link
+          href="/products/all"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/80 px-4 py-2 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-100"
+        >
+          <ArrowLeft size={16} />
+          Back to Products
+        </Link>
+
+        <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
+          {/* LEFT: IMAGE GALLERY */}
+          <ImageGallery product={product} />
+
+          {/* RIGHT: INFO */}
+          <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur sm:p-8">
+            {product.brand && (
+              <p className="text-sm font-semibold text-neutral-600">
+                {product.brand}
+              </p>
+            )}
+
+            {product.sku && (
+              <p className="mt-1 text-xs font-medium text-neutral-500">
+                SKU: <span className="text-neutral-700 font-semibold">{product.sku}</span>
+              </p>
+            )}
+
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+              {product.name}
+            </h1>
+
+            <div className="mt-5 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              {pricing.hasDiscount ? (
+                <div className="flex items-baseline gap-3">
+                  <p className="text-sm font-semibold text-neutral-400 line-through">
+                    AU${pricing.originalPrice.toFixed(2)}
+                  </p>
+                  <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
+                    AU${pricing.finalPrice.toFixed(2)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
+                  AU${pricing.finalPrice.toFixed(2)}
+                </p>
+              )}
+
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-extrabold ${
+                  product.inStock
+                    ? "bg-accent/10 text-accent-dark"
+                    : "bg-neutral-200 text-neutral-600"
+                }`}
+              >
+                {product.inStock ? <Check size={16} /> : null}
+                {product.inStock ? "In Stock" : "Out of Stock"}
+              </span>
+            </div>
+
+            {/* Discount Applied Badge */}
+            {hasDiscount && (
+              <div className="mt-3">
+                <img
+                  src="/images/discount applied.png"
+                  alt="Trade discount applied"
+                  className="h-10 w-auto object-contain"
+                />
+              </div>
+            )}
+
+            {/* Quantity */}
+            {product.inStock && (
+              <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+                <span className="text-sm font-semibold text-neutral-800">Quantity</span>
+                <div
+                  className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
+                  aria-label="Product quantity selector"
+                >
+                  <button
+                    type="button"
+                    className="inline-flex h-11 w-12 items-center justify-center text-lg font-semibold text-neutral-800 transition hover:bg-neutral-100 disabled:opacity-50"
+                    aria-label="Decrease quantity"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="inline-flex h-11 w-14 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex h-11 w-12 items-center justify-center text-lg font-semibold text-neutral-800 transition hover:bg-neutral-100"
+                    aria-label="Increase quantity"
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark disabled:opacity-60"
+                disabled={!product.inStock}
+                onClick={() => addToCart(product, quantity)}
+              >
+                <ShoppingCart size={18} />
+                {product.inStock ? "Add to Cart" : "Out of Stock"}
+              </button>
+
+              <button
+                className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-extrabold shadow-xs transition ${
+                  inWishlist
+                    ? "border-primary/25 bg-primary/5 text-primary-dark hover:bg-primary/10"
+                    : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
+                onClick={toggleWishlist}
+              >
+                <Heart size={18} />
+                {inWishlist ? "In Wishlist" : "Add to Wishlist"}
+              </button>
+            </div>
+
+            {/* Specs */}
+            <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-5">
+              <h3 className="text-base font-semibold text-neutral-900">
+                Product Details
+              </h3>
+              <ul className="mt-4 grid gap-2 text-sm text-neutral-700">
+                {product.brand && (
+                  <li>
+                    <span className="font-semibold text-neutral-900">Brand:</span>{" "}
+                    <Link href={`/brands/${encodeURIComponent(product.brand)}`} className="text-primary hover:underline font-medium">
+                      {product.brand}
+                    </Link>
+                  </li>
+                )}
+                {(product.cat1 || product.cat2) && (
+                  <li>
+                    <span className="font-semibold text-neutral-900">Categories:</span>{" "}
+                    {[product.cat1, product.cat2].filter(Boolean).map(getCategoryDisplayName).join(', ')}
+                  </li>
+                )}
+                {product.condition && (
+                  <li>
+                    <span className="font-semibold text-neutral-900">Condition:</span>{" "}
+                    {product.condition}
+                  </li>
+                )}
+                {product.returns && (
+                  <li>
+                    <span className="font-semibold text-neutral-900">Returns:</span>{" "}
+                    {product.returns}
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Contextual internal links for SEO */}
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              {product.brand && (
+                <Link
+                  href={`/brands/${encodeURIComponent(product.brand)}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+                >
+                  More {product.brand} remotes
+                </Link>
+              )}
+              {product.cat1 && (
+                <Link
+                  href={`/products/${String(product.cat1).toLowerCase()}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+                >
+                  More {getCategoryDisplayName(product.cat1)}
+                </Link>
+              )}
+              <Link
+                href="/support/which-garage-door-remote-do-i-need"
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                Remote identification guide
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* PRODUCT INFO SECTIONS */}
+        {visibleTabs.length > 0 && (
+          <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur overflow-hidden">
+            <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
+              {visibleTabs.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveTab(section.id)}
+                  className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                    activeTab === section.id
+                      ? "bg-accent/10 text-accent-dark"
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-4 sm:p-8">
+              {visibleTabs.find((s) => s.id === activeTab)?.content}
+            </div>
+          </div>
+        )}
+
+        {relatedProducts.length > 0 && (
+          <div className="mt-10">
+            <div className="max-w-2xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                Related Products
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">
+                More remotes you might like
+              </p>
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-4">
+              {relatedProducts.map((item) => (
+                <ProductCard key={item.id} product={item} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ProductDetailClient;
