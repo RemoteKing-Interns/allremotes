@@ -888,6 +888,59 @@ export async function sendPaymentRequestEmail({
   });
 }
 
+// Review request email — asks customer to leave a Google review after delivered order
+const GOOGLE_REVIEW_URL = "https://g.page/r/CWQhp-OLluk4EAI/review";
+
+export async function sendReviewRequestEmail({
+  to,
+  orderId,
+  customerName,
+}: {
+  to: string;
+  orderId: string;
+  customerName: string;
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+
+  const content = `
+    <h2>How did we do, ${customerName}?</h2>
+    <p>Your order <strong>#${orderId}</strong> has been delivered! We'd love to hear your feedback.</p>
+
+    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
+      <strong>How was your experience with All Remotes?</strong><br><br>
+      <strong>Shipping:</strong> Was your order delivered quickly and safely?<br>
+      <strong>Product:</strong> Is your remote working as expected?<br>
+      <strong>Service:</strong> Were you happy with our customer support?<br>
+      <strong>Quality:</strong> Does the product meet your expectations?<br><br>
+      Your feedback helps us improve and helps other customers make informed decisions.
+    </div>
+
+    <center>
+      <a href="${GOOGLE_REVIEW_URL}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+        Leave a Google Review
+      </a>
+    </center>
+
+    <p style="margin-top:20px;text-align:center;font-size:14px;color:#67777d;">
+      It only takes a minute and makes a big difference to our small business.
+    </p>
+
+    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
+
+    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
+      <p>Have an issue with your order? We're here to help!</p>
+      <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
+      <p style="font-size:13px;color:#67777d;">All products come with a 12-month warranty.</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `How was your experience with All Remotes? — Order #${orderId}`,
+    html: baseTemplate(content, 'Share Your Feedback'),
+  });
+}
+
 // Test email configuration
 export async function testEmailConfiguration() {
   const transporter = createTransporter();

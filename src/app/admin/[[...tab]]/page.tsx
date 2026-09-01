@@ -927,6 +927,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [syncing, setSyncing] = useState(false);
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
   const [otherActionsOpen, setOtherActionsOpen] = useState(false);
+  const [sendingReviewRequest, setSendingReviewRequest] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
   const [bulkShipping, setBulkShipping] = useState(false);
@@ -1249,6 +1250,30 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const handleSendPaymentLink = () => {
     if (!selectedOrder) return;
     setPaymentLinkModal({ order: selectedOrder, message: "", sending: false, previewHtml: "", previewLoading: true });
+  };
+
+  const handleSendReviewRequest = async () => {
+    if (!selectedOrder) return;
+    setSendingReviewRequest(true);
+    try {
+      const resp = await fetch("/api/admin/orders/send-review-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: selectedOrder.id }),
+      });
+      const data = await resp.json().catch(() => ({} as any));
+      if (!resp.ok) throw new Error(data.error || "Failed to send review request");
+      const now = data.reviewRequestedAt || new Date().toISOString();
+      setSelectedOrder((prev: any) => (prev ? { ...prev, reviewRequestedAt: now } : prev));
+      setOrders((prev: any[]) =>
+        prev.map((o: any) => (o.id === selectedOrder.id ? { ...o, reviewRequestedAt: now } : o))
+      );
+      alert("Review request email sent successfully");
+    } catch (err: any) {
+      alert(`Failed to send review request: ${err.message}`);
+    } finally {
+      setSendingReviewRequest(false);
+    }
   };
 
   const load = useCallback(async () => {
@@ -2403,6 +2428,11 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   }`}>
                     {selectedOrder.status || 'Processing'}
                   </span>
+                  {selectedOrder.reviewRequestedAt && (
+                    <span className="ml-1 inline-flex rounded-full bg-violet-100 px-2 py-1 text-xs font-semibold text-violet-700" title={`Review requested ${new Date(selectedOrder.reviewRequestedAt).toLocaleString()}`}>
+                      Review sent
+                    </span>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total</p>
@@ -2712,6 +2742,14 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
                     >
                       {selectedOrder?.status === 'shipped' ? 'Edit Tracking' : 'Mark as Shipped'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOtherActionsOpen(false); void handleSendReviewRequest(); }}
+                      disabled={sendingReviewRequest}
+                      className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {sendingReviewRequest ? "Sending..." : selectedOrder?.reviewRequestedAt ? "Resend Review Request" : "Request Review"}
                     </button>
                   </div>
                 )}

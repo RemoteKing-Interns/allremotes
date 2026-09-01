@@ -25,10 +25,17 @@ async function fetchQuantity(apiId: string, apiKey: string, productCode: string)
   const res = await fetch(`${UNLEASHED_BASE}/StockOnHand?${qs}`, {
     headers: unleashedHeaders(apiId, apiKey, qs),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[Stock] Unleashed StockOnHand ${res.status} for ${productCode}:`, body.slice(0, 200));
+    return null;
+  }
   const data = await res.json().catch(() => null);
   const item = data?.Items?.[0];
-  if (!item) return null;
+  if (!item) {
+    console.warn(`[Stock] No StockOnHand items for ${productCode}`);
+    return null;
+  }
   return item.QtyOnHand ?? item.AvailableQty ?? null;
 }
 
@@ -38,10 +45,17 @@ async function fetchBinLocation(apiId: string, apiKey: string, productCode: stri
   const res = await fetch(`${UNLEASHED_BASE}/Products?${qs}`, {
     headers: unleashedHeaders(apiId, apiKey, qs),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[Stock] Unleashed Products ${res.status} for ${productCode}:`, body.slice(0, 200));
+    return null;
+  }
   const data = await res.json().catch(() => null);
   const product = data?.Items?.[0];
-  if (!product) return null;
+  if (!product) {
+    console.warn(`[Stock] No Products items for ${productCode}`);
+    return null;
+  }
   
   const inventoryDetail = product.InventoryDetails?.find((d: any) => d.Warehouse?.WarehouseCode === 'RKW1') ?? product.InventoryDetails?.[0];
   return inventoryDetail?.BinLocation ?? null;
@@ -94,10 +108,14 @@ export async function POST(request: Request) {
       inventoryRefreshedAt: refreshedAt,
     };
 
-    await db.collection("products").updateOne(
+    console.log(`[Stock] ${product.rk_sku}: writing updates:`, JSON.stringify(updates));
+
+    const updateResult = await db.collection("products").updateOne(
       { _id: product._id },
       { $set: updates }
     );
+
+    console.log(`[Stock] ${product.rk_sku}: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
 
     return NextResponse.json({
       product: {
