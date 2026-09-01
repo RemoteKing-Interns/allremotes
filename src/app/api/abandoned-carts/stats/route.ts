@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,11 +44,13 @@ export async function GET(request: Request) {
     const averageCartValue = totalAbandoned > 0 ? estimatedRevenue / totalAbandoned : 0;
 
     // Recovered: carts where the customer eventually placed an order with matching email/userId
-    const emails = allAbandoned.map(c => c.email).filter(Boolean);
-    const userIds = allAbandoned.map(c => c.userId).filter(Boolean);
+    const allAbandonedDecrypted = decryptPiiArray(allAbandoned, ["email"]);
+    const emails = allAbandonedDecrypted.map(c => c.email).filter(Boolean);
+    const userIds = allAbandonedDecrypted.map(c => c.userId).filter(Boolean);
+    const emailHashes = emails.map(e => emailHash(e));
     const recoveredOrders = await ordersCol.countDocuments({
       $or: [
-        ...(emails.length ? [{ email: { $in: emails } }] : []),
+        ...(emailHashes.length ? [{ "customer.emailHash": { $in: emailHashes } }] : []),
         ...(userIds.length ? [{ userId: { $in: userIds } }] : [])
       ],
       createdAt: { $gte: thresholdDate.toISOString() }

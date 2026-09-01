@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import bcrypt from 'bcryptjs';
 import { validatePassword } from '../../../../lib/password-policy';
+import { decryptPii, PII_FIELDS } from '../../../../lib/pii-crypto';
 
 const SALT_ROUNDS = 10;
 
@@ -32,6 +33,9 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    // Decrypt PII for password validation
+    decryptPii(user, PII_FIELDS.user);
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);

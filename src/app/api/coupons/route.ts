@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encrypt, emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
       usedCount: 0,
       validFrom: now.toISOString(),
       validUntil: expiresAt,
-      customerEmail: customerEmail || null,
+      customerEmail: customerEmail ? encrypt(customerEmail) : null,
+      customerEmailHash: customerEmail ? emailHash(customerEmail) : undefined,
       customerUserId: customerUserId || null,
       isActive: true,
       createdAt: now.toISOString(),
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
 
     const query: any = { code: code?.toUpperCase(), isActive: true };
     
-    if (customerEmail) query.customerEmail = customerEmail;
+    if (customerEmail) query.customerEmailHash = emailHash(customerEmail);
     if (customerUserId) query.customerUserId = customerUserId;
 
     const coupon = await col.findOne(query);

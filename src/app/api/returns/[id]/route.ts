@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii } from "@/lib/pii-crypto";
 import type { ReturnRequest, ReturnStatus } from "../route";
 
 export const runtime = "nodejs";
@@ -36,6 +37,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
       const col = db.collection<ReturnRequest>("returns");
       const returnRequest = await col.findOne({ id });
       if (!returnRequest) return NextResponse.json({ error: "Return not found" }, { status: 404 });
+      decryptPii(returnRequest, ["customerEmail", "customerName"]);
       return NextResponse.json(returnRequest);
     }
 
@@ -86,6 +88,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         { returnDocument: "after" }
       );
       if (!res) return NextResponse.json({ error: "Return not found" }, { status: 404 });
+      decryptPii(res, ["customerEmail", "customerName"]);
       return NextResponse.json(res);
     }
 

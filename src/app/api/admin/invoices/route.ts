@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
     const total = roundMoney(subtotal + gst - discountTotal);
 
     const now = new Date().toISOString();
+    const customerEmail = String(body.customer?.email || "").trim();
     const doc: Record<string, any> = {
       id: await makeInvoiceId(),
       type: "invoice",
@@ -89,7 +91,8 @@ export async function POST(request: Request) {
       },
       customer: {
         fullName: String(body.customer?.fullName || "").trim(),
-        email: String(body.customer?.email || "").trim(),
+        email: customerEmail,
+        emailHash: customerEmail ? emailHash(customerEmail) : undefined,
         phone: String(body.customer?.phone || "").trim(),
       },
       shipping: {
@@ -113,9 +116,14 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
+    // Encrypt PII before storing
+    encryptPii(doc, PII_FIELDS.order);
+
     const db = await getDb();
     await db.collection("orders").insertOne(doc);
 
+    // Decrypt for response
+    decryptPiiArray([doc], PII_FIELDS.order);
     return NextResponse.json({ ok: true, order: doc }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
@@ -146,7 +154,8 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .toArray();
 
-    return NextResponse.json({ ok: true, orders }, { headers: CORS_HEADERS });
+    const decryptedOrders = decryptPiiArray(orders, PII_FIELDS.order);
+    return NextResponse.json({ ok: true, orders: decryptedOrders }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to list invoices", details: err?.message || String(err) },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import bcrypt from 'bcryptjs';
 import { serverLogger } from '../../../../lib/server-logger';
+import { emailHash, decryptPii, PII_FIELDS } from '../../../../lib/pii-crypto';
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Check admin_users first (invited admins have hashed passwords, no provider field)
-    const adminUser = await db.collection('admin_users').findOne({ email: email.toLowerCase() });
+    const adminUser = await db.collection('admin_users').findOne({ $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }] });
     if (adminUser && adminUser.password) {
       const isValid = await bcrypt.compare(password, adminUser.password);
       if (!isValid) {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
           { status: 401 }
         );
       }
+      decryptPii(adminUser, PII_FIELDS.user);
       const userResponse = {
         id: adminUser._id.toString(),
         name: adminUser.name,
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
 
     // Find user by email (email/password provider)
     const user = await usersCollection.findOne({
-      email: email.toLowerCase(),
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
       provider: 'email'
     });
 
@@ -79,6 +81,9 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+
+    // Decrypt PII for response
+    decryptPii(user, PII_FIELDS.user);
 
     // Return user data (without password)
     const userResponse = {

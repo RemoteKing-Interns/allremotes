@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import * as OTPAuth from "otpauth";
 import { serverLogger } from "@/lib/server-logger";
+import { encrypt, decryptPii, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This invite link has expired" }, { status: 410 });
     }
 
+    // Decrypt invite PII before using email/name
+    decryptPii(invite, ["email", "name"]);
+
     // Validate TOTP if secret provided
     if (totpSecret && totpCode) {
       const totp = new OTPAuth.TOTP({
@@ -67,8 +71,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newAdmin: any = {
-      name: invite.name,
-      email: invite.email,
+      name: encrypt(invite.name),
+      email: encrypt(invite.email),
+      emailHash: emailHash(invite.email),
       password: hashedPassword,
       permissions: invite.permissions,
       role: "admin",
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (mongoEnabled()) {
       const db = await getDb();
       // Check if user already exists (e.g. re-accepting)
-      await db.collection("admin_users").deleteMany({ email: invite.email });
+      await db.collection("admin_users").deleteMany({ $or: [{ emailHash: emailHash(invite.email) }, { email: invite.email }] });
       await db.collection("admin_users").insertOne(newAdmin);
       // Mark invite as used
       await db.collection("admin_invites").updateOne(

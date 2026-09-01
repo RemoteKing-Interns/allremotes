@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { getPaymentRequestEmailHtml, sendPaymentRequestEmail } from "@/lib/email";
+import { decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 import fs from "fs";
 import path from "path";
 
@@ -64,6 +65,8 @@ export async function POST(request: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    decryptPii(order, PII_FIELDS.order);
 
     const origin =
       request.headers.get("origin") ||

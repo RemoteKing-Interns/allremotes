@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
+import { emailHash, decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -52,8 +53,8 @@ export async function POST(request: NextRequest) {
     if (!resolvedName && userEmail && mongoEnabled()) {
       try {
         const db0 = await getDb();
-        const adminUser = await db0.collection("admin_users").findOne({ email: userEmail });
-        if (adminUser?.name) resolvedName = adminUser.name;
+        const adminUser = await db0.collection("admin_users").findOne({ $or: [{ emailHash: emailHash(userEmail) }, { email: userEmail }] });
+        if (adminUser?.name) { decryptPii(adminUser, PII_FIELDS.user); resolvedName = adminUser.name; }
       } catch { /* ignore */ }
     }
     if (!resolvedName) resolvedName = userEmail || "AllRemotes";
@@ -135,8 +136,8 @@ export async function GET(request: NextRequest) {
         if (createdBy && createdBy !== "unknown" && createdBy.includes("@")) {
           try {
             const db2 = await getDb();
-            const adminUser = await db2.collection("admin_users").findOne({ email: createdBy });
-            if (adminUser?.name) createdBy = adminUser.name;
+            const adminUser = await db2.collection("admin_users").findOne({ $or: [{ emailHash: emailHash(createdBy) }, { email: createdBy }] });
+            if (adminUser?.name) { decryptPii(adminUser, PII_FIELDS.user); createdBy = adminUser.name; }
           } catch { /* ignore */ }
         }
         return {
@@ -192,8 +193,8 @@ export async function GET(request: NextRequest) {
     if (mongoEnabled() && createdBy && createdBy !== "unknown" && createdBy.includes("@")) {
       try {
         const db2 = await getDb();
-        const adminUser = await db2.collection("admin_users").findOne({ email: createdBy });
-        if (adminUser?.name) createdBy = adminUser.name;
+        const adminUser = await db2.collection("admin_users").findOne({ $or: [{ emailHash: emailHash(createdBy) }, { email: createdBy }] });
+        if (adminUser?.name) { decryptPii(adminUser, PII_FIELDS.user); createdBy = adminUser.name; }
       } catch { /* ignore */ }
     }
 

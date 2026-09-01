@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encrypt, decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,7 @@ export type SupportThread = {
   orderId?: string;
   returnId?: string;
   customerEmail: string;
+  customerEmailHash?: string;
   customerName: string;
   status: "open" | "closed";
   lastMessageAt: string;
@@ -67,13 +69,13 @@ export async function GET(request: Request) {
           .find({ threadId })
           .sort({ createdAt: 1 })
           .toArray();
-
-        return NextResponse.json(messages, { headers: CORS_HEADERS });
+        const decryptedMessages = decryptPiiArray(messages, ["customerEmail"]);
+        return NextResponse.json(decryptedMessages, { headers: CORS_HEADERS });
       } else {
         // Get threads for a customer or order/return
         const threadsCol = db.collection<SupportThread>("support_threads");
         const query: Record<string, any> = {};
-        if (customerEmail) query.customerEmail = customerEmail;
+        if (customerEmail) query.customerEmailHash = emailHash(customerEmail);
         if (orderId) query.orderId = orderId;
         if (returnId) query.returnId = returnId;
 
@@ -81,8 +83,8 @@ export async function GET(request: Request) {
           .find(query)
           .sort({ lastMessageAt: -1 })
           .toArray();
-
-        return NextResponse.json(threads, { headers: CORS_HEADERS });
+        const decryptedThreads = decryptPiiArray(threads, ["customerEmail", "customerName"]);
+        return NextResponse.json(decryptedThreads, { headers: CORS_HEADERS });
       }
     } else {
       // File-based fallback not implemented for chat
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
       thread = await threadsCol.findOne({ id: threadId });
     } else {
       thread = await threadsCol.findOne({
-        customerEmail,
+        customerEmailHash: emailHash(customerEmail),
         $or: [{ orderId }, { returnId }],
       });
     }
@@ -143,8 +145,9 @@ export async function POST(request: Request) {
         id: makeThreadId(),
         orderId,
         returnId,
-        customerEmail,
-        customerName: customerName || "",
+        customerEmail: encrypt(customerEmail),
+        customerEmailHash: emailHash(customerEmail),
+        customerName: encrypt(customerName || ""),
         status: "open",
         lastMessageAt: now,
         createdAt: now,
@@ -164,7 +167,7 @@ export async function POST(request: Request) {
       threadId: thread.id,
       orderId,
       returnId,
-      customerEmail,
+      customerEmail: encrypt(customerEmail),
       sender,
       message,
       attachments: Array.isArray(attachments) ? attachments : [],
@@ -175,7 +178,12 @@ export async function POST(request: Request) {
     const messagesCol = db.collection<ChatMessage>("support_messages");
     await messagesCol.insertOne(newMessage);
 
-    return NextResponse.json({ thread, message: newMessage }, { headers: CORS_HEADERS });
+    // Decrypt for response
+    const responseThread = { ...thread };
+    decryptPii(responseThread, ["customerEmail", "customerName"]);
+    const responseMessage = { ...newMessage };
+    decryptPii(responseMessage, ["customerEmail"]);
+    return NextResponse.json({ thread: responseThread, message: responseMessage }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to send message", details: err?.message || String(err) },

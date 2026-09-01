@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii, decryptPiiArray, PII_FIELDS } from "@/lib/pii-crypto";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -62,6 +63,9 @@ export async function GET() {
 
     const threadsWithDetails: ThreadWithDetails[] = await Promise.all(
       threads.map(async (thread) => {
+        // Decrypt PII in thread
+        decryptPii(thread, ["customerEmail", "customerName"]);
+
         // Get unread count (customer messages not read by admin)
         const unreadCount = await messagesCol.countDocuments({
           threadId: thread.id,
@@ -81,10 +85,12 @@ export async function GET() {
 
         if (thread.orderId) {
           orderDetails = await ordersCol.findOne({ id: thread.orderId });
+          if (orderDetails) decryptPii(orderDetails, PII_FIELDS.order);
         }
 
         if (thread.returnId) {
           returnDetails = await returnsCol.findOne({ id: thread.returnId });
+          if (returnDetails) decryptPii(returnDetails, ["customerEmail", "customerName"]);
         }
 
         return {

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encryptPii, decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -38,6 +39,7 @@ export async function GET(
         { status: 404, headers: CORS_HEADERS }
       );
     }
+    decryptPii(order, PII_FIELDS.order);
     return NextResponse.json({ ok: true, order }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
@@ -109,6 +111,7 @@ export async function PATCH(
       );
     }
 
+    decryptPii(result, PII_FIELDS.order);
     return NextResponse.json(
       { ok: true, order: result },
       { headers: CORS_HEADERS }
@@ -151,13 +154,16 @@ export async function PUT(
     }
 
     const now = new Date().toISOString();
-    const update = {
+    const update: Record<string, any> = {
       customer: body.customer,
       shipping: body.shipping,
       items,
       pricing: body.pricing,
       updatedAt: now,
     };
+
+    // Encrypt PII before storing
+    encryptPii(update, PII_FIELDS.order);
 
     const db = await getDb();
     const result = await db
@@ -175,6 +181,7 @@ export async function PUT(
       );
     }
 
+    decryptPii(result, PII_FIELDS.order);
     return NextResponse.json(
       { ok: true, order: result },
       { headers: CORS_HEADERS }

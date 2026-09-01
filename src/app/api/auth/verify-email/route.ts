@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import { generateVerificationToken, hashToken, getTokenExpiry } from '../../../../lib/email-verification';
+import { emailHash, decryptPii, PII_FIELDS } from '../../../../lib/pii-crypto';
 
 /**
  * POST /api/auth/verify-email - Verify email with token
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
       }
     );
 
+    decryptPii(user, PII_FIELDS.user);
+
     return NextResponse.json({
       success: true,
       message: 'Email verified successfully',
@@ -95,7 +98,7 @@ export async function PUT(request: Request) {
 
     // Find user by email
     const user = await usersCollection.findOne({
-      email: email.toLowerCase(),
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
       provider: 'email',
     });
 
@@ -133,6 +136,7 @@ export async function PUT(request: Request) {
 
     // Send verification email
     const { sendVerificationEmail } = await import('../../../../lib/email');
+    decryptPii(user, PII_FIELDS.user);
     await sendVerificationEmail({
       to: user.email,
       customerName: user.name,

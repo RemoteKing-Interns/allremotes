@@ -3,6 +3,7 @@ import { mongoEnabled, getDb } from "@/lib/mongo";
 import bcrypt from "bcryptjs";
 import { serverLogger } from "@/lib/server-logger";
 import { ObjectId } from "mongodb";
+import { encrypt, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ async function isSuperUser(request: NextRequest): Promise<boolean> {
   if (!callerEmail) return false;
   if (!mongoEnabled()) return false;
   const db = await getDb();
-  const caller = await db.collection("admin_users").findOne({ email: callerEmail });
+  const caller = await db.collection("admin_users").findOne({ $or: [{ emailHash: emailHash(callerEmail) }, { email: callerEmail }] });
   if (!caller) return false;
   return caller.role === "admin" || (Array.isArray(caller.permissions) && caller.permissions.includes("*"));
 }
@@ -30,8 +31,8 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const users = await db.collection("admin_users").find({}).toArray();
     
-    // Remove passwords from response
-    const safeUsers = users.map(user => {
+    // Decrypt PII and remove passwords from response
+    const safeUsers = decryptPiiArray(users, PII_FIELDS.user).map(user => {
       const { password, ...safeUser } = user;
       return safeUser;
     });
@@ -82,8 +83,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser: any = {
-      name,
-      email,
+      name: encrypt(name),
+      email: encrypt(email),
+      emailHash: emailHash(email),
       password: hashedPassword,
       permissions, // e.g., ["*"] for full access or ["/admin/spreadsheet"] for specific routes
       role: "admin",
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
     const collection = db.collection("admin_users");
 
     // Check if user already exists
-    const existingUser = await collection.findOne({ email });
+    const existingUser = await collection.findOne({ $or: [{ emailHash: emailHash(email) }, { email }] });
     if (existingUser) {
       return NextResponse.json(
         { error: "User with this email already exists" },
@@ -129,6 +131,7 @@ export async function POST(request: NextRequest) {
     // Remove password from response
     const { password: _, ...safeUser } = newUser;
     safeUser._id = result.insertedId;
+    decryptPii(safeUser, PII_FIELDS.user);
 
     await serverLogger.info('admin_user_created', { name, email, permissions }, { userEmail: email });
     return NextResponse.json({ user: safeUser });
@@ -209,6 +212,7 @@ export async function PUT(request: NextRequest) {
     
     // Remove password from response
     const { password, ...safeUser } = updatedUser;
+    decryptPii(safeUser, PII_FIELDS.user);
 
     await serverLogger.info('admin_user_updated', { id, changes: Object.keys(updates) });
     return NextResponse.json({ user: safeUser });

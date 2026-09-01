@@ -5,9 +5,10 @@ import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
 import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
 import { sendOrderConfirmationEmail, sendNewOrderNotification } from "../../../lib/email";
+import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "../../../lib/pii-crypto";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -69,11 +70,14 @@ export async function GET(request: Request) {
       
       // Build query - filter by email and/or orderId if provided
       const query: Record<string, any> = {};
-      if (email) query["customer.email"] = email.toLowerCase();
+      if (email) query["customer.emailHash"] = emailHash(email);
       if (orderId) query["id"] = { $regex: new RegExp(orderId.replace(/[#]/g, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") };
       const orders = await col.find(query).sort({ createdAt: -1 }).toArray();
       
-      return NextResponse.json(orders, { 
+      // Decrypt PII for response
+      const decryptedOrders = decryptPiiArray(orders, PII_FIELDS.order);
+      
+      return NextResponse.json(decryptedOrders, { 
         headers: { 
           "Cache-Control": "no-store",
           ...CORS_HEADERS 
@@ -127,6 +131,27 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
+    // Store plaintext copies for emails/SMS before encrypting
+    const plaintextCustomerEmail = order.customer?.email;
+    const plaintextCustomerName = order.customer?.fullName || order.customer?.name;
+    const plaintextCustomerPhone = order.customer?.phone || order.shipping?.phone;
+    const plaintextShippingAddress = [
+      order.shipping?.address,
+      [order.shipping?.city, order.shipping?.state, order.shipping?.zipCode]
+        .filter(Boolean)
+        .join(" "),
+      order.shipping?.country,
+    ].filter(Boolean).join("\n");
+
+    // Add emailHash for searchable email field
+    if (order.customer?.email) {
+      if (!order.customer) order.customer = {} as any;
+      (order.customer as any).emailHash = emailHash(order.customer.email);
+    }
+
+    // Encrypt PII before storing
+    encryptPii(order, PII_FIELDS.order);
+
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
@@ -152,15 +177,14 @@ export async function POST(request: Request) {
     }
 
     // Send SMS confirmation if phone number provided (non-blocking)
-    const customerPhone = order.customer?.phone || order.shipping?.phone;
-    if (isSmsConfigured() && customerPhone && order.total != null) {
+    if (isSmsConfigured() && plaintextCustomerPhone && order.total != null) {
       const formattedTotal = typeof order.total === 'number' 
         ? `AU$${order.total.toFixed(2)}`
         : order.total;
       
-      sendOrderConfirmationSms(customerPhone, order.id, formattedTotal).then((result) => {
+      sendOrderConfirmationSms(plaintextCustomerPhone, order.id, formattedTotal).then((result) => {
         if (result.success) {
-          console.log(`[SMS] Order confirmation sent to ${customerPhone} for order ${order.id}`);
+          console.log(`[SMS] Order confirmation sent to ${plaintextCustomerPhone} for order ${order.id}`);
         } else {
           console.error(`[SMS] Failed to send confirmation for order ${order.id}:`, result.error);
         }
@@ -168,19 +192,7 @@ export async function POST(request: Request) {
     }
 
     // Send order confirmation emails (non-blocking)
-    const customerEmail = order.customer?.email;
-    const customerName = order.customer?.fullName || order.customer?.name;
-    if (customerEmail && customerName && Array.isArray(order.items) && order.items.length > 0) {
-      const shippingAddress = [
-        order.shipping?.address,
-        [order.shipping?.city, order.shipping?.state, order.shipping?.zipCode]
-          .filter(Boolean)
-          .join(" "),
-        order.shipping?.country,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
+    if (plaintextCustomerEmail && plaintextCustomerName && Array.isArray(order.items) && order.items.length > 0) {
       const emailItems = order.items.map((item: any) => ({
         name: String(item.name),
         quantity: Number(item.quantity) || 1,
@@ -191,18 +203,18 @@ export async function POST(request: Request) {
 
       Promise.all([
         sendOrderConfirmationEmail({
-          to: customerEmail,
+          to: plaintextCustomerEmail,
           orderId: order.id,
-          customerName,
+          customerName: plaintextCustomerName,
           items: emailItems,
           total: orderTotal,
-          shippingAddress,
+          shippingAddress: plaintextShippingAddress,
         }),
         sendNewOrderNotification({
           to: "shane@allremotes.com.au",
           orderId: order.id,
-          customerName,
-          customerEmail,
+          customerName: plaintextCustomerName,
+          customerEmail: plaintextCustomerEmail,
           total: orderTotal,
           items: order.items.map((item: any) => `${item.name} x${item.quantity || 1}`),
         }),
@@ -222,7 +234,10 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(order, {
+    // Decrypt a copy for the response
+    const orderResponse = { ...order };
+    decryptPii(orderResponse, PII_FIELDS.order);
+    return NextResponse.json(orderResponse, {
       headers: CORS_HEADERS
     });
   } catch (err: any) {
@@ -289,6 +304,8 @@ export async function PUT(request: Request) {
         // Fallback: re-query the doc to confirm it exists
         updatedOrder = (await col.findOne({ id: orderId })) as unknown as OrderDoc | null;
       }
+      // Decrypt PII for response/SMS
+      if (updatedOrder) decryptPii(updatedOrder, PII_FIELDS.order);
     } else {
       // File-based fallback
       const orders = readOrdersFile();

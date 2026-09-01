@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { sendWelcomeEmail, sendVerificationEmail } from '../../../../lib/email';
 import { validatePassword } from '../../../../lib/password-policy';
 import { generateVerificationToken, hashToken } from '../../../../lib/email-verification';
+import { encrypt, emailHash, PII_FIELDS } from '../../../../lib/pii-crypto';
 
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
 
     // Check if user already exists (email/password provider)
     const existingUser = await usersCollection.findOne({
-      email: email.toLowerCase(),
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
       provider: 'email'
     });
 
@@ -73,8 +74,9 @@ export async function POST(request: Request) {
 
     // Create new user
     const newUser = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
+      name: encrypt(name.trim()),
+      email: encrypt(email.toLowerCase().trim()),
+      emailHash: emailHash(email),
       password: hashedPassword,
       provider: 'email',
       role: 'customer',
@@ -98,16 +100,16 @@ export async function POST(request: Request) {
 
     // Send welcome email (don't wait for it)
     sendWelcomeEmail({
-      to: newUser.email,
-      customerName: newUser.name
+      to: email.toLowerCase().trim(),
+      customerName: name.trim()
     }).catch(err => {
       console.error('Failed to send welcome email:', err);
     });
 
     // Send verification email (don't wait for it)
     sendVerificationEmail({
-      to: newUser.email,
-      customerName: newUser.name,
+      to: email.toLowerCase().trim(),
+      customerName: name.trim(),
       verificationToken,
       baseUrl: origin,
     }).catch(err => {
@@ -117,8 +119,8 @@ export async function POST(request: Request) {
     // Return user data (without password)
     const userResponse = {
       id: result.insertedId.toString(),
-      name: newUser.name,
-      email: newUser.email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       provider: newUser.provider,
       role: newUser.role,
       createdAt: newUser.createdAt,

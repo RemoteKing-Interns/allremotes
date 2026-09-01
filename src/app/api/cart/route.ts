@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encrypt, decryptPii, emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,13 +25,14 @@ export async function GET(request: Request) {
     const db = await getDb();
     const col = db.collection("carts");
     
-    const query = userId ? { userId } : { email };
+    const query = userId ? { userId } : { emailHash: emailHash(email) };
     const cartDoc = await col.findOne(query);
 
     if (!cartDoc) {
       return NextResponse.json({ cart: [] });
     }
 
+    decryptPii(cartDoc, ["email"]);
     return NextResponse.json({ cart: cartDoc.items || [] });
   } catch (err: any) {
     return NextResponse.json(
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const col = db.collection("carts");
     
-    const query = userId ? { userId } : { email };
+    const query = userId ? { userId } : { emailHash: emailHash(email) };
     const updatedAt = new Date().toISOString();
     const createdAt = updatedAt;
 
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
           lastActivity: updatedAt,
           abandoned: false,
           ...(userId && { userId }),
-          ...(email && { email })
+          ...(email && { email: encrypt(email), emailHash: emailHash(email) })
         },
         $setOnInsert: { createdAt }
       },
@@ -115,7 +117,7 @@ export async function PATCH(request: Request) {
     const db = await getDb();
     const col = db.collection("carts");
     
-    const query = userId ? { userId } : { email };
+    const query = userId ? { userId } : { emailHash: emailHash(email) };
     const cartDoc = await col.findOne(query);
 
     if (!cartDoc && action !== "mark_contacted") {
@@ -189,7 +191,7 @@ export async function DELETE(request: Request) {
     const db = await getDb();
     const col = db.collection("carts");
     
-    const query = userId ? { userId } : { email };
+    const query = userId ? { userId } : { emailHash: emailHash(email) };
     await col.deleteOne(query);
 
     return NextResponse.json({ success: true });

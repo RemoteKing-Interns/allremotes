@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { readOrdersJson, writeOrdersJson, type OrderDoc } from "@/lib/orders-json";
+import { decryptPiiArray, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
         .sort({ createdAt: -1 })
         .limit(limit)
         .toArray();
-      return NextResponse.json(orders, { headers: { "Cache-Control": "no-store" } });
+      const decryptedOrders = decryptPiiArray(orders, PII_FIELDS.order);
+      return NextResponse.json(decryptedOrders, { headers: { "Cache-Control": "no-store" } });
     }
 
     const orders = await readOrdersJson();

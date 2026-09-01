@@ -3,6 +3,7 @@ import { mongoEnabled, getDb } from "@/lib/mongo";
 import bcrypt from "bcryptjs";
 import { serverLogger } from "@/lib/server-logger";
 import { ObjectId } from "mongodb";
+import { encrypt, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,11 +18,12 @@ export async function GET() {
     const db = await getDb();
     const ordersCol = db.collection("orders");
 
-    // Aggregate customers from orders by email (fallback to username for channels without email)
+    // Aggregate customers from orders by emailHash (deterministic) or username fallback
     const pipeline = [
       {
         $match: {
           $or: [
+            { "customer.emailHash": { $exists: true, $nin: [null, ""] } },
             { "customer.email": { $exists: true, $nin: [null, ""] } },
             { "customer.username": { $exists: true, $nin: [null, ""] } },
           ],
@@ -31,7 +33,7 @@ export async function GET() {
         $addFields: {
           customerKey: {
             $ifNull: [
-              { $trim: { input: { $toLower: "$customer.email" } } },
+              { $ifNull: ["$customer.emailHash", { $trim: { input: { $toLower: "$customer.email" } } }] },
               { $concat: ["username:", { $toLower: { $ifNull: ["$customer.username", ""] } }] },
             ],
           },
@@ -70,8 +72,13 @@ export async function GET() {
 
     const aggregated = await ordersCol.aggregate(pipeline).toArray();
 
+    // Decrypt PII fields after aggregation
+    const decryptedAggregated = decryptPiiArray(aggregated, [
+      "name", "email", "username", "phone", "street", "city", "state", "zip", "country",
+    ]);
+
     // Build per-channel breakdown for each customer
-    const customers = aggregated.map((c: any) => {
+    const customers = decryptedAggregated.map((c: any) => {
       const channelMap: Record<string, { orders: number; spent: number }> = {};
       for (const co of c.channelOrders || []) {
         const ch = co.channel || "website";
@@ -167,9 +174,10 @@ export async function POST(request: NextRequest) {
     }
 
     const newCustomer: any = {
-      name,
-      email,
-      phone: phone || "",
+      name: encrypt(name),
+      email: encrypt(email),
+      emailHash: emailHash(email),
+      phone: encrypt(phone || ""),
       address: address || {
         street: "",
         city: "",
@@ -210,7 +218,7 @@ export async function POST(request: NextRequest) {
     const collection = db.collection("customers");
 
     // Check if customer already exists
-    const existingCustomer = await collection.findOne({ email });
+    const existingCustomer = await collection.findOne({ $or: [{ emailHash: emailHash(email) }, { email }] });
     if (existingCustomer) {
       return NextResponse.json(
         { error: "Customer with this email already exists" },
@@ -221,8 +229,12 @@ export async function POST(request: NextRequest) {
     const result = await collection.insertOne(newCustomer);
     newCustomer._id = result.insertedId;
 
+    // Decrypt for response
+    const responseCustomer = { ...newCustomer };
+    decryptPii(responseCustomer, ["name", "email", "phone"]);
+
     await serverLogger.info('customer_created', { name, email }, { userEmail: email });
-    return NextResponse.json({ customer: newCustomer });
+    return NextResponse.json({ customer: responseCustomer });
   } catch (error: any) {
     console.error("Error creating customer:", error);
     return NextResponse.json(
@@ -284,6 +296,7 @@ export async function PUT(request: NextRequest) {
 
     // Get updated customer
     const updatedCustomer = await collection.findOne({ _id: new ObjectId(id) });
+    if (updatedCustomer) decryptPii(updatedCustomer, ["name", "email", "phone"]);
 
     await serverLogger.info('customer_updated', { id, changes: Object.keys(updates) });
     return NextResponse.json({ customer: updatedCustomer });
@@ -318,15 +331,15 @@ export async function DELETE(request: NextRequest) {
     const db = await getDb();
     const ordersCol = db.collection("orders");
 
-    // Build query: match by email, or by username key (for channel customers without email)
+    // Build query: match by emailHash, or by username key (for channel customers without email)
     let query: any;
     if (email) {
-      query = { "customer.email": email };
+      query = { "customer.emailHash": emailHash(email) };
     } else if (customerKey?.startsWith("username:")) {
       const username = customerKey.replace("username:", "");
       query = { "customer.username": { $regex: new RegExp(`^${username}$`, "i") } };
     } else {
-      query = { "customer.email": customerKey };
+      query = { "customer.emailHash": customerKey };
     }
 
     // Count matching orders first

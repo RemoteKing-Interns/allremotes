@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
+import { emailHash } from '../../../../lib/pii-crypto';
 
 export async function GET(request: Request) {
   try {
@@ -27,12 +28,12 @@ export async function GET(request: Request) {
 
     // Check if email exists (any provider)
     const existingUser = await usersCollection.findOne({
-      email: email.toLowerCase()
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }]
     });
 
     // Also check for OAuth users separately
     const existingOAuthUser = await usersCollection.findOne({
-      email: email.toLowerCase(),
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
       provider: { $in: ['google', 'apple'] }
     });
 

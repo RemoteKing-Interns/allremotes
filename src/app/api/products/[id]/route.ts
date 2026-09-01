@@ -5,7 +5,7 @@ import { enrichProductWithS3Images } from "@/lib/products-json";
 const CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

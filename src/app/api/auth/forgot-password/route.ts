@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '../../../../lib/email';
+import { emailHash, decryptPii, PII_FIELDS } from '../../../../lib/pii-crypto';
 
 // Token expiration time (1 hour)
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
     // Find user by email (only email/password provider)
     const user = await usersCollection.findOne({
-      email: email.toLowerCase(),
+      $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
       provider: 'email'
     });
 
@@ -81,6 +82,9 @@ export async function POST(request: Request) {
         }
       }
     );
+
+    // Decrypt PII for email sending
+    decryptPii(user, PII_FIELDS.user);
 
     // Send password reset email
     await sendPasswordResetEmail({

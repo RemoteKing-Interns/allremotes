@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
 
     for (const cart of pendingCarts) {
       if (!cart.email) continue;
+      decryptPii(cart, ["email"]);
       try {
         const couponCode = `SAVE${discountPercent}${Date.now().toString(36).toUpperCase()}${sent}`;
 

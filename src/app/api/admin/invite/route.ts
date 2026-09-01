@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import crypto from "crypto";
 import { serverLogger } from "@/lib/server-logger";
 import { ObjectId } from "mongodb";
+import { encrypt, decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 72); // 72 hours
 
     const invite = {
-      email,
-      name,
+      email: encrypt(email),
+      emailHash: emailHash(email),
+      name: encrypt(name),
       permissions: permissions || ["*"],
       token,
       expiresAt,
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (mongoEnabled()) {
       const db = await getDb();
       // Prevent duplicate pending invites for same email
-      await db.collection("admin_invites").deleteMany({ email, used: false });
+      await db.collection("admin_invites").deleteMany({ emailHash: emailHash(email), used: false });
       await db.collection("admin_invites").insertOne(invite);
     } else {
       const invites = JSON.parse(
@@ -168,6 +170,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "This invite link has expired" }, { status: 410 });
       }
 
+      decryptPii(invite, ["email", "name"]);
       return NextResponse.json({
         valid: true,
         email: invite.email,
@@ -195,22 +198,25 @@ export async function GET(request: NextRequest) {
 
     // Compute status for each
     const now = new Date();
-    const enriched = invites.map((inv: any) => ({
-      id: inv._id?.toString() || inv.id,
-      email: inv.email,
-      name: inv.name,
-      permissions: inv.permissions,
-      token: inv.token,
-      used: inv.used,
-      usedAt: inv.usedAt,
-      expiresAt: inv.expiresAt,
-      createdAt: inv.createdAt,
-      status: inv.used
-        ? "accepted"
-        : new Date(inv.expiresAt) < now
-        ? "expired"
-        : "pending",
-    }));
+    const enriched = invites.map((inv: any) => {
+      decryptPii(inv, ["email", "name"]);
+      return {
+        id: inv._id?.toString() || inv.id,
+        email: inv.email,
+        name: inv.name,
+        permissions: inv.permissions,
+        token: inv.token,
+        used: inv.used,
+        usedAt: inv.usedAt,
+        expiresAt: inv.expiresAt,
+        createdAt: inv.createdAt,
+        status: inv.used
+          ? "accepted"
+          : new Date(inv.expiresAt) < now
+          ? "expired"
+          : "pending",
+      };
+    });
 
     return NextResponse.json({ invites: enriched });
   } catch (error: any) {

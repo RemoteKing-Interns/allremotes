@@ -3,7 +3,7 @@ import { getDb, mongoEnabled } from "@/lib/mongo";
 import { parseCsvText, rowsToRecords, upsertProductsFromCsvRecords } from "@/lib/products-import";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

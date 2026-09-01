@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as OTPAuth from "otpauth";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import crypto from "crypto";
+import { emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     if (mongoEnabled()) {
       const db = await getDb();
-      adminUser = await db.collection("admin_users").findOne({ email });
+      adminUser = await db.collection("admin_users").findOne({ $or: [{ emailHash: emailHash(email) }, { email }] });
     } else {
       const adminUsers = JSON.parse(
         (typeof localStorage !== "undefined" && localStorage.getItem("admin_users")) || "[]"

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://allremotesrk.vercel.app",
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
   "Access-Control-Allow-Methods": "GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -38,6 +39,7 @@ export async function GET(
         { status: 404, headers: CORS_HEADERS }
       );
     }
+    decryptPii(order, PII_FIELDS.order);
     return NextResponse.json({ ok: true, order }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(

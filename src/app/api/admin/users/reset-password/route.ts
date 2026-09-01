@@ -3,6 +3,7 @@ import { mongoEnabled, getDb } from "@/lib/mongo";
 import { serverLogger } from "@/lib/server-logger";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/email";
+import { decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
     if (!targetUser) {
       return NextResponse.json({ error: "Admin user not found" }, { status: 404 });
     }
+
+    decryptPii(targetUser, PII_FIELDS.user);
 
     const resetToken = generateResetToken();
     const hashedToken = hashToken(resetToken);

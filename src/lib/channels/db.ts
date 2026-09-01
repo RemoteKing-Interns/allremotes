@@ -5,6 +5,7 @@ import { amazonAdapter } from "./amazon";
 import type { ChannelCredentials, Marketplace, MarketplaceAccount, ChannelListing, ChannelOrder } from "./core";
 import { eBayAdapter } from "./ebay";
 import { temuAdapter } from "./temu";
+import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 function getAdapter(channel: Marketplace) {
   switch (channel) {
@@ -84,9 +85,13 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
   if (!mongoEnabled()) return;
   const db = await getDb();
   const now = new Date().toISOString();
+
+  // Encrypt PII in the channel order before storing
+  const encryptedOrder = encryptPii({ ...order }, PII_FIELDS.order);
+
   await db.collection(ORDERS_COLLECTION).updateOne(
-    { orderId: order.orderId },
-    { $set: { ...order, updatedAt: now } },
+    { orderId: encryptedOrder.orderId },
+    { $set: { ...encryptedOrder, updatedAt: now } },
     { upsert: true }
   );
 
@@ -95,25 +100,26 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
   // alongside site orders. Fields owned by the channel are always refreshed;
   // status/createdAt are only set on first insert so local admin changes
   // (e.g. marking shipped) aren't clobbered on resync.
-  const id = `${order.channel.toUpperCase()}-${order.externalOrderId}`;
+  const id = `${encryptedOrder.channel.toUpperCase()}-${encryptedOrder.externalOrderId}`;
+  const customerEmailHash = order.customer?.email ? emailHash(order.customer.email) : undefined;
   await db.collection("orders").updateOne(
     { id },
     {
       $set: {
-        channel: order.channel,
-        externalOrderId: order.externalOrderId,
-        externalStatus: order.externalStatus,
-        customer: order.customer,
-        shipping: order.shipping,
-        items: order.items,
-        pricing: order.pricing,
-        shippingNote: order.shippingNote,
+        channel: encryptedOrder.channel,
+        externalOrderId: encryptedOrder.externalOrderId,
+        externalStatus: encryptedOrder.externalStatus,
+        customer: { ...encryptedOrder.customer, ...(customerEmailHash ? { emailHash: customerEmailHash } : {}) },
+        shipping: encryptedOrder.shipping,
+        items: encryptedOrder.items,
+        pricing: encryptedOrder.pricing,
+        shippingNote: encryptedOrder.shippingNote,
         updatedAt: now,
       },
       $setOnInsert: {
         id,
-        status: order.status,
-        createdAt: order.createdAt,
+        status: encryptedOrder.status,
+        createdAt: encryptedOrder.createdAt,
       },
     },
     { upsert: true }
@@ -123,12 +129,13 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
 export async function getChannelOrders(channel: Marketplace, limit = 100): Promise<ChannelOrder[]> {
   if (!mongoEnabled()) return [];
   const db = await getDb();
-  return db
+  const orders = await db
     .collection(ORDERS_COLLECTION)
     .find({ channel })
     .sort({ createdAt: -1 })
     .limit(limit)
-    .toArray() as unknown as Promise<ChannelOrder[]>;
+    .toArray() as unknown as ChannelOrder[];
+  return decryptPiiArray(orders, PII_FIELDS.order);
 }
 
 export async function getValidCredentials(channel: Marketplace): Promise<ChannelCredentials> {

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
       const col = db.collection("orders");
       const order = await col.findOne({ id });
       if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      decryptPii(order, PII_FIELDS.order);
       return NextResponse.json(order);
     }
 
@@ -76,6 +78,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
       const updated = (rawRes as any)?.value !== undefined ? (rawRes as any).value : rawRes;
       if (!updated) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      decryptPii(updated, PII_FIELDS.order);
       return NextResponse.json(updated);
     }
 

@@ -1,5 +1,7 @@
 const STARSHIPIT_BASE = "https://api.starshipit.com";
 
+import { decryptPii, PII_FIELDS } from "./pii-crypto";
+
 function starshipitHeaders() {
   const apiKey = process.env.STARSHIPIT_API_KEY;
   const subscriptionKey = process.env.STARSHIPIT_SUBSCRIPTION_KEY;
@@ -227,6 +229,9 @@ export async function pushOrderToStarshipit(
   if (existing) {
     return { order: existing, created: false, alreadyExists: true };
   }
+
+  // Decrypt PII before using customer/shipping fields
+  decryptPii(order, PII_FIELDS.order);
 
   const customer = order.customer || {};
   const shipping = order.shipping || {};

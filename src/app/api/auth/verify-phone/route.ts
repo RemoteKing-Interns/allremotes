@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import crypto from 'crypto';
 import { sendSms, isSmsConfigured } from '../../../../lib/sms';
+import { emailHash } from '@/lib/pii-crypto';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     // If email provided, store OTP against user
     if (email) {
       await usersCollection.updateOne(
-        { email: email.toLowerCase() },
+        { $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }] },
         {
           $set: {
             phoneOtp: hashedOTP,
@@ -138,7 +139,7 @@ export async function PUT(request: Request) {
     // Check if user exists with this phone verification
     if (email) {
       userRecord = await usersCollection.findOne({
-        email: email.toLowerCase(),
+        $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
         phoneOtp: hashedOTP,
         tempPhone: formattedPhone,
       });
@@ -179,7 +180,7 @@ export async function PUT(request: Request) {
     // Update user record with verified phone
     if (email && userRecord) {
       await usersCollection.updateOne(
-        { email: email.toLowerCase() },
+        { $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }] },
         {
           $set: {
             phone: formattedPhone,

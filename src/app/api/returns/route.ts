@@ -3,6 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { sendEmail } from "@/lib/email";
+import { encrypt, encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
 
 const ADMIN_EMAIL = 'shane@allremotes.com.au';
 
@@ -25,6 +26,7 @@ export type ReturnRequest = {
   orderId: string;
   orderDate: string;
   customerEmail: string;
+  customerEmailHash?: string;
   customerName: string;
   items: Array<{
     productId: string;
@@ -97,10 +99,11 @@ export async function GET(request: Request) {
       const db = await getDb();
       const col = db.collection<ReturnRequest>("returns");
       const query: Record<string, any> = {};
-      if (email) query.customerEmail = email;
+      if (email) query.customerEmailHash = emailHash(email);
       if (orderId) query.orderId = orderId;
       if (status) query.status = status;
       returns = await col.find(query).sort({ createdAt: -1 }).toArray() as ReturnRequest[];
+      returns = decryptPiiArray(returns, ["customerEmail", "customerName"]) as ReturnRequest[];
     } else {
       returns = readReturnsFile();
       if (email) returns = returns.filter((r) => r.customerEmail === email);
@@ -154,8 +157,9 @@ export async function POST(request: Request) {
       id: await makeReturnId(),
       orderId,
       orderDate: orderDate || now,
-      customerEmail,
-      customerName: customerName || "",
+      customerEmail: encrypt(customerEmail),
+      customerEmailHash: emailHash(customerEmail),
+      customerName: encrypt(customerName || ""),
       items: Array.isArray(items) ? items : [],
       reason,
       reasonDetails: reasonDetails || "",
@@ -275,7 +279,7 @@ export async function POST(request: Request) {
       `,
     }).catch((err) => console.error('[Returns] Failed to send customer email:', err));
 
-    return NextResponse.json(returnRequest, { headers: CORS_HEADERS });
+    return NextResponse.json({ ...returnRequest, customerEmail, customerName: customerName || "" }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to create return request", details: err?.message || String(err) },

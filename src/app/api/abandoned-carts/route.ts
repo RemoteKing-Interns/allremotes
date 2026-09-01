@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { encrypt, decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
 
     if (search) {
       query.$or = [
-        { email: { $regex: search, $options: "i" } },
+        { emailHash: emailHash(search) },
         { userId: { $regex: search, $options: "i" } },
         { "items.name": { $regex: search, $options: "i" } },
         { "items.id": { $regex: search, $options: "i" } }
@@ -45,7 +46,8 @@ export async function GET(request: Request) {
       .sort({ lastActivity: -1 })
       .toArray();
 
-    return NextResponse.json({ carts: abandonedCarts });
+    const decryptedCarts = decryptPiiArray(abandonedCarts, ["email"]);
+    return NextResponse.json({ carts: decryptedCarts });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to load abandoned carts", details: err?.message || String(err) },

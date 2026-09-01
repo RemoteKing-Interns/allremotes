@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { sendReviewRequestEmail } from "@/lib/email";
+import { decryptPii, PII_FIELDS } from "@/lib/pii-crypto";
 import fs from "fs";
 import path from "path";
 
@@ -39,6 +40,8 @@ export async function POST(request: Request) {
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    decryptPii(order, PII_FIELDS.order);
 
     const customerEmail = order.customer?.email;
     const customerName = order.customer?.fullName || order.customer?.name || "Customer";
