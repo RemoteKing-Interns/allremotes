@@ -74,9 +74,18 @@ export default function CustomerManagement() {
   const [filters, setFilters] = useState({
     status: "",
     search: "",
+    channel: "",
+    tier: "",
+    state: "",
+    minSpent: "",
+    maxSpent: "",
+    dateFrom: "",
+    dateTo: "",
+    returningOnly: false,
   });
-  const [sortBy, setSortBy] = useState<'totalSpent' | 'totalOrders' | 'lastOrderDate' | 'name'>('totalSpent');
+  const [sortBy, setSortBy] = useState<'totalSpent' | 'totalOrders' | 'lastOrderDate' | 'firstOrderDate' | 'name' | 'avgOrderValue'>('totalSpent');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -193,18 +202,32 @@ export default function CustomerManagement() {
     }
   };
 
-  const handleDelete = async (customerId: string) => {
-    if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) return;
-    
+  const handleDelete = async (customer: Customer) => {
+    const orderCount = customer.totalOrders || 0;
+    const msg = orderCount > 0
+      ? `Delete ${customer.name}?\n\nThis will permanently delete ${orderCount} order(s) and all related data. This cannot be undone.`
+      : `Delete ${customer.name}?\n\nThis action cannot be undone.`;
+    if (!confirm(msg)) return;
+
     try {
-      const response = await fetch(`/api/admin/customers?id=${customerId}`, {
+      const params = new URLSearchParams();
+      if (customer.email) {
+        params.set("email", customer.email);
+      } else if (customer._id) {
+        params.set("key", String(customer._id));
+      } else {
+        toast.error("Cannot identify customer for deletion");
+        return;
+      }
+
+      const response = await fetch(`/api/admin/customers?${params}`, {
         method: "DELETE",
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
-        toast.success("Customer deleted successfully");
+        toast.success(data.message || "Customer deleted successfully");
         fetchCustomers();
       } else {
         toast.error(data.error || "Failed to delete customer");
@@ -248,26 +271,64 @@ export default function CustomerManagement() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = !filters.search || 
-      customer.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      customer.email.toLowerCase().includes(filters.search.toLowerCase()) ||
+    const q = filters.search.toLowerCase();
+    const matchesSearch = !q || 
+      customer.name.toLowerCase().includes(q) ||
+      customer.email.toLowerCase().includes(q) ||
+      (customer.username || '').toLowerCase().includes(q) ||
       (customer.phone || '').includes(filters.search);
     
     const matchesStatus = !filters.status || customer.status === filters.status;
+    const matchesChannel = !filters.channel || (customer.channels || []).includes(filters.channel);
+    const matchesTier = !filters.tier || 
+      (filters.tier === 'gold' && customer.totalSpent > 500) ||
+      (filters.tier === 'silver' && customer.totalSpent > 100 && customer.totalSpent <= 500) ||
+      (filters.tier === 'bronze' && customer.totalSpent <= 100);
+    const matchesState = !filters.state || (customer.address?.state || '').toLowerCase() === filters.state.toLowerCase();
+    const matchesMinSpent = !filters.minSpent || customer.totalSpent >= parseFloat(filters.minSpent);
+    const matchesMaxSpent = !filters.maxSpent || customer.totalSpent <= parseFloat(filters.maxSpent);
+    const matchesReturning = !filters.returningOnly || customer.totalOrders > 1;
+    const matchesDateFrom = !filters.dateFrom || 
+      (customer.lastOrderDate && new Date(customer.lastOrderDate) >= new Date(filters.dateFrom));
+    const matchesDateTo = !filters.dateTo || 
+      (customer.lastOrderDate && new Date(customer.lastOrderDate) <= new Date(filters.dateTo + 'T23:59:59'));
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesChannel && matchesTier && 
+           matchesState && matchesMinSpent && matchesMaxSpent && matchesReturning &&
+           matchesDateFrom && matchesDateTo;
   }).sort((a, b) => {
     let cmp = 0;
     if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
     else if (sortBy === 'totalSpent') cmp = a.totalSpent - b.totalSpent;
     else if (sortBy === 'totalOrders') cmp = a.totalOrders - b.totalOrders;
-    else if (sortBy === 'lastOrderDate') {
-      const aDate = a.lastOrderDate ? new Date(a.lastOrderDate).getTime() : 0;
-      const bDate = b.lastOrderDate ? new Date(b.lastOrderDate).getTime() : 0;
+    else if (sortBy === 'avgOrderValue') {
+      const aAvg = a.totalOrders > 0 ? a.totalSpent / a.totalOrders : 0;
+      const bAvg = b.totalOrders > 0 ? b.totalSpent / b.totalOrders : 0;
+      cmp = aAvg - bAvg;
+    } else if (sortBy === 'lastOrderDate' || sortBy === 'firstOrderDate') {
+      const dateField = sortBy === 'lastOrderDate' ? a.lastOrderDate : a.firstOrderDate;
+      const bField = sortBy === 'lastOrderDate' ? b.lastOrderDate : b.firstOrderDate;
+      const aDate = dateField ? new Date(dateField).getTime() : 0;
+      const bDate = bField ? new Date(bField).getTime() : 0;
       cmp = aDate - bDate;
     }
     return sortDir === 'asc' ? cmp : -cmp;
   });
+
+  // Derive unique states and channels for filter dropdowns
+  const availableStates = useMemo(() => 
+    [...new Set(customers.map(c => c.address?.state).filter(Boolean) as string[])].sort(),
+    [customers]
+  );
+  const availableChannels = useMemo(() => 
+    [...new Set(customers.flatMap(c => c.channels || []))].sort(),
+    [customers]
+  );
+  const activeFilterCount = (filters.search ? 1 : 0) +
+    (filters.channel ? 1 : 0) + (filters.tier ? 1 : 0) + (filters.state ? 1 : 0) +
+    (filters.minSpent ? 1 : 0) + (filters.maxSpent ? 1 : 0) +
+    (filters.dateFrom ? 1 : 0) + (filters.dateTo ? 1 : 0) +
+    (filters.returningOnly ? 1 : 0) + (filters.status ? 1 : 0);
 
   const handleSort = (col: typeof sortBy) => {
     if (sortBy === col) {
@@ -426,13 +487,14 @@ export default function CustomerManagement() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Search by name, email, or phone..."
+                placeholder="Search name, email, username, phone..."
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 className="w-full pl-10 pr-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
@@ -440,25 +502,156 @@ export default function CustomerManagement() {
             </div>
           </div>
           
-          <div>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="banned">Banned</option>
-            </select>
-          </div>
+          {/* Channel filter */}
+          <select
+            value={filters.channel}
+            onChange={(e) => setFilters(prev => ({ ...prev, channel: e.target.value }))}
+            className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+          >
+            <option value="">All Channels</option>
+            {availableChannels.map(ch => (
+              <option key={ch} value={ch}>{ch.charAt(0).toUpperCase() + ch.slice(1)}</option>
+            ))}
+          </select>
 
+          {/* Tier filter */}
+          <select
+            value={filters.tier}
+            onChange={(e) => setFilters(prev => ({ ...prev, tier: e.target.value }))}
+            className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+          >
+            <option value="">All Tiers</option>
+            <option value="gold">Gold ($500+)</option>
+            <option value="silver">Silver ($100-500)</option>
+            <option value="bronze">Bronze (&lt;$100)</option>
+          </select>
+
+          {/* State filter */}
+          <select
+            value={filters.state}
+            onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
+            className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+          >
+            <option value="">All States</option>
+            {availableStates.map(st => (
+              <option key={st} value={st}>{st}</option>
+            ))}
+          </select>
+
+          {/* Advanced toggle */}
           <button
-            onClick={() => setFilters({ status: "", search: "" })}
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`px-3 py-2 text-sm rounded-lg border transition-colors flex items-center gap-1.5 ${
+              showAdvancedFilters || activeFilterCount > 3
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50'
+            }`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Advanced
+            {activeFilterCount > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* Clear */}
+          <button
+            onClick={() => setFilters({ status: "", search: "", channel: "", tier: "", state: "", minSpent: "", maxSpent: "", dateFrom: "", dateTo: "", returningOnly: false })}
             className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-800"
           >
             Clear
           </button>
+        </div>
+
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="mt-4 pt-4 border-t border-neutral-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Min spend */}
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Min Spent (AU$)</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={filters.minSpent}
+                onChange={(e) => setFilters(prev => ({ ...prev, minSpent: e.target.value }))}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              />
+            </div>
+            {/* Max spend */}
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Max Spent (AU$)</label>
+              <input
+                type="number"
+                placeholder="∞"
+                value={filters.maxSpent}
+                onChange={(e) => setFilters(prev => ({ ...prev, maxSpent: e.target.value }))}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              />
+            </div>
+            {/* Date from */}
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Last Order From</label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              />
+            </div>
+            {/* Date to */}
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1">Last Order To</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              />
+            </div>
+            {/* Returning only */}
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.returningOnly}
+                  onChange={(e) => setFilters(prev => ({ ...prev, returningOnly: e.target.checked }))}
+                  className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-neutral-700">Returning customers only (2+ orders)</span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Result count */}
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-neutral-500">
+            Showing <span className="font-semibold text-neutral-900">{filteredCustomers.length}</span> of {customers.length} customers
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-400">Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setSortDir('desc'); }}
+              className="px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="totalSpent">Total Spent</option>
+              <option value="totalOrders">Total Orders</option>
+              <option value="avgOrderValue">Avg Order Value</option>
+              <option value="lastOrderDate">Last Order Date</option>
+              <option value="firstOrderDate">First Order Date</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+            <button
+              onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="px-2 py-1 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50"
+              title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDir === 'asc' ? '↑ Asc' : '↓ Desc'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -483,8 +676,14 @@ export default function CustomerManagement() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-neutral-700" onClick={() => handleSort('totalSpent')}>
                   <span className="inline-flex items-center gap-1">Total Spent {sortBy === 'totalSpent' && (sortDir === 'asc' ? '↑' : '↓')}</span>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-neutral-700" onClick={() => handleSort('avgOrderValue')}>
+                  <span className="inline-flex items-center gap-1">Avg Order {sortBy === 'avgOrderValue' && (sortDir === 'asc' ? '↑' : '↓')}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-neutral-700" onClick={() => handleSort('lastOrderDate')}>
                   <span className="inline-flex items-center gap-1">Last Order {sortBy === 'lastOrderDate' && (sortDir === 'asc' ? '↑' : '↓')}</span>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-neutral-700" onClick={() => handleSort('firstOrderDate')}>
+                  <span className="inline-flex items-center gap-1">First Order {sortBy === 'firstOrderDate' && (sortDir === 'asc' ? '↑' : '↓')}</span>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                   Tier
@@ -550,6 +749,9 @@ export default function CustomerManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-neutral-900">
                       ${customer.totalSpent.toFixed(2)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                      ${customer.totalOrders > 0 ? (customer.totalSpent / customer.totalOrders).toFixed(2) : '0.00'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
                       {customer.lastOrderDate ? (
                         <div className="flex items-center">
@@ -559,6 +761,9 @@ export default function CustomerManagement() {
                       ) : (
                         <span className="text-neutral-400">—</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-400">
+                      {customer.firstOrderDate ? new Date(customer.firstOrderDate).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${tierConfig[tier].color}`}>
@@ -582,7 +787,7 @@ export default function CustomerManagement() {
                         <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(customer._id || customer.id!)}
+                        onClick={() => handleDelete(customer)}
                         className="text-red-600 hover:text-red-900"
                         title="Delete Customer"
                       >
@@ -1140,6 +1345,19 @@ export default function CustomerManagement() {
                 className="flex-1 px-4 py-2.5 text-neutral-600 hover:text-neutral-800 border border-neutral-300 rounded-lg transition-colors"
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedCustomer) {
+                    setShowViewModal(false);
+                    setSelectedCustomer(null);
+                    handleDelete(selectedCustomer);
+                  }
+                }}
+                className="px-4 py-2.5 text-red-600 hover:text-red-700 border border-red-300 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
               </button>
               <button
                 onClick={() => { setShowViewModal(false); openEditModal(selectedCustomer); }}

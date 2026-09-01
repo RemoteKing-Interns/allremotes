@@ -296,49 +296,59 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// Delete customer
+// Delete customer and all their orders
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const email = searchParams.get("email");
+    const customerKey = searchParams.get("key");
+    const deleteOrders = searchParams.get("deleteOrders") !== "false"; // default true
 
-    if (!id) {
+    if (!email && !customerKey) {
       return NextResponse.json(
-        { error: "Customer ID is required" },
+        { error: "Customer email or key is required" },
         { status: 400 }
       );
     }
 
     if (!mongoEnabled()) {
-      // Fallback to localStorage for development
-      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const filteredCustomers = customers.filter(u => u.id !== id);
-      
-      if (customers.length === filteredCustomers.length) {
-        return NextResponse.json(
-          { error: "Customer not found" },
-          { status: 404 }
-        );
-      }
-
-      localStorage.setItem('customers', JSON.stringify(filteredCustomers));
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, deletedOrders: 0 });
     }
 
     const db = await getDb();
-    const collection = db.collection("customers");
+    const ordersCol = db.collection("orders");
 
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
-
-    if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 }
-      );
+    // Build query: match by email, or by username key (for channel customers without email)
+    let query: any;
+    if (email) {
+      query = { "customer.email": email };
+    } else if (customerKey?.startsWith("username:")) {
+      const username = customerKey.replace("username:", "");
+      query = { "customer.username": { $regex: new RegExp(`^${username}$`, "i") } };
+    } else {
+      query = { "customer.email": customerKey };
     }
 
-    await serverLogger.warn('customer_deleted', { id });
-    return NextResponse.json({ success: true });
+    // Count matching orders first
+    const orderCount = await ordersCol.countDocuments(query);
+
+    if (deleteOrders) {
+      // Delete all orders for this customer
+      const result = await ordersCol.deleteMany(query);
+      await serverLogger.warn('customer_deleted', { email: email || customerKey, deletedOrders: result.deletedCount });
+      return NextResponse.json({
+        success: true,
+        deletedOrders: result.deletedCount,
+        message: `Deleted ${result.deletedCount} order(s) for this customer`,
+      });
+    } else {
+      // Just return the count without deleting
+      return NextResponse.json({
+        success: true,
+        orderCount,
+        message: `Found ${orderCount} order(s) for this customer`,
+      });
+    }
   } catch (error: any) {
     console.error("Error deleting customer:", error);
     return NextResponse.json(
