@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
+import { useStore } from "../../../context/StoreContext";
 import { generateProductSlugUrl } from "../../../lib/product-slugs";
 
 const Cart = () => {
@@ -20,14 +21,31 @@ const Cart = () => {
     getItemPriceBreakdown,
     getItemLineTotal,
     clearCart,
+    addToCart,
   } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { getProducts } = useStore();
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const isModalOpen = Boolean(selectedItem);
   const isAnyModalOpen = isModalOpen || showCheckoutModal;
   const totalItems = cart.reduce((count, item) => count + Number(item.quantity || 0), 0);
+  const autoAddDone = useRef(false);
+
+  useEffect(() => {
+    if (autoAddDone.current) return;
+    const addId = searchParams.get("add");
+    if (!addId) return;
+    const products = getProducts() || [];
+    const product = products.find((p) => String(p.id) === String(addId));
+    if (product) {
+      addToCart(product, 1);
+      autoAddDone.current = true;
+      router.replace("/cart");
+    }
+  }, [searchParams, getProducts, addToCart, router]);
 
   useEffect(() => {
     if (!isAnyModalOpen) return;
@@ -515,4 +533,10 @@ const Cart = () => {
   );
 };
 
-export default Cart;
+export default function CartPage() {
+  return (
+    <Suspense fallback={<div className="container py-20 text-center text-neutral-500">Loading cart…</div>}>
+      <Cart />
+    </Suspense>
+  );
+}

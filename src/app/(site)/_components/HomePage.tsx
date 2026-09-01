@@ -91,6 +91,18 @@ const DEFAULT_HERO_IMAGES = [
   "/slider/9.png",
 ];
 
+const DEFAULT_HERO_IMAGES_MOBILE = [
+  "/slider/mobile/1.jpg",
+  "/slider/mobile/2.jpg",
+  "/slider/mobile/3.jpg",
+  "/slider/mobile/4.jpg",
+  "/slider/mobile/5.jpg",
+  "/slider/mobile/6.jpg",
+  "/slider/mobile/7.jpg",
+  "/slider/mobile/8.jpg",
+  "/slider/mobile/9.jpg",
+];
+
 const DEFAULT_FEATURES = [
   {
     icon: "GG",
@@ -201,6 +213,15 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -215,13 +236,12 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
   const home = mounted ? getHomeContent() : null;
 
   const heroImages = useMemo(() => {
-    // Always prefer the public/slider folder images
-    const raw = DEFAULT_HERO_IMAGES;
-    const filtered = raw.filter(
+    const baseSet = isMobile ? DEFAULT_HERO_IMAGES_MOBILE : DEFAULT_HERO_IMAGES;
+    const filtered = baseSet.filter(
       (img: any) => img && typeof img === "string" && img.trim().length > 0 && !brokenImages.has(String(img))
     );
-    return filtered.length > 0 ? filtered : DEFAULT_HERO_IMAGES;
-  }, [brokenImages]);
+    return filtered.length > 0 ? filtered : baseSet;
+  }, [brokenImages, isMobile]);
 
   useEffect(() => {
     if (!heroImages.length || isDragging) return;

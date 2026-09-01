@@ -241,6 +241,7 @@ async function generateProductXml(product: Product): Promise<string> {
     <g:identifier_exists>${identifierExists}</g:identifier_exists>
     <g:excluded_destination>local_inventory_ads</g:excluded_destination>
     <g:excluded_destination>free_local_listings</g:excluded_destination>
+    <g:checkout_link_template>${escapeXml(`${BASE_URL}/cart?add=${product.id}`)}</g:checkout_link_template>
     ${shipping}
   </item>`;
 }
