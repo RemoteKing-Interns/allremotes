@@ -6,6 +6,7 @@ frontend:
         - npm ci
     build:
       commands:
+        - env | grep -E '^(MONGODB_|PII_|S3_|APPLE_|STRIPE_|SMTP_|EMAIL_|CLICKSEND_|UNLEASHED_|PICKOPS_|STARSHIPIT_|CHANNEL_|EBAY_|AMAZON_|TEMU_|ALIEXPRESS_|AGNES_|GSC_|ALLOW_|NEXT_PUBLIC_)' >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
