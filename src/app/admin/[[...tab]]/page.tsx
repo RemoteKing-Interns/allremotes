@@ -1682,6 +1682,75 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         </div>
       </div>
 
+      {/* Order Stats Summary */}
+      {!loading && orders.length > 0 && (
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {(() => {
+            const totalRevenue = orders.reduce((sum: number, o: any) => sum + Number(o?.pricing?.total || 0), 0);
+            const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+            const pending = orders.filter((o: any) => !o.status || o.status === 'processing').length;
+            const shipped = orders.filter((o: any) => o.status === 'shipped').length;
+            const delivered = orders.filter((o: any) => o.status === 'delivered' || o.status === 'customer_received').length;
+            const ebayCount = orders.filter((o: any) => o.channel === 'ebay').length;
+            const webCount = orders.length - ebayCount;
+            return [
+              { label: 'Total Orders', value: orders.length, icon: '📦', color: 'text-blue-600 bg-blue-50' },
+              { label: 'Total Revenue', value: `AU$${totalRevenue.toFixed(2)}`, icon: '💰', color: 'text-emerald-600 bg-emerald-50' },
+              { label: 'Avg Order Value', value: `AU$${avgOrderValue.toFixed(2)}`, icon: '📊', color: 'text-amber-600 bg-amber-50' },
+              { label: 'Pending', value: pending, icon: '⏳', color: 'text-orange-600 bg-orange-50' },
+              { label: 'Shipped', value: shipped, icon: '🚚', color: 'text-sky-600 bg-sky-50' },
+              { label: 'Delivered', value: delivered, icon: '✅', color: 'text-green-600 bg-green-50' },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl border border-neutral-200 p-4">
+                <div className={`inline-flex items-center justify-center h-9 w-9 rounded-lg ${stat.color} mb-3 text-lg`}>
+                  {stat.icon}
+                </div>
+                <p className="text-2xl font-bold text-neutral-900">{stat.value}</p>
+                <p className="text-xs text-neutral-500 mt-1">{stat.label}</p>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {/* Channel split + quick insights */}
+      {!loading && orders.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-3">
+          {(() => {
+            const ebayCount = orders.filter((o: any) => o.channel === 'ebay').length;
+            const webCount = orders.length - ebayCount;
+            const trackedCount = orders.filter((o: any) => {
+              const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
+              return sm === 'tracked' || sm === 'express';
+            }).length;
+            const untrackedCount = orders.length - trackedCount;
+            const uniqueCustomers = new Set(orders.map((o: any) => o?.customer?.email).filter(Boolean)).size;
+            return (
+              <>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-sm">
+                  <span className="font-semibold text-neutral-900">{uniqueCustomers}</span>
+                  <span className="text-neutral-500">unique customers</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-sm">
+                  <span className="font-semibold text-blue-600">{webCount}</span>
+                  <span className="text-neutral-500">website</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="font-semibold text-yellow-600">{ebayCount}</span>
+                  <span className="text-neutral-500">eBay</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-sm">
+                  <span className="font-semibold text-blue-600">{trackedCount}</span>
+                  <span className="text-neutral-500">tracked</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="font-semibold text-slate-600">{untrackedCount}</span>
+                  <span className="text-neutral-500">untracked</span>
+                </span>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
       <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">
         <strong>Grouping:</strong> Orders are grouped from 12PM to 12PM (noon to noon)
       </div>
@@ -1721,6 +1790,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   <div className="sticky top-0 z-10 bg-neutral-100/80 backdrop-blur-sm border-b border-neutral-200 px-6 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <h3 className="text-sm font-bold text-neutral-700 shrink-0">{groupLabel}</h3>
+                      <span className="text-xs text-neutral-500 shrink-0">
+                        {groupOrders.length} order{groupOrders.length !== 1 ? 's' : ''} · AU${groupOrders.reduce((sum: number, o: any) => sum + Number(o?.pricing?.total || 0), 0).toFixed(2)}
+                      </span>
                       {/* Unleashed order number badge — shown once available */}
                       {pushState?.unleashedOrderNumber && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">

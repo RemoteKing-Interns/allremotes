@@ -16,6 +16,7 @@ const policyItems = [
 
 const supportItems = [
   { href: "/support", label: "Support Center" },
+  { href: "/blog", label: "Guides & Blog" },
   { href: "/contact", label: "Contact Us" },
   { href: "mailto:shane@allremotes.com.au", label: "shane@allremotes.com.au" },
 ];

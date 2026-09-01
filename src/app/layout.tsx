@@ -16,9 +16,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title:
-    "ALLREMOTES | Garage, Gate & Home Remotes",
+    "Garage Door Remotes & Gate Remotes Australia | ALLREMOTES",
   description:
-    "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+    "Buy replacement garage door remotes, gate remotes and access control products online. Compatible remotes for Merlin, ATA, B&D, Chamberlain & more. Fast shipping Australia-wide, 30-day returns, 12-month warranty.",
   keywords: [
     "garage door remote",
     "gate remote",
@@ -44,31 +44,31 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     title:
-      "ALLREMOTES | Garage, Gate & Home Remotes",
+      "Garage Door Remotes & Gate Remotes Australia | ALLREMOTES",
     description:
-      "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+      "Buy replacement garage door remotes, gate remotes and access control products online. Compatible remotes for Merlin, ATA, B&D, Chamberlain & more. Fast shipping Australia-wide, 30-day returns, 12-month warranty.",
     url: "/",
     images: [
       {
-        url: "/images/3.jpg",
-        width: 1000,
-        height: 667,
-        alt: "ALLREMOTES Australia - garage door and gate remotes, motors and accessories",
+        url: "/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ALLREMOTES Australia - Garage Door Remotes & Gate Remotes",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title:
-      "ALLREMOTES | Garage, Gate & Home Remotes",
+      "Garage Door Remotes & Gate Remotes Australia | ALLREMOTES",
     description:
-      "Shop replacement garage door remotes, gate remotes, home automation remotes, keyless entry and accessories at ALLREMOTES Australia. Fast shipping and expert support.",
+      "Buy replacement garage door remotes, gate remotes and access control products online. Compatible remotes for Merlin, ATA, B&D, Chamberlain & more. Fast shipping Australia-wide, 30-day returns, 12-month warranty.",
     images: [
       {
-        url: "/images/3.jpg",
-        width: 1000,
-        height: 667,
-        alt: "ALLREMOTES Australia - garage door and gate remotes, motors and accessories",
+        url: "/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ALLREMOTES Australia - Garage Door Remotes & Gate Remotes",
       },
     ],
   },
@@ -101,7 +101,7 @@ const structuredData = [
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/favicon.png`,
-    image: `${SITE_URL}/images/3.jpg`,
+    image: `${SITE_URL}/images/og-image.png`,
     telephone: "+61 3 9999 9999",
     email: "shane@allremotes.com.au",
     address: {

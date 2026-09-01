@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     url: "/register",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Register | ALLREMOTES Australia",
     description:
       "Create a free ALLREMOTES Australia account to save order details, checkout faster and manage garage, gate and car remote purchases.",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
 };
 

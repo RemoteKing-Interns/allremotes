@@ -148,6 +148,19 @@ const NavBar = ({
                 Support
               </Link>
 
+              {/* Blog */}
+              <Link
+                href="/blog"
+                onClick={handleMobileLinkClick}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  isRouteActive("/blog")
+                    ? "bg-accent/10 text-accent-dark"
+                    : "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
+                }`}
+              >
+                Blog
+              </Link>
+
               {/* Contact */}
               <Link
                 href="/contact"
@@ -303,6 +316,16 @@ const NavBar = ({
                 Shop By Brand
               </Link>
 
+              {/* Blog */}
+              <Link
+                href="/blog"
+                className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  isRouteActive('/blog') ? 'bg-accent/10 text-accent-dark' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                }`}
+              >
+                Blog
+              </Link>
+
               {/* Support dropdown */}
               <div className="relative">
                 <button
@@ -325,6 +348,7 @@ const NavBar = ({
                         { name: 'Contact Us', path: '/contact' },
                         { name: 'Return Policy', path: '/return-policy' },
                         { name: 'FAQ', path: '/support/faq' },
+                      { name: 'Guides & Blog', path: '/blog' },
                       ].map((item, idx) => (
                         <Link
                           key={idx}

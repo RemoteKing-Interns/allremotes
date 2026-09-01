@@ -7,19 +7,143 @@ import { ObjectId } from "mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Get all customers
+// Get all customers — derived from orders collection (all channels)
 export async function GET() {
   try {
     if (!mongoEnabled()) {
-      // Fallback to localStorage for development
-      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      return NextResponse.json({ customers });
+      return NextResponse.json({ customers: [], analytics: {} });
     }
 
     const db = await getDb();
-    const customers = await db.collection("customers").find({}).toArray();
-    
-    return NextResponse.json({ customers });
+    const ordersCol = db.collection("orders");
+
+    // Aggregate customers from orders by email (fallback to username for channels without email)
+    const pipeline = [
+      {
+        $match: {
+          $or: [
+            { "customer.email": { $exists: true, $nin: [null, ""] } },
+            { "customer.username": { $exists: true, $nin: [null, ""] } },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          customerKey: {
+            $ifNull: [
+              { $trim: { input: { $toLower: "$customer.email" } } },
+              { $concat: ["username:", { $toLower: { $ifNull: ["$customer.username", ""] } }] },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$customerKey",
+          name: { $first: { $ifNull: ["$customer.fullName", "$customer.username", "$customer.email"] } },
+          email: { $first: { $ifNull: ["$customer.email", ""] } },
+          username: { $first: { $ifNull: ["$customer.username", ""] } },
+          phone: { $first: { $ifNull: ["$shipping.phone", "$customer.phone"] } },
+          city: { $first: "$shipping.city" },
+          state: { $first: "$shipping.state" },
+          street: { $first: "$shipping.address" },
+          zip: { $first: "$shipping.zipCode" },
+          country: { $first: "$shipping.country" },
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: { $toDouble: { $ifNull: ["$pricing.total", 0] } } },
+          firstOrderDate: { $min: "$createdAt" },
+          lastOrderDate: { $max: "$createdAt" },
+          orderIds: { $push: "$id" },
+          channels: { $addToSet: { $ifNull: ["$channel", "website"] } },
+          channelOrders: {
+            $push: {
+              channel: { $ifNull: ["$channel", "website"] },
+              total: { $toDouble: { $ifNull: ["$pricing.total", 0] } },
+              orderId: "$id",
+              date: "$createdAt",
+            },
+          },
+        },
+      },
+      { $sort: { totalSpent: -1 } },
+    ];
+
+    const aggregated = await ordersCol.aggregate(pipeline).toArray();
+
+    // Build per-channel breakdown for each customer
+    const customers = aggregated.map((c: any) => {
+      const channelMap: Record<string, { orders: number; spent: number }> = {};
+      for (const co of c.channelOrders || []) {
+        const ch = co.channel || "website";
+        if (!channelMap[ch]) channelMap[ch] = { orders: 0, spent: 0 };
+        channelMap[ch].orders++;
+        channelMap[ch].spent += Number(co.total || 0);
+      }
+
+      return {
+        _id: c._id,
+        name: c.name || c.email || c.username || "Unknown",
+        email: c.email || "",
+        username: c.username || "",
+        phone: c.phone || "",
+        address: {
+          street: c.street || "",
+          city: c.city || "",
+          state: c.state || "",
+          zip: c.zip || "",
+          country: c.country || "Australia",
+        },
+        totalOrders: c.totalOrders,
+        totalSpent: Number(c.totalSpent || 0),
+        firstOrderDate: c.firstOrderDate,
+        lastOrderDate: c.lastOrderDate,
+        registrationDate: c.firstOrderDate,
+        orderIds: c.orderIds || [],
+        channels: c.channels || ["website"],
+        channelBreakdown: Object.entries(channelMap).map(([channel, data]) => ({
+          channel,
+          orders: data.orders,
+          spent: Number(data.spent.toFixed(2)),
+        })),
+        status: "active",
+        createdAt: c.firstOrderDate,
+        updatedAt: c.lastOrderDate,
+      };
+    });
+
+    // Build overall analytics
+    const channelSet = new Set<string>();
+    const channelRevenue: Record<string, number> = {};
+    const channelOrderCount: Record<string, number> = {};
+    for (const c of customers) {
+      for (const cb of c.channelBreakdown) {
+        channelSet.add(cb.channel);
+        channelRevenue[cb.channel] = (channelRevenue[cb.channel] || 0) + cb.spent;
+        channelOrderCount[cb.channel] = (channelOrderCount[cb.channel] || 0) + cb.orders;
+      }
+    }
+
+    const analytics = {
+      totalCustomers: customers.length,
+      totalRevenue: customers.reduce((s, c) => s + c.totalSpent, 0),
+      totalOrders: customers.reduce((s, c) => s + c.totalOrders, 0),
+      avgOrderValue: customers.length > 0
+        ? customers.reduce((s, c) => s + c.totalSpent, 0) / customers.reduce((s, c) => s + c.totalOrders, 0)
+        : 0,
+      returningCustomers: customers.filter(c => c.totalOrders > 1).length,
+      topCustomers: customers
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 5)
+        .map(c => ({ name: c.name, email: c.email, totalSpent: c.totalSpent, totalOrders: c.totalOrders, channels: c.channels })),
+      channelDistribution: Array.from(channelSet).map(ch => ({
+        channel: ch,
+        customers: customers.filter(c => c.channels.includes(ch)).length,
+        orders: channelOrderCount[ch] || 0,
+        revenue: Number((channelRevenue[ch] || 0).toFixed(2)),
+      })).sort((a, b) => b.revenue - a.revenue),
+    };
+
+    return NextResponse.json({ customers, analytics });
   } catch (error: any) {
     console.error("Error fetching customers:", error);
     return NextResponse.json(

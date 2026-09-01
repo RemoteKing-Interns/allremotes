@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getNavigationPaths, getPublicProducts } from "@/lib/public-site";
 import { getSiteUrl } from "@/lib/site-url";
 import { generateProductSlugUrl } from "@/lib/server-products";
+import { BLOG_POSTS } from "@/lib/blog-posts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,8 +45,16 @@ const STATIC_ROUTES = [
   "/garage-remotes-melbourne",
   "/garage-remotes-sydney",
   "/garage-remotes-brisbane",
+  "/garage-remotes-perth",
+  "/garage-remotes-adelaide",
+  "/garage-remotes-hobart",
+  "/garage-remotes-darwin",
+  "/garage-remotes-canberra",
   "/gate-remotes-perth",
   "/gate-remotes-adelaide",
+  "/gate-remotes-melbourne",
+  "/gate-remotes-sydney",
+  "/blog",
 ] as const;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -168,6 +177,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: navigationUpdatedAt,
       changeFrequency: "weekly",
       priority: 0.75,
+    });
+  });
+
+  BLOG_POSTS.forEach((post) => {
+    upsertEntry(entries, `/blog/${post.slug}`, {
+      lastModified: toDate(post.date),
+      changeFrequency: "monthly",
+      priority: 0.6,
     });
   });
 

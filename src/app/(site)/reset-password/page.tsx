@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     url: "/reset-password",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Reset Password | ALLREMOTES Australia",
     description:
       "Set a new password for your ALLREMOTES Australia account. Use the secure reset link sent to your email to regain access.",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
 };
 

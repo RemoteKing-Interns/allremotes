@@ -27,14 +27,14 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     url: "/products/all",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "All Remotes for Sale Australia | ALLREMOTES",
     description:
       "Browse all garage, gate, car and home remotes at ALLREMOTES Australia. Replacement remotes, motors and accessories with fast shipping and warranty.",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
 };
 

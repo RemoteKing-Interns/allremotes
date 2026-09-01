@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     locale: "en_AU",
     siteName: "ALLREMOTES Australia",
     url: "/verify-email",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Verify Email | ALLREMOTES Australia",
     description:
       "Verify your ALLREMOTES Australia email address to activate your account and start shopping garage, gate and car remotes.",
-    images: [{ url: "/images/3.jpg" }],
+    images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
   },
 };
 

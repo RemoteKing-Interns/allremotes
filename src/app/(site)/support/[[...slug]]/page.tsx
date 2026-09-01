@@ -359,13 +359,13 @@ export async function generateMetadata({
         locale: "en_AU",
         siteName: "ALLREMOTES Australia",
         url: canonical,
-        images: [{ url: "/images/3.jpg" }],
+        images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
       },
       twitter: {
         card: "summary_large_image",
         title: article.title,
         description: article.description,
-        images: [{ url: "/images/3.jpg" }],
+        images: [{ url: "/images/og-image.png", width: 1200, height: 630 }],
       },
     };
   }
