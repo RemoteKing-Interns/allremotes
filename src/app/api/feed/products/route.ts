@@ -257,7 +257,14 @@ export async function GET() {
 
     const db = await getDb();
     const col = db.collection("products");
-    const mongoProducts = await col.find({}).toArray();
+    const mongoProducts = await col.find({
+      $or: [
+        { status: "active" },
+        { status: { $exists: false } },
+        { status: null },
+        { status: "" },
+      ],
+    }).toArray();
     const productsArray = enrichProductsWithS3Images(mongoProducts);
     
     const filtered = productsArray.filter((p: Product) => p && p.id && p.price && !isBlockedProduct(p));

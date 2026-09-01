@@ -35,7 +35,7 @@ function mongoTroubleshootingHint(err: unknown) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!mongoEnabled()) {
       return NextResponse.json(
@@ -44,9 +44,20 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get("status") || "active";
+
     const db = await getDb();
     const col = db.collection("products");
-    let products: any[] = await col.find({}).toArray();
+    const query = statusFilter === "all" ? {} : {
+      $or: [
+        { status: statusFilter },
+        { status: { $exists: false } },
+        { status: null },
+        { status: "" },
+      ],
+    };
+    let products: any[] = await col.find(query).toArray();
 
     // Enrich products with S3 image URLs based on SKU
     // Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-N.png

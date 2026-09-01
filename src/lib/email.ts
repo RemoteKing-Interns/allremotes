@@ -37,46 +37,46 @@ const baseTemplate = (content: string, title: string) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #f4efe8; -webkit-text-size-adjust: 100%; }
+    body { margin: 0; padding: 0; background-color: #f5f5f5; -webkit-text-size-adjust: 100%; }
     table { border-collapse: collapse; }
-    h2 { color: #17353a; font-size: 26px; font-weight: 800; margin: 0 0 18px; line-height: 1.3; }
-    h3 { color: #17353a; font-size: 18px; font-weight: 700; margin: 26px 0 12px; }
-    p { color: #34525a; font-size: 16px; line-height: 1.7; margin: 14px 0; }
+    h2 { color: #1a1a1a; font-size: 26px; font-weight: 800; margin: 0 0 18px; line-height: 1.3; }
+    h3 { color: #1a1a1a; font-size: 18px; font-weight: 700; margin: 26px 0 12px; }
+    p { color: #444; font-size: 16px; line-height: 1.7; margin: 14px 0; }
     a { color: #1A7A6E; }
-    .content-table th, .content-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee8e1; font-size: 15px; color: #34525a; }
-    .content-table th { font-weight: 700; background: #f4efe8; color: #17353a; }
+    .content-table th, .content-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 15px; color: #444; }
+    .content-table th { font-weight: 700; background: #f9f9f9; color: #1a1a1a; }
     .button { display: inline-block; padding: 16px 40px; background-color: #C0392B; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 17px; }
-    .info-box { background: #f4efe8; border-left: 5px solid #1A7A6E; padding: 20px 22px; border-radius: 10px; margin: 22px 0; color: #17353a; font-size: 16px; line-height: 1.8; }
-    .info-box strong { color: #0F4F47; }
-    .divider { height: 1px; background: #eee8e1; margin: 28px 0; border: none; }
-    .contact-section { background: #f4efe8; padding: 20px; border-radius: 10px; margin-top: 26px; text-align: center; }
-    .contact-section p { margin: 6px 0; color: #17353a; }
-    .contact-section a { color: #0F4F47; font-weight: 700; text-decoration: none; }
+    .info-box { background: #f9f9f9; border-left: 5px solid #1A7A6E; padding: 20px 22px; border-radius: 10px; margin: 22px 0; color: #1a1a1a; font-size: 16px; line-height: 1.8; }
+    .info-box strong { color: #1A7A6E; }
+    .divider { height: 1px; background: #eee; margin: 28px 0; border: none; }
+    .contact-section { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 26px; text-align: center; }
+    .contact-section p { margin: 6px 0; color: #1a1a1a; }
+    .contact-section a { color: #1A7A6E; font-weight: 700; text-decoration: none; }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4efe8;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4efe8;padding:24px 0;">
+<body style="margin:0;padding:0;background-color:#f5f5f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:24px 0;">
     <tr>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:94%;">
           <!-- Header -->
           <tr>
-            <td align="center" style="background-color:#0F4F47;padding:36px 24px;border-radius:16px 16px 0 0;">
+            <td align="center" style="background-color:#ffffff;padding:36px 24px;border-radius:16px 16px 0 0;border-bottom:4px solid #1A7A6E;">
               <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" width="190" style="display:block;max-width:190px;height:auto;margin:0 auto 12px;" />
-              <div style="color:#ffffff;font-size:24px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:0.3px;">${title}</div>
+              <div style="color:#1a1a1a;font-size:24px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:0.3px;">${title}</div>
             </td>
           </tr>
           <!-- Content -->
           <tr>
-            <td style="background-color:#ffffff;padding:40px 36px;border:1px solid #dfd7cf;border-top:none;border-radius:0 0 16px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.7;color:#34525a;">
+            <td style="background-color:#ffffff;padding:40px 36px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 16px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.7;color:#444;">
               ${content}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
             <td align="center" style="padding:28px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <p style="margin:4px 0;color:#67777d;font-size:13px;">&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
-              <p style="margin:4px 0;"><a href="${siteUrl}" style="color:#0F4F47;font-weight:600;text-decoration:none;font-size:13px;">allremotes.com.au</a></p>
+              <p style="margin:4px 0;color:#888;font-size:13px;">&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
+              <p style="margin:4px 0;"><a href="${siteUrl}" style="color:#1A7A6E;font-weight:600;text-decoration:none;font-size:13px;">allremotes.com.au</a></p>
             </td>
           </tr>
         </table>
@@ -490,10 +490,10 @@ export async function sendWelcomeEmail({
     body { 
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
       line-height: 1.6; 
-      color: #17353a; 
+      color: #1a1a1a; 
       margin: 0; 
       padding: 0; 
-      background-color: #fbf8f5;
+      background-color: #f5f5f5;
     }
     .container { 
       max-width: 600px; 
@@ -501,10 +501,11 @@ export async function sendWelcomeEmail({
       padding: 20px; 
     }
     .header { 
-      background: linear-gradient(135deg, #1A7A6E 0%, #0F4F47 100%); 
+      background: #ffffff; 
       padding: 30px 20px; 
       text-align: center; 
       border-radius: 12px 12px 0 0;
+      border-bottom: 4px solid #1A7A6E;
     }
     .header img {
       max-width: 180px;
@@ -512,7 +513,7 @@ export async function sendWelcomeEmail({
       margin-bottom: 10px;
     }
     .header h1 { 
-      color: white; 
+      color: #1a1a1a; 
       margin: 0; 
       font-size: 24px; 
       font-weight: 600;
@@ -520,7 +521,7 @@ export async function sendWelcomeEmail({
     .content { 
       background: #ffffff; 
       padding: 40px 30px; 
-      border: 1px solid #eee8e1; 
+      border: 1px solid #e0e0e0; 
       border-top: none;
       border-radius: 0 0 12px 12px;
     }
@@ -531,12 +532,12 @@ export async function sendWelcomeEmail({
       margin-bottom: 20px;
     }
     .content p {
-      color: #34525a;
+      color: #444;
       font-size: 16px;
       margin: 15px 0;
     }
     .info-box { 
-      background: #f4efe8; 
+      background: #f9f9f9; 
       border-left: 4px solid #1A7A6E;
       padding: 20px; 
       border-radius: 8px; 
@@ -549,7 +550,7 @@ export async function sendWelcomeEmail({
     .info-box ul {
       margin: 15px 0 0 0;
       padding-left: 25px;
-      color: #34525a;
+      color: #444;
     }
     .info-box li {
       margin: 10px 0;
@@ -573,7 +574,7 @@ export async function sendWelcomeEmail({
     .footer { 
       text-align: center; 
       padding: 30px 20px; 
-      color: #67777d; 
+      color: #888; 
       font-size: 13px; 
     }
     .footer a {
@@ -581,7 +582,7 @@ export async function sendWelcomeEmail({
       text-decoration: none;
     }
     .contact-section {
-      background: #fbf8f5;
+      background: #f9f9f9;
       padding: 20px;
       border-radius: 8px;
       margin-top: 25px;
@@ -604,7 +605,7 @@ export async function sendWelcomeEmail({
       <p>Hi ${customerName},</p>
       <p>Thank you for creating an account with us. We're excited to have you on board!</p>
       
-      <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
+      <div class="info-box" style="background:#f9f9f9;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#1a1a1a;font-size:16px;line-height:1.8;">
         <strong>What you can do now:</strong>
         <ul>
           <li>Browse our extensive collection of remotes</li>
@@ -620,7 +621,7 @@ export async function sendWelcomeEmail({
         </a>
       </center>
       
-      <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
+      <div class="contact-section" style="background:#f9f9f9;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
         <p>Questions? We're here to help!</p>
         <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
       </div>

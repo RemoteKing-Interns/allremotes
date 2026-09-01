@@ -37,10 +37,12 @@ function mongoTroubleshootingHint(err: unknown) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const { searchParams } = new URL(request.url);
+  const includeAll = searchParams.get("status") === "all";
 
   try {
     if (!mongoEnabled()) {
@@ -52,7 +54,16 @@ export async function GET(
 
     const db = await getDb();
     const col = db.collection("products");
-    const product = await col.findOne({ id });
+    const query: any = { id };
+    if (!includeAll) {
+      query.$or = [
+        { status: "active" },
+        { status: { $exists: false } },
+        { status: null },
+        { status: "" },
+      ];
+    }
+    const product = await col.findOne(query);
 
     if (!product) {
       return NextResponse.json(

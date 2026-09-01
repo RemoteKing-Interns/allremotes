@@ -147,6 +147,58 @@ export async function OPTIONS() {
   });
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Invalid body" }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    const status = String(body.status || "").trim();
+    if (!["active", "draft", "archived"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status. Must be active, draft, or archived." }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    if (!mongoEnabled()) {
+      return NextResponse.json({ error: "MongoDB is not configured." }, { status: 503, headers: CORS_HEADERS });
+    }
+
+    const db = await getDb();
+    const col = db.collection("products");
+    const now = new Date().toISOString();
+
+    // Single product update
+    if (body.id) {
+      const result = await col.updateOne(
+        { id: String(body.id) },
+        { $set: { status, updatedAt: now } }
+      );
+      if (result.matchedCount === 0) {
+        return NextResponse.json({ error: "Product not found" }, { status: 404, headers: CORS_HEADERS });
+      }
+      return NextResponse.json({ ok: true, id: body.id, status, modified: result.modifiedCount }, { headers: CORS_HEADERS });
+    }
+
+    // Bulk update
+    if (Array.isArray(body.ids) && body.ids.length > 0) {
+      const ids = body.ids.map(String);
+      const result = await col.updateMany(
+        { id: { $in: ids } },
+        { $set: { status, updatedAt: now } }
+      );
+      return NextResponse.json({ ok: true, status, matched: result.matchedCount, modified: result.modifiedCount }, { headers: CORS_HEADERS });
+    }
+
+    return NextResponse.json({ error: "Either id or ids[] is required" }, { status: 400, headers: CORS_HEADERS });
+  } catch (err: any) {
+    console.error("API /admin/products PATCH error:", err);
+    return NextResponse.json(
+      { error: "Failed to update product status", details: err?.message || String(err) },
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

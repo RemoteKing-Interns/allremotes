@@ -931,6 +931,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [pushingStarshipit, setPushingStarshipit] = useState(false);
   const [bulkShipping, setBulkShipping] = useState(false);
+  // Order filters
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderChannelFilter, setOrderChannelFilter] = useState("all");
   const [bulkShipModal, setBulkShipModal] = useState<{
     untrackedOrders: any[];
     trackedOrders: any[];
@@ -1678,6 +1682,32 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const isPushedToUnleashed = (groupLabel: string, orderId: string) =>
     unleashedPushState[groupLabel]?.pushedOrderIds?.includes(orderId) ?? false;
 
+  // ── Filtered orders based on search, status, and channel ──
+  const filteredOrders = orders.filter((o: any) => {
+    if (orderStatusFilter !== "all") {
+      if (orderStatusFilter === "processing") {
+        if (o.status && o.status !== "processing") return false;
+      } else if (o.status !== orderStatusFilter) return false;
+    }
+    if (orderChannelFilter !== "all") {
+      const isEbay = o.channel === "ebay";
+      if (orderChannelFilter === "web" && isEbay) return false;
+      if (orderChannelFilter === "ebay" && !isEbay) return false;
+    }
+    if (orderSearch) {
+      const q = orderSearch.toLowerCase();
+      const matches =
+        o.id?.toLowerCase().includes(q) ||
+        o.customerName?.toLowerCase().includes(q) ||
+        o.customer?.name?.toLowerCase().includes(q) ||
+        o.customer?.email?.toLowerCase().includes(q) ||
+        o.customer?.phone?.toLowerCase().includes(q) ||
+        (o.items || []).some((item: any) => item.sku?.toLowerCase().includes(q) || item.name?.toLowerCase().includes(q));
+      if (!matches) return false;
+    }
+    return true;
+  });
+
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
@@ -1707,17 +1737,62 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         </div>
       </div>
 
-      {/* Order Stats Summary */}
+      {/* Order Filters */}
       {!loading && orders.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <div className="relative flex-1 min-w-[200px]">
+            <input
+              type="text"
+              placeholder="Search by order ID, customer name, email, or SKU..."
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              className="w-full rounded-lg border border-neutral-200 px-4 py-2.5 text-sm placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+            />
+          </div>
+          <select
+            value={orderStatusFilter}
+            onChange={(e) => setOrderStatusFilter(e.target.value)}
+            className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm font-medium text-neutral-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+          >
+            <option value="all">All Statuses</option>
+            <option value="processing">Pending / Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="customer_received">Customer Received</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select
+            value={orderChannelFilter}
+            onChange={(e) => setOrderChannelFilter(e.target.value)}
+            className="rounded-lg border border-neutral-200 px-3 py-2.5 text-sm font-medium text-neutral-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+          >
+            <option value="all">All Channels</option>
+            <option value="web">Website</option>
+            <option value="ebay">eBay</option>
+          </select>
+          {(orderSearch || orderStatusFilter !== "all" || orderChannelFilter !== "all") && (
+            <button
+              type="button"
+              onClick={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderChannelFilter("all"); }}
+              className="rounded-lg bg-neutral-100 px-3 py-2.5 text-sm font-semibold text-neutral-600 hover:bg-neutral-200"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Order Stats Summary */}
+      {!loading && filteredOrders.length > 0 && (
         <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {(() => {
-            const totalRevenue = orders.reduce((sum: number, o: any) => sum + Number(o?.pricing?.total || 0), 0);
-            const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
-            const pending = orders.filter((o: any) => !o.status || o.status === 'processing').length;
-            const shipped = orders.filter((o: any) => o.status === 'shipped').length;
-            const delivered = orders.filter((o: any) => o.status === 'delivered' || o.status === 'customer_received').length;
-            const ebayCount = orders.filter((o: any) => o.channel === 'ebay').length;
-            const webCount = orders.length - ebayCount;
+            const totalRevenue = filteredOrders.reduce((sum: number, o: any) => sum + Number(o?.pricing?.total || 0), 0);
+            const avgOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
+            const pending = filteredOrders.filter((o: any) => !o.status || o.status === 'processing').length;
+            const shipped = filteredOrders.filter((o: any) => o.status === 'shipped').length;
+            const delivered = filteredOrders.filter((o: any) => o.status === 'delivered' || o.status === 'customer_received').length;
+            const ebayCount = filteredOrders.filter((o: any) => o.channel === 'ebay').length;
+            const webCount = filteredOrders.length - ebayCount;
             return [
               { label: 'Total Orders', value: orders.length, icon: '📦', color: 'text-blue-600 bg-blue-50' },
               { label: 'Total Revenue', value: `AU$${totalRevenue.toFixed(2)}`, icon: '💰', color: 'text-emerald-600 bg-emerald-50' },
@@ -1739,17 +1814,17 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       )}
 
       {/* Channel split + quick insights */}
-      {!loading && orders.length > 0 && (
+      {!loading && filteredOrders.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-3">
           {(() => {
-            const ebayCount = orders.filter((o: any) => o.channel === 'ebay').length;
-            const webCount = orders.length - ebayCount;
-            const trackedCount = orders.filter((o: any) => {
+            const ebayCount = filteredOrders.filter((o: any) => o.channel === 'ebay').length;
+            const webCount = filteredOrders.length - ebayCount;
+            const trackedCount = filteredOrders.filter((o: any) => {
               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
               return sm === 'tracked' || sm === 'express';
             }).length;
-            const untrackedCount = orders.length - trackedCount;
-            const uniqueCustomers = new Set(orders.map((o: any) => o?.customer?.email).filter(Boolean)).size;
+            const untrackedCount = filteredOrders.length - trackedCount;
+            const uniqueCustomers = new Set(filteredOrders.map((o: any) => o?.customer?.email).filter(Boolean)).size;
             return (
               <>
                 <span className="inline-flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-sm">
@@ -1793,17 +1868,17 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600" />
             Loading orders...
           </div>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center text-center">
             <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-xl bg-neutral-100 text-2xl font-bold text-neutral-400">
               📦
             </span>
-            <p className="text-sm font-semibold text-neutral-900">No orders yet</p>
-            <p className="mt-1 text-sm text-neutral-500">When customers place orders, they will appear here.</p>
+            <p className="text-sm font-semibold text-neutral-900">No orders found</p>
+            <p className="mt-1 text-sm text-neutral-500">{orders.length === 0 ? "When customers place orders, they will appear here." : "Try adjusting your filters."}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            {Object.entries(groupOrdersByDate(orders)).map(([groupLabel, groupOrders]) => {
+            {Object.entries(groupOrdersByDate(filteredOrders)).map(([groupLabel, groupOrders]) => {
               const selection = getGroupSelection(groupLabel, groupOrders);
               const allSelected = selection.size === groupOrders.length;
               const someSelected = selection.size > 0 && !allSelected;
@@ -5960,6 +6035,9 @@ function AdminProducts() {
   const isRestoringFilters = useRef(false);
   // Spreadsheet view toggle
   const [spreadsheetView, setSpreadsheetView] = useState(false);
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -5990,7 +6068,8 @@ function AdminProducts() {
     setLoadError("");
     try {
       const cacheBust = isRefresh ? `?t=${Date.now()}` : '';
-      const resp = await fetch(`/api/products${cacheBust}`, { cache: "no-store" });
+      const statusParam = cacheBust ? '&status=all' : '?status=all';
+      const resp = await fetch(`/api/products${cacheBust}${statusParam}`, { cache: "no-store" });
       const data = await resp.json().catch(() => null);
       if (!resp.ok) throw new Error(data?.error || "Failed to load products");
       setProductsState(Array.isArray(data) ? data : []);
@@ -6243,7 +6322,7 @@ function AdminProducts() {
     
     // Reload products from server to get fresh data
     try {
-      const resp = await fetch("/api/products", { cache: "no-store" });
+      const resp = await fetch("/api/products?status=all", { cache: "no-store" });
       const data = await resp.json().catch(() => null);
       if (resp.ok && Array.isArray(data)) {
         setProductsState(data);
@@ -6315,16 +6394,56 @@ function AdminProducts() {
     }, 1000);
   };
 
-  const publishProduct = (id: string) => {
+  const setProductStatus = async (id: string, status: 'active' | 'draft' | 'archived') => {
     setProductsState((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: 'active' } : p))
+      prev.map((p) => (p.id === id ? { ...p, status } : p))
     );
+    try {
+      await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+    } catch (err) {
+      console.error('Failed to persist product status:', err);
+    }
   };
 
-  const unpublishProduct = (id: string) => {
+  const bulkSetStatus = async (status: 'active' | 'draft' | 'archived') => {
+    if (selectedIds.size === 0) return;
+    setBulkStatusLoading(true);
+    const ids = Array.from(selectedIds);
     setProductsState((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: 'draft' } : p))
+      prev.map((p) => (ids.includes(p.id) ? { ...p, status } : p))
     );
+    try {
+      await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, status }),
+      });
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('Failed to bulk update product status:', err);
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (prev.size === paginatedProducts.length) return new Set();
+      return new Set(paginatedProducts.map((p: any) => p.id));
+    });
   };
 
   const update = (id, field, value) => {
@@ -6335,7 +6454,7 @@ function AdminProducts() {
 
   const startEditing = async (id: string) => {
     try {
-      const resp = await fetch(`/api/products/${id}`, { cache: "no-store" });
+      const resp = await fetch(`/api/products/${id}?status=all`, { cache: "no-store" });
       if (resp.ok) {
         const fresh = await resp.json();
         setProductsState((prev) => prev.map((p) => (p.id === id ? { ...fresh, id } : p)));
@@ -7425,10 +7544,58 @@ function AdminProducts() {
             </div>
           ) : (
             <>
+              {/* Bulk Actions Bar */}
+              {selectedIds.size > 0 && (
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <span className="text-sm font-semibold text-emerald-800">
+                    {selectedIds.size} product{selectedIds.size !== 1 ? "s" : ""} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => bulkSetStatus("active")}
+                      disabled={bulkStatusLoading}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      Set Active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => bulkSetStatus("draft")}
+                      disabled={bulkStatusLoading}
+                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      Set Draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => bulkSetStatus("archived")}
+                      disabled={bulkStatusLoading}
+                      className="rounded-lg bg-neutral-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIds(new Set())}
+                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="divide-y divide-neutral-100 lg:hidden">
                 {paginatedProducts.map((p) => (
                   <div key={p.id} className="grid gap-3 px-4 py-4">
                     <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        onChange={() => toggleSelect(p.id)}
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                      />
                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-white">
                         <img src={p.image} alt="" className="h-full w-full object-contain p-1" />
                       </div>
@@ -7494,6 +7661,14 @@ function AdminProducts() {
                 <table className="w-full table-fixed text-left text-sm">
                   <thead className="border-b border-neutral-100 bg-white text-neutral-500">
                     <tr>
+                      <th className="w-10 px-4 py-4 font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size > 0 && selectedIds.size === paginatedProducts.length}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </th>
                       <th className="w-20 px-6 py-4 font-semibold">Image</th>
                       <th 
                         className="px-6 py-4 font-semibold cursor-pointer hover:text-neutral-700 select-none"
@@ -7546,7 +7721,15 @@ function AdminProducts() {
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
                     {paginatedProducts.map((p) => (
-                      <tr key={p.id} className="transition-colors hover:bg-neutral-50/70">
+                      <tr key={p.id} className={`transition-colors hover:bg-neutral-50/70 ${selectedIds.has(p.id) ? 'bg-emerald-50/40' : ''}`}>
+                        <td className="px-4 py-3 align-top">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelect(p.id)}
+                            className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                        </td>
                         <td className="px-6 py-3 align-top">
                           <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-neutral-200 bg-white">
                             <ProductImage
@@ -7606,17 +7789,19 @@ function AdminProducts() {
                           AU${Number(p.price).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 text-center align-top">
-                          {p.inStock ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                              In Stock
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-                              Out of Stock
-                            </span>
-                          )}
+                          <select
+                            value={p.status || 'active'}
+                            onChange={(e) => setProductStatus(p.id, e.target.value as 'active' | 'draft' | 'archived')}
+                            className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${
+                              (p.status === 'draft') ? 'bg-amber-50 text-amber-700 ring-amber-600/20' :
+                              (p.status === 'archived') ? 'bg-neutral-100 text-neutral-600 ring-neutral-500/20' :
+                              'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                            }`}
+                          >
+                            <option value="active">Active</option>
+                            <option value="draft">Draft</option>
+                            <option value="archived">Archived</option>
+                          </select>
                         </td>
                         <td className="px-6 py-4 text-right align-top">
                           <div className="flex items-center justify-end gap-2">
