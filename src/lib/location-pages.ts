@@ -16,19 +16,24 @@ export const LOCATION_PAGES: Record<string, LocationPage> = {
   "garage-remotes-melbourne": {
     slug: "garage-remotes-melbourne",
     city: "Melbourne",
-    title: "Garage Door Remotes Melbourne | Fast Delivery | ALLREMOTES",
+    title: "Garage Door Remotes Melbourne | Fast Local Delivery | ALLREMOTES",
     h1: "Garage Door Remotes Melbourne",
     metaDescription:
-      "Buy replacement garage door remotes in Melbourne. Compatible remotes for Merlin, ATA, B&D, Chamberlain & more. Fast delivery across Melbourne metro and VIC. 12-month warranty.",
+      "Buy replacement garage door remotes in Melbourne. Local Yarra Glen business with fast delivery across Melbourne metro & VIC. Compatible remotes for Merlin, ATA, B&D, Chamberlain & more. 12-month warranty.",
     keywords: [
       "garage door remotes melbourne",
       "garage remote melbourne",
       "garage remote replacement melbourne",
       "buy garage remote melbourne",
       "garage door remote control melbourne",
+      "merlin remote melbourne",
+      "b&d remote melbourne",
+      "ata remote melbourne",
+      "garage remotes victoria",
+      "garage door remotes vic",
     ],
     intro:
-      "Looking for replacement garage door remotes in Melbourne? ALLREMOTES is based in Yarra Glen, Victoria, and we ship to all Melbourne metro suburbs and regional VIC with fast dispatch. Order your compatible replacement remote online and get it delivered to your door anywhere in Melbourne.",
+      "Looking for replacement garage door remotes in Melbourne? ALLREMOTES is a locally owned business based in Yarra Glen, Victoria. We ship to all Melbourne metro suburbs — from the CBD to Frankston, Werribee, Craigieburn and beyond — plus regional VIC. Order your compatible replacement remote online and get it delivered to your door anywhere in Melbourne with fast, tracked shipping. All remotes come with a 12-month warranty and same-day dispatch for orders placed before 2pm AEST.",
   },
   "garage-remotes-sydney": {
     slug: "garage-remotes-sydney",

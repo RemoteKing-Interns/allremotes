@@ -105,28 +105,60 @@ export const SEO_LANDING_PAGES: Record<string, SeoLandingPage> = {
   "gate-remotes": {
     slug: "gate-remotes",
     title: "Gate Remotes Australia | Buy Replacement Gate Remote Controls",
-    h1: "Gate Remotes Australia",
+    h1: "Gate Remotes & Gate Remote Controls Australia",
     metaDescription:
-      "Buy replacement gate remotes online in Australia. Compatible remotes for automatic swing gates, sliding gates and barrier arms. 12-month warranty, fast nationwide shipping.",
+      "Buy replacement gate remotes online in Australia. Compatible remotes for automatic swing gates, sliding gates, barrier arms, DEA, Fadini, Nice, Centurion & more. 12-month warranty, fast shipping.",
     keywords: [
       "gate remotes",
       "gate remote",
-      "gate remote australia",
+      "gate remote control",
+      "gate remote controls",
       "replacement gate remote",
       "automatic gate remote",
-      "gate remote control",
+      "universal gate remote",
       "sliding gate remote",
+      "boom gate remote",
+      "gate transmitter",
+      "gate remotes australia",
     ],
     intro:
-      "Shop replacement gate remotes for automatic swing gates, sliding gates, and barrier arm openers. ALLREMOTES stocks compatible gate remote controls for Centurion, Elsema, and all major 433MHz gate motor brands — with fast Australia-wide shipping and a 12-month warranty.",
+      "Shop replacement gate remotes for automatic swing gates, sliding gates, and barrier arm openers. ALLREMOTES stocks compatible gate remote controls for Centurion, Elsema, DEA, Fadini, Nice, Ditec and all major 433MHz gate motor brands — with fast Australia-wide shipping and a 12-month warranty.",
     sections: [
       {
         heading: "Replacement Gate Remotes for Every Application",
         body: (
           <>
             <p>
-              Whether you have a residential swing gate, a commercial sliding gate, or an industrial barrier arm, we have a compatible replacement remote for your motor. Our gate remotes work with the most common gate opener brands in Australia, including Centurion, Elsema, and generic 433MHz receivers. All remotes are pre-tested and ship with programming instructions.
+              Whether you have a residential swing gate, a commercial sliding gate, or an industrial barrier arm, we have a compatible replacement remote for your motor. Our gate remotes work with the most common gate opener brands in Australia. All remotes are pre-tested and ship with programming instructions.
             </p>
+          </>
+        ),
+      },
+      {
+        heading: "Gate Remote Brands We Support",
+        body: (
+          <>
+            <p>
+              We stock compatible replacement gate remotes for the following manufacturers:
+            </p>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { name: "Centurion", desc: "Sliding & swing gate motors" },
+                { name: "Elsema", desc: "433MHz gate receivers" },
+                { name: "DEA", desc: "GTX, GTX2 transmitters" },
+                { name: "Fadini", desc: "Italian gate motors" },
+                { name: "Nice", desc: "Nice gate openers" },
+                { name: "Ditec", desc: "Ditec gate motors" },
+                { name: "Global Access", desc: "Gate access systems" },
+                { name: "Key Automation", desc: "Automated gate systems" },
+                { name: "Allgate", desc: "Universal gate remotes" },
+              ].map((mfr) => (
+                <div key={mfr.name} className="rounded-lg border border-neutral-200 bg-white p-3">
+                  <p className="font-semibold text-neutral-900 text-sm">{mfr.name}</p>
+                  <p className="mt-1 text-xs text-neutral-500">{mfr.desc}</p>
+                </div>
+              ))}
+            </div>
           </>
         ),
       },
@@ -136,6 +168,16 @@ export const SEO_LANDING_PAGES: Record<string, SeoLandingPage> = {
           <>
             <p>
               Sliding gate motors are common in commercial and residential settings across Australia. We stock compatible remotes for sliding gate openers that operate on 433MHz, including models compatible with Centurion sliding gate motors. If your sliding gate remote is lost or damaged, browse our range for a quick replacement.
+            </p>
+          </>
+        ),
+      },
+      {
+        heading: "Universal Gate Remotes",
+        body: (
+          <>
+            <p>
+              Universal gate remotes can be programmed to work with multiple gate motor brands, provided they use the same frequency and coding system. They are a good option if you have multiple gates with different motor brands, or if you can&apos;t find a brand-specific replacement. However, universal remotes may not support rolling code technology on all motors — check the compatibility list before ordering.
             </p>
           </>
         ),
@@ -170,8 +212,100 @@ export const SEO_LANDING_PAGES: Record<string, SeoLandingPage> = {
         answer:
           "Some multi-button remotes can be programmed to operate both a gate and a garage door, provided they use the same frequency and coding system. Check the product description for multi-channel options.",
       },
+      {
+        question: "Do you stock Centurion gate remotes?",
+        answer:
+          "Yes, we stock compatible replacement remotes for Centurion sliding and swing gate motors. Check our Centurion brand page for the full range.",
+      },
+      {
+        question: "Are universal gate remotes reliable?",
+        answer:
+          "Universal gate remotes work well with fixed-code gate motors on 433MHz. For rolling code motors, a brand-specific replacement is usually more reliable. Check the compatibility list on each product page.",
+      },
     ],
     ctaText: "Shop All Gate Remotes",
+    ctaLink: "/products/garage",
+  },
+  "roller-door-remotes": {
+    slug: "roller-door-remotes",
+    title: "Roller Door Remotes Australia | Replacement Roller Door Remote Controls",
+    h1: "Roller Door Remotes Australia",
+    metaDescription:
+      "Buy replacement roller door remotes online in Australia. Compatible remotes for B&D, Merlin, ATA, Gliderol roller door openers. 12-month warranty, fast shipping nationwide.",
+    keywords: [
+      "roller door remotes",
+      "roller door remote",
+      "roller door remote control",
+      "replacement roller door remote",
+      "b&d roller door remote",
+      "garage roller door remote",
+      "roller door remote australia",
+    ],
+    intro:
+      "Shop replacement roller door remotes for every major Australian roller door opener brand. ALLREMOTES stocks compatible remotes for B&D, Merlin, ATA and Gliderol roller door motors — all backed by a 12-month warranty and shipped Australia-wide.",
+    sections: [
+      {
+        heading: "Replacement Roller Door Remotes for All Brands",
+        body: (
+          <>
+            <p>
+              Roller door openers use the same remote technology as sectional garage door openers, but the motor units are typically mounted differently. Whether you have a B&D Controll-A-Door roller, a Merlin roller door opener, or a Gliderol GTS roller, we have a compatible replacement remote. Browse our{" "}
+              <Link href="/products/garage" className="font-semibold text-primary hover:underline">garage remotes range</Link>{" "}
+              to find the right match for your motor.
+            </p>
+          </>
+        ),
+      },
+      {
+        heading: "Popular Roller Door Remote Brands",
+        body: (
+          <>
+            <p>
+              The most common roller door opener brands in Australia are{" "}
+              <Link href="/brands/B%26D" className="font-semibold text-primary hover:underline">B&D</Link>,{" "}
+              <Link href="/brands/Merlin" className="font-semibold text-primary hover:underline">Merlin</Link>,{" "}
+              <Link href="/brands/ATA" className="font-semibold text-primary hover:underline">ATA</Link>{" "}
+              and{" "}
+              <Link href="/brands/Gliderol" className="font-semibold text-primary hover:underline">Gliderol</Link>. Most roller door remotes operate on 433MHz and use rolling code technology for security. Check your existing remote or motor unit for the brand and model before ordering.
+            </p>
+          </>
+        ),
+      },
+      {
+        heading: "How to Identify Your Roller Door Remote",
+        body: (
+          <>
+            <p>
+              Check the motor unit at the top of your roller door for a brand label and model number. Alternatively, check the back of your existing remote — the brand and model are usually printed there. If you can&apos;t find the details, use our{" "}
+              <Link href="/support/which-garage-door-remote-do-i-need" className="font-semibold text-primary hover:underline">
+                remote identification guide
+              </Link>{" "}
+              or{" "}
+              <Link href="/contact" className="font-semibold text-primary hover:underline">contact us</Link>{" "}
+              with a photo of your remote.
+            </p>
+          </>
+        ),
+      },
+    ],
+    faqs: [
+      {
+        question: "Are roller door remotes the same as garage door remotes?",
+        answer:
+          "Yes, roller door openers use the same remote technology as sectional garage door openers. The key is matching the brand and frequency (usually 433MHz) to your motor unit.",
+      },
+      {
+        question: "How do I program a roller door remote?",
+        answer:
+          "Most roller door remotes are programmed by pressing the learn button on the motor unit, then pressing a button on the new remote. Programming instructions are included with every remote.",
+      },
+      {
+        question: "Do you stock B&D roller door remotes?",
+        answer:
+          "Yes, we stock compatible replacement remotes for B&D roller door openers including Controll-A-Door and Tri-Tran+ models. Check our B&D brand page for the full range.",
+      },
+    ],
+    ctaText: "Shop All Garage & Roller Door Remotes",
     ctaLink: "/products/garage",
   },
   "replacement-garage-remotes": {
