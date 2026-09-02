@@ -7,7 +7,7 @@ import { mongoEnabled, getDb } from "@/lib/mongo";
 import { enrichProductsWithS3Images } from "@/lib/products-json";
 import { generateProductSlugUrl } from "@/lib/server-products";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://allremotes.com.au";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.allremotes.com.au";
 
 interface Product {
   id: string;

@@ -29,7 +29,7 @@ const createTransporter = () => {
 
 // Base email template — branded, table-based layout for email client compatibility
 const baseTemplate = (content: string, title: string) => {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -203,7 +203,7 @@ export async function sendOrderConfirmationEmail({
     <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         View Order Details
       </a>
     </center>
@@ -294,7 +294,7 @@ export async function sendOrderDeliveredEmail({
     <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Leave a Review
       </a>
     </center>
@@ -324,7 +324,7 @@ export async function sendPasswordResetEmail({
   customerName: string;
   baseUrl?: string;
 }) {
-  const siteUrl = baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+  const siteUrl = baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
   const resetUrl = `${siteUrl}/reset-password?token=${resetToken}`;
   
   const resetTemplate = `
@@ -477,7 +477,7 @@ export async function sendWelcomeEmail({
   to: string;
   customerName: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
   
   const welcomeTemplate = `
 <!DOCTYPE html>
@@ -666,7 +666,7 @@ export async function sendLowStockNotification({
     </div>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Manage Inventory
       </a>
     </center>
@@ -712,7 +712,7 @@ export async function sendReturnRequestEmail({
     </ul>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         Process Return
       </a>
     </center>
@@ -758,7 +758,7 @@ export async function sendNewOrderNotification({
     </ul>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
         View Order
       </a>
     </center>
@@ -783,7 +783,7 @@ export async function sendVerificationEmail({
   verificationToken: string;
   baseUrl?: string;
 }) {
-  const verificationUrl = `${baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au'}/verify-email?token=${verificationToken}`;
+  const verificationUrl = `${baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/verify-email?token=${verificationToken}`;
   
   const content = `
     <h2>Verify Your Email Address</h2>
@@ -901,7 +901,7 @@ export async function sendReviewRequestEmail({
   orderId: string;
   customerName: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
 
   const content = `
     <h2>How did we do, ${customerName}?</h2>

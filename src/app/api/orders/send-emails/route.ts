@@ -187,7 +187,7 @@ ${orderDetails.shipping.address}
 ${orderDetails.shipping.city}, ${orderDetails.shipping.state} ${orderDetails.shipping.zipCode}${deliveryInstructions}
 
 ---
-View order in admin: ${process.env.NEXT_PUBLIC_SITE_URL || "https://allremotes.com.au"}/admin/orders
+View order in admin: ${process.env.NEXT_PUBLIC_SITE_URL || "https://www.allremotes.com.au"}/admin/orders
 `;
 
     // Admin notification email (HTML)
@@ -225,7 +225,7 @@ View order in admin: ${process.env.NEXT_PUBLIC_SITE_URL || "https://allremotes.c
           ${deliveryInstructionsHtml}
         </div>
         
-        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://allremotes.com.au"}/admin/orders" style="background: #FF6B35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View in Admin</a></p>
+        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://www.allremotes.com.au"}/admin/orders" style="background: #FF6B35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View in Admin</a></p>
       </div>
     `;
 

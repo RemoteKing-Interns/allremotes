@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing coupon code" }, { status: 400 });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://allremotes.com.au";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.allremotes.com.au";
     const cartTotal = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
     const html = `

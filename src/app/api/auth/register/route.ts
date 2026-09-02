@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const { name, email, password } = await request.json();
     
     // Get the origin from request headers for dynamic base URL
-    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://allremotes.com.au';
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
 
     // Validation
     if (!name || !email || !password) {
