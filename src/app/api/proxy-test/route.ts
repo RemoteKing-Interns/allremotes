@@ -12,12 +12,24 @@ export const runtime = "nodejs";
  */
 export async function GET() {
   const proxyUrl = process.env.PROXY_URL;
+  const allKeys = Object.keys(process.env).sort();
+  const proxyKeys = allKeys.filter((k) => k.toUpperCase().includes("PROXY"));
   const result: {
     proxyConfigured: boolean;
+    proxyKeyCount: number;
+    proxyKeys: string[];
+    proxyUrlLength?: number;
+    proxyUrlPrefix?: string;
     proxyOutboundIp?: string;
     directOutboundIp?: string;
     error?: string;
-  } = { proxyConfigured: !!proxyUrl };
+  } = {
+    proxyConfigured: !!proxyUrl,
+    proxyKeyCount: proxyKeys.length,
+    proxyKeys,
+    proxyUrlLength: proxyUrl?.length,
+    proxyUrlPrefix: proxyUrl ? proxyUrl.slice(0, 30) : undefined,
+  };
 
   try {
     const proxyRes = await proxyFetch("https://api.ipify.org?format=json");
