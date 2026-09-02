@@ -674,6 +674,13 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       {/* CTA */}
       <section className="container py-16 sm:py-20 lg:py-24">
         <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 px-6 py-14 text-center shadow-strong sm:px-12 sm:py-20 lg:py-24">
+          <img
+            src="/images/remote-banner.jpg"
+            alt="Australian garage door and gate remotes"
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-neutral-900/70" />
           <div className="relative z-10 mx-auto max-w-2xl">
             <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               {cta.title || "Ready to Find Your Perfect Remote?"}
