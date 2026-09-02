@@ -65,7 +65,7 @@ function isValidImageUrl(url: string): boolean {
 
 const S3_BUCKET = "https://allremotes.s3.ap-southeast-2.amazonaws.com";
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || "allremotes";
-const S3_REGION = process.env.AWS_REGION || "ap-southeast-2";
+const S3_REGION = process.env.S3_REGION || process.env.AWS_REGION || "ap-southeast-2";
 
 let s3Client: S3Client | null = null;
 function getS3Client() {
@@ -73,8 +73,8 @@ function getS3Client() {
     s3Client = new S3Client({
       region: S3_REGION,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+        accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
   }
