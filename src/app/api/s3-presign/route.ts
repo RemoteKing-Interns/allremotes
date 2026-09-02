@@ -16,11 +16,14 @@ function getConfig() {
   return { region, accessKeyId, secretAccessKey, bucket, configured };
 }
 
+function publicS3Url(key: string): string | null {
+  const base = process.env.S3_BUCKET_URL || "";
+  if (!base) return null;
+  return `${base.replace(/\/$/, "")}/${key}`;
+}
+
 export async function POST(request: NextRequest) {
   const config = getConfig();
-  if (!config.configured) {
-    return NextResponse.json({ error: "S3 is not configured" }, { status: 503 });
-  }
 
   let body: { keys?: string[] };
   try {
@@ -41,6 +44,17 @@ export async function POST(request: NextRequest) {
     if (key.includes("..") || key.includes("//") || key.startsWith("/")) {
       return NextResponse.json({ error: `Invalid key: ${key}` }, { status: 400 });
     }
+  }
+
+  // No AWS creds (e.g. Amplify, which forbids AWS_* env vars) but bucket is public:
+  // return raw public URLs for allowed prefixes.
+  if (!config.configured) {
+    const urls: Record<string, string> = {};
+    for (const key of keys) {
+      const url = publicS3Url(key);
+      if (url) urls[key] = url;
+    }
+    return NextResponse.json({ urls });
   }
 
   const client = new S3Client({
@@ -79,9 +93,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const config = getConfig();
-  if (!config.configured) {
-    return NextResponse.json({ error: "S3 is not configured" }, { status: 503 });
-  }
 
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key") || "";
@@ -96,6 +107,13 @@ export async function GET(request: NextRequest) {
 
   if (key.includes("..") || key.includes("//") || key.startsWith("/")) {
     return NextResponse.json({ error: "Invalid key" }, { status: 400 });
+  }
+
+  // No AWS creds (e.g. Amplify) but bucket is public: return raw URL.
+  if (!config.configured) {
+    const url = publicS3Url(key);
+    if (!url) return NextResponse.json({ error: "S3 is not configured" }, { status: 503 });
+    return NextResponse.json({ signedUrl: url });
   }
 
   const client = new S3Client({
