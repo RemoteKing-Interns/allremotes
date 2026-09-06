@@ -69,7 +69,7 @@ function setNested(obj: any, path: string, value: any): void {
 // ── PII field definitions per collection ──
 
 export const PII_FIELDS = {
-  user: ["name", "email"],
+  user: ["name", "email", "phone"],
   order: [
     "customer.fullName",
     "customer.email",

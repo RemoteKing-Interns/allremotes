@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/mongo';
 import crypto from 'crypto';
 import { sendSms, isSmsConfigured } from '../../../../lib/sms';
-import { emailHash } from '@/lib/pii-crypto';
+import { emailHash, encrypt } from '@/lib/pii-crypto';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -183,7 +183,7 @@ export async function PUT(request: Request) {
         { $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }] },
         {
           $set: {
-            phone: formattedPhone,
+            phone: encrypt(formattedPhone),
             phoneVerified: true,
             phoneVerifiedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

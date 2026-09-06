@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../lib/mongo';
 import { sendWelcomeEmail } from '../../../lib/email';
+import { encrypt } from '../../../lib/pii-crypto';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://allremotes-admin.vercel.app",
@@ -160,7 +161,7 @@ export async function PUT(request) {
     const sanitizedUpdates = {};
     for (const key of allowedUpdates) {
       if (updates[key] !== undefined) {
-        sanitizedUpdates[key] = updates[key];
+        sanitizedUpdates[key] = key === 'phone' ? encrypt(updates[key]) : updates[key];
       }
     }
 
