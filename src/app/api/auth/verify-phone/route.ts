@@ -64,7 +64,7 @@ export async function POST(request: Request) {
           $set: {
             phoneOtp: hashedOTP,
             phoneOtpExpiry: expiryDate.toISOString(),
-            tempPhone: formattedPhone,
+            tempPhone: encrypt(formattedPhone),
             updatedAt: new Date().toISOString(),
           },
         }
@@ -141,7 +141,7 @@ export async function PUT(request: Request) {
       userRecord = await usersCollection.findOne({
         $or: [{ emailHash: emailHash(email) }, { email: email.toLowerCase() }],
         phoneOtp: hashedOTP,
-        tempPhone: formattedPhone,
+        tempPhone: encrypt(formattedPhone),
       });
 
       if (userRecord) {
