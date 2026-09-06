@@ -176,19 +176,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send SMS confirmation if phone number provided (non-blocking)
+    // Send SMS confirmation if phone number provided
     if (isSmsConfigured() && plaintextCustomerPhone && order.total != null) {
       const formattedTotal = typeof order.total === 'number' 
         ? `AU$${order.total.toFixed(2)}`
         : order.total;
       
-      sendOrderConfirmationSms(plaintextCustomerPhone, order.id, formattedTotal).then((result) => {
+      try {
+        const result = await sendOrderConfirmationSms(plaintextCustomerPhone, order.id, formattedTotal);
         if (result.success) {
           console.log(`[SMS] Order confirmation sent to ${plaintextCustomerPhone} for order ${order.id}`);
         } else {
           console.error(`[SMS] Failed to send confirmation for order ${order.id}:`, result.error);
         }
-      });
+      } catch (smsError) {
+        console.error(`[SMS] Order SMS error for ${order.id}:`, smsError);
+      }
     }
 
     // Send order confirmation emails (non-blocking)
@@ -201,24 +204,25 @@ export async function POST(request: Request) {
 
       const orderTotal = Number(order.pricing?.total ?? order.total ?? 0);
 
-      Promise.all([
-        sendOrderConfirmationEmail({
-          to: plaintextCustomerEmail,
-          orderId: order.id,
-          customerName: plaintextCustomerName,
-          items: emailItems,
-          total: orderTotal,
-          shippingAddress: plaintextShippingAddress,
-        }),
-        sendNewOrderNotification({
-          to: "shane@allremotes.com.au",
-          orderId: order.id,
-          customerName: plaintextCustomerName,
-          customerEmail: plaintextCustomerEmail,
-          total: orderTotal,
-          items: order.items.map((item: any) => `${item.name} x${item.quantity || 1}`),
-        }),
-      ]).then(([customerResult, adminResult]) => {
+      try {
+        const [customerResult, adminResult] = await Promise.all([
+          sendOrderConfirmationEmail({
+            to: plaintextCustomerEmail,
+            orderId: order.id,
+            customerName: plaintextCustomerName,
+            items: emailItems,
+            total: orderTotal,
+            shippingAddress: plaintextShippingAddress,
+          }),
+          sendNewOrderNotification({
+            to: "shane@allremotes.com.au",
+            orderId: order.id,
+            customerName: plaintextCustomerName,
+            customerEmail: plaintextCustomerEmail,
+            total: orderTotal,
+            items: order.items.map((item: any) => `${item.name} x${item.quantity || 1}`),
+          }),
+        ]);
         if (!customerResult.success) {
           console.error(`[Email] Customer confirmation failed for ${order.id}:`, customerResult.error);
         } else {
@@ -229,9 +233,9 @@ export async function POST(request: Request) {
         } else {
           console.log(`[Email] Admin notification sent for order ${order.id}`);
         }
-      }).catch((emailError) => {
+      } catch (emailError) {
         console.error(`[Email] Order email error for ${order.id}:`, emailError);
-      });
+      }
     }
 
     // Decrypt a copy for the response
