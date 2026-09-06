@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import {
   sendEmail,
   sendOrderConfirmationEmail,
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in email API:', error);
     return NextResponse.json(
-      { error: 'Failed to send email' },
+      { error: 'Failed to send email', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
