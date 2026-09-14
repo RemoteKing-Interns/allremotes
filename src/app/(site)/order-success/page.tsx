@@ -101,18 +101,18 @@ const OrderSuccessContent = () => {
           <p>Your order has been confirmed and will be processed soon.</p>
           
           {orderDetails?.sessionId && (
-            <p style={{ marginTop: 10, opacity: 0.9 }}>
-              Session ID: <strong>{orderDetails.sessionId}</strong>
+            <p className="mt-2 w-full opacity-90">
+              Session ID: <strong className="break-all">{orderDetails.sessionId}</strong>
             </p>
           )}
-          
+
           {orderDetails?.paymentIntentId && (
-            <p style={{ marginTop: 10, opacity: 0.9 }}>
-              Payment ID: <strong>{orderDetails.paymentIntentId}</strong>
+            <p className="mt-2 w-full opacity-90">
+              Payment ID: <strong className="break-all">{orderDetails.paymentIntentId}</strong>
             </p>
           )}
-          
-          <div style={{ marginTop: 30, display: 'flex', gap: 16, justifyContent: 'center' }}>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3 sm:gap-4">
             <button
               onClick={() => router.push("/")}
               className="btn btn-primary"

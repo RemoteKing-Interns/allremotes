@@ -669,9 +669,9 @@ export default function ProductListClient({
 
   return (
     <div className="animate-fadeIn">
-      <div className="container py-8 sm:py-10">
-        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-7 shadow-panel backdrop-blur sm:p-10">
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+      <div className="container py-6 sm:py-10">
+        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(26,122,110,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(192,57,43,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,248,245,0.88))] p-5 shadow-panel backdrop-blur sm:p-8 lg:p-10">
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl lg:text-4xl">
             {pageTitle}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
@@ -704,7 +704,7 @@ export default function ProductListClient({
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)] xl:items-start">
+        <div className="mt-6 grid gap-5 xl:grid-cols-[18.5rem_minmax(0,1fr)] xl:items-start sm:mt-8">
           <aside className="hidden rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur xl:block">
             <FiltersPanel
               brands={brandsWithSelected}
@@ -844,7 +844,7 @@ export default function ProductListClient({
               </div>
             ) : (
               <>
-                <div className="mt-6 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="mt-6 grid grid-cols-2 gap-3 min-[400px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">
                   {pageProducts.map((product) => (
                     <ProductCard
                       key={product.id}

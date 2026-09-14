@@ -13,6 +13,7 @@ const Cart = () => {
     cart,
     hasDiscount,
     discountRate,
+    cartHydrated,
     removeFromCart,
     updateQuantity,
     getCartTotal,
@@ -66,7 +67,8 @@ const Cart = () => {
     };
   }, [isAnyModalOpen]);
 
-  if (cart.length === 0) {
+  // Don't flash the empty state while the cart is still hydrating from storage.
+  if (cartHydrated && cart.length === 0) {
     return (
       <div className="animate-fadeIn">
         <div className="container py-10 sm:py-12">
@@ -212,14 +214,14 @@ const Cart = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedItem(item)}
-                          className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-semibold text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
+                          className="min-h-11 flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-center text-xs font-semibold text-neutral-700 shadow-xs hover:bg-neutral-100 sm:flex-none"
                         >
                           View
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.id)}
-                          className="flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-semibold text-primary-dark hover:bg-primary/15 sm:flex-none"
+                          className="min-h-11 flex-1 rounded-full bg-primary/10 px-4 py-2 text-center text-xs font-semibold text-primary-dark hover:bg-primary/15 sm:flex-none"
                         >
                           Remove
                         </button>
@@ -236,18 +238,20 @@ const Cart = () => {
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
+                              className="h-11 w-11 text-lg font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
                               disabled={Number(item.quantity) <= 1}
+                              aria-label="Decrease quantity"
                             >
                               −
                             </button>
-                            <span className="inline-flex h-10 w-12 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
+                            <span className="inline-flex h-11 w-12 items-center justify-center border-x border-neutral-200 text-sm font-extrabold text-neutral-900">
                               {item.quantity}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="h-10 w-10 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
+                              className="h-11 w-11 text-lg font-semibold text-neutral-800 hover:bg-neutral-100"
+                              aria-label="Increase quantity"
                             >
                               +
                             </button>

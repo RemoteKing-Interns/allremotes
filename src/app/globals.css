@@ -126,11 +126,13 @@
   /* Basic page shells used across legacy routes */
   .shop-page,
   .checkout-page,
+  .order-success-page,
   .home {
     @apply animate-fadeIn;
   }
 
-  .checkout-page .container {
+  .checkout-page .container,
+  .order-success-page .container {
     @apply py-8 sm:py-10;
   }
 
@@ -171,11 +173,22 @@
   }
 
   .checkout-page .checkout-content {
-    @apply mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start;
+    @apply mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start;
   }
 
   .checkout-page .checkout-form {
-    @apply grid gap-5;
+    @apply grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5;
+  }
+
+  .checkout-page .form-group,
+  .checkout-page .form-section {
+    @apply min-w-0;
+  }
+
+  .checkout-page .form-group input,
+  .checkout-page .form-group select,
+  .checkout-page .form-group textarea {
+    @apply min-w-0;
   }
 
   .checkout-page .form-section {
@@ -228,7 +241,7 @@
   }
 
   .checkout-page .form-row {
-    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3;
+    @apply mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3;
   }
 
   .checkout-page .address-autocomplete {
@@ -309,7 +322,7 @@
   }
 
   .checkout-page .coupon-input {
-    @apply flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none;
+    @apply min-w-0 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none;
   }
 
   .checkout-page .coupon-apply-btn {
@@ -328,27 +341,31 @@
     @apply mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 text-base font-extrabold text-neutral-900;
   }
 
-  .checkout-page .order-success {
+  .order-success-page .loading {
+    @apply py-16 text-center text-sm font-semibold text-neutral-500;
+  }
+
+  :is(.checkout-page, .order-success-page) .order-success {
     @apply mx-auto mt-6 grid max-w-xl justify-items-center gap-3 rounded-2xl border border-neutral-200 bg-white/90 p-6 text-center shadow-panel sm:p-8;
   }
 
-  .checkout-page .success-icon {
+  :is(.checkout-page, .order-success-page) .success-icon {
     @apply inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-2xl font-black text-accent-dark;
   }
 
-  .checkout-page .order-success h1 {
+  :is(.checkout-page, .order-success-page) .order-success h1 {
     @apply text-2xl font-extrabold tracking-tight text-neutral-900;
   }
 
-  .checkout-page .order-success p {
-    @apply text-sm leading-7 text-neutral-600;
+  :is(.checkout-page, .order-success-page) .order-success p {
+    @apply break-words text-sm leading-7 text-neutral-600;
   }
 
-  .checkout-page .order-success-id {
+  :is(.checkout-page, .order-success-page) .order-success-id {
     @apply text-sm font-semibold text-neutral-700;
   }
 
-  .checkout-page .order-success-action {
+  :is(.checkout-page, .order-success-page) .order-success-action {
     @apply mt-2;
   }
 
@@ -500,5 +517,15 @@
 
   .admin-a11y :where(input, textarea, select):disabled {
     @apply cursor-not-allowed bg-neutral-100 text-neutral-500;
+  }
+}
+
+/* Prevent iOS Safari auto-zoom on input focus (requires >=16px font).
+   Unlayered so it wins over Tailwind utility classes on mobile only. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
   }
 }

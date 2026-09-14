@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { mongoEnabled, getDb } from "@/lib/mongo";
+import { getPublicProducts, invalidatePublicProductsCache } from "@/lib/public-site";
 import { enrichProductsWithS3Images } from "@/lib/products-json";
 
 const CORS_HEADERS = {
@@ -47,17 +49,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status") || "active";
 
-    const db = await getDb();
-    const col = db.collection("products");
-    const query = statusFilter === "all" ? {} : {
-      $or: [
-        { status: statusFilter },
-        { status: { $exists: false } },
-        { status: null },
-        { status: "" },
-      ],
-    };
-    let products: any[] = await col.find(query).toArray();
+    const all = await getPublicProducts();
+    let products: any[] = statusFilter === "all"
+      ? all
+      : all.filter((p: any) => !p.status || p.status === statusFilter);
 
     // Enrich products with S3 image URLs based on SKU
     // Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-N.png
@@ -110,6 +105,8 @@ export async function DELETE(request: Request) {
           { status: 404, headers: CORS_HEADERS }
         );
       }
+      revalidateTag("products");
+      invalidatePublicProductsCache();
     }
 
     return NextResponse.json(

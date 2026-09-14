@@ -17,7 +17,7 @@ async function loadProduct(productId: string) {
   return db.collection("products").findOne({ id: productId });
 }
 
-async function buildListingPayload(product: any): Promise<ListingPayload> {
+async function buildListingPayload(product: any, channel?: Marketplace): Promise<ListingPayload> {
   const sku = product.sku || getProductSkuForKey(product) || product.id;
   const price = Number(product.price || 0);
   const quantity = Number(product.quantity || product.stock || (product.inStock ? 1 : 0));
@@ -37,16 +37,21 @@ async function buildListingPayload(product: any): Promise<ListingPayload> {
     buildFullDescription(product) ||
     `High-quality ${title}. Professional replacement remote with reliable performance.`;
 
-  let categoryId = product.marketplaceCategory?.ebay;
-  if (!categoryId || categoryId === "0") {
-    categoryId = await guessCategory(product.name || product.sku || product.id);
-    if (categoryId) {
-      const db = await getDb();
-      const filter = product._id ? { _id: product._id } : { id: product.id };
-      await db
-        .collection("products")
-        .updateOne(filter, { $set: { "marketplaceCategory.ebay": categoryId } });
-      product.marketplaceCategory = { ...product.marketplaceCategory, ebay: categoryId };
+  let categoryId: string | undefined;
+  if (channel === "temu") {
+    categoryId = product.marketplaceCategory?.temu;
+  } else {
+    categoryId = product.marketplaceCategory?.ebay;
+    if (!categoryId || categoryId === "0") {
+      categoryId = await guessCategory(product.name || product.sku || product.id);
+      if (categoryId) {
+        const db = await getDb();
+        const filter = product._id ? { _id: product._id } : { id: product.id };
+        await db
+          .collection("products")
+          .updateOne(filter, { $set: { "marketplaceCategory.ebay": categoryId } });
+        product.marketplaceCategory = { ...product.marketplaceCategory, ebay: categoryId };
+      }
     }
   }
 
@@ -98,7 +103,7 @@ export async function GET(request: Request) {
 async function pushToChannel(channel: Marketplace, productId: string, fields: string[]) {
   const product = await loadProduct(productId);
   if (!product) throw new Error(`Product ${productId} not found`);
-  const payload = await buildListingPayload(product);
+  const payload = await buildListingPayload(product, channel);
   const creds = await getValidCredentials(channel);
 
   const existing = await getChannelListings(productId).then((list) =>
@@ -196,8 +201,8 @@ export async function POST(request: Request) {
       if (!productId) return NextResponse.json({ error: "Missing productId" }, { status: 400 });
       const product = await loadProduct(productId);
       if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-      const payload = await buildListingPayload(product);
       const channel: Marketplace = body?.channel || "ebay";
+      const payload = await buildListingPayload(product, channel);
       const creds = await getValidCredentials(channel);
       const { externalId, externalUrl } = await getAdapter(channel).publishListing(payload, creds);
       await saveChannelListing({

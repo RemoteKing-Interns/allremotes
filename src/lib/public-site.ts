@@ -149,9 +149,24 @@ async function readContentDoc(key: string): Promise<ContentDoc> {
   return readContentJson(key);
 }
 
+// In-memory TTL cache. The products payload (~2.3MB) exceeds Next.js's 2MB
+// data-cache limit for unstable_cache, so a process-level cache is used instead.
+// Ceiling: product edits take up to PRODUCTS_TTL_MS to appear on the storefront;
+// upgrade path is a shared store (e.g. Redis) if multi-instance freshness matters.
+const PRODUCTS_TTL_MS = 60_000;
+let productsCache: { data: ProductRecord[]; expiresAt: number } | null = null;
+
+export function invalidatePublicProductsCache() {
+  productsCache = null;
+}
+
 export async function getPublicProducts(): Promise<ProductRecord[]> {
   if (!mongoEnabled()) {
     throw new Error("MongoDB is not configured. Public products require MongoDB.");
+  }
+
+  if (productsCache && Date.now() < productsCache.expiresAt) {
+    return productsCache.data;
   }
 
   const db = await getDb();
@@ -160,7 +175,9 @@ export async function getPublicProducts(): Promise<ProductRecord[]> {
     .find({})
     .toArray();
 
-  return Array.isArray(products) ? (products as ProductRecord[]) : [];
+  const data = Array.isArray(products) ? (products as ProductRecord[]) : [];
+  productsCache = { data, expiresAt: Date.now() + PRODUCTS_TTL_MS };
+  return data;
 }
 
 export async function getNavigationPaths(): Promise<{

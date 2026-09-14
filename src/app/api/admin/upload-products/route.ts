@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { invalidatePublicProductsCache } from "@/lib/public-site";
 import { parseCsvText, rowsToRecords, upsertProductsFromCsvRecords } from "@/lib/products-import";
 
 const CORS_HEADERS = {
@@ -77,8 +79,10 @@ export async function POST(request: Request) {
       mongo: { productsCol },
       jsonStore: null,
     });
+    revalidateTag("products");
+    invalidatePublicProductsCache();
 
-    return NextResponse.json(result.body, { 
+    return NextResponse.json(result.body, {
       status: result.status,
       headers: CORS_HEADERS 
     });

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Search, Store, ChevronDown, ChevronRight, PanelLeft, PanelLeftClose, ExternalLink } from "lucide-react";
+import { Search, Store, ChevronDown, ChevronRight, PanelLeft, PanelLeftClose, ExternalLink, X } from "lucide-react";
 import { NavItem, NavGroup, allNavItems, navGroupDefinitions } from "../shared/adminConstants";
 
 interface AdminSidebarProps {
@@ -16,6 +16,7 @@ interface AdminSidebarProps {
   user: any;
   hasPermission: (key: string) => boolean;
   onOpenSearch: () => void;
+  onClose?: () => void;
 }
 
 export default function AdminSidebar({
@@ -29,6 +30,7 @@ export default function AdminSidebar({
   user,
   hasPermission,
   onOpenSearch,
+  onClose,
 }: AdminSidebarProps) {
   const navItems = allNavItems.filter((item) => hasPermission(item.perm));
   const groupedIds = new Set(navGroupDefinitions.flatMap((g) => g.ids));
@@ -41,7 +43,7 @@ export default function AdminSidebar({
 
   return (
     <aside
-      className={`${sidebarCollapsed ? "w-16" : "w-60"} flex-shrink-0 bg-[#1a1a1a] text-white transition-all duration-300 flex flex-col`}
+      className={`${sidebarCollapsed ? "w-16" : "w-60"} h-full flex-shrink-0 bg-[#1a1a1a] text-white transition-all duration-300 flex flex-col`}
     >
       {/* Logo Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -57,10 +59,11 @@ export default function AdminSidebar({
           </div>
         )}
         <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onClick={() => (onClose ? onClose() : setSidebarCollapsed(!sidebarCollapsed))}
           className="p-1.5 rounded-lg hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+          aria-label={onClose ? "Close menu" : "Toggle sidebar"}
         >
-          {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+          {onClose ? <X size={18} /> : sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
         </button>
       </div>
 

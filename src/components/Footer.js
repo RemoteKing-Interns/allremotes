@@ -107,6 +107,8 @@ const Footer = () => {
                 alt={icon}
                 width={48}
                 height={32}
+                loading="lazy"
+                decoding="async"
                 className="h-8 w-auto rounded"
               />
             ))}

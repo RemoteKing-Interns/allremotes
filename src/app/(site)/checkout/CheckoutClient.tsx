@@ -14,6 +14,7 @@ import { trackBeginCheckout, trackPurchase } from "../../../lib/gtag";
 const Checkout = () => {
   const {
     cart,
+    cartHydrated,
     hasDiscount,
     discountRate,
     getCartTotal,
@@ -23,7 +24,7 @@ const Checkout = () => {
     getItemLineTotal,
     clearCart,
   } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { getSettings } = useStore();
   const settings = getSettings();
   const router = useRouter();
@@ -65,8 +66,8 @@ const Checkout = () => {
   const discountTotal = getCartDiscountTotal();
   const discountedTotal = getCartTotal();
 
-  const shouldRedirectToLogin = !user && !isGuest;
-  const shouldRedirectToCart = cart.length === 0 && !orderPlaced;
+  const shouldRedirectToLogin = !authLoading && !user && !isGuest;
+  const shouldRedirectToCart = cartHydrated && cart.length === 0 && !orderPlaced;
 
   useEffect(() => {
     if (cart.length > 0 && !orderPlaced && !showAnimation) {

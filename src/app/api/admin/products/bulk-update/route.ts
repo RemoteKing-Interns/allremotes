@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { mongoEnabled, getDb } from "@/lib/mongo";
+import { invalidatePublicProductsCache } from "@/lib/public-site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +49,8 @@ export async function POST(request: NextRequest) {
     });
 
     const result = await collection.bulkWrite(operations);
+    revalidateTag("products");
+    invalidatePublicProductsCache();
 
     return NextResponse.json({
       success: true,

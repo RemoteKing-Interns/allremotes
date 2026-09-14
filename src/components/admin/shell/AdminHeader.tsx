@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, HelpCircle, LogOut } from "lucide-react";
+import { Bell, HelpCircle, LogOut, Menu } from "lucide-react";
 
 interface NotificationItem {
   id: string;
@@ -23,6 +23,7 @@ interface AdminHeaderProps {
   fetchNotifications: () => void;
   onNotifClick: (n: NotificationItem) => void;
   onLogout: () => void;
+  onOpenNav?: () => void;
 }
 
 export default function AdminHeader({
@@ -34,6 +35,7 @@ export default function AdminHeader({
   fetchNotifications,
   onNotifClick,
   onLogout,
+  onOpenNav,
 }: AdminHeaderProps) {
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -48,9 +50,18 @@ export default function AdminHeader({
   }, [setNotifOpen]);
 
   return (
-    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-6 flex-shrink-0">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold text-neutral-900 capitalize">
+    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        {onOpenNav && (
+          <button
+            onClick={onOpenNav}
+            className="p-2 -ml-1 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700 transition-colors lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        <h1 className="truncate text-lg font-semibold text-neutral-900 capitalize">
           {activeTab === "dashboard" ? "Home" : activeTab.replace("_", " ")}
         </h1>
       </div>
@@ -73,7 +84,7 @@ export default function AdminHeader({
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-96 rounded-xl border border-neutral-200 bg-white shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-1rem))] rounded-xl border border-neutral-200 bg-white shadow-xl z-50 overflow-hidden">
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
                 <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
                 <span className="text-xs text-neutral-500">{notifications.length} items</span>

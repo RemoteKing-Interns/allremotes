@@ -427,7 +427,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
 
         {/* Content */}
         <div className="container relative z-10 flex h-full min-h-[100dvh] max-h-[900px] items-center px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl py-24 lg:py-0">
+          <div className="max-w-3xl py-16 sm:py-24 lg:py-0">
             <motion.span
               {...fadeInUp}
               className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-white/90 backdrop-blur"
@@ -439,7 +439,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
             <motion.h1
               {...fadeInUp}
               transition={{ ...fadeInUp.transition, delay: 0.05 }}
-              className="text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl"
+              className="text-3xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl"
             >
               {hero.title || "Garage Door & Gate Remotes"}
             </motion.h1>
@@ -492,16 +492,20 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
             >
               <ChevronRight size={20} />
             </button>
-            <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+            <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-1">
               {heroImages.map((_: any, index: number) => (
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}
                   aria-label={`Go to slide ${index + 1}`}
-                  className={`h-2 rounded-full transition-all ${
-                    index === currentSlide ? "w-8 bg-white" : "w-2 bg-white/40 hover:bg-white/60"
-                  }`}
-                />
+                  className="flex h-11 w-8 items-center justify-center"
+                >
+                  <span
+                    className={`block h-2 rounded-full transition-all ${
+                      index === currentSlide ? "w-8 bg-white" : "w-2 bg-white/40 hover:bg-white/60"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           </>
@@ -520,14 +524,14 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
           ].map((item, index) => (
             <div
               key={index}
-              className="flex flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:items-center sm:justify-center sm:text-left"
+              className="flex flex-col items-center gap-2 px-3 py-5 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:px-4 sm:py-8 sm:text-left"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
-                <item.icon size={22} strokeWidth={1.8} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark sm:h-11 sm:w-11">
+                <item.icon size={20} strokeWidth={1.8} className="sm:h-[22px] sm:w-[22px]" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-neutral-900">{item.title}</p>
-                <p className="text-xs text-neutral-500">{item.body}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-neutral-900 sm:text-sm">{item.title}</p>
+                <p className="text-[11px] text-neutral-500 sm:text-xs">{item.body}</p>
               </div>
             </div>
           ))}
@@ -535,7 +539,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* POPULAR PRODUCTS */}
-      <section className="container py-16 sm:py-20 lg:py-24">
+      <section className="container py-12 sm:py-16 lg:py-20">
         <SectionHeader
           eyebrow="Popular Picks"
           title="The remotes customers choose first"
@@ -555,7 +559,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
             No products available right now.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
             {popularProducts.map((product: any) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -564,7 +568,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* WHY BUY */}
-      <section className="container py-16 sm:py-20 lg:py-24">
+      <section className="container py-12 sm:py-16 lg:py-20">
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <div>
             <SectionHeader
@@ -601,7 +605,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* FEATURED RANGE */}
-      <section className="border-t border-neutral-200 bg-white py-16 sm:py-20 lg:py-24">
+      <section className="border-t border-neutral-200 bg-white py-12 sm:py-16 lg:py-20">
         <div className="container">
           <SectionHeader
             eyebrow="Full Range"
@@ -613,7 +617,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
               No products available right now.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
               {products.slice(0, 8).map((product: any) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -632,7 +636,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* REVIEWS */}
-      <section className="bg-neutral-50 py-16 sm:py-20 lg:py-24">
+      <section className="bg-neutral-50 py-12 sm:py-16 lg:py-20">
         <div className="container">
           <SectionHeader
             eyebrow="Reviews"
@@ -672,8 +676,8 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       <HomeSeoContent />
 
       {/* CTA */}
-      <section className="container py-16 sm:py-20 lg:py-24">
-        <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 px-6 py-14 text-center shadow-strong sm:px-12 sm:py-20 lg:py-24">
+      <section className="container py-12 sm:py-16 lg:py-20">
+        <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 px-5 py-10 text-center shadow-strong sm:px-12 sm:py-16 lg:py-24">
           <img
             src="/images/remote-banner.jpg"
             alt="Australian garage door and gate remotes"

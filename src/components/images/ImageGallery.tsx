@@ -76,9 +76,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
   }
 
   return (
-    <div className={`flex flex-col gap-4 ${className}`}>
+    <div className={`flex flex-col gap-3 sm:gap-4 ${className}`}>
       {/* Main Image */}
-      <div className="relative flex h-[28rem] items-center justify-center overflow-hidden bg-white rounded-2xl sm:h-[34rem]">
+      <div className="relative flex h-[20rem] items-center justify-center overflow-hidden bg-white rounded-2xl sm:h-[28rem] lg:h-[34rem]">
         <ProductImage
           src={currentImage}
           alt={product?.name || "Product image"}
@@ -104,7 +104,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
               <button
                 key={`thumb-${idx}-${imgUrl}`}
                 onClick={() => setSelectedImageIndex(idx)}
-                className={`relative flex h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                className={`relative flex h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-20 sm:w-20 ${
                   isSelected
                     ? "border-primary shadow-md"
                     : "border-neutral-200 hover:border-neutral-300"

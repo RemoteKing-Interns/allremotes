@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { invalidatePublicProductsCache } from "@/lib/public-site";
 import { getProductSkuForKey, normalizeSkuKey } from "@/lib/products-import";
 
 const CORS_HEADERS = {
@@ -120,6 +122,8 @@ export async function PUT(request: Request) {
         modified: result?.modifiedCount || 0,
         upserted: result?.upsertedCount || 0,
       });
+      revalidateTag("products");
+      invalidatePublicProductsCache();
     }
     return NextResponse.json({ ok: true, saved: ops.length, storage: "mongodb" }, {
       headers: CORS_HEADERS,
@@ -176,6 +180,8 @@ export async function PATCH(request: Request) {
       if (result.matchedCount === 0) {
         return NextResponse.json({ error: "Product not found" }, { status: 404, headers: CORS_HEADERS });
       }
+      revalidateTag("products");
+      invalidatePublicProductsCache();
       return NextResponse.json({ ok: true, id: body.id, status, modified: result.modifiedCount }, { headers: CORS_HEADERS });
     }
 
@@ -186,6 +192,8 @@ export async function PATCH(request: Request) {
         { id: { $in: ids } },
         { $set: { status, updatedAt: now } }
       );
+      revalidateTag("products");
+      invalidatePublicProductsCache();
       return NextResponse.json({ ok: true, status, matched: result.matchedCount, modified: result.modifiedCount }, { headers: CORS_HEADERS });
     }
 
@@ -312,6 +320,8 @@ export async function POST(request: Request) {
         modified: result?.modifiedCount || 0,
         upserted: result?.upsertedCount || 0,
       });
+      revalidateTag("products");
+      invalidatePublicProductsCache();
     }
     return NextResponse.json({ ok: true, saved: ops.length, storage: "mongodb" }, {
       headers: CORS_HEADERS,

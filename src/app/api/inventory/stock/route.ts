@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import crypto from "crypto";
 import { mongoEnabled, getDb } from "@/lib/mongo";
+import { invalidatePublicProductsCache } from "@/lib/public-site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,6 +118,8 @@ export async function POST(request: Request) {
     );
 
     console.log(`[Stock] ${product.rk_sku}: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
+    revalidateTag("products");
+    invalidatePublicProductsCache();
 
     return NextResponse.json({
       product: {

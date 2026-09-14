@@ -378,21 +378,21 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
 
   return (
     <div className="animate-fadeIn">
-      <div className="container py-8 sm:py-10">
+      <div className="container py-6 sm:py-10">
         <Link
           href="/products/all"
-          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/80 px-4 py-2 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-100"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-100 sm:px-4 sm:py-2 sm:text-sm"
         >
           <ArrowLeft size={16} />
           Back to Products
         </Link>
 
-        <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:items-start">
+        <div className="mt-4 grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
           {/* LEFT: IMAGE GALLERY */}
           <ImageGallery product={product} />
 
           {/* RIGHT: INFO */}
-          <div className="rounded-2xl border border-neutral-200 bg-white/80 p-6 shadow-panel backdrop-blur sm:p-8">
+          <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-panel backdrop-blur sm:p-6 lg:p-8">
             {product.brand && (
               <p className="text-sm font-semibold text-neutral-600">
                 {product.brand}
@@ -405,22 +405,22 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
               </p>
             )}
 
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+            <h1 className="mt-3 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl lg:text-3xl">
               {product.name}
             </h1>
 
-            <div className="mt-5 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:mt-5">
               {pricing.hasDiscount ? (
                 <div className="flex items-baseline gap-3">
                   <p className="text-sm font-semibold text-neutral-400 line-through">
                     AU${pricing.originalPrice.toFixed(2)}
                   </p>
-                  <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
+                  <p className="text-xl font-extrabold tracking-tight text-neutral-900 sm:text-2xl">
                     AU${pricing.finalPrice.toFixed(2)}
                   </p>
                 </div>
               ) : (
-                <p className="text-2xl font-extrabold tracking-tight text-neutral-900">
+                <p className="text-xl font-extrabold tracking-tight text-neutral-900 sm:text-2xl">
                   AU${pricing.finalPrice.toFixed(2)}
                 </p>
               )}
@@ -450,7 +450,7 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
 
             {/* Quantity */}
             {product.inStock && (
-              <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="mt-5 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:mt-6 sm:gap-4">
                 <span className="text-sm font-semibold text-neutral-800">Quantity</span>
                 <div
                   className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs"
@@ -481,7 +481,7 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
             )}
 
             {/* Buttons */}
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-2.5 sm:mt-6 sm:grid-cols-2 sm:gap-3">
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark disabled:opacity-60"
                 disabled={!product.inStock}
@@ -505,7 +505,7 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
             </div>
 
             {/* Specs */}
-            <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-5">
+            <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:mt-8 sm:p-5">
               <h3 className="text-base font-semibold text-neutral-900">
                 Product Details
               </h3>
@@ -569,14 +569,14 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
 
         {/* PRODUCT INFO SECTIONS */}
         {visibleTabs.length > 0 && (
-          <div className="mt-10 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur overflow-hidden">
-            <div className="flex flex-wrap gap-2 border-b border-neutral-200 p-3">
+          <div className="mt-8 rounded-2xl border border-neutral-200 bg-white/80 shadow-panel backdrop-blur overflow-hidden sm:mt-10">
+            <div className="flex gap-2 overflow-x-auto border-b border-neutral-200 p-3 scrollbar-hide">
               {visibleTabs.map((section) => (
                 <button
                   key={section.id}
                   type="button"
                   onClick={() => setActiveTab(section.id)}
-                  className={`rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-extrabold tracking-[0.12em] transition ${
                     activeTab === section.id
                       ? "bg-accent/10 text-accent-dark"
                       : "text-neutral-700 hover:bg-neutral-100"
@@ -586,23 +586,25 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
                 </button>
               ))}
             </div>
-            <div className="p-4 sm:p-8">
-              {visibleTabs.find((s) => s.id === activeTab)?.content}
+            <div className="overflow-x-auto p-4 sm:p-6 lg:p-8 [&_*]:max-w-full [&_img]:h-auto [&_table]:block [&_table]:overflow-x-auto">
+              <div className="min-w-0 break-words [overflow-wrap:anywhere]">
+                {visibleTabs.find((s) => s.id === activeTab)?.content}
+              </div>
             </div>
           </div>
         )}
 
         {relatedProducts.length > 0 && (
-          <div className="mt-10">
+          <div className="mt-8 sm:mt-10">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
+              <h2 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
                 Related Products
               </h2>
               <p className="mt-2 text-sm leading-7 text-neutral-600">
                 More remotes you might like
               </p>
             </div>
-            <div className="mt-6 grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:gap-5 lg:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 lg:grid-cols-4">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}

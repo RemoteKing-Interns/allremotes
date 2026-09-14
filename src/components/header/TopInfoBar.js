@@ -206,16 +206,19 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
       : null;
   const items = mergeTopBarItems(configuredItems || STATIC_TOP_BAR_ITEMS);
 
-  // Auto-rotate carousel on small screens
+  // Auto-rotate carousel on small screens (paused for reduced-motion users)
   useEffect(() => {
     if (items.length <= 1) return;
-    
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % items.length);
     }, 3000); // Change every 3 seconds
 
     return () => clearInterval(interval);
   }, [items.length]);
+
+  const activeItem = items[currentIndex % items.length];
 
   return (
     <div
@@ -230,9 +233,9 @@ const TopInfoBar = ({ promotions, collapsed = false }) => {
           <div className="flex w-full items-center justify-center text-[9px] font-bold uppercase leading-snug tracking-[0.02em] text-white min-[390px]:text-[10px] max-[647px]:text-[8px] md:hidden">
             <div className="flex items-center justify-center gap-1 min-[390px]:gap-1.5 max-[647px]:gap-0.5">
               <span className="shrink-0 text-white [&_svg]:h-3 [&_svg]:w-3 min-[390px]:[&_svg]:h-3.5 [&_svg]:w-3.5 max-[647px]:[&_svg]:h-2.5 [&_svg]:w-2.5">
-                {getIconForText(items[currentIndex])}
+                {getIconForText(activeItem)}
               </span>
-              <span className="text-center text-white font-extrabold max-[647px]:font-bold truncate px-1">{items[currentIndex]}</span>
+              <span className="text-center text-white font-extrabold max-[647px]:font-bold truncate px-1">{activeItem}</span>
             </div>
           </div>
           

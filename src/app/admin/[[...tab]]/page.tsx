@@ -420,6 +420,7 @@ const AdminContent = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   // Auto-expand the sidebar group containing the active tab
@@ -826,22 +827,48 @@ const AdminContent = () => {
 
   return (
     <div className="flex h-screen bg-[#f6f6f7]">
-      <AdminSidebar
-        sidebarCollapsed={sidebarCollapsed}
-        setSidebarCollapsed={setSidebarCollapsed}
-        expandedGroups={expandedGroups}
-        setExpandedGroups={setExpandedGroups}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        unreadMessageCount={unreadMessageCount}
-        user={user}
-        hasPermission={hasPermission}
-        onOpenSearch={() => { setCmdkOpen(true); }}
-      />
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        <AdminSidebar
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          expandedGroups={expandedGroups}
+          setExpandedGroups={setExpandedGroups}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          unreadMessageCount={unreadMessageCount}
+          user={user}
+          hasPermission={hasPermission}
+          onOpenSearch={() => { setCmdkOpen(true); }}
+        />
+      </div>
+
+      {/* Mobile nav drawer */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileNavOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex shadow-2xl">
+            <AdminSidebar
+              sidebarCollapsed={false}
+              setSidebarCollapsed={setSidebarCollapsed}
+              expandedGroups={expandedGroups}
+              setExpandedGroups={setExpandedGroups}
+              activeTab={activeTab}
+              setActiveTab={(tab) => { setActiveTab(tab); setMobileNavOpen(false); }}
+              unreadMessageCount={unreadMessageCount}
+              user={user}
+              hasPermission={hasPermission}
+              onOpenSearch={() => { setMobileNavOpen(false); setCmdkOpen(true); }}
+              onClose={() => setMobileNavOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AdminHeader
+          onOpenNav={() => setMobileNavOpen(true)}
           activeTab={activeTab}
           notifOpen={notifOpen}
           setNotifOpen={setNotifOpen}
@@ -857,7 +884,7 @@ const AdminContent = () => {
         />
 
         {/* Page Content — only the active tab is mounted; inactive tabs are unmounted to save DOM nodes and API calls */}
-        <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-6">
+        <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-4 sm:p-6">
           {/* Permission guard fallback */}
           {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
             <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -918,6 +945,27 @@ type UnleashedPushState = {
 };
 
 const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/LabelCanvasEditor"), { ssr: false });
+
+// Item name with a hover image preview. The <img> only mounts after the first
+// hover, so order rows never fetch images until the admin actually asks for one.
+function OrderItemName({ name, imageUrl, truncate = false }: { name: string; imageUrl?: string | null; truncate?: boolean }) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <span
+      className={`group/tip relative inline-block max-w-full align-top ${imageUrl ? "cursor-help underline decoration-dotted decoration-neutral-300 underline-offset-2" : ""}`}
+      onMouseEnter={() => imageUrl && setArmed(true)}
+    >
+      <span className={truncate ? "block truncate" : ""}>{name}</span>
+      {armed && imageUrl && (
+        <img
+          src={imageUrl}
+          alt={name}
+          className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden h-36 w-40 rounded-xl border border-neutral-200 bg-white object-contain p-2 shadow-xl group-hover/tip:block"
+        />
+      )}
+    </span>
+  );
+}
 
 function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void; activeTab: string }) {
   const [orders, setOrders] = useState<any[]>([]);
@@ -988,6 +1036,58 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [allGroupStock, setAllGroupStock] = useState<Record<string, Record<string, { unleashedQty: number | null; newStock: number | null }>>>({});
   const [modalStock, setModalStock] = useState<Record<string, { unleashedQty: number | null; newStock: number | null }>>({});
   const [loadingStock, setLoadingStock] = useState(false);
+
+  // Order items only carry name/sku — resolve product images from the catalog.
+  // Channel orders (eBay etc.) use listing names/ids, so exact key match falls
+  // back to distinctive-token overlap on the item name.
+  const { getProducts } = useStore();
+  const productImageIndex = useMemo(() => {
+    const norm = (s: any) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const toks = (s: any) => String(s ?? "").toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
+    const exact = new Map<string, string>();
+    const named: { img: string; norm: string; tokens: Set<string> }[] = [];
+    for (const p of getProducts() || []) {
+      const img = getPrimaryImage(p);
+      if (!img) continue;
+      for (const k of [p.id, p.sku, p.rk_sku, p.name, p.model]) {
+        const key = k ? String(k).trim().toLowerCase() : "";
+        if (key && !exact.has(key)) exact.set(key, img);
+      }
+      const name = p.name || p.model || "";
+      named.push({ img, norm: norm(name), tokens: new Set(toks(name)) });
+    }
+    return { exact, named, norm, toks };
+  }, [getProducts]);
+
+  const itemImage = (item: any): string | null => {
+    const { exact, named, norm, toks } = productImageIndex;
+    for (const k of [item?.id, item?.rk_sku, item?.sku, item?.name]) {
+      const img = k ? exact.get(String(k).trim().toLowerCase()) : undefined;
+      if (img) return img;
+    }
+    const itemNorm = norm(item?.name);
+    const itemToks = new Set(toks(item?.name));
+    let best: { img: string; score: number } | null = null;
+    for (const p of named) {
+      if (itemNorm && p.norm && (itemNorm.includes(p.norm) || p.norm.includes(itemNorm))) {
+        return p.img;
+      }
+      let score = 0;
+      let digitToken = false;
+      for (const t of p.tokens) {
+        if (itemToks.has(t)) {
+          score++;
+          if (/\d/.test(t)) digitToken = true;
+        }
+      }
+      // Require a digit-bearing token (e.g. a model code like "e148m") plus one
+      // more shared token so generic brand words alone can't match.
+      if (digitToken && score >= 2 && score > (best?.score || 0)) {
+        best = { img: p.img, score };
+      }
+    }
+    return best?.img || null;
+  };
 
   const printPackingSlips = async (ordersToPrint: any[]) => {
     if (ordersToPrint.length === 0) return;
@@ -2345,8 +2445,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       <tbody className="divide-y divide-neutral-100">
                         {modalItems.map((item, idx) => (
                           <tr key={item.id} className="hover:bg-neutral-50/60">
-                            <td className="px-4 py-3 font-medium text-neutral-900 max-w-[200px] truncate" title={item.name}>
-                              {item.name}
+                            <td className="px-4 py-3 font-medium text-neutral-900 max-w-[200px]" title={item.name}>
+                              <OrderItemName name={item.name} imageUrl={itemImage(item)} truncate />
                             </td>
                             {hasRkSku && (
                               <td className="px-4 py-3 font-mono text-xs text-neutral-500">
@@ -2709,7 +2809,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   {(selectedOrder?.items || []).map((item: any, idx: number) => (
                     <div key={idx} className={`flex items-center justify-between p-3 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
-                        <p className="font-medium text-sm text-neutral-900">{item.name}</p>
+                        <p className="font-medium text-sm text-neutral-900">
+                          <OrderItemName name={item.name} imageUrl={itemImage(item)} />
+                        </p>
                         {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
                         <p className="text-xs text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
                       </div>

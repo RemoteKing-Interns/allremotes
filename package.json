@@ -36,7 +36,8 @@
     "recharts": "^3.9.2",
     "resend": "^6.12.3",
     "stripe": "^20.4.1",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "undici": "^8.10.2"
   },
   "scripts": {
     "dev": "next dev",
@@ -56,6 +57,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9.39.0",
     "eslint-config-next": "15.5.12",
+    "playwright-core": "^1.63.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.0.0",

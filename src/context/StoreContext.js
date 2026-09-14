@@ -456,8 +456,12 @@ export const StoreProvider = ({ children }) => {
     const data = await res.json();
     const normalized = coerceServerProductsToLocal(data);
     if (!normalized) return;
-    setProducts(resolveProducts(normalized));
-  }, [apiBase, setProducts]);
+    // Hydrate local state only — do NOT setProducts() here. setProducts PUTs the
+    // whole array back to /api/admin/products, so every page view would trigger
+    // a 237-doc bulkWrite and invalidate the server-side product cache.
+    saveProducts(resolveProducts(normalized));
+    setProductsVersion((v) => v + 1);
+  }, [apiBase]);
 
   // Try to hydrate products from the server on first load (non-blocking).
   useEffect(() => {

@@ -57,8 +57,15 @@ const NavBar = ({
         setOpenDropdown(null);
       }
     };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setOpenDropdown(null);
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   return (

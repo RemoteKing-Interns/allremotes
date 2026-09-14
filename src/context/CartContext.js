@@ -34,6 +34,7 @@ export const useCart = () => {
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const { user, loading } = useAuth();
   const { getPromotions } = useStore();
   const promotions = getPromotions();
@@ -245,6 +246,7 @@ export const CartProvider = ({ children }) => {
     }
 
     prevUserKeyRef.current = userKey;
+    setCartHydrated(true);
   }, [
     user,
     loading,
@@ -391,6 +393,7 @@ export const CartProvider = ({ children }) => {
     <CartContext.Provider
       value={{
         cart,
+        cartHydrated,
         addToCart,
         removeFromCart,
         updateQuantity,

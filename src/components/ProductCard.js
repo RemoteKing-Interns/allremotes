@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { generateProductSlugUrl } from "../lib/product-slugs";
 import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
@@ -31,6 +31,7 @@ const ProductCard = ({
   const { user } = useAuth();
   const { getPromotions } = useStore();
   const [isWishlisted, setIsWishlisted] = React.useState(false);
+  const reduceMotion = useReducedMotion();
   const promotions = getPromotions();
   const pricing = getPriceBreakdown(product.price, isDiscountEligible(user), {
     promotions,
@@ -105,10 +106,10 @@ const ProductCard = ({
 
   return (
     <motion.div
-      whileHover={{ y: -4 }}
+      whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ type: "spring", bounce: 0, duration: 0.3 }}
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 shadow-panel backdrop-blur transition-shadow duration-300 hover:shadow-strong"
-      initial={{ opacity: 0, y: 18 }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
     >
@@ -135,7 +136,7 @@ const ProductCard = ({
         />
 
         {/* Badges - Top Left */}
-        <div className="absolute left-2 top-2 right-12 z-20 flex flex-col gap-1 sm:left-3 sm:top-3 sm:right-auto sm:gap-1.5">
+        <div className="pointer-events-none absolute left-2 top-2 z-20 flex max-w-[calc(100%-3.5rem)] flex-col gap-1 sm:left-3 sm:top-3 sm:max-w-none sm:gap-1.5">
           {product.inStock ? (
             <span className="inline-flex max-w-full items-center gap-1.5 self-start rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-extrabold text-accent-dark sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
@@ -158,7 +159,7 @@ const ProductCard = ({
           <button
             type="button"
             onClick={toggleWishlist}
-            className={`absolute right-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 sm:right-3 sm:top-3 sm:h-10 sm:w-10 ${
+            className={`absolute right-2 top-2 z-30 flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 shadow-xs transition-all duration-200 sm:right-3 sm:top-3 ${
               isWishlisted
                 ? "bg-white text-primary"
                 : "bg-white/90 text-neutral-700 opacity-100 backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
@@ -177,8 +178,9 @@ const ProductCard = ({
         )}
       </div>
 
-      {/* Product Info */}
-      <div className="relative z-20 flex flex-1 flex-col p-3 sm:p-5 bg-white">
+      {/* Product Info — no z-index: the card's absolute Link (z-10) sits above
+          this block so name/price clicks navigate; the button stays z-30 */}
+      <div className="flex flex-1 flex-col bg-white p-3 sm:p-5">
         <p className="mb-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.14em] text-neutral-500">
           {brandLabel}
         </p>
