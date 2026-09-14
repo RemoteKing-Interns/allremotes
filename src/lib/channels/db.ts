@@ -26,11 +26,32 @@ const ACCOUNTS_COLLECTION = "marketplaceAccounts";
 const LISTINGS_COLLECTION = "channelListings";
 const ORDERS_COLLECTION = "channelOrders";
 
+// TEMU self-managed apps have no OAuth redirect — the seller authorizes the app
+// in Seller Center and pastes the token shown. Fall back to env credentials.
+function temuEnvAccount(): MarketplaceAccount | null {
+  const accessToken = process.env.TEMU_ACCESS_TOKEN;
+  if (!process.env.TEMU_APP_KEY || !accessToken) return null;
+  return {
+    channel: "temu",
+    connected: true,
+    credentials: {
+      accessToken,
+      // Manual tokens are long-lived; far-future expiry skips the refresh path.
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    updatedAt: "env",
+  } as MarketplaceAccount;
+}
+
 export async function getMarketplaceAccount(channel: Marketplace): Promise<MarketplaceAccount | null> {
-  if (!mongoEnabled()) return null;
+  if (!mongoEnabled()) return channel === "temu" ? temuEnvAccount() : null;
   const db = await getDb();
   const doc = await db.collection(ACCOUNTS_COLLECTION).findOne({ channel });
-  if (!doc) return null;
+  if (!doc || !doc.connected) {
+    const envAccount = channel === "temu" ? temuEnvAccount() : null;
+    if (envAccount) return envAccount;
+    if (!doc) return null;
+  }
   return {
     channel: doc.channel,
     connected: doc.connected,

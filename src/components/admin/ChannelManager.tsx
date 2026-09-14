@@ -223,16 +223,25 @@ export default function ChannelManager() {
           <div key={channel} className="rounded-xl border border-neutral-200 p-4">
             <h2 className="text-lg font-semibold mb-2 capitalize">{channel} Account</h2>
             <p className="text-sm text-neutral-600 mb-3">
-              {status[channel]?.connected ? `Connected` : "Not connected"}
-              {status[channel]?.updatedAt ? ` · ${status[channel].updatedAt}` : ""}
+              {status[channel]?.connected
+                ? `Connected${status[channel]?.updatedAt === "env" ? " via env token" : ""}`
+                : "Not connected"}
+              {status[channel]?.updatedAt && status[channel]?.updatedAt !== "env" ? ` · ${status[channel].updatedAt}` : ""}
             </p>
+            {channel === "temu" && (
+              <p className="mb-3 text-xs text-neutral-500">
+                Manual flow: the button opens Seller Center → authorize the app → copy the token → set <code>TEMU_ACCESS_TOKEN</code> in env. TEMU does not redirect back.
+              </p>
+            )}
             <button
               type="button"
               onClick={() => connect(channel)}
               disabled={loading}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50"
             >
-              {status[channel]?.connected ? "Reconnect" : "Connect"}
+              {channel === "temu"
+                ? "Open Seller Center"
+                : status[channel]?.connected ? "Reconnect" : "Connect"}
             </button>
           </div>
         ))}

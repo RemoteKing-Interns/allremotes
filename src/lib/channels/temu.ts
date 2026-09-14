@@ -146,11 +146,9 @@ export const temuAdapter: ChannelAdapter = {
       throw new Error("TEMU_APP_KEY must be set");
     }
     const base = SELLER_CENTER[TEMU_SITE] || SELLER_CENTER.us;
-    const params = new URLSearchParams({
-      appKey: TEMU_APP_KEY,
-      redirect_uri: TEMU_REDIRECT_URI,
-      state,
-    });
+    const params = new URLSearchParams({ appKey: TEMU_APP_KEY, state });
+    // Manual auth flow doesn't use redirect_uri — only send it if configured.
+    if (TEMU_REDIRECT_URI) params.set("redirect_uri", TEMU_REDIRECT_URI);
     return `${base}/open-platform/client-manage/authorization?${params}`;
   },
 
