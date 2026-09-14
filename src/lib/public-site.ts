@@ -155,6 +155,7 @@ async function readContentDoc(key: string): Promise<ContentDoc> {
 // upgrade path is a shared store (e.g. Redis) if multi-instance freshness matters.
 const PRODUCTS_TTL_MS = 60_000;
 let productsCache: { data: ProductRecord[]; expiresAt: number } | null = null;
+let productsPromise: Promise<ProductRecord[]> | null = null;
 
 export function invalidatePublicProductsCache() {
   productsCache = null;
@@ -169,15 +170,34 @@ export async function getPublicProducts(): Promise<ProductRecord[]> {
     return productsCache.data;
   }
 
-  const db = await getDb();
-  const products = await db
-    .collection("products")
-    .find({})
-    .toArray();
+  // Dedup concurrent misses — a cold window can race N requests into N queries.
+  if (!productsPromise) {
+    productsPromise = (async () => {
+      const db = await getDb();
+      const products = await db
+        .collection("products")
+        .find({})
+        .toArray();
+      const data = Array.isArray(products) ? (products as ProductRecord[]) : [];
+      productsCache = { data, expiresAt: Date.now() + PRODUCTS_TTL_MS };
+      return data;
+    })().finally(() => {
+      productsPromise = null;
+    });
+  }
+  return productsPromise;
+}
 
-  const data = Array.isArray(products) ? (products as ProductRecord[]) : [];
-  productsCache = { data, expiresAt: Date.now() + PRODUCTS_TTL_MS };
-  return data;
+// Single-product fetch — avoid pulling the whole 2.3MB collection for one page.
+export async function getPublicProductById(
+  id: string,
+): Promise<ProductRecord | null> {
+  if (!mongoEnabled()) {
+    throw new Error("MongoDB is not configured. Public products require MongoDB.");
+  }
+  const db = await getDb();
+  const doc = await db.collection("products").findOne({ id });
+  return doc ? (JSON.parse(JSON.stringify(doc)) as ProductRecord) : null;
 }
 
 export async function getNavigationPaths(): Promise<{

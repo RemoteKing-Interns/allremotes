@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { invalidatePublicProductsCache } from "@/lib/public-site";
+import { getPublicProducts, invalidatePublicProductsCache } from "@/lib/public-site";
 import { getProductSkuForKey, normalizeSkuKey } from "@/lib/products-import";
 
 const CORS_HEADERS = {
@@ -221,23 +221,21 @@ export async function GET(request: Request) {
       );
     }
 
-    const db = await getDb();
-    const col = db.collection("products");
-    const filter: any = {};
+    // Full collection comes from the shared in-memory cache — avoids re-pulling
+    // ~2.3MB from Atlas on every admin page (channels tab, product list, etc).
+    const all = await getPublicProducts();
+    let filtered = all as any[];
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { sku: { $regex: search, $options: "i" } },
-        { id: { $regex: search, $options: "i" } },
-      ];
+      filtered = all.filter((p: any) =>
+        [p.name, p.sku, p.id].some((v) =>
+          String(v || "").toLowerCase().includes(search),
+        ),
+      );
     }
-    const total = await col.countDocuments(filter);
-    const products = await col
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .toArray();
+    const total = filtered.length;
+    const products = [...filtered]
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice((page - 1) * limit, page * limit);
     return NextResponse.json({ products, total, page, limit, source: "mongodb" }, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(

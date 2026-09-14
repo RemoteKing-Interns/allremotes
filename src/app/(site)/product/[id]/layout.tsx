@@ -1,8 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
-import { unstable_cache } from "next/cache";
-import { getPublicProducts } from "@/lib/public-site";
-import { enrichProductWithS3Images } from "@/lib/products-json";
+import { getProductDetail } from "@/lib/product-detail";
 import { getSiteUrl } from "@/lib/site-url";
 import { toAbsoluteImageUrl } from "@/lib/images";
 import { getCategoryPageTitle } from "@/lib/category";
@@ -15,17 +13,6 @@ function getCategoryDisplayName(category: string) {
   return getCategoryPageTitle(category || "all");
 }
 
-const getProductCached = unstable_cache(
-  async (id: string) => {
-    const products = await getPublicProducts();
-    const product = products.find((p) => String(p.id) === id);
-    if (!product) return null;
-    return enrichProductWithS3Images(product);
-  },
-  ["product-detail-metadata"],
-  { revalidate: 60, tags: ["product-metadata"] },
-);
-
 export async function generateMetadata({
   params,
 }: {
@@ -33,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id: rawId } = await params;
   const id = extractIdFromSlugParam(rawId);
-  const product = await getProductCached(id);
+  const product = await getProductDetail(id);
 
   if (!product) {
     return { title: "Product not found | ALLREMOTES" };
@@ -238,7 +225,7 @@ export default async function ProductLayout({
 }) {
   const { id: rawId } = await params;
   const id = extractIdFromSlugParam(rawId);
-  const product = await getProductCached(id);
+  const product = await getProductDetail(id);
   if (!product) notFound();
 
   if (isUuid(rawId)) {
