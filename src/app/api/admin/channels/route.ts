@@ -39,7 +39,8 @@ async function buildListingPayload(product: any, channel?: Marketplace): Promise
 
   let categoryId: string | undefined;
   if (channel === "temu") {
-    categoryId = product.marketplaceCategory?.temu;
+    // Per-product override wins; catalog-wide default comes from env.
+    categoryId = product.marketplaceCategory?.temu || process.env.TEMU_DEFAULT_CATID;
   } else {
     categoryId = product.marketplaceCategory?.ebay;
     if (!categoryId || categoryId === "0") {
