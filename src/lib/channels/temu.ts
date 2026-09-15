@@ -237,15 +237,26 @@ export const temuAdapter: ChannelAdapter = {
       goodsBasic: {
         catId: Number(payload.category),
         goodsName: payload.title.slice(0, 500),
+        goodsDesc: payload.description?.slice(0, 50000) || "",
+        goodsGallery: {
+          goodsCarouselImage: temuImages,
+        },
+        brand: { noTrademark: true },
+        productType: 1,
       },
       goodsServicePromise: {
         shipmentLimitDay: 1,
+        fulfillmentType: 1,
         costTemplateId: TEMU_COST_TEMPLATE_ID,
         ...(TEMU_SITE === "us" ? { importDesignation: "Imported" } : {}),
       },
-      goodsDesc: payload.description?.slice(0, 50000) || "",
       skuList: [
         {
+          externalSkuId: payload.sku,
+          referencePrice: {
+            amount: payload.price.toFixed(2),
+            currency,
+          },
           price: {
             basePrice: {
               amount: payload.price.toFixed(2),
@@ -282,6 +293,7 @@ export const temuAdapter: ChannelAdapter = {
       throw new Error("TEMU product create returned no goodsId");
     }
     const skuId = result.skuInfoList?.[0]?.skuId;
+
     return {
       externalId: String(result.goodsId),
       externalUrl: skuId
@@ -297,16 +309,24 @@ export const temuAdapter: ChannelAdapter = {
    */
   async updateInventory(sku, price, quantity, creds) {
     const currency = getCurrency();
-    // Price update
+    // Price update — requires goodsId + changeSkuPriceDTOList with reason.
+    // sku here is the skuId (stored as externalId in ChannelListing for now).
+    // TODO: store goodsId in ChannelListing so we can pass it here.
     await temuCall(
       "bg.local.goods.priceorder.change.sku.price",
       {
-        skuList: [
+        changeSkuPriceDTOList: [
           {
-            skuId: Number(sku),
-            price: { amount: price.toFixed(2), currency },
+            reason: "Inventory sync",
+            skuChangePriceBaseDTOList: [
+              {
+                skuId: Number(sku),
+                newSupplierPrice: { amount: price.toFixed(2), currency },
+              },
+            ],
           },
         ],
+        rejectSkuPricing: true,
       },
       creds
     );
