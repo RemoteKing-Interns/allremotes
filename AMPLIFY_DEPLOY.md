@@ -51,7 +51,8 @@ Set these in Amplify Console > App settings > Environment variables:
 ### Channels
 - `EBAY_APP_ID`, `EBAY_CERT_ID`, `EBAY_REDIRECT_URI`, etc.
 - `AMAZON_CLIENT_ID`, `AMAZON_CLIENT_SECRET`, etc.
-- `TEMU_APP_KEY`, `TEMU_APP_SECRET`, `TEMU_ACCESS_TOKEN` (manual auth) or `TEMU_REDIRECT_URI` (callback auth), `TEMU_SITE` (`us`/`eu`/`global`), `TEMU_COST_TEMPLATE_ID` (shipping template from Seller Center), `TEMU_SANDBOX` (`true` for sandbox)
+- `TEMU_APP_KEY`, `TEMU_APP_SECRET`, `TEMU_ACCESS_TOKEN` (manual auth) or `TEMU_REDIRECT_URI` (callback auth), `TEMU_SITE` (`us`/`eu`/`global`), `TEMU_COST_TEMPLATE_ID` (shipping template from Seller Center), `TEMU_SANDBOX` (`true` for sandbox), `TEMU_DEFAULT_CATID` (fallback leaf category, e.g. `14416` = Garage Door Keypads & Remotes)
+- `PROXY_URL` — **required for TEMU**: static-IP Squid proxy so API calls come from the whitelisted IP (`http://user:pass@16.176.119.210:3128`). Without it TEMU rejects calls with `NOT_IN_IP_WHITE_LIST`
 - `ALIEXPRESS_APP_KEY`, `ALIEXPRESS_APP_SECRET`, etc.
 - `CHANNEL_ENCRYPTION_KEY` — Channel credentials encryption key
 

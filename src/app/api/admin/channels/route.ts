@@ -11,6 +11,8 @@ import { getDb } from "@/lib/mongo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Pushes upload images through the proxy serially — allow the max duration.
+export const maxDuration = 60;
 
 async function loadProduct(productId: string) {
   const db = await getDb();

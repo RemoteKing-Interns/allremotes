@@ -155,22 +155,32 @@ export default function ChannelManager() {
     if (preflightMissing?.length) {
       setMessage(`Skipped ${preflightMissing.length} product(s) without an eBay category:\n\n${preflightMissing.join("\n")}`);
     }
+    // Push one product per request — image uploads are slow, and a batch
+    // would exceed the serverless function timeout (empty response body).
     try {
-      const res = await fetch("/api/admin/channels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "push",
-          productIds,
-          channels: selectedChannels,
-          fields: selectedFields,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.details || data.error || `HTTP ${res.status}`);
-      const failed = data.results?.filter((r: any) => !r.ok).map((r: any) => `${r.sku ? `SKU ${r.sku}` : r.productId}${r.name ? ` (${r.name})` : ""}: ${r.error}`).join("; ");
+      const results: any[] = [];
+      for (const id of productIds) {
+        const res = await fetch("/api/admin/channels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "push",
+            productIds: [id],
+            channels: selectedChannels,
+            fields: selectedFields,
+          }),
+        });
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : { error: `HTTP ${res.status} (empty response — likely timeout)` };
+        if (!res.ok) {
+          results.push({ ok: false, productId: id, error: data.details || data.error || `HTTP ${res.status}` });
+        } else {
+          results.push(...(data.results || []));
+        }
+      }
+      const failed = results.filter((r: any) => !r.ok).map((r: any) => `${r.sku ? `SKU ${r.sku}` : r.productId}${r.name ? ` (${r.name})` : ""}: ${r.error}`).join("; ");
       const missingMsg = preflightMissing?.length ? `Skipped ${preflightMissing.length} product(s) without an eBay category:\n\n${preflightMissing.join("\n")}` : "";
-      const resultMsg = failed ? `Some failed: ${failed}` : `Pushed ${data.results?.length || 0} product(s)`;
+      const resultMsg = failed ? `Some failed: ${failed}` : `Pushed ${results.length} product(s)`;
       setMessage([missingMsg, resultMsg].filter(Boolean).join("\n\n"));
       await load();
     } catch (err: any) {
