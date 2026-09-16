@@ -425,6 +425,10 @@ async function printViaDymoWebService(printerName: string, labelXml: string): Pr
     throw new Error('DYMO Connect framework not initialized. Restart DYMO Connect and refresh the page.');
   }
   await env.printLabelAsync(printerName, '', labelXml, '');
+  // The DYMO Connect web service drops overlapping print jobs — when bulk-printing
+  // multiple labels in quick succession, only the first job reaches the spooler.
+  // Wait briefly so the current job is queued before the next one is submitted.
+  await new Promise((r) => setTimeout(r, 1500));
 }
 
 export async function printLabel(options: PrintLabelOptions): Promise<PrintLabelResult> {
