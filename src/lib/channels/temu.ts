@@ -343,7 +343,18 @@ export const temuAdapter: ChannelAdapter = {
       if (String(err?.message || "").includes("150010090")) {
         const existingGoodsId = await findGoodsIdByOutSkuSn(payload.sku, creds);
         if (existingGoodsId) {
-          return temuAdapter.updateListing(existingGoodsId, payload, creds);
+          try {
+            return await temuAdapter.updateListing(existingGoodsId, payload, creds);
+          } catch (updateErr: any) {
+            if (String(updateErr?.message || "").includes("150010205")) {
+              throw new Error(
+                `TEMU: SKU "${payload.sku}" is in TEMU's recycle bin (deletion still processing). ` +
+                `Wait for TEMU to finish processing the deletion (can take hours), or use a different SKU. ` +
+                `Original error: ${updateErr.message}`
+              );
+            }
+            throw updateErr;
+          }
         }
       }
       throw err;
