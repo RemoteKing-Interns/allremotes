@@ -1294,14 +1294,12 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       const res = await fetch('/api/admin/label-templates');
       const data = await res.json().catch(() => null);
       if (res.ok && Array.isArray(data)) savedTemplates = data;
-      const { loadDymoFramework, getSelectedDymoPrinter, getSelectedLabelTemplateId, printLabel } = await import('../../../lib/dymo');
+      const { loadDymoFramework, getSelectedDymoPrinter, getSelectedLabelTemplateId, printLabels } = await import('../../../lib/dymo');
       await loadDymoFramework();
       const printerName = getSelectedDymoPrinter();
       const defaultId = getSelectedLabelTemplateId();
       const template = savedTemplates.find((t: any) => t.id === defaultId) || savedTemplates[0] || defaultLabelTemplate;
-      let printed = 0;
-      const errors: string[] = [];
-      for (const order of ordersToPrint) {
+      const optionsList = ordersToPrint.map((order) => {
         const fields: Record<string, string> = {
           customerName: order.customer?.fullName || order.customer?.email || 'Guest',
           customerEmail: order.customer?.email || '',
@@ -1313,15 +1311,14 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           orderId: order.id,
           items: (order.items || []).map((i: any) => `${i.quantity}x ${i.name}`).join(', '),
         };
-        try {
-          const result = await printLabel({ ...buildLabelOptions(order, fields, template), printerName });
-          if (result && result.status) printed++;
-          else errors.push(`${order.id}: ${result?.message || 'Unknown'}`);
-        } catch (err: any) {
-          errors.push(`${order.id}: ${err.message}`);
-        }
+        return { ...buildLabelOptions(order, fields, template), printerName };
+      });
+      try {
+        const result = await printLabels(optionsList);
+        alert(result.message);
+      } catch (err: any) {
+        alert(`Failed to print labels: ${err.message}`);
       }
-      alert(`Printed ${printed} of ${ordersToPrint.length} labels.${errors.length ? '\n\nErrors:\n' + errors.join('\n') : ''}`);
     } catch (err: any) {
       alert(`Failed to print labels: ${err.message}`);
     }

@@ -487,6 +487,67 @@ export async function printLabel(options: PrintLabelOptions): Promise<PrintLabel
 }
 
 /**
+ * Print multiple labels in a single print job using a DYMO LabelSet.
+ *
+ * Calling printLabelAsync once per label in a loop drops jobs on network
+ * printers — the DYMO Connect web service only reliably queues one job at a
+ * time, so subsequent submissions are lost and only the first label prints.
+ *
+ * A LabelSet sends all records as one print job; the spooler handles the
+ * batch atomically and every label prints. All options must share the same
+ * template (same label layout) — the bulk print path already enforces this.
+ */
+export async function printLabels(optionsList: PrintLabelOptions[]): Promise<PrintLabelResult> {
+  if (optionsList.length === 0) {
+    throw new Error('No labels to print.');
+  }
+  await initDymoFramework();
+
+  const printers = await getPrinterInfos();
+  if (printers.length === 0) {
+    throw new Error('No DYMO printers found. Ensure DYMO LabelWriter is connected.');
+  }
+  const configuredPrinter = optionsList[0].printerName || getSelectedDymoPrinter();
+  const printer = configuredPrinter ? printers.find((c) => c.name === configuredPrinter) : printers[0];
+  if (!printer) {
+    throw new Error(`Selected DYMO printer "${configuredPrinter}" is unavailable. Open Printer Setup and select a connected printer.`);
+  }
+  const printerName = printer.name;
+
+  // All labels use the same template — generate the label XML once.
+  const labelXml = generateLabelXml(optionsList[0]);
+  const label = await openLabelXml(labelXml);
+  if (!isValidLabel(label)) {
+    throw new Error('Invalid label format.');
+  }
+
+  // Build a LabelSet: one record per label, each record sets text on the
+  // template's text objects by their Name (field.id).
+  const framework = (window as any).dymo.label.framework;
+  const labelSetBuilder = new framework.LabelSetBuilder();
+  for (const options of optionsList) {
+    const record = labelSetBuilder.addRecord();
+    for (const field of options.template.fields) {
+      record.setText(field.id, getFieldValue(field, options));
+    }
+  }
+  const labelSetXml = labelSetBuilder.toString();
+  const labelXmlToPrint = label.getLabelXml ? label.getLabelXml() : labelXml;
+
+  if (!printer.isLocal) {
+    const env = (window as any)[DYMO_FRAMEWORK_KEY];
+    if (env && typeof env.printLabelAsync === 'function') {
+      await env.printLabelAsync(printerName, '', labelXmlToPrint, labelSetXml);
+      return { status: 'submitted', message: `LAN print job sent to DYMO Connect for ${optionsList.length} label(s).` };
+    }
+  }
+
+  // Local printers: use the framework printLabel (synchronous queue) with the LabelSet.
+  framework.printLabel(printerName, '', labelXmlToPrint, labelSetXml);
+  return { status: 'confirmed', message: `Printed ${optionsList.length} label(s).` };
+}
+
+/**
  * Render a test label preview as a base64 PNG data URI.
  */
 export async function renderTestLabelPreview(printerName?: string): Promise<string> {
@@ -620,51 +681,32 @@ function generateLabelXml(options: PrintLabelOptions): string {
 /**
  * Set label data based on template fields
  */
+function getFieldValue(field: any, options: PrintLabelOptions): string {
+  const { orderId, customerName, customerEmail, customerPhone, address, suburb, state, postcode, items, fieldValues } = options;
+  if (fieldValues && fieldValues[field.dataKey || field.id] !== undefined) {
+    return fieldValues[field.dataKey || field.id];
+  }
+  switch (field.dataKey) {
+    case 'orderId': return orderId;
+    case 'customerName': return customerName;
+    case 'customerEmail': return customerEmail;
+    case 'customerPhone': return customerPhone;
+    case 'address': return address;
+    case 'suburb': return suburb;
+    case 'state': return state;
+    case 'postcode': return postcode;
+    case 'items': return items.map(item => `${item.name} x${item.quantity}`).join('\n');
+    default: return '';
+  }
+}
+
 function setLabelData(label: any, options: PrintLabelOptions): void {
-  const { template, orderId, customerName, customerEmail, customerPhone, address, suburb, state, postcode, items, fieldValues } = options;
+  const { template } = options;
 
   template.fields.forEach((field) => {
-    let value = '';
-
-    // Check fieldValues override first (from modal editing)
-    if (fieldValues && fieldValues[field.dataKey || field.id] !== undefined) {
-      value = fieldValues[field.dataKey || field.id];
-    } else {
-      switch (field.dataKey) {
-        case 'orderId':
-          value = orderId;
-          break;
-        case 'customerName':
-          value = customerName;
-          break;
-        case 'customerEmail':
-          value = customerEmail;
-          break;
-        case 'customerPhone':
-          value = customerPhone;
-          break;
-        case 'address':
-          value = address;
-          break;
-        case 'suburb':
-          value = suburb;
-          break;
-        case 'state':
-          value = state;
-          break;
-        case 'postcode':
-          value = postcode;
-          break;
-        case 'items':
-          value = items.map(item => `${item.name} x${item.quantity}`).join('\n');
-          break;
-        default:
-          value = '';
-      }
-    }
+    const value = getFieldValue(field, options);
 
     // Set the field value on the label
-    // Implementation depends on DYMO SDK specifics
     if (label.setObjectText) {
       label.setObjectText(field.id, value);
     }
