@@ -140,11 +140,18 @@ async function uploadImageToTemu(
  * ChannelListing record exists (e.g., pushed from another environment).
  */
 async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials): Promise<string | null> {
-  const data = await temuCall(
-    "bg.local.goods.list.query",
-    { searchText: outSkuSn, pageNo: 1, pageSize: 50 },
-    creds
-  );
+  let data: any;
+  try {
+    data = await temuCall(
+      "bg.local.goods.list.query",
+      { searchText: outSkuSn, pageNo: 1, pageSize: 50 },
+      creds
+    );
+  } catch {
+    // List query can return BUSINESS_SERVICE_ERROR for some searches;
+    // treat as "not found" so the caller falls through to a clear error.
+    return null;
+  }
   const list = ((data?.result as any)?.goodsList || []) as Array<{
     goodsId: string | number;
     outSkuSnList?: string[];

@@ -135,18 +135,42 @@ async function pushToChannel(channel: Marketplace, productId: string, fields: st
     }
 
     if (existing && getAdapter(channel).updateListing) {
-      const { externalId, externalUrl } = await getAdapter(channel).updateListing(existing.externalId, payload, creds);
-      await saveChannelListing({
-        productId,
-        sku: payload.sku,
-        channel,
-        externalId,
-        externalUrl: externalUrl || existing.externalUrl,
-        status: "listed",
-        lastSyncedAt: new Date().toISOString(),
-      });
-      await logChannelEvent({ channel, action: "updateListing", productId, sku: payload.sku, result: { externalId, externalUrl } });
-      return { productId, channel, externalId, mode: "update" };
+      try {
+        const { externalId, externalUrl } = await getAdapter(channel).updateListing(existing.externalId, payload, creds);
+        await saveChannelListing({
+          productId,
+          sku: payload.sku,
+          channel,
+          externalId,
+          externalUrl: externalUrl || existing.externalUrl,
+          status: "listed",
+          lastSyncedAt: new Date().toISOString(),
+        });
+        await logChannelEvent({ channel, action: "updateListing", productId, sku: payload.sku, result: { externalId, externalUrl } });
+        return { productId, channel, externalId, mode: "update" };
+      } catch (err: any) {
+        // TEMU returns 150010188 "mall and goods not match" when the goodsId was
+        // deleted (stale local ChannelListing) or 150010205 when deletion is still
+        // processing. For 150010188 the SKU is free again — drop the stale listing
+        // and create a fresh one. For 150010205 the SKU is still reserved, so rethrow
+        // with a clear message instead of silently failing.
+        const msg = String(err?.message || "");
+        if (msg.includes("150010188")) {
+          const db = await getDb();
+          await db.collection("channelListings").deleteOne({
+            productId, channel, externalId: existing.externalId,
+          });
+          // fall through to publishListing below
+        } else if (msg.includes("150010205")) {
+          throw new Error(
+            `TEMU: SKU "${payload.sku}" is in TEMU's recycle bin (deletion still processing). ` +
+            `Wait for TEMU to finish processing the deletion (can take hours), or use a different SKU. ` +
+            `Original error: ${msg}`
+          );
+        } else {
+          throw err;
+        }
+      }
     }
 
     const { externalId, externalUrl } = await getAdapter(channel).publishListing(payload, creds);
