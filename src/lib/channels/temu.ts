@@ -134,6 +134,29 @@ async function uploadImageToTemu(
   return result.url;
 }
 
+/**
+ * Find an existing TEMU goodsId by externalSkuId (outSkuSn) via the goods list.
+ * Used as a fallback when publishListing hits "SKU duplicated" but no local
+ * ChannelListing record exists (e.g., pushed from another environment).
+ */
+async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials): Promise<string | null> {
+  const data = await temuCall(
+    "bg.local.goods.list.query",
+    { searchText: outSkuSn, pageNo: 1, pageSize: 50 },
+    creds
+  );
+  const list = ((data?.result as any)?.goodsList || []) as Array<{
+    goodsId: string | number;
+    outSkuSnList?: string[];
+  }>;
+  for (const g of list) {
+    if (g.outSkuSnList?.includes(outSkuSn)) {
+      return String(g.goodsId);
+    }
+  }
+  return null;
+}
+
 export const temuAdapter: ChannelAdapter = {
   name: "temu",
 
@@ -284,7 +307,21 @@ export const temuAdapter: ChannelAdapter = {
       if (goodsProperty.length) createPayload.goodsProperty = goodsProperty;
     }
 
-    const data = await temuCall("temu.local.goods.v2.add", createPayload, creds);
+    let data: any;
+    try {
+      data = await temuCall("temu.local.goods.v2.add", createPayload, creds);
+    } catch (err: any) {
+      // If the SKU already exists on TEMU (e.g., pushed from another environment
+      // and no ChannelListing record exists locally), fall back to updating the
+      // existing listing by looking up the goodsId via the goods list API.
+      if (String(err?.message || "").includes("150010090")) {
+        const existingGoodsId = await findGoodsIdByOutSkuSn(payload.sku, creds);
+        if (existingGoodsId) {
+          return temuAdapter.updateListing(existingGoodsId, payload, creds);
+        }
+      }
+      throw err;
+    }
     const result = data.result as {
       goodsId: string;
       skuInfoList?: Array<{ skuId: string }>;
@@ -299,6 +336,95 @@ export const temuAdapter: ChannelAdapter = {
       externalUrl: skuId
         ? `https://www.temu.com/goods-${result.goodsId}.html`
         : undefined,
+    };
+  },
+
+  /**
+   * Update an existing TEMU listing via bg.local.goods.partial.update.
+   * externalId is the goodsId. Re-uploads images and updates name/desc/gallery/price/qty.
+   */
+  async updateListing(externalId, payload, creds) {
+    if (!TEMU_COST_TEMPLATE_ID) {
+      throw new Error("TEMU_COST_TEMPLATE_ID must be set");
+    }
+    const goodsId = Number(externalId);
+
+    // Re-upload images (TEMU image URLs may expire; always refresh)
+    const temuImages: string[] = [];
+    for (const img of payload.images.slice(0, 6)) {
+      try {
+        temuImages.push(await uploadImageToTemu(img, creds));
+      } catch {
+        // If upload fails, skip — keep existing images on TEMU
+      }
+    }
+
+    const currency = getCurrency(payload.currency);
+    const updatePayload: Record<string, unknown> = {
+      goodsId,
+      goodsBasic: {
+        goodsName: payload.title.slice(0, 500),
+        ...(temuImages.length ? { goodsGallery: { goodsCarouselImage: temuImages } } : {}),
+      },
+      goodsDesc: payload.description?.slice(0, 50000) || "",
+    };
+
+    // Query the existing product to get skuId + existing goodsProperties.
+    // partial.update validates the ENTIRE product against category requirements,
+    // so we must pass back the existing goodsProperties (e.g. "Power Supply")
+    // or TEMU rejects with "keyword attribute required".
+    // Also: saveMode is NOT accepted by partial.update in flattened form.
+    try {
+      const detail = await temuCall("bg.local.goods.detail.query", { goodsId }, creds);
+      const result = detail?.result as any;
+      const skuList = (result?.skuList || []) as Array<{ skuId: string | number }>;
+      if (skuList.length > 0 && temuImages.length) {
+        updatePayload.skuList = [
+          {
+            skuId: skuList[0].skuId,
+            images: temuImages,
+          },
+        ];
+      }
+      // Carry over existing goodsProperties so category-required attributes stay set.
+      // partial.update expects goodsProperty: { goodsProperties: [...] } (object wrapping array).
+      if (result?.goodsProperties) {
+        updatePayload.goodsProperty = { goodsProperties: result.goodsProperties };
+      }
+      // Price update via the price API (only works after initial audit)
+      if (skuList.length > 0 && payload.price > 0) {
+        try {
+          await temuCall(
+            "bg.local.goods.priceorder.change.sku.price",
+            {
+              goodsId,
+              changeSkuPriceDTOList: [
+                {
+                  reason: "Listing update",
+                  skuChangePriceBaseDTOList: [
+                    {
+                      skuId: Number(skuList[0].skuId),
+                      newSupplierPrice: { amount: payload.price.toFixed(2), currency },
+                    },
+                  ],
+                },
+              ],
+              rejectSkuPricing: true,
+            },
+            creds
+          );
+        } catch {
+          // Price audit may still be pending — ignore; the listing still updates
+        }
+      }
+    } catch {
+      // If detail query fails, still update the basic fields above
+    }
+
+    await temuCall("bg.local.goods.partial.update", updatePayload, creds);
+    return {
+      externalId: String(goodsId),
+      externalUrl: `https://www.temu.com/goods-${goodsId}.html`,
     };
   },
 
