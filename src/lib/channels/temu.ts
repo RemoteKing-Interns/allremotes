@@ -157,6 +157,19 @@ async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials
   return null;
 }
 
+/**
+ * Required category attributes with "no battery" defaults for remote controls.
+ * Category 14416 (Garage Door Keypads & Remotes) requires these on every update;
+ * v2.add doesn't enforce them but partial.update does.
+ */
+const DEFAULT_GOODS_PROPERTIES = [
+  { refPid: 1561, vid: 36627 }, // Power Supply: Use Without Electricity
+  { refPid: 2153, vid: 52032 }, // Battery Properties: Without Battery
+  { refPid: 121, vid: 2148 },  // Material: Plastic
+  { refPid: 2204, vid: 56055 }, // Code Way: Rolling Code
+  { refPid: 2205, vid: 56077 }, // Adapt To The Country Area: AU&NZ
+];
+
 export const temuAdapter: ChannelAdapter = {
   name: "temu",
 
@@ -293,19 +306,32 @@ export const temuAdapter: ChannelAdapter = {
       ],
     };
 
-    // Map aspects → goodsProperty if provided as { refPid: "vid" } pairs
+    // Start with "no battery" defaults required by category 14416, then merge
+    // any explicit aspects from the product (overrides defaults by refPid).
+    const goodsProperty: Array<{ refPid: number; vid: number }> = [...DEFAULT_GOODS_PROPERTIES];
     if (payload.aspects) {
-      const goodsProperty: Array<{ refPid: number; vid: number }> = [];
+      const overrides = new Map<number, number[]>();
       for (const [key, values] of Object.entries(payload.aspects)) {
         const refPid = Number(key);
         if (!Number.isFinite(refPid)) continue;
         for (const v of values) {
           const vid = Number(v);
-          if (Number.isFinite(vid)) goodsProperty.push({ refPid, vid });
+          if (Number.isFinite(vid)) {
+            if (!overrides.has(refPid)) overrides.set(refPid, []);
+            overrides.get(refPid)!.push(vid);
+          }
         }
       }
-      if (goodsProperty.length) createPayload.goodsProperty = goodsProperty;
+      // Remove default entries that are overridden, then add the overrides
+      const overridePids = new Set(overrides.keys());
+      const filtered = goodsProperty.filter((g) => !overridePids.has(g.refPid));
+      goodsProperty.length = 0;
+      goodsProperty.push(...filtered);
+      for (const [refPid, vids] of overrides) {
+        for (const vid of vids) goodsProperty.push({ refPid, vid });
+      }
     }
+    if (goodsProperty.length) createPayload.goodsProperty = goodsProperty;
 
     let data: any;
     try {
@@ -386,11 +412,16 @@ export const temuAdapter: ChannelAdapter = {
           },
         ];
       }
-      // Carry over existing goodsProperties so category-required attributes stay set.
-      // partial.update expects goodsProperty: { goodsProperties: [...] } (object wrapping array).
-      if (result?.goodsProperties) {
-        updatePayload.goodsProperty = { goodsProperties: result.goodsProperties };
-      }
+      // Merge existing goodsProperties with "no battery" defaults so any
+      // category-required attributes that are missing get filled in.
+      // partial.update expects goodsProperty: { goodsProperties: [...] }.
+      const existing = (result?.goodsProperties || []) as Array<{ refPid?: number; vid?: number }>;
+      const existingPids = new Set(existing.map((g) => g.refPid).filter(Boolean));
+      const merged = [
+        ...existing,
+        ...DEFAULT_GOODS_PROPERTIES.filter((d) => !existingPids.has(d.refPid)),
+      ];
+      updatePayload.goodsProperty = { goodsProperties: merged };
       // Price update via the price API (only works after initial audit)
       if (skuList.length > 0 && payload.price > 0) {
         try {
