@@ -536,8 +536,13 @@ export async function printLabels(optionsList: PrintLabelOptions[]): Promise<Pri
 
   if (!printer.isLocal) {
     const env = (window as any)[DYMO_FRAMEWORK_KEY];
-    if (env && typeof env.printLabelAsync === 'function') {
-      await env.printLabelAsync(printerName, '', labelXmlToPrint, labelSetXml);
+    // PrintLabel2 is the web service endpoint that honors labelSetXml for
+    // batched labels; PrintLabel ignores it and prints only one label.
+    const printFn = typeof env?.printLabel2Async === 'function'
+      ? env.printLabel2Async.bind(env)
+      : env?.printLabelAsync?.bind(env);
+    if (printFn) {
+      await printFn(printerName, '', labelXmlToPrint, labelSetXml);
       return { status: 'submitted', message: `LAN print job sent to DYMO Connect for ${optionsList.length} label(s).` };
     }
   }
