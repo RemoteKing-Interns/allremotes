@@ -47,7 +47,8 @@ const sanitizeDescription = (html: string): string => {
 const getCategoryDisplayName = (category: string): string => {
   const displayNames: Record<string, string> = {
     'garage': 'Garage & Gate',
-    'car': 'Car Remotes',
+    'car': 'Automotive',
+    'automotive': 'Automotive',
     'home': 'For The Home',
     'locksmith': 'Locksmithing',
     'all': 'All Products',

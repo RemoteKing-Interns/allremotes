@@ -3,6 +3,7 @@ import { getNavigationPaths, getPublicProducts } from "@/lib/public-site";
 import { getSiteUrl } from "@/lib/site-url";
 import { generateProductSlugUrl } from "@/lib/server-products";
 import { BLOG_POSTS } from "@/lib/blog-posts";
+import { resolveProductCategory } from "@/lib/category";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ const STATIC_ROUTES = [
   "/",
   "/about",
   "/garage-gate",
+  "/automotive",
   "/for-the-home",
   "/locksmithing",
   "/shop-by-brand",
@@ -39,6 +41,7 @@ const STATIC_ROUTES = [
   "/payment-options",
   "/products/all",
   "/products/garage",
+  "/products/automotive",
   "/garage-door-remotes",
   "/gate-remotes",
   "/replacement-garage-remotes",
@@ -79,12 +82,6 @@ function getLatestDate(...values: Array<Date | string | null | undefined>) {
   });
 
   return latest;
-}
-
-function normalizeCategory(category: string | null | undefined) {
-  const value = String(category || "").trim().toLowerCase();
-  if (!value || value === "all") return null;
-  return value;
 }
 
 function upsertEntry(
@@ -133,8 +130,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     });
 
-    const category = normalizeCategory(product.category);
-    if (!category || category === "car" || !updatedAt) return;
+    const category = resolveProductCategory(product.category);
+    if (category === "all" || !updatedAt) return;
 
     const current = categoryLastModified.get(category);
     if (!current || updatedAt.getTime() > current.getTime()) {

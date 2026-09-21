@@ -112,7 +112,7 @@ const Cart = () => {
   const getCategoryLabel = (category) => {
     const value = String(category || "").trim().toLowerCase();
     if (!value) return "General";
-    if (value === "car") return "Automotive Remote";
+    if (value === "car" || value === "automotive") return "Automotive Remote";
     if (value === "garage") return "Garage & Gate Remote";
     return value
       .replace(/[-_]+/g, " ")
@@ -190,7 +190,7 @@ const Cart = () => {
                       </h3>
                     </Link>
                     <p className="mt-1 text-xs font-semibold text-neutral-500">
-                      {item.category === 'car' ? 'Automotive Remote' : 'Garage & Gate Remote'}
+                      {item.category === 'car' || item.category === 'automotive' ? 'Automotive Remote' : 'Garage & Gate Remote'}
                     </p>
 
                     <div className="mt-3 flex flex-wrap items-center gap-3">

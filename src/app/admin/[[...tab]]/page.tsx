@@ -6876,7 +6876,7 @@ function AdminProducts() {
                 >
                   <option value="all">All Categories</option>
                   {categoryOptions.map((cat: string) => (
-                    <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat}</option>
+                    <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat === 'car' || cat === 'automotive' ? 'Automotive' : cat}</option>
                   ))}
                 </select>
               </div>
@@ -7522,7 +7522,7 @@ function AdminProducts() {
                       >
                         <option value="">Select category</option>
                         {categoryOptions.map((cat: string) => (
-                          <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat}</option>
+                          <option key={cat} value={cat}>{cat === 'garage' ? 'Garage & Gate' : cat === 'car' || cat === 'automotive' ? 'Automotive' : cat}</option>
                         ))}
                       </select>
                       <button
@@ -9525,7 +9525,7 @@ function AdminPromotions() {
                           onChange={(e) => updateOffer(o.id, { appliesTo: e.target.value })}
                         >
                           <option value="all">All Products</option>
-                          <option value="car">Car Remotes Only</option>
+                          <option value="automotive">Automotive Only</option>
                           <option value="garage">Garage Remotes Only</option>
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-400">▾</div>

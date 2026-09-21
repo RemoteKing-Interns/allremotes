@@ -1,24 +1,17 @@
 import React, { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import ProductListClient from "../_components/ProductListClient";
 import { getCategoryPageTitle } from "@/lib/category";
 import { getSiteUrl } from "@/lib/site-url";
 import { getServerProducts } from "@/lib/server-products";
 
-const REMOVED_CATEGORIES = new Set(["car", "automotive", "auto", "vehicle"]);
-
-function redirectIfRemoved(category: string) {
-  if (REMOVED_CATEGORIES.has(category.toLowerCase())) {
-    redirect("/products/all");
-  }
-}
-
 function getCategoryDescription(category: string) {
   const descriptions: Record<string, string> = {
     garage:
       "Buy garage door remotes and garage remote controls online in Australia. Compatible replacement remotes for Merlin, B&D, ATA, Chamberlain, Gliderol, Steel-Line and more. 12-month warranty, fast Australia-wide shipping.",
+    automotive:
+      "Browse automotive keys, transponder chips, car remotes and key accessories at ALLREMOTES Australia. Quality transponders and replacement car keys with fast Australia-wide shipping.",
     home:
       "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more at ALLREMOTES Australia.",
     locksmith:
@@ -34,6 +27,9 @@ function getCategoryTitle(category: string) {
   if (category === "garage") {
     return "Garage Remotes Australia | Garage Door Remote Controls | ALLREMOTES";
   }
+  if (category === "automotive") {
+    return "Automotive Keys & Transponders Australia | ALLREMOTES";
+  }
   const display = getCategoryPageTitle(category);
   return `${display} Remotes for Sale Australia | ALLREMOTES`;
 }
@@ -41,6 +37,9 @@ function getCategoryTitle(category: string) {
 function getCategoryH1(category: string) {
   if (category === "garage") {
     return "Garage Remotes & Garage Door Remote Controls";
+  }
+  if (category === "automotive") {
+    return "Automotive Keys, Transponders & Car Remotes";
   }
   return `${getCategoryPageTitle(category)} Remotes`;
 }
@@ -62,6 +61,17 @@ function getCategoryKeywords(category: string) {
       "buy garage door remotes",
       "roller door remotes",
       "garage remotes australia",
+    ];
+  }
+  if (category === "automotive") {
+    return [
+      "transponder chips",
+      "car transponder",
+      "car keys australia",
+      "automotive keys",
+      "key fob replacement",
+      "immobilizer chip",
+      "car remote key",
     ];
   }
   return ["remote", "remotes", `${category} remote`, "Australia", "replacement remote"];
@@ -254,7 +264,6 @@ export async function generateMetadata({
   params: Promise<{ category: string }>;
 }): Promise<Metadata> {
   const { category } = await params;
-  redirectIfRemoved(category);
   const title = getCategoryTitle(category);
   const description = getCategoryDescription(category);
   const keywords = getCategoryKeywords(category);
@@ -329,7 +338,6 @@ export default async function ProductsCategoryPage({
   params: Promise<{ category: string }>;
 }) {
   const { category } = await params;
-  redirectIfRemoved(category);
   const initialProducts = await getServerProducts();
   const isGarage = category === "garage";
   return (

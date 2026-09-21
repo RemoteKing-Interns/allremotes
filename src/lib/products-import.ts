@@ -217,7 +217,7 @@ function mapRowToProduct(row: Record<string, string>) {
   if (categoryRaw) {
     const g = categoryRaw.toLowerCase();
     if (g.includes("garage") || g.includes("gate")) category = "garage";
-    else if (g.includes("auto") || g.includes("car")) category = "car";
+    else if (g.includes("auto") || g.includes("car") || g.includes("transponder")) category = "automotive";
     else category = categoryRaw;
   }
 

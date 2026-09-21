@@ -246,7 +246,7 @@ function FiltersPanel({
         >
           <option value="all">All Products</option>
           <option value="garage">Garage & Gate</option>
-          <option value="car">Automotive</option>
+          <option value="automotive">Automotive</option>
           <option value="home">For The Home</option>
           <option value="locksmith">Locksmithing</option>
         </select>

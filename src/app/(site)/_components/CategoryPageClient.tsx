@@ -12,6 +12,7 @@ import {
 
 const CATEGORY_SUBTITLES: Record<string, string> = {
   garage: "Explore our wide range of garage and gate automation products",
+  automotive: "Automotive keys, transponder chips and car remotes",
   home: "Discover home automation solutions and remotes",
   locksmith: "Professional locksmithing tools and equipment",
   all: "Browse all products",
@@ -19,6 +20,7 @@ const CATEGORY_SUBTITLES: Record<string, string> = {
 
 const CATEGORY_TITLES: Record<string, string> = {
   garage: "Garage & Gate",
+  automotive: "Automotive",
   home: "For The Home",
   locksmith: "Locksmithing",
   all: "All Products",

@@ -88,7 +88,11 @@ function excelRowToProduct(row, index) {
     skuKey: normalizeSkuKey(sku),
     name: title,
     brand,
-    category: category.toLowerCase().includes('garage') ? 'garage' : category.toLowerCase().includes('car') ? 'car' : 'all',
+    category: category.toLowerCase().includes('garage')
+      ? 'garage'
+      : ['car', 'auto', 'vehicle', 'transponder', 'automotive'].some((t) => category.toLowerCase().includes(t))
+        ? 'automotive'
+        : 'all',
     price,
     comparePrice,
     inStock,

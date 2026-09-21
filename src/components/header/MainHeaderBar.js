@@ -176,7 +176,7 @@ const MainHeaderBar = ({
                                 </span>
                               </div>
                               <div className="mt-1 text-xs font-semibold text-neutral-500">
-                                {product.category === "car"
+                                {product.category === "car" || product.category === "automotive"
                                   ? "Automotive Remote"
                                   : "Garage & Gate Remote"}
                               </div>

@@ -1,3 +1,5 @@
+import { resolveProductCategory } from '../lib/category';
+
 export const getMemberDiscountRate = () => {
   try {
     if (typeof window !== 'undefined') {
@@ -65,7 +67,7 @@ const getOfferDiscountRate = ({ promotions, product, now = new Date() }) => {
   for (const offer of list) {
     if (!isOfferActiveNow(offer, now)) continue;
     const appliesTo = String(offer.appliesTo || "all");
-    if (appliesTo !== "all" && appliesTo !== String(product.category || "")) continue;
+    if (appliesTo !== "all" && resolveProductCategory(appliesTo) !== resolveProductCategory(product.category)) continue;
     const rate = clamp(offer.discountPercent, 0, 95) / 100;
     if (rate > best) best = rate;
   }

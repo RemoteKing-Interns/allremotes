@@ -20,7 +20,7 @@ const COLUMN_DEFS = [
   { data: "rk_url", title: "RK_URL", width: 240, wordWrap: true },
   { data: "name", title: "Name", width: 220, wordWrap: true },
   { data: "brand", title: "Brand", width: 100 },
-  { data: "category", title: "Category", width: 100, type: "dropdown", source: ["car", "garage", "all"] },
+  { data: "category", title: "Category", width: 100, type: "dropdown", source: ["automotive", "car", "garage", "all"] },
   { data: "cat1", title: "Category 1", width: 100 },
   { data: "price", title: "Price", width: 80, type: "numeric" },
   { data: "comparePrice", title: "Compare Price", width: 100, type: "numeric" },

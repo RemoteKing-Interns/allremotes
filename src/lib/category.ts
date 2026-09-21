@@ -6,9 +6,12 @@ const EXACT_CATEGORY_ALIASES: Record<string, string> = {
   "garage-and-gate": "garage",
   garagegate: "garage",
   garage: "garage",
-  automotive: "all",
-  auto: "all",
-  car: "all",
+  automotive: "automotive",
+  auto: "automotive",
+  car: "automotive",
+  vehicle: "automotive",
+  transponder: "automotive",
+  transponders: "automotive",
   "for-the-home": "home",
   "for-home": "home",
   home: "home",
@@ -19,6 +22,7 @@ const EXACT_CATEGORY_ALIASES: Record<string, string> = {
 
 const MENU_CATEGORY_TO_PRODUCTS_CATEGORY: Record<string, string> = {
   "garage-gate": "garage",
+  automotive: "automotive",
   "for-the-home": "home",
   locksmithing: "locksmith",
   "shop-by-brand": "all",
@@ -29,6 +33,7 @@ const MENU_CATEGORY_TO_PRODUCTS_CATEGORY: Record<string, string> = {
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   all: "Shop All Products",
   garage: "Garage & Gate",
+  automotive: "Automotive",
   home: "For The Home",
   locksmith: "Locksmithing",
 };
@@ -44,6 +49,20 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "sectional door",
     "swing gate",
     "slide gate",
+  ],
+  automotive: [
+    "transponder",
+    "transponder chip",
+    "car key",
+    "car keys",
+    "key fob",
+    "immobilizer",
+    "immobiliser",
+    "chip key",
+    "smart key",
+    "remote key",
+    "flip key",
+    "automotive",
   ],
   home: [
     "home",
@@ -149,6 +168,16 @@ export function resolveProductCategory(value: unknown) {
   const tokens = new Set(normalized.split("-").filter(Boolean));
 
   if (tokens.has("garage") || tokens.has("gate")) return "garage";
+  if (
+    tokens.has("automotive") ||
+    tokens.has("auto") ||
+    tokens.has("car") ||
+    tokens.has("vehicle") ||
+    tokens.has("transponder") ||
+    tokens.has("transponders")
+  ) {
+    return "automotive";
+  }
   if (
     tokens.has("home") ||
     tokens.has("household") ||

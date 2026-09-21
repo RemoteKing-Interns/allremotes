@@ -9,6 +9,13 @@ function normaliseCategory(raw: string): string | null {
   const s = raw.trim().toLowerCase();
   if (!s || s === "all") return null;
   if (s.includes("garage") || s.includes("gate") || s.includes("door")) return "garage";
+  if (
+    s.includes("automotive") ||
+    s.includes("transponder") ||
+    s.split(/[^a-z0-9]+/).some((t) => ["car", "cars", "auto", "vehicle", "automobile"].includes(t))
+  ) {
+    return "automotive";
+  }
   if (s.includes("home") || s.includes("house")) return "home";
   if (s.includes("lock")) return "locksmith";
   return s;
@@ -16,6 +23,7 @@ function normaliseCategory(raw: string): string | null {
 
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   garage: "Garage & Gate",
+  automotive: "Automotive",
   home: "For The Home",
   locksmith: "Locksmithing",
 };
