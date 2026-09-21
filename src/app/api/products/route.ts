@@ -49,10 +49,19 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status") || "active";
 
-    const all = await getPublicProducts();
-    let products: any[] = statusFilter === "all"
-      ? all
-      : all.filter((p: any) => !p.status || p.status === statusFilter);
+    // The public cache only holds non-draft products. Admin views that ask for
+    // drafts/all must hit the DB directly or they'd never see them.
+    let products: any[];
+    if (statusFilter === "active") {
+      products = await getPublicProducts();
+    } else {
+      const db = await getDb();
+      const all = await db.collection("products").find({}).toArray();
+      products =
+        statusFilter === "all"
+          ? all
+          : all.filter((p: any) => !p.status || p.status === statusFilter);
+    }
 
     // Enrich products with S3 image URLs based on SKU
     // Pattern: https://allremotes.s3.ap-southeast-2.amazonaws.com/images/{sku}-N.png

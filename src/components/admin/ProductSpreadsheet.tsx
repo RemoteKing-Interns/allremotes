@@ -97,7 +97,7 @@ export default function ProductSpreadsheet({ onBack, readOnly = false, shareConf
         columnCount: shareConfig?.columns?.length || COLUMN_DEFS.length,
       });
 
-      const resp = await fetch("/api/products", { cache: "no-store" });
+      const resp = await fetch("/api/products?status=all", { cache: "no-store" });
       const json = await resp.json();
       setData(Array.isArray(json) ? json : []);
 

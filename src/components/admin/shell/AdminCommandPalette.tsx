@@ -94,7 +94,7 @@ export default function AdminCommandPalette({
         })
         .catch(() => null);
 
-      fetch(`/api/products`, { cache: "no-store" })
+      fetch(`/api/products?status=all`, { cache: "no-store" })
         .then((r) => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) return;
