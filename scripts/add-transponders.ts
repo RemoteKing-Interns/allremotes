@@ -687,6 +687,7 @@ async function main() {
       brand: def.brand,
       category: "automotive",
       cat1: "automotive",
+      status: "draft", // new products start as draft; publish via admin
       price,
       inStock: stock >= 1,
       stock,

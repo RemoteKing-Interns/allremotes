@@ -62,7 +62,6 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "smart key",
     "remote key",
     "flip key",
-    "automotive",
   ],
   home: [
     "home",

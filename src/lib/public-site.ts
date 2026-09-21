@@ -161,6 +161,17 @@ export function invalidatePublicProductsCache() {
   productsCache = null;
 }
 
+// Draft products are never public. Matches the allowlist used by the product feed:
+// a product is public when status is "active", missing, null or empty.
+export const PUBLIC_PRODUCT_FILTER = {
+  $or: [
+    { status: "active" },
+    { status: { $exists: false } },
+    { status: null },
+    { status: "" },
+  ],
+};
+
 export async function getPublicProducts(): Promise<ProductRecord[]> {
   if (!mongoEnabled()) {
     throw new Error("MongoDB is not configured. Public products require MongoDB.");
@@ -176,7 +187,7 @@ export async function getPublicProducts(): Promise<ProductRecord[]> {
       const db = await getDb();
       const products = await db
         .collection("products")
-        .find({})
+        .find(PUBLIC_PRODUCT_FILTER)
         .toArray();
       const data = Array.isArray(products) ? (products as ProductRecord[]) : [];
       productsCache = { data, expiresAt: Date.now() + PRODUCTS_TTL_MS };
@@ -196,7 +207,9 @@ export async function getPublicProductById(
     throw new Error("MongoDB is not configured. Public products require MongoDB.");
   }
   const db = await getDb();
-  const doc = await db.collection("products").findOne({ id });
+  const doc = await db
+    .collection("products")
+    .findOne({ id, ...PUBLIC_PRODUCT_FILTER });
   return doc ? (JSON.parse(JSON.stringify(doc)) as ProductRecord) : null;
 }
 

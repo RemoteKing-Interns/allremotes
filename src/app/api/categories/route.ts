@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
+import { PUBLIC_PRODUCT_FILTER } from "@/lib/public-site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function GET() {
     }
 
     const db = await getDb();
-    const products = await db.collection("products").find({}).toArray();
+    const products = await db.collection("products").find(PUBLIC_PRODUCT_FILTER).toArray();
 
     const countMap: Record<string, number> = {};
     products.forEach((p) => {
