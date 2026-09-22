@@ -213,6 +213,9 @@ export async function GET(request: Request) {
     const limit = Math.min(1000, Math.max(1, Number(searchParams.get("limit") || 200)));
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const search = String(searchParams.get("search") || "").trim().toLowerCase();
+    // Admin route historically returned every product — keep that default;
+    // pass ?status=draft|active|archived to narrow.
+    const statusFilter = String(searchParams.get("status") || "all").trim();
 
     if (!mongoEnabled()) {
       return NextResponse.json(
@@ -223,8 +226,14 @@ export async function GET(request: Request) {
 
     // Full collection comes from the shared in-memory cache — avoids re-pulling
     // ~2.3MB from Atlas on every admin page (channels tab, product list, etc).
-    const all = await getPublicProducts();
+    // The cache excludes drafts, so explicit non-active status queries hit the DB.
+    const all = statusFilter === "active"
+      ? await getPublicProducts()
+      : await (await getDb()).collection("products").find({}).toArray();
     let filtered = all as any[];
+    if (statusFilter !== "active" && statusFilter !== "all") {
+      filtered = filtered.filter((p: any) => p.status === statusFilter);
+    }
     if (search) {
       filtered = all.filter((p: any) =>
         [p.name, p.sku, p.id].some((v) =>

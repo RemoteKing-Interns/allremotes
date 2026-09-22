@@ -60,7 +60,7 @@ export default function ProductImageGen() {
   const effectiveRefImage = refOverridePreview || refOverrideUrl || selected?.image || "";
 
   useEffect(() => {
-    fetch("/api/admin/products?limit=1000")
+    fetch("/api/admin/products?limit=1000&status=all")
       .then((r) => r.json())
       .then((data) => {
         setProducts(data.products || []);
