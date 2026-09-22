@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { revalidateTag } from "next/cache";
 import { getDb, mongoEnabled } from "@/lib/mongo";
+import { invalidatePublicProductsCache } from "@/lib/public-site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +70,8 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = buildPublicUrl(config.bucket, config.region, key);
 
-    // Persist on the product record: add to images[], set as primary if none set.
+    // Persist on the product record: new image becomes primary (images[0] wins
+    // in getPrimaryImage) and is prepended to images[].
     if (!mongoEnabled()) {
       return NextResponse.json(
         { error: "MongoDB is not configured. Image uploads require MongoDB." },
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
     const col = db.collection("products");
     const product = await col.findOne({ id: productId });
     const existingImages: string[] = Array.isArray(product?.images) ? product.images : [];
-    const images = Array.from(new Set([...existingImages, publicUrl]));
+    const images = Array.from(new Set([publicUrl, ...existingImages]));
     await col.updateOne(
       { id: productId },
       {
@@ -92,6 +95,8 @@ export async function POST(request: NextRequest) {
         },
       }
     );
+    revalidateTag("products");
+    invalidatePublicProductsCache();
 
     return NextResponse.json({ url: publicUrl, key }, { status: 200 });
   } catch (err: any) {
