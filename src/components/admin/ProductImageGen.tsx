@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, RefreshCw, Image, Check, AlertCircle, Link as LinkIcon, Upload, X } from "lucide-react";
 import ProductImage from "@/components/images/ProductImage";
 
@@ -39,6 +40,10 @@ export default function ProductImageGen() {
   const [refOverridePreview, setRefOverridePreview] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Deep-link target (?product=<id|sku>) — captured once; the admin page's
+  // URL-sync effect strips unknown params after mount.
+  const searchParams = useSearchParams();
+  const deepLinkProduct = useRef(searchParams.get("product"));
 
   const resetRefOverride = () => {
     setRefUrlInput("");
@@ -63,8 +68,19 @@ export default function ProductImageGen() {
     fetch("/api/admin/products?limit=1000&status=all")
       .then((r) => r.json())
       .then((data) => {
-        setProducts(data.products || []);
+        const list: Product[] = data.products || [];
+        setProducts(list);
         setLoadingProducts(false);
+        const key = deepLinkProduct.current?.toLowerCase();
+        if (key) {
+          const match = list.find(
+            (p) =>
+              p.id.toLowerCase() === key ||
+              p.sku?.toLowerCase() === key ||
+              p.rk_sku?.toLowerCase() === key
+          );
+          if (match) setSelected(match);
+        }
       })
       .catch(() => setLoadingProducts(false));
   }, []);

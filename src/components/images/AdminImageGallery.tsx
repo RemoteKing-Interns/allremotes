@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Trash2, Eye, Upload, GripVertical } from "lucide-react";
+import { Trash2, Eye, Upload, GripVertical, Wand2 } from "lucide-react";
 import ProductImage from "./ProductImage";
 import MediaPickerModal from "./MediaPickerModal";
 import { filterDummyImages, getFallbackLetter } from "@/lib/images";
@@ -11,6 +11,7 @@ interface AdminImageGalleryProps {
   images?: string[];
   onChange?: (images: string[]) => void;
   onUpload?: (files: File[]) => Promise<string[]>;
+  onGenerateAI?: () => void;
 }
 
 /**
@@ -28,6 +29,7 @@ const AdminImageGallery: React.FC<AdminImageGalleryProps> = ({
   images = [],
   onChange,
   onUpload,
+  onGenerateAI,
 }) => {
   const workingImages = useMemo(
     () => filterDummyImages(images.map((img) => String(img)).filter(Boolean)),
@@ -215,6 +217,18 @@ const AdminImageGallery: React.FC<AdminImageGalleryProps> = ({
           >
             <Upload size={24} />
             <span className="text-xs font-medium">Upload Images</span>
+          </button>
+        )}
+
+        {/* AI Generate */}
+        {onGenerateAI && (
+          <button
+            type="button"
+            onClick={onGenerateAI}
+            className="aspect-square rounded-lg border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 text-blue-500 hover:text-blue-600"
+          >
+            <Wand2 size={24} />
+            <span className="text-xs font-medium">Generate AI Image</span>
           </button>
         )}
       </div>

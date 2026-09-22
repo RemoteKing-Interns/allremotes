@@ -7352,6 +7352,9 @@ function AdminProducts() {
                   <AdminImageGallery
                     product={productForEdit}
                     images={productForEdit.images || []}
+                    onGenerateAI={() =>
+                      router.push(`/admin/image_gen?product=${encodeURIComponent(productForEdit.id)}`)
+                    }
                     onChange={(newImages) => {
                       update(productForEdit.id, "images", newImages);
                       update(productForEdit.id, "image", newImages[0] || "");
