@@ -6,6 +6,11 @@ import { getCategoryPageTitle } from "@/lib/category";
 import { getSiteUrl } from "@/lib/site-url";
 import { getServerProducts } from "@/lib/server-products";
 
+// Product listings must reflect live DB state (status, price, stock) —
+// never prerender them at build time or drafts/price changes stay stale
+// in the cached HTML for up to a year.
+export const dynamic = "force-dynamic";
+
 function getCategoryDescription(category: string) {
   const descriptions: Record<string, string> = {
     garage:
