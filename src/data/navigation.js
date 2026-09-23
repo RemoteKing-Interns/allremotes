@@ -349,12 +349,23 @@ export const navigationMenu = {
         ],
       },
       {
+        title: "Key Covers",
+        items: [
+          {
+            name: "All Key Covers",
+            path: "/automotive/key-covers",
+            icon: getIcon(17),
+            isShopAll: true,
+          },
+        ],
+      },
+      {
         title: "Transponders",
         items: [
           {
             name: "All Transponders",
             path: "/automotive/transponders",
-            icon: getIcon(17),
+            icon: getIcon(18),
             isShopAll: true,
           },
         ],
