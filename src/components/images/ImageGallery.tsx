@@ -20,6 +20,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [brokenImageIndices, setBrokenImageIndices] = useState<Set<number>>(new Set());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Reset whenever the image list changes (including when product data is fetched)
   useEffect(() => {
@@ -78,7 +79,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
   return (
     <div className={`flex flex-col gap-3 sm:gap-4 ${className}`}>
       {/* Main Image */}
-      <div className="relative flex h-[20rem] items-center justify-center overflow-hidden bg-white rounded-2xl sm:h-[28rem] lg:h-[34rem]">
+      <button
+        type="button"
+        onClick={() => images.length > 0 && setLightboxOpen(true)}
+        className={`relative flex h-[20rem] items-center justify-center overflow-hidden bg-white rounded-2xl sm:h-[28rem] lg:h-[34rem] ${
+          images.length > 0 ? "cursor-zoom-in" : "cursor-default"
+        }`}
+        aria-label="Enlarge product image"
+      >
         <ProductImage
           src={currentImage}
           alt={product?.name || "Product image"}
@@ -90,7 +98,38 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
           onLoad={() => handleImageLoad(safeCurrentImageIndex)}
           onError={() => handleImageError(safeCurrentImageIndex)}
         />
-      </div>
+      </button>
+
+      {/* Lightbox */}
+      {lightboxOpen && images.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+          onClick={() => setLightboxOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Product image enlarged"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            aria-label="Close enlarged image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div className="relative w-full h-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <ProductImage
+              src={currentImage}
+              alt={product?.name || "Product image"}
+              fallbackLetter={fallbackLetter}
+              fill
+              sizes="(max-width: 1536px) 90vw, 90vw"
+              className="object-contain"
+              loading="eager"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Thumbnails */}
       {images.length > 1 && (
