@@ -170,8 +170,8 @@ async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials
  * v2.add doesn't enforce them but partial.update does.
  */
 const DEFAULT_GOODS_PROPERTIES = [
-  { refPid: 1561, vid: 36627 }, // Power Supply: Use Without Electricity
-  { refPid: 2153, vid: 52032 }, // Battery Properties: Without Battery
+  { refPid: 1561, vid: 36626 }, // Power Supply: Dry Battery Power
+  { refPid: 2153, vid: 52030 }, // Battery Properties: Non-rechargeable Battery
   { refPid: 121, vid: 2148 },  // Material: Plastic
   { refPid: 2204, vid: 56055 }, // Code Way: Rolling Code
   { refPid: 2205, vid: 56077 }, // Adapt To The Country Area: AU&NZ
