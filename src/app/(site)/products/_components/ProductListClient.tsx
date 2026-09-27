@@ -671,6 +671,8 @@ export default function ProductListClient({
         "Shop replacement garage door remotes and gate remotes for Merlin, B&D, ATA, Chamberlain, Gliderol, Steel-Line and more. All remotes are quality-tested, come with a 12-month warranty, and ship Australia-wide with fast dispatch. Use our compatibility guide to find the right remote for your motor model.",
       car:
         "Shop replacement car remotes, key fobs, transponder keys and key shells for popular vehicles.",
+      automotive:
+        "Shop automotive keys, transponder chips, key covers, key shells and car remote accessories. Compatible replacements for Toyota, Mazda, Hyundai, Suzuki, Ford and more — quality-tested with fast Australia-wide shipping.",
       home:
         "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more.",
       locksmith:
@@ -692,7 +694,8 @@ export default function ProductListClient({
             {pageDescription}
           </p>
 
-          {!routeBrand && routeCategoryKey === "all" && (
+          {!routeBrand && routeCategoryKey === "all" &&
+            (selectedCategory === "all" || selectedCategory === "garage") && (
             <div className="mt-4 flex flex-wrap gap-2">
               {["Merlin", "ATA", "B&D", "Chamberlain", "Gliderol"].map(
                 (brand) => (
