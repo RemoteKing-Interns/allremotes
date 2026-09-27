@@ -82,37 +82,45 @@ const Header = () => {
     setShowSearchResults(false);
   }, [pathname]);
 
+  // Memoize the product list + precomputed searchable text once per
+  // productsVersion change (getProducts() JSON.parses a ~2.3MB blob and
+  // re-enriches every product — running it per keystroke was the bottleneck).
+  const searchableProducts = React.useMemo(() => {
+    const list = getProducts() || [];
+    return list.map((product) => ({
+      product,
+      searchableText: [
+        product.name,
+        product.description,
+        product.category,
+        product.brand,
+        product.sku,
+        product.seo_title,
+        product.tags,
+        product.features,
+        product.compatibility,
+        product.cat1,
+        product.cat2,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+    }));
+  }, [getProducts]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 0);
+    }, 150);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
-    const list = getProducts() || [];
-    const query = debouncedQuery.trim();
+    const query = debouncedQuery.trim().toLowerCase();
     if (query.length > 0) {
-      const q = query.toLowerCase();
-      const filtered = list.filter((product) => {
-        const searchableText = [
-          product.name,
-          product.description,
-          product.category,
-          product.brand,
-          product.sku,
-          product.seo_title,
-          product.tags,
-          product.features,
-          product.compatibility,
-          product.cat1,
-          product.cat2,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return searchableText.includes(q);
-      });
+      const filtered = searchableProducts
+        .filter(({ searchableText }) => searchableText.includes(query))
+        .map(({ product }) => product);
       setSearchResults(filtered.slice(0, 8));
       setShowSearchResults(true);
     } else {
@@ -120,7 +128,7 @@ const Header = () => {
       setShowSearchResults(false);
     }
     setIsSearching(false);
-  }, [debouncedQuery, getProducts]);
+  }, [debouncedQuery, searchableProducts]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);

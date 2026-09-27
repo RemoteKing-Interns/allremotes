@@ -450,21 +450,13 @@ export default function ProductListClient({
     return brands;
   }, [brands, selectedBrands]);
 
-  const filteredProducts = useMemo(() => {
-    let result = products.filter((p) =>
-      matchesProductToCategory(p, selectedCategory),
-    );
-
-    if (selectedBrands.length > 0) {
-      result = result.filter((p) => 
-        selectedBrands.some(brand => matchesBrandFilter(p, brand))
-      );
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((p) => {
-        const searchableText = [
+  // Precompute searchable text once per products list — joining 9 fields
+  // per product on every keystroke made the listing filter lag.
+  const searchableProducts = useMemo(
+    () =>
+      (products || []).map((p: any) => ({
+        product: p,
+        searchableText: [
           p.name,
           p.description,
           p.category,
@@ -477,9 +469,30 @@ export default function ProductListClient({
         ]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase();
-        return searchableText.includes(q);
-      });
+          .toLowerCase(),
+      })),
+    [products]
+  );
+
+  const filteredProducts = useMemo(() => {
+    let result = products.filter((p) =>
+      matchesProductToCategory(p, selectedCategory),
+    );
+
+    if (selectedBrands.length > 0) {
+      result = result.filter((p) =>
+        selectedBrands.some(brand => matchesBrandFilter(p, brand))
+      );
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matched = new Set(
+        searchableProducts
+          .filter(({ searchableText }) => searchableText.includes(q))
+          .map(({ product }) => product)
+      );
+      result = result.filter((p) => matched.has(p));
     }
 
     if (stockStatus !== "all") {
@@ -522,7 +535,7 @@ export default function ProductListClient({
     });
 
     return result;
-  }, [products, selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
+  }, [products, searchableProducts, selectedCategory, selectedBrands, searchQuery, stockStatus, priceMin, priceMax, sortBy]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
