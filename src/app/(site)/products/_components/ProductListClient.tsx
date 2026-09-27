@@ -434,11 +434,12 @@ export default function ProductListClient({
 
   const brands = useMemo<string[]>(() => {
     const brandValues = (products || [])
+      .filter((p) => matchesProductToCategory(p, selectedCategory))
       .map((p: any) => (p?.brand ? String(p.brand) : ""))
       .filter(Boolean) as string[];
     const unique = Array.from(new Set<string>(brandValues));
     return ["all", ...unique];
-  }, [products]);
+  }, [products, selectedCategory]);
 
   const brandsWithSelected = useMemo(() => {
     if (selectedBrands.length === 0) return brands;
