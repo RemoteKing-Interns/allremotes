@@ -28,6 +28,7 @@ import MediaPickerModal from "../../../components/images/MediaPickerModal";
 import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
 import { buildPackingSlipData, renderPackingSlipHtml } from "../../../lib/packingSlip";
 import { buildTrackingLink } from "../../../lib/tracking";
+import { createUnleashedSkuMap, getOrderSkuForUnleashed, getUnleashedProductCode, normalizeUnleashedSku } from "../../../lib/unleashedSku";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   LayoutDashboard,
@@ -1576,9 +1577,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
   const productSkuOptions = useMemo(
     () =>
-      (getProducts() || [])
-        .filter((p: any) => p.sku)
-        .map((p: any) => ({ sku: String(p.sku), name: String(p.name || p.model || "") })),
+      Array.from(createUnleashedSkuMap(getProducts() || []), ([sku, product]) => ({
+        sku,
+        name: String(product.name || product.model || ""),
+      })),
     [getProducts]
   );
 
@@ -1593,11 +1595,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     if (!sku) return;
     setSavingItemSkuKey(key);
     try {
-      const match = (getProducts() || []).find(
-        (p: any) => String(p.sku || "").toLowerCase() === sku.toLowerCase()
-      );
+      const match = createUnleashedSkuMap(getProducts() || []).get(normalizeUnleashedSku(sku));
+      const productCode = getUnleashedProductCode(match);
       const items = order.items.map((it: any, i: number) =>
-        i === idx ? { ...it, sku, ...(match?.rk_sku ? { rk_sku: match.rk_sku } : {}) } : it
+        i === idx ? { ...it, sku, ...(productCode ? { rk_sku: productCode } : {}) } : it
       );
       const resp = await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
@@ -1777,20 +1778,24 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     const selectedOrderIds = Array.from(selection);
     const selectedOrders = groupOrders.filter((o) => selectedOrderIds.includes(o.id));
 
+    const catalogSkuMap = createUnleashedSkuMap(getProducts() || []);
     // Aggregate items: merge by product id, summing quantities
     const itemMap: Record<string, { id: string; name: string; sku: string; rk_sku: string; quantity: number }> = {};
     selectedOrders.forEach((order) => {
       (order.items || []).forEach((item: any) => {
+        const sku = getOrderSkuForUnleashed(item.sku, item.externalId, order.channel);
+        const product = sku ? catalogSkuMap.get(normalizeUnleashedSku(sku)) : undefined;
+        const rkSku = item.rk_sku || getUnleashedProductCode(product);
         // Group by rk_sku first (stable Unleashed product code), then sku, then id, then name
-        const key = item.rk_sku || item.sku || item.id || item.name;
+        const key = rkSku || sku || item.id || item.externalId || item.name;
         if (itemMap[key]) {
           itemMap[key].quantity += Number(item.quantity || 1);
         } else {
           itemMap[key] = {
             id: item.id || key,
             name: item.name || "Unknown",
-            sku: item.sku || "",
-            rk_sku: item.rk_sku || "",
+            sku,
+            rk_sku: rkSku,
             quantity: Number(item.quantity || 1),
           };
         }
@@ -1863,7 +1868,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       customerName: o.customerName || o.customer?.name || "",
       items: (o.items || []).map((item: any) => ({
         name: item.name || "",
-        sku: item.sku || "",
+        sku: getOrderSkuForUnleashed(item.sku, item.externalId, o.channel),
         rk_sku: item.rk_sku || "",
         quantity: Number(item.quantity || 1),
         unitPrice: Number(item.unitPrice || item.price || 0),
@@ -2597,14 +2602,14 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 Review and adjust quantities before pushing. Items are aggregated across all selected orders.
               </p>
               {(() => {
-                const hasRkSku = modalItems.some((i) => i.rk_sku);
+                const hasUnleashedSku = modalItems.some((i) => i.rk_sku || i.sku);
                 return (
                   <div className="rounded-lg border border-neutral-200 overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500">
                         <tr>
                           <th className="px-4 py-2.5 text-left font-semibold">Product</th>
-                          {hasRkSku && <th className="px-4 py-2.5 text-left font-semibold">RK_SKU</th>}
+                          {hasUnleashedSku && <th className="px-4 py-2.5 text-left font-semibold">Unleashed SKU</th>}
                           <th className="px-4 py-2.5 text-right font-semibold w-28">Quantity</th>
                           <th className="px-4 py-2.5 text-right font-semibold w-28">
                             {loadingStock ? (
@@ -2622,9 +2627,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             <td className="px-4 py-3 font-medium text-neutral-900 max-w-[200px]" title={item.name}>
                               <OrderItemName name={item.name} imageUrl={itemImage(item)} truncate />
                             </td>
-                            {hasRkSku && (
+                            {hasUnleashedSku && (
                               <td className="px-4 py-3 font-mono text-xs text-neutral-500">
-                                {item.rk_sku || "—"}
+                                {item.rk_sku || item.sku || "—"}
                               </td>
                             )}
                             <td className="px-4 py-3 text-right">
@@ -2658,7 +2663,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         ))}
                         {modalItems.length === 0 && (
                           <tr>
-                            <td colSpan={hasRkSku ? 4 : 3} className="px-4 py-6 text-center text-sm text-neutral-400">
+                            <td colSpan={hasUnleashedSku ? 4 : 3} className="px-4 py-6 text-center text-sm text-neutral-400">
                               No items in selected orders.
                             </td>
                           </tr>

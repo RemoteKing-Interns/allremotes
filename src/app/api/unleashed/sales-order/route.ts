@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { pushAllToPickops } from "@/lib/pickops";
+import { createUnleashedSkuMap, getUnleashedProductCode, normalizeUnleashedSku } from "@/lib/unleashedSku";
 
 const UNLEASHED_BASE = "https://api.unleashedsoftware.com";
 
@@ -62,34 +63,30 @@ export async function POST(request: Request) {
   }
 
   // For items missing rk_sku or unitPrice, look them up from the products collection
-  const itemsNeedingLookup = items.filter((i) => (!i.rk_sku && i.sku) || !i.unitPrice);
-  if (itemsNeedingLookup.length > 0 && mongoEnabled()) {
+  const allItems = [...items, ...perOrder.flatMap((o: any) => o.items || [])];
+  const needsLookup = allItems.some((i) => (!i.rk_sku && i.sku) || !i.unitPrice);
+  if (needsLookup && mongoEnabled()) {
     try {
       const db = await getDb();
-      const skus = items.map((i) => i.sku).filter(Boolean);
-      const products = await db.collection("products").find({ sku: { $in: skus } }, { projection: { sku: 1, rk_sku: 1, unleashed_product_code: 1, price: 1 } }).toArray();
-      const productMap: Record<string, { rk_sku?: string; price?: number }> = {};
-      products.forEach((p: any) => { if (p.sku) productMap[p.sku] = { rk_sku: p.rk_sku || p.unleashed_product_code, price: p.price }; });
-      items = items.map((i) => {
-        const match = i.sku ? productMap[i.sku] : undefined;
+      const skus = Array.from(new Set(allItems.map((i) => normalizeUnleashedSku(i.sku)).filter(Boolean)));
+      const products = skus.length
+        ? await db.collection("products").find(
+            { $or: [{ sku: { $in: skus } }, { rk_sku: { $in: skus } }, { unleashed_product_code: { $in: skus } }] },
+            { projection: { sku: 1, rk_sku: 1, unleashed_product_code: 1, price: 1 } }
+          ).toArray()
+        : [];
+      const productMap = createUnleashedSkuMap(products as any[]);
+      const enrichItem = (i: any) => {
+        const match = i.sku ? productMap.get(normalizeUnleashedSku(i.sku)) : undefined;
         return {
           ...i,
-          rk_sku: i.rk_sku || match?.rk_sku || "",
+          rk_sku: i.rk_sku || getUnleashedProductCode(match),
           unitPrice: i.unitPrice || match?.price || 0,
         };
-      });
+      };
+      items = items.map(enrichItem);
       // Enrich perOrder items with the same productMap
-      perOrder = perOrder.map((o) => ({
-        ...o,
-        items: o.items.map((i) => {
-          const match = i.sku ? productMap[i.sku] : undefined;
-          return {
-            ...i,
-            rk_sku: i.rk_sku || match?.rk_sku || "",
-            unitPrice: i.unitPrice || match?.price || 0,
-          };
-        }),
-      }));
+      perOrder = perOrder.map((o) => ({ ...o, items: o.items.map(enrichItem) }));
     } catch {
       // Non-fatal — fall back to existing values
     }
@@ -97,13 +94,13 @@ export async function POST(request: Request) {
 
   // Fail early if any item is missing a Unleashed product code
   const missingProductCodes = items
-    .filter((i) => !i.rk_sku)
+    .filter((i) => !getUnleashedProductCode(i))
     .map((i) => ({ name: i.name, sku: i.sku, key: i.rk_sku || i.sku || i.name }));
   if (missingProductCodes.length > 0) {
     return NextResponse.json(
       {
-        error: "Some products are missing a Unleashed product code (rk_sku or unleashed_product_code). Product names may also differ (e.g. eBay names may not match All Remotes / Remote King names) — match by SKU.",
-        note: "Product names may differ between eBay, All Remotes, and Remote King. Use the SKU to identify the product and set rk_sku or unleashed_product_code.",
+        error: "Some products are missing a SKU or Unleashed product code.",
+        note: "Use a catalog SKU, RK SKU, or Unleashed product code to identify each product.",
         missing: missingProductCodes,
       },
       { status: 400 }
@@ -131,7 +128,7 @@ export async function POST(request: Request) {
     return {
       LineNumber: idx + 1,
       Product: {
-        ProductCode: item.rk_sku || item.sku || item.name,
+        ProductCode: getUnleashedProductCode(item),
       },
       OrderQuantity: item.quantity,
       UnitPrice: unitPrice,
