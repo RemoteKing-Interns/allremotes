@@ -1597,31 +1597,41 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     try {
       const match = createUnleashedSkuMap(getProducts() || []).get(normalizeUnleashedSku(sku));
       const productCode = getUnleashedProductCode(match);
-      const items = order.items.map((it: any, i: number) =>
-        i === idx ? { ...it, sku, ...(productCode ? { rk_sku: productCode } : {}) } : it
-      );
+      const items = order.items.map((it: any, i: number) => {
+        if (i !== idx) return it;
+        const updated = { ...it, sku };
+        if (productCode) updated.rk_sku = productCode;
+        else delete updated.rk_sku;
+        return updated;
+      });
       const resp = await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ items }),
       });
-      if (!resp.ok) throw new Error("Failed to save SKU");
-      let ebayError = "";
-      if (order.channel === "ebay" && item.externalId) {
-        const r = await fetch("/api/admin/channels/ebay/item-sku", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ itemId: item.externalId, sku, variationColor: item.color }),
-        });
-        if (!r.ok) {
-          const d = await r.json().catch(() => null);
-          ebayError = d?.error || `HTTP ${r.status}`;
-        }
-      }
-      const patch = { items };
-      setOrders(orders.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      const savedOrder = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(savedOrder?.error || savedOrder?.details || "Failed to save SKU");
+      const savedItems = Array.isArray(savedOrder?.items) ? savedOrder.items : items;
+      const patch = { items: savedItems };
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
       setSelectedOrder((prev: any) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
       setItemSkuDrafts((d) => ({ ...d, [key]: "" }));
+      let ebayError = "";
+      if (order.channel === "ebay" && item.externalId) {
+        try {
+          const r = await fetch("/api/admin/channels/ebay/item-sku", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ itemId: item.externalId, sku, variationColor: item.color }),
+          });
+          if (!r.ok) {
+            const d = await r.json().catch(() => null);
+            ebayError = d?.error || `HTTP ${r.status}`;
+          }
+        } catch (err: any) {
+          ebayError = err?.message || "eBay request failed";
+        }
+      }
       if (ebayError) alert(`SKU saved on the order, but updating the eBay listing failed: ${ebayError}`);
     } catch (err: any) {
       alert(err?.message || "Failed to save SKU");

@@ -6,6 +6,7 @@ import type { ChannelCredentials, Marketplace, MarketplaceAccount, ChannelListin
 import { eBayAdapter } from "./ebay";
 import { temuAdapter } from "./temu";
 import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
+import { mergeChannelOrderSkus } from "./order-item-skus";
 
 function getAdapter(channel: Marketplace) {
   switch (channel) {
@@ -123,7 +124,10 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
   // (e.g. marking shipped) aren't clobbered on resync.
   const id = `${encryptedOrder.channel.toUpperCase()}-${encryptedOrder.externalOrderId}`;
   const customerEmailHash = order.customer?.email ? emailHash(order.customer.email) : undefined;
-  await db.collection("orders").updateOne(
+  const orderCollection = db.collection("orders");
+  const existingOrder = await orderCollection.findOne({ id }, { projection: { items: 1 } });
+  const items = mergeChannelOrderSkus(encryptedOrder.items, existingOrder?.items || []);
+  await orderCollection.updateOne(
     { id },
     {
       $set: {
@@ -132,7 +136,7 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
         externalStatus: encryptedOrder.externalStatus,
         customer: { ...encryptedOrder.customer, ...(customerEmailHash ? { emailHash: customerEmailHash } : {}) },
         shipping: encryptedOrder.shipping,
-        items: encryptedOrder.items,
+        items,
         pricing: encryptedOrder.pricing,
         shippingNote: encryptedOrder.shippingNote,
         updatedAt: now,
