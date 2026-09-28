@@ -176,8 +176,11 @@ export async function POST(request: Request) {
       }
     }
 
+    // Admin manual orders can pass sendNotifications:false to skip SMS/emails
+    const notify = (body as any).sendNotifications !== false;
+
     // Send SMS confirmation if phone number provided
-    if (isSmsConfigured() && plaintextCustomerPhone && order.total != null) {
+    if (notify && isSmsConfigured() && plaintextCustomerPhone && order.total != null) {
       const formattedTotal = typeof order.total === 'number' 
         ? `AU$${order.total.toFixed(2)}`
         : order.total;
@@ -195,7 +198,7 @@ export async function POST(request: Request) {
     }
 
     // Send order confirmation emails (non-blocking)
-    if (plaintextCustomerEmail && plaintextCustomerName && Array.isArray(order.items) && order.items.length > 0) {
+    if (notify && plaintextCustomerEmail && plaintextCustomerName && Array.isArray(order.items) && order.items.length > 0) {
       const emailItems = order.items.map((item: any) => ({
         name: String(item.name),
         quantity: Number(item.quantity) || 1,

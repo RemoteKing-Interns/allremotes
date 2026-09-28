@@ -992,6 +992,21 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [shipOrderModal, setShipOrderModal] = useState<{ order: any; trackingNumber: string; carrier: string; trackingLink: string; sending: boolean } | null>(null);
   const [labelModal, setLabelModal] = useState<{ order: any; preview: string; loading: boolean; printing: boolean; fields: Record<string, string>; template: any; savedTemplates: any[] } | null>(null);
 
+  // ── Manual order creation
+  type CreateItem = { key: string; name: string; sku: string; rk_sku: string; quantity: number; unitPrice: number };
+  const emptyCreateForm = () => ({
+    fullName: "", email: "", phone: "",
+    address: "", city: "", state: "", zipCode: "",
+    shippingMethod: "untracked", shippingCost: 0,
+    paymentStatus: "pending",
+    sendNotifications: false,
+    items: [{ key: "", name: "", sku: "", rk_sku: "", quantity: 1, unitPrice: 0 }] as CreateItem[],
+  });
+  const [createModal, setCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
 
@@ -1482,6 +1497,56 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     }
   };
 
+  const createOrder = async () => {
+    setCreateError("");
+    const items = createForm.items
+      .filter((i) => i.name.trim() && i.quantity > 0)
+      .map((i) => ({
+        name: i.name.trim(), sku: i.sku, rk_sku: i.rk_sku,
+        quantity: i.quantity, unitPrice: i.unitPrice,
+        lineTotal: i.quantity * i.unitPrice,
+      }));
+    if (items.length === 0) { setCreateError("Add at least one item."); return; }
+    const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
+    const shippingCost = Number(createForm.shippingCost) || 0;
+    const postageLabels: Record<string, string> = {
+      untracked: "Free Untracked Shipping", tracked: "Tracked Shipping", express: "Express Shipping",
+    };
+    setCreating(true);
+    try {
+      const resp = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          customer: { fullName: createForm.fullName, email: createForm.email },
+          items,
+          pricing: { currency: "AUD", subtotal, discountTotal: 0, shipping: shippingCost, total: subtotal + shippingCost },
+          total: subtotal + shippingCost,
+          shipping: {
+            address: createForm.address, city: createForm.city, state: createForm.state,
+            zipCode: createForm.zipCode, country: "AU", phone: createForm.phone,
+          },
+          shippingMethod: createForm.shippingMethod,
+          postageService: postageLabels[createForm.shippingMethod] || "Free Untracked Shipping",
+          payment: { method: "manual", status: createForm.paymentStatus },
+          channel: "manual",
+          status: "processing",
+          sendNotifications: createForm.sendNotifications,
+        }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || "Failed to create order");
+      setCreateModal(false);
+      setCreateForm(emptyCreateForm());
+      await load();
+      if (data?.id) setSelectedOrder(data);
+    } catch (err: any) {
+      setCreateError(err?.message || "Failed to create order");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== "orders") return;
     load();
@@ -1815,6 +1880,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           <p className="mt-1 text-sm text-neutral-500">Manage and track customer orders.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700"
+            onClick={() => { setCreateError(""); setCreateModal(true); }}
+          >
+            + Create order
+          </button>
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-200 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -2557,6 +2629,151 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   </>
                 )}
               </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Order Modal */}
+      {createModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !creating && setCreateModal(false)}>
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between border-b border-neutral-200 pb-3">
+              <h2 className="text-lg font-bold text-neutral-900">Create Order</h2>
+              <button onClick={() => !creating && setCreateModal(false)} className="rounded-full p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <datalist id="create-order-products">
+              {(getProducts() || []).map((p: any) => (
+                <option key={p.id || p.sku} value={`${p.name || p.model || p.sku} (${p.sku})`} />
+              ))}
+            </datalist>
+
+            <div className="space-y-5">
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Customer</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <input placeholder="Full name" value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  <input placeholder="Email" type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  <input placeholder="Phone" value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Shipping Address</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                  <input placeholder="Street address" value={createForm.address} onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 sm:col-span-2" />
+                  <input placeholder="City" value={createForm.city} onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="State" value={createForm.state} onChange={(e) => setCreateForm({ ...createForm, state: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                    <input placeholder="Postcode" value={createForm.zipCode} onChange={(e) => setCreateForm({ ...createForm, zipCode: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Items</h3>
+                <div className="space-y-2">
+                  {createForm.items.map((item, idx) => (
+                    <div key={idx} className="flex flex-wrap items-center gap-2">
+                      <input
+                        list="create-order-products"
+                        placeholder="Search product by name or SKU (or type a custom item)"
+                        value={item.key || item.name}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const next = [...createForm.items];
+                          const match = (getProducts() || []).find((p: any) => `${p.name || p.model || p.sku} (${p.sku})` === v);
+                          next[idx] = match
+                            ? { key: v, name: match.name || match.model, sku: match.sku || "", rk_sku: match.rk_sku || "", quantity: item.quantity, unitPrice: Number(match.price || 0) }
+                            : { ...item, key: v, name: v };
+                          setCreateForm({ ...createForm, items: next });
+                        }}
+                        className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                      />
+                      <input
+                        type="number" min={1} value={item.quantity}
+                        onChange={(e) => { const next = [...createForm.items]; next[idx] = { ...item, quantity: Math.max(1, Number(e.target.value) || 1) }; setCreateForm({ ...createForm, items: next }); }}
+                        className="w-20 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                        title="Qty"
+                      />
+                      <input
+                        type="number" min={0} step="0.01" value={item.unitPrice}
+                        onChange={(e) => { const next = [...createForm.items]; next[idx] = { ...item, unitPrice: Number(e.target.value) || 0 }; setCreateForm({ ...createForm, items: next }); }}
+                        className="w-24 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                        title="Unit price"
+                      />
+                      <span className="w-20 text-right text-sm font-semibold text-neutral-700">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                      <button type="button" onClick={() => setCreateForm({ ...createForm, items: createForm.items.filter((_, i) => i !== idx) })} className="rounded-lg p-2 text-neutral-400 hover:bg-rose-50 hover:text-rose-600" title="Remove item">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCreateForm({ ...createForm, items: [...createForm.items, { key: "", name: "", sku: "", rk_sku: "", quantity: 1, unitPrice: 0 }] })}
+                    className="rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-500 hover:border-emerald-400 hover:text-emerald-600"
+                  >
+                    + Add item
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Shipping Method</h3>
+                  <select
+                    value={createForm.shippingMethod}
+                    onChange={(e) => {
+                      const m = e.target.value;
+                      const costs: Record<string, number> = { untracked: 0, tracked: 12, express: 18 };
+                      setCreateForm({ ...createForm, shippingMethod: m, shippingCost: costs[m] ?? 0 });
+                    }}
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="untracked">Free Untracked — $0</option>
+                    <option value="tracked">Tracked — $12</option>
+                    <option value="express">Express — $18</option>
+                  </select>
+                </div>
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Shipping Cost ($)</h3>
+                  <input type="number" min={0} step="0.01" value={createForm.shippingCost} onChange={(e) => setCreateForm({ ...createForm, shippingCost: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                </div>
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Payment Status</h3>
+                  <select value={createForm.paymentStatus} onChange={(e) => setCreateForm({ ...createForm, paymentStatus: e.target.value })} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100">
+                    <option value="pending">Unpaid</option>
+                    <option value="succeeded">Paid (manual)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg bg-neutral-50 px-4 py-3">
+                <label className="flex items-center gap-2 text-sm text-neutral-700">
+                  <input type="checkbox" checked={createForm.sendNotifications} onChange={(e) => setCreateForm({ ...createForm, sendNotifications: e.target.checked })} className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500" />
+                  Send confirmation email/SMS to customer
+                </label>
+                <p className="text-sm font-bold text-neutral-900">
+                  Total: AU${(createForm.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) + (Number(createForm.shippingCost) || 0)).toFixed(2)}
+                </p>
+              </div>
+
+              {createError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{createError}</p>}
+
+              <div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+                <button type="button" onClick={() => !creating && setCreateModal(false)} className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-200">Cancel</button>
+                <button
+                  type="button"
+                  onClick={createOrder}
+                  disabled={creating}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creating ? "Creating..." : "Create order"}
+                </button>
               </div>
             </div>
           </div>
