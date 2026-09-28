@@ -3642,16 +3642,29 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             ) : (
               <>
                 <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirm Shipping Method Change</h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-amber-800 font-semibold">⚠️ This action will update the shipping method.</p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    Order #{changeShippingModal.order.id} will be changed to {
-                      changeShippingModal.newMethod === 'untracked' ? 'Free Untracked' :
-                      changeShippingModal.newMethod === 'tracked' ? 'Tracked Shipping' :
-                      'Express Shipping'
-                    }.
-                  </p>
-                </div>
+                {(() => {
+                  const SHIPPING_COSTS: Record<string, number> = { untracked: 0, tracked: 12, express: 18 };
+                  const o = changeShippingModal.order;
+                  const oldCost = Number(o?.pricing?.shipping || 0);
+                  const newCost = SHIPPING_COSTS[changeShippingModal.newMethod] ?? 0;
+                  const oldTotal = Number(o?.pricing?.total || 0);
+                  const newTotal = oldTotal + (newCost - oldCost);
+                  return (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-amber-800 font-semibold">⚠️ This will update the shipping method and order total.</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Order #{o.id} will be changed to {
+                          changeShippingModal.newMethod === 'untracked' ? 'Free Untracked' :
+                          changeShippingModal.newMethod === 'tracked' ? 'Tracked Shipping' :
+                          'Express Shipping'
+                        }.
+                      </p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Shipping: AU${oldCost.toFixed(2)} → AU${newCost.toFixed(2)} · New total: <strong>AU${newTotal.toFixed(2)}</strong>
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setChangeShippingModal({ ...changeShippingModal, step: 1 })}
@@ -3663,22 +3676,35 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     onClick={async () => {
                       setChangingShipping(true);
                       try {
-                        const resp = await fetch(`/api/orders/${changeShippingModal.order.id}`, {
+                        const SHIPPING_COSTS: Record<string, number> = { untracked: 0, tracked: 12, express: 18 };
+                        const POSTAGE_LABELS: Record<string, string> = {
+                          untracked: "Free Untracked Shipping", tracked: "Tracked Shipping", express: "Express Shipping",
+                        };
+                        const m = changeShippingModal.newMethod;
+                        const o = changeShippingModal.order;
+                        const newShipping = SHIPPING_COSTS[m] ?? 0;
+                        const oldShipping = Number(o?.pricing?.shipping || 0);
+                        const newTotal = Number(o?.pricing?.total || 0) + (newShipping - oldShipping);
+                        const newPricing = { ...(o?.pricing || {}), shipping: newShipping, total: newTotal };
+
+                        const resp = await fetch(`/api/orders/${o.id}`, {
                           method: 'PATCH',
                           headers: { 'content-type': 'application/json' },
                           body: JSON.stringify({
-                            shippingMethod: changeShippingModal.newMethod,
+                            shippingMethod: m,
+                            postageService: POSTAGE_LABELS[m],
+                            pricing: newPricing,
+                            total: newTotal,
                           }),
                         });
                         if (!resp.ok) throw new Error('Failed to update shipping method');
-                        
+
                         // Update local state
-                        setOrders(orders.map(o => 
-                          o.id === changeShippingModal.order.id 
-                            ? { ...o, shippingMethod: changeShippingModal.newMethod }
-                            : o
+                        const patch = { shippingMethod: m, postageService: POSTAGE_LABELS[m], pricing: newPricing, total: newTotal };
+                        setOrders(orders.map(ord =>
+                          ord.id === o.id ? { ...ord, ...patch } : ord
                         ));
-                        setSelectedOrder({ ...selectedOrder, shippingMethod: changeShippingModal.newMethod });
+                        setSelectedOrder({ ...selectedOrder, ...patch });
                         setChangeShippingModal(null);
                       } catch (err) {
                         alert('Failed to update shipping method');
