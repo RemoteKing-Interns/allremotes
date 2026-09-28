@@ -174,7 +174,7 @@ const DEFAULT_GOODS_PROPERTIES = [
   { refPid: 2153, vid: 52030 }, // Battery Properties: Non-rechargeable Battery
   { refPid: 121, vid: 2148 },  // Material: Plastic
   { refPid: 2204, vid: 56055 }, // Code Way: Rolling Code
-  { refPid: 2205, vid: 56077 }, // Adapt To The Country Area: AU&NZ
+  { refPid: 2205, vid: 56062 }, // Adapt To The Country Area: Used Globally
 ];
 
 export const temuAdapter: ChannelAdapter = {
@@ -321,12 +321,10 @@ export const temuAdapter: ChannelAdapter = {
       for (const [key, values] of Object.entries(payload.aspects)) {
         const refPid = Number(key);
         if (!Number.isFinite(refPid)) continue;
+        if (!overrides.has(refPid)) overrides.set(refPid, []);
         for (const v of values) {
           const vid = Number(v);
-          if (Number.isFinite(vid)) {
-            if (!overrides.has(refPid)) overrides.set(refPid, []);
-            overrides.get(refPid)!.push(vid);
-          }
+          if (Number.isFinite(vid)) overrides.get(refPid)!.push(vid);
         }
       }
       // Remove default entries that are overridden, then add the overrides
