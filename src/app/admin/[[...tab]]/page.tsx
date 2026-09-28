@@ -1054,6 +1054,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [modalStock, setModalStock] = useState<Record<string, { unleashedQty: number | null; newStock: number | null }>>({});
   const [loadingStock, setLoadingStock] = useState(false);
 
+  // ── Order item SKU assignment (eBay orders missing a listing SKU)
+  const [itemSkuDrafts, setItemSkuDrafts] = useState<Record<string, string>>({});
+  const [savingItemSkuKey, setSavingItemSkuKey] = useState("");
+
   // Order items only carry name/sku — resolve product images from the catalog.
   // Channel orders (eBay etc.) use listing names/ids, so exact key match falls
   // back to distinctive-token overlap on the item name.
@@ -1567,6 +1571,61 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       setSelectedOrder({ ...selectedOrder, ...patch });
     } catch {
       alert("Failed to update payment status");
+    }
+  };
+
+  const productSkuOptions = useMemo(
+    () =>
+      (getProducts() || [])
+        .filter((p: any) => p.sku)
+        .map((p: any) => ({ sku: String(p.sku), name: String(p.name || p.model || "") })),
+    [getProducts]
+  );
+
+  // Assigns a SKU to an order item: persists to the order, copies rk_sku when
+  // the SKU matches a catalog product, and pushes the SKU onto the eBay listing
+  // (custom label) so resyncs keep it.
+  const saveItemSku = async (order: any, idx: number) => {
+    const item = order.items?.[idx];
+    if (!item) return;
+    const key = String(item.externalId || idx);
+    const sku = (itemSkuDrafts[key] || "").trim();
+    if (!sku) return;
+    setSavingItemSkuKey(key);
+    try {
+      const match = (getProducts() || []).find(
+        (p: any) => String(p.sku || "").toLowerCase() === sku.toLowerCase()
+      );
+      const items = order.items.map((it: any, i: number) =>
+        i === idx ? { ...it, sku, ...(match?.rk_sku ? { rk_sku: match.rk_sku } : {}) } : it
+      );
+      const resp = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      if (!resp.ok) throw new Error("Failed to save SKU");
+      let ebayError = "";
+      if (order.channel === "ebay" && item.externalId) {
+        const r = await fetch("/api/admin/channels/ebay/item-sku", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ itemId: item.externalId, sku, variationColor: item.color }),
+        });
+        if (!r.ok) {
+          const d = await r.json().catch(() => null);
+          ebayError = d?.error || `HTTP ${r.status}`;
+        }
+      }
+      const patch = { items };
+      setOrders(orders.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      setSelectedOrder((prev: any) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
+      setItemSkuDrafts((d) => ({ ...d, [key]: "" }));
+      if (ebayError) alert(`SKU saved on the order, but updating the eBay listing failed: ${ebayError}`);
+    } catch (err: any) {
+      alert(err?.message || "Failed to save SKU");
+    } finally {
+      setSavingItemSkuKey("");
     }
   };
 
@@ -3123,19 +3182,49 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
               <div>
                 <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Items</h3>
                 <div className="rounded-lg border border-neutral-200">
-                  {(selectedOrder?.items || []).map((item: any, idx: number) => (
+                  {(selectedOrder?.items || []).map((item: any, idx: number) => {
+                    const skuKey = String(item.externalId || idx);
+                    const hasRealSku = !!item.sku && String(item.sku) !== String(item.externalId);
+                    const canAssignSku = selectedOrder?.channel === "ebay" && !!item.externalId;
+                    return (
                     <div key={idx} className={`flex items-center justify-between p-3 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
                         <p className="font-medium text-sm text-neutral-900">
                           <OrderItemName name={item.name} imageUrl={itemImage(item)} />
                         </p>
                         {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
+                        {hasRealSku && <p className="font-mono text-xs text-neutral-500">{item.sku}</p>}
+                        {canAssignSku && !hasRealSku && (
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <input
+                              list="order-item-sku-options"
+                              placeholder="Assign SKU"
+                              value={itemSkuDrafts[skuKey] ?? ""}
+                              onChange={(e) => setItemSkuDrafts((d) => ({ ...d, [skuKey]: e.target.value }))}
+                              className="w-36 rounded-lg border border-neutral-200 px-2 py-1 font-mono text-xs focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => saveItemSku(selectedOrder, idx)}
+                              disabled={savingItemSkuKey === skuKey || !(itemSkuDrafts[skuKey] || "").trim()}
+                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              {savingItemSkuKey === skuKey ? "Saving…" : "Save"}
+                            </button>
+                          </div>
+                        )}
                         <p className="text-xs text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
                       </div>
                       <p className="font-semibold text-sm text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                <datalist id="order-item-sku-options">
+                  {productSkuOptions.map((p) => (
+                    <option key={p.sku} value={p.sku}>{p.name}</option>
+                  ))}
+                </datalist>
               </div>
             </div>
 

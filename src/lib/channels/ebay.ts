@@ -560,6 +560,65 @@ export async function createEbayInventoryLocation(
   });
 }
 
+const EBAY_TRADING_SITE_IDS: Record<string, string> = {
+  EBAY_US: "0",
+  EBAY_GB: "3",
+  EBAY_AU: "15",
+  EBAY_DE: "77",
+};
+
+function xmlEscape(v: string): string {
+  return v
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Sets the custom label (SKU) on a live eBay listing via Trading API ReviseItem.
+// Order lines only carry a SKU when the listing has one, so this also fixes
+// future order syncs for that listing. Ceiling: on multi-variation listings the
+// SKU is matched by Color specifics when `variationColor` is provided; other
+// variations keep their existing labels.
+export async function setEbayListingSku(
+  itemId: string,
+  sku: string,
+  accessToken: string,
+  variationColor?: string
+): Promise<void> {
+  const color = String(variationColor || "").trim();
+  const variationXml = color
+    ? `<Variations><Variation><SKU>${xmlEscape(sku)}</SKU><VariationSpecifics><NameValueList><Name>Color</Name><Value>${xmlEscape(color)}</Value></NameValueList></VariationSpecifics></Variation></Variations>`
+    : "";
+  const body = `<?xml version="1.0" encoding="utf-8"?>
+<ReviseItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+  <ErrorLanguage>en_AU</ErrorLanguage>
+  <Item>
+    <ItemID>${xmlEscape(itemId)}</ItemID>
+    <SKU>${xmlEscape(sku)}</SKU>
+    ${variationXml}
+  </Item>
+</ReviseItemRequest>`;
+
+  const res = await fetch(`${EBAY_API_URL}/ws/api.dll`, {
+    method: "POST",
+    headers: {
+      "X-EBAY-API-CALL-NAME": "ReviseItem",
+      "X-EBAY-API-SITEID": EBAY_TRADING_SITE_IDS[EBAY_MARKETPLACE_ID] || "0",
+      "X-EBAY-API-COMPATIBILITY-LEVEL": "1225",
+      "X-EBAY-API-IAF-TOKEN": accessToken,
+      "Content-Type": "text/xml",
+    },
+    body,
+  });
+  const text = await res.text();
+  const ack = text.match(/<Ack>([^<]+)<\/Ack>/)?.[1] || "";
+  if (!res.ok || !/success|warning/i.test(ack)) {
+    const msg = text.match(/<LongMessage>([^<]+)<\/LongMessage>/)?.[1] || text.slice(0, 300);
+    throw new Error(`eBay ReviseItem failed (${ack || res.status}): ${msg}`);
+  }
+}
+
 async function getApplicationAccessToken(): Promise<string> {
   const body = new URLSearchParams({
     grant_type: "client_credentials",
