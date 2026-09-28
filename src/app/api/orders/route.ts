@@ -4,8 +4,10 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
 import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
-import { sendOrderConfirmationEmail, sendNewOrderNotification } from "../../../lib/email";
+import { sendOrderConfirmationEmail, sendNewOrderNotification, sendShippingUpdateEmail } from "../../../lib/email";
 import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "../../../lib/pii-crypto";
+import { getStarshipitTracking, starshipitConfigured } from "../../../lib/starshipit";
+import { buildTrackingLink } from "../../../lib/tracking";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
@@ -76,8 +78,65 @@ export async function GET(request: Request) {
       
       // Decrypt PII for response
       const decryptedOrders = decryptPiiArray(orders, PII_FIELDS.order);
-      
-      return NextResponse.json(decryptedOrders, { 
+
+      // Admin refresh (unfiltered list): poll Starshipit for tracking on pushed-but-untracked
+      // orders; backfill tracking + mark shipped, email customer once per order.
+      if (!email && !orderId && starshipitConfigured()) {
+        const POST_SHIP = new Set(["shipped", "delivered", "customer_received"]);
+        const pending = decryptedOrders.filter((o: any) =>
+          o.starshipitOrderNumber &&
+          !o.trackingNumber &&
+          String(o.status || "").toLowerCase() !== "cancelled"
+        );
+        const results = await Promise.allSettled(pending.map(async (o: any) => {
+          const t = await getStarshipitTracking(o.starshipitOrderNumber);
+          if (!t?.tracking_number) return;
+          const now = new Date().toISOString();
+          const carrier = t.carrier_name || "";
+          const wasPostShip = POST_SHIP.has(String(o.status || "").toLowerCase());
+          const shipped: Record<string, any> = {
+            shippedAt: t.shipment_date || now,
+            carrier,
+            trackingNumber: t.tracking_number,
+            trackingLink: t.tracking_url || buildTrackingLink(carrier, t.tracking_number),
+            updatedAt: now,
+          };
+          if (!wasPostShip) shipped.status = "shipped";
+          // Guard so concurrent refreshes can't claim + email the same order twice
+          const res = await col.updateOne(
+            { id: o.id, $or: [{ trackingNumber: { $exists: false } }, { trackingNumber: null }, { trackingNumber: "" }] },
+            { $set: shipped }
+          );
+          if (!res.matchedCount) return;
+          Object.assign(o, shipped);
+          // Only email on a real processing->shipped transition; backfills on already-shipped
+          // orders stay silent, and the flag prevents any resend.
+          if (!wasPostShip && !o.trackingEmailSentAt && o.channel !== "ebay" && o.customer?.email) {
+            const emailRes = await sendShippingUpdateEmail({
+              to: o.customer.email,
+              orderId: o.id,
+              customerName: o.customer?.fullName || o.customer?.name || "Customer",
+              trackingNumber: shipped.trackingNumber,
+              carrier,
+              status: "Shipped",
+              trackingLink: shipped.trackingLink,
+            }).catch((e: any) => ({ success: false, error: e?.message }));
+            if (emailRes?.success) {
+              await col.updateOne({ id: o.id }, { $set: { trackingEmailSentAt: now } });
+              o.trackingEmailSentAt = now;
+            } else {
+              console.error(`Starshipit shipped email failed for ${o.id}:`, emailRes?.error);
+            }
+          }
+        }));
+        results.forEach((r, i) => {
+          if (r.status === "rejected") {
+            console.error(`Starshipit tracking poll failed for ${pending[i]?.id}:`, (r.reason as any)?.message || r.reason);
+          }
+        });
+      }
+
+      return NextResponse.json(decryptedOrders, {
         headers: { 
           "Cache-Control": "no-store",
           ...CORS_HEADERS 
