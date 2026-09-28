@@ -1008,8 +1008,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
-  // Tax invoice option: include bank-transfer payment details block
-  const [invoiceBankDetails, setInvoiceBankDetails] = useState(false);
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
@@ -1153,8 +1151,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     }, 500);
   };
 
-  const printPackingSlips = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "packing-slip", "Print invoices");
-  const printInvoices = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "invoice", "Print tax invoices", { includePaymentDetails: invoiceBankDetails });
+  // Single invoice button — unpaid orders automatically get the UNPAID badge
+  // and bank-details block (buildPackingSlipData auto-detects).
+  const printInvoices = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "invoice", "Print invoices");
 
   // Auto-open order modal when viewOrderId is set
   useEffect(() => {
@@ -1969,15 +1968,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             <option value="web">Website</option>
             <option value="ebay">eBay</option>
           </select>
-          <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-neutral-600" title="When ticked, Tax Invoice includes the bank-transfer payment details block">
-            <input
-              type="checkbox"
-              checked={invoiceBankDetails}
-              onChange={(e) => setInvoiceBankDetails(e.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
-            />
-            Invoice: include bank details
-          </label>
           {(orderSearch || orderStatusFilter !== "all" || orderChannelFilter !== "all") && (
             <button
               type="button"
@@ -2204,7 +2194,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         <button
                           type="button"
                           disabled={packingOrders.length === 0}
-                          onClick={() => printPackingSlips(packingOrders)}
+                          onClick={() => printInvoices(packingOrders)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Printer className="h-3.5 w-3.5" />
@@ -2212,26 +2202,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           {packingOrders.length > 0 && (
                             <span className="ml-0.5 rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
                               {packingOrders.length}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })()}
-                    {/* Tax invoice with bank details */}
-                    {(() => {
-                      const invoiceOrders = groupOrders.filter((o: any) => selection.has(o.id));
-                      return (
-                        <button
-                          type="button"
-                          disabled={invoiceOrders.length === 0}
-                          onClick={() => printInvoices(invoiceOrders)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          Tax Invoice
-                          {invoiceOrders.length > 0 && (
-                            <span className="ml-0.5 rounded-full bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                              {invoiceOrders.length}
                             </span>
                           )}
                         </button>

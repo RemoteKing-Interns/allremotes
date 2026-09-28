@@ -122,9 +122,10 @@ export function buildPackingSlipData(order: any, opts?: { includePaymentDetails?
           ? "PAID"
           : String(order.payment?.status || "").toUpperCase(),
     paymentStatusClass: "",
-    showPaymentDetails: opts?.includePaymentDetails ? "1" : "",
+    showPaymentDetails: "",
   };
   data.paymentStatusClass = data.paymentStatus === "PAID" ? "paid" : "unpaid";
+  data.showPaymentDetails = opts?.includePaymentDetails ?? data.paymentStatus === "UNPAID" ? "1" : "";
 
   return data;
 }
