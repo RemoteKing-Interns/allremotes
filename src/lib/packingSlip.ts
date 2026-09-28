@@ -315,6 +315,7 @@ export const DEFAULT_INVOICE_TEMPLATE = `<!-- Tax invoice template. {{field}} pl
   .inv ~ .inv { page-break-before: always; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
   .company { font-size: 13px; line-height: 1.6; }
+  .company .logo img { height: 52px; width: auto; margin-bottom: 8px; }
   .company .name { font-size: 15px; font-weight: 700; text-transform: uppercase; }
   .title-block { text-align: right; }
   .title-block h1 { font-size: 26px; font-weight: 800; letter-spacing: 2px; margin: 0; }
@@ -345,6 +346,7 @@ export const DEFAULT_INVOICE_TEMPLATE = `<!-- Tax invoice template. {{field}} pl
 <div class="inv">
   <div class="head">
     <div class="company">
+      <div class="logo"><img src="https://www.allremotes.com.au/images/mainlogo.png" alt="All Remotes"></div>
       <div class="name">All Remotes Pty Ltd</div>
       <div>ABN: {{abn}}</div>
       <div>32 Bell Street, Yarra Glen, Victoria 3775</div>
