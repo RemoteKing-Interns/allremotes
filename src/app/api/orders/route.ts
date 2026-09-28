@@ -122,6 +122,12 @@ export async function POST(request: Request) {
         headers: CORS_HEADERS
       });
     }
+    if (!Array.isArray((body as any).items) || (body as any).items.length === 0) {
+      return NextResponse.json({ error: "Order must contain at least one item" }, {
+        status: 400,
+        headers: CORS_HEADERS
+      });
+    }
 
     const now = new Date().toISOString();
     const order: OrderDoc = {
