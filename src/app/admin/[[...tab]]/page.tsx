@@ -1553,6 +1553,23 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     }
   };
 
+  const setPaymentStatus = async (order: any, status: "succeeded" | "pending") => {
+    const payment = { ...(order.payment || {}), method: order.payment?.method || "manual", status };
+    try {
+      const resp = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ payment }),
+      });
+      if (!resp.ok) throw new Error("Failed to update payment status");
+      const patch = { payment };
+      setOrders(orders.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      setSelectedOrder({ ...selectedOrder, ...patch });
+    } catch {
+      alert("Failed to update payment status");
+    }
+  };
+
   // Lazy-load known customers once when the create modal opens
   useEffect(() => {
     if (!createModal || customerOptions.length > 0) return;
@@ -2888,6 +2905,28 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total</p>
                   <p className="text-sm font-bold">AU${Number(selectedOrder?.pricing?.total || 0).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Payment</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const ps = String(selectedOrder?.payment?.status || (selectedOrder?.type === "invoice" ? "unpaid" : "")).toLowerCase();
+                      const paid = ["succeeded", "paid"].includes(ps);
+                      return (
+                        <>
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${paid ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                            {paid ? "PAID" : "UNPAID"}
+                          </span>
+                          <button
+                            onClick={() => setPaymentStatus(selectedOrder, paid ? "pending" : "succeeded")}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                          >
+                            Mark {paid ? "unpaid" : "paid"}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Shipping Method</p>
