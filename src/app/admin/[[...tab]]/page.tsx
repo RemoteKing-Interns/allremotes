@@ -2460,6 +2460,11 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                 {o.channel === "ebay" && (
                                   <span className="rounded bg-yellow-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-yellow-800">eBay</span>
                                 )}
+                                {Array.isArray(o.items) && o.items.some((it: any) => !it?.sku || String(it.sku) === String(it?.externalId)) && (
+                                  <span title="Missing SKUs">
+                                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-label="Missing SKUs" />
+                                  </span>
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-4 font-medium text-neutral-600">
@@ -2486,14 +2491,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                               })()}
                             </td>
                             <td className="px-4 py-4 text-center font-medium text-neutral-600">
-                              <span className="inline-flex items-center justify-center gap-1">
-                                {Array.isArray(o.items) ? o.items.length : 0}
-                                {Array.isArray(o.items) && o.items.some((it: any) => !it?.sku || String(it.sku) === String(it?.externalId)) && (
-                                  <span title="Missing SKUs">
-                                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-label="Missing SKUs" />
-                                  </span>
-                                )}
-                              </span>
+                              {Array.isArray(o.items) ? o.items.length : 0}
                             </td>
                             <td className="px-4 py-4 text-right font-extrabold text-neutral-900">
                               AU${Number(o?.pricing?.total || 0).toFixed(2)}
