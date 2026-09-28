@@ -2969,7 +2969,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Payment</p>
                   {(() => {
                     const ps = String(selectedOrder?.payment?.status || (selectedOrder?.type === "invoice" ? "unpaid" : "")).toLowerCase();
-                    const paid = ["succeeded", "paid"].includes(ps);
+                    // Marketplace orders (ebay/temu/amazon) are collected by the
+                    // channel — no recorded payment status means paid.
+                    const marketplacePaid = !selectedOrder?.payment?.status && !!selectedOrder?.channel && selectedOrder?.channel !== "manual";
+                    const paid = ["succeeded", "paid"].includes(ps) || marketplacePaid;
                     return (
                       <div className="flex items-center gap-2">
                         <button

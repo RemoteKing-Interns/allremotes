@@ -118,7 +118,10 @@ export function buildPackingSlipData(order: any, opts?: { includePaymentDetails?
     paymentStatus:
       order.type === "invoice" || ["unpaid", "pending"].includes(String(order.payment?.status || "").toLowerCase())
         ? "UNPAID"
-        : ["succeeded", "paid"].includes(String(order.payment?.status || "").toLowerCase())
+        : ["succeeded", "paid"].includes(String(order.payment?.status || "").toLowerCase()) ||
+            // Marketplace-collected orders (ebay/temu/etc.) with no recorded
+            // payment status are paid by definition.
+            (!order.payment?.status && !!order.channel && order.channel !== "manual")
           ? "PAID"
           : String(order.payment?.status || "").toUpperCase(),
     paymentStatusClass: "",

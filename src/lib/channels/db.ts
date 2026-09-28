@@ -141,6 +141,9 @@ export async function saveChannelOrder(order: ChannelOrder): Promise<void> {
         id,
         status: encryptedOrder.status,
         createdAt: encryptedOrder.createdAt,
+        // Marketplace orders are collected by the channel — always paid.
+        // $setOnInsert so a manual mark-unpaid isn't clobbered by resyncs.
+        payment: { method: "marketplace", status: "succeeded" },
       },
     },
     { upsert: true }
