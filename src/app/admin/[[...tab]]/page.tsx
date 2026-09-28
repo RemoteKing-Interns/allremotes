@@ -2908,25 +2908,27 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Payment</p>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const ps = String(selectedOrder?.payment?.status || (selectedOrder?.type === "invoice" ? "unpaid" : "")).toLowerCase();
-                      const paid = ["succeeded", "paid"].includes(ps);
-                      return (
-                        <>
-                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${paid ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                            {paid ? "PAID" : "UNPAID"}
-                          </span>
-                          <button
-                            onClick={() => setPaymentStatus(selectedOrder, paid ? "pending" : "succeeded")}
-                            className="text-xs text-blue-600 hover:text-blue-800 underline"
-                          >
-                            Mark {paid ? "unpaid" : "paid"}
-                          </button>
-                        </>
-                      );
-                    })()}
-                  </div>
+                  {(() => {
+                    const ps = String(selectedOrder?.payment?.status || (selectedOrder?.type === "invoice" ? "unpaid" : "")).toLowerCase();
+                    const paid = ["succeeded", "paid"].includes(ps);
+                    return (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={paid}
+                          onClick={() => setPaymentStatus(selectedOrder, paid ? "pending" : "succeeded")}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${paid ? "bg-emerald-500" : "bg-rose-400"}`}
+                          title={paid ? "Paid — click to mark unpaid" : "Unpaid — click to mark paid"}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${paid ? "translate-x-6" : "translate-x-1"}`} />
+                        </button>
+                        <span className={`text-xs font-semibold ${paid ? "text-emerald-700" : "text-rose-700"}`}>
+                          {paid ? "Paid" : "Unpaid"}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Shipping Method</p>
