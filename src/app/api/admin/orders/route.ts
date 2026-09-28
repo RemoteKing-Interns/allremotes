@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { readOrdersJson, writeOrdersJson, type OrderDoc } from "@/lib/orders-json";
 import { decryptPiiArray, PII_FIELDS } from "@/lib/pii-crypto";
+import { getStarshipitTracking, starshipitConfigured } from "@/lib/starshipit";
+import { buildTrackingLink } from "@/lib/tracking";
+import { sendShippingUpdateEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +37,56 @@ export async function GET(request: Request) {
         .limit(limit)
         .toArray();
       const decryptedOrders = decryptPiiArray(orders, PII_FIELDS.order);
+
+      // Poll Starshipit for tracking on pushed-but-untracked orders; mark shipped + email when found
+      if (starshipitConfigured()) {
+        const pending = decryptedOrders.filter((o: any) =>
+          (o.starshipitOrderNumber || o.starshipitPushedAt) &&
+          !o.trackingNumber &&
+          !["shipped", "delivered", "cancelled"].includes(String(o.status || "").toLowerCase())
+        );
+        const results = await Promise.allSettled(pending.map(async (o: any) => {
+          const t = await getStarshipitTracking(o.starshipitOrderNumber || o.id);
+          if (!t?.tracking_number) return;
+          const now = new Date().toISOString();
+          const carrier = t.carrier_name || "";
+          const shipped = {
+            status: "shipped",
+            shippedAt: t.shipment_date || now,
+            carrier,
+            trackingNumber: t.tracking_number,
+            trackingLink: t.tracking_url || buildTrackingLink(carrier, t.tracking_number),
+            updatedAt: now,
+          };
+          // Guard so concurrent refreshes can't claim + email the same order twice
+          const res = await col.updateOne(
+            { id: o.id, $or: [{ trackingNumber: { $exists: false } }, { trackingNumber: null }, { trackingNumber: "" }] },
+            { $set: shipped }
+          );
+          if (!res.matchedCount) return;
+          Object.assign(o, shipped);
+          if (o.channel !== "ebay" && o.customer?.email) {
+            const emailRes = await sendShippingUpdateEmail({
+              to: o.customer.email,
+              orderId: o.id,
+              customerName: o.customer?.fullName || o.customer?.name || "Customer",
+              trackingNumber: shipped.trackingNumber,
+              carrier,
+              status: "Shipped",
+              trackingLink: shipped.trackingLink,
+            }).catch((e: any) => ({ success: false, error: e?.message }));
+            if (!emailRes?.success) {
+              console.error(`Starshipit shipped email failed for ${o.id}:`, emailRes?.error);
+            }
+          }
+        }));
+        results.forEach((r, i) => {
+          if (r.status === "rejected") {
+            console.error(`Starshipit tracking poll failed for ${pending[i]?.id}:`, (r.reason as any)?.message || r.reason);
+          }
+        });
+      }
+
       return NextResponse.json(decryptedOrders, { headers: { "Cache-Control": "no-store" } });
     }
 
