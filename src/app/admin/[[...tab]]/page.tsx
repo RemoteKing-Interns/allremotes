@@ -2486,7 +2486,14 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                               })()}
                             </td>
                             <td className="px-4 py-4 text-center font-medium text-neutral-600">
-                              {Array.isArray(o.items) ? o.items.length : 0}
+                              <span className="inline-flex items-center justify-center gap-1">
+                                {Array.isArray(o.items) ? o.items.length : 0}
+                                {Array.isArray(o.items) && o.items.some((it: any) => !it?.sku || String(it.sku) === String(it?.externalId)) && (
+                                  <span title="Missing SKUs">
+                                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-label="Missing SKUs" />
+                                  </span>
+                                )}
+                              </span>
                             </td>
                             <td className="px-4 py-4 text-right font-extrabold text-neutral-900">
                               AU${Number(o?.pricing?.total || 0).toFixed(2)}
