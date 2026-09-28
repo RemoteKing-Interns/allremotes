@@ -1008,6 +1008,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
+  // Tax invoice option: include bank-transfer payment details block
+  const [invoiceBankDetails, setInvoiceBankDetails] = useState(false);
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
@@ -1106,7 +1108,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     return best?.img || null;
   };
 
-  const printDocuments = async (ordersToPrint: any[], templateKey: string, printLabel: string) => {
+  const printDocuments = async (ordersToPrint: any[], templateKey: string, printLabel: string, docOpts?: { includePaymentDetails?: boolean }) => {
     if (ordersToPrint.length === 0) return;
     let template: string;
     try {
@@ -1124,7 +1126,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       return;
     }
     const slips = ordersToPrint
-      .map((o) => renderPackingSlipHtml(template, buildPackingSlipData(o)))
+      .map((o) => renderPackingSlipHtml(template, buildPackingSlipData(o, docOpts)))
       .join("");
     const html = `
       <!DOCTYPE html>
@@ -1152,7 +1154,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   };
 
   const printPackingSlips = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "packing-slip", "Print invoices");
-  const printInvoices = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "invoice", "Print tax invoices");
+  const printInvoices = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "invoice", "Print tax invoices", { includePaymentDetails: invoiceBankDetails });
 
   // Auto-open order modal when viewOrderId is set
   useEffect(() => {
@@ -1967,6 +1969,15 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             <option value="web">Website</option>
             <option value="ebay">eBay</option>
           </select>
+          <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-neutral-600" title="When ticked, Tax Invoice includes the bank-transfer payment details block">
+            <input
+              type="checkbox"
+              checked={invoiceBankDetails}
+              onChange={(e) => setInvoiceBankDetails(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            Invoice: include bank details
+          </label>
           {(orderSearch || orderStatusFilter !== "all" || orderChannelFilter !== "all") && (
             <button
               type="button"

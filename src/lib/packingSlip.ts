@@ -46,6 +46,7 @@ export interface PackingSlipData {
   abn: string;
   paymentStatus: string;
   paymentStatusClass: string;
+  showPaymentDetails: string;
 }
 
 export function escapeHtml(str: string): string {
@@ -61,7 +62,7 @@ function formatMoney(value: number | undefined | null, fallback = 0): string {
   return Number(value ?? fallback).toFixed(2);
 }
 
-export function buildPackingSlipData(order: any): PackingSlipData {
+export function buildPackingSlipData(order: any, opts?: { includePaymentDetails?: boolean }): PackingSlipData {
   const customer = order.customer || {};
   const shipping = order.shipping || {};
   const pricing = order.pricing || {};
@@ -121,6 +122,7 @@ export function buildPackingSlipData(order: any): PackingSlipData {
           ? "PAID"
           : String(order.payment?.status || "").toUpperCase(),
     paymentStatusClass: "",
+    showPaymentDetails: opts?.includePaymentDetails ? "1" : "",
   };
   data.paymentStatusClass = data.paymentStatus === "PAID" ? "paid" : "unpaid";
 
@@ -145,6 +147,12 @@ function replacePlaceholders(template: string, context: any): string {
 
 export function renderPackingSlipHtml(template: string, data: PackingSlipData): string {
   let html = template;
+
+  // handle {{#if field}} ... {{/if}} blocks (truthy check)
+  const ifRegex = /\{\{\s*#if\s+([\w.]+)\s*\}\}([\s\S]*?)\{\{\s*\/if\s*\}\}/g;
+  html = html.replace(ifRegex, (block, field, inner) =>
+    resolveValue(field, data) ? inner : ""
+  );
 
   // handle {{#each items}} ... {{/each}} blocks
   const eachRegex = /\{\{\s*#each\s+([\w]+)\s*\}\}([\s\S]*?)\{\{\s*\/each\s*\}\}/g;
@@ -403,6 +411,7 @@ export const DEFAULT_INVOICE_TEMPLATE = `<!-- Tax invoice template. {{field}} pl
     <div class="row" style="font-size:11px;color:#777;justify-content:flex-end;">All prices inclusive of GST</div>
   </div>
 
+  {{#if showPaymentDetails}}
   <div class="payment">
     <h2>Payment Details</h2>
     <div class="box">
@@ -412,6 +421,7 @@ export const DEFAULT_INVOICE_TEMPLATE = `<!-- Tax invoice template. {{field}} pl
       <strong>Account number:</strong> 759094
     </div>
   </div>
+  {{/if}}
 
   <div class="footer">For future orders, visit allremotes.com.au or email info@allremotes.com.au</div>
 </div>`;
