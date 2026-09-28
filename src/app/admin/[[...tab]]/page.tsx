@@ -1006,6 +1006,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [customerOptions, setCustomerOptions] = useState<any[]>([]);
+  const [customerQuery, setCustomerQuery] = useState("");
 
   // ── Unleashed: per-group selected order IDs (for checkboxes)
   const [groupSelections, setGroupSelections] = useState<Record<string, Set<string>>>({});
@@ -1545,6 +1547,29 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     } finally {
       setCreating(false);
     }
+  };
+
+  // Lazy-load known customers once when the create modal opens
+  useEffect(() => {
+    if (!createModal || customerOptions.length > 0) return;
+    fetch("/api/admin/customers")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCustomerOptions(Array.isArray(d?.customers) ? d.customers : []))
+      .catch(() => {});
+  }, [createModal, customerOptions.length]);
+
+  const applyCustomer = (c: any) => {
+    setCreateForm((f) => ({
+      ...f,
+      fullName: c.name || f.fullName,
+      email: c.email || f.email,
+      phone: c.phone || f.phone,
+      address: c.address?.street || f.address,
+      city: c.address?.city || f.city,
+      state: c.address?.state || f.state,
+      zipCode: c.address?.zip || f.zipCode,
+    }));
+    setCustomerQuery("");
   };
 
   useEffect(() => {
@@ -2655,6 +2680,39 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
             <div className="space-y-5">
               <div>
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Customer</h3>
+                <div className="relative mb-3">
+                  <input
+                    placeholder="Search existing customer by name, email or phone — select to autofill"
+                    value={customerQuery}
+                    onChange={(e) => setCustomerQuery(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  />
+                  {customerQuery.trim() && (
+                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
+                      {(() => {
+                        const q = customerQuery.trim().toLowerCase();
+                        const matches = customerOptions.filter((c) =>
+                          [c.name, c.email, c.phone].some((v) => String(v || "").toLowerCase().includes(q))
+                        ).slice(0, 8);
+                        if (matches.length === 0) return <p className="px-3 py-2 text-xs text-neutral-400">No matching customer</p>;
+                        return matches.map((c, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => applyCustomer(c)}
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-semibold text-neutral-900">{c.name || c.email}</span>
+                              <span className="block truncate text-xs text-neutral-500">{c.email}{c.phone ? ` · ${c.phone}` : ""}</span>
+                            </span>
+                            <span className="shrink-0 text-xs text-neutral-400">{c.totalOrders} order{c.totalOrders === 1 ? "" : "s"}</span>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <input placeholder="Full name" value={createForm.fullName} onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
                   <input placeholder="Email" type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
