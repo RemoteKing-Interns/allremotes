@@ -44,6 +44,8 @@ export interface PackingSlipData {
   postageService: string;
   footerText: string;
   abn: string;
+  paymentStatus: string;
+  paymentStatusClass: string;
 }
 
 export function escapeHtml(str: string): string {
@@ -112,7 +114,15 @@ export function buildPackingSlipData(order: any): PackingSlipData {
     currency,
     postageService: order.postageService || "",
     footerText: "",
+    paymentStatus:
+      order.type === "invoice" || ["unpaid", "pending"].includes(String(order.payment?.status || "").toLowerCase())
+        ? "UNPAID"
+        : ["succeeded", "paid"].includes(String(order.payment?.status || "").toLowerCase())
+          ? "PAID"
+          : String(order.payment?.status || "").toUpperCase(),
+    paymentStatusClass: "",
   };
+  data.paymentStatusClass = data.paymentStatus === "PAID" ? "paid" : "unpaid";
 
   return data;
 }
@@ -280,4 +290,128 @@ export const DEFAULT_PACKING_SLIP_TEMPLATE = `<!-- Custom packing slip template.
   </div>
 
   <div class="footer">{{footerText}}</div>
+</div>`;
+
+/**
+ * Tax-invoice document template — matches the ALL REMOTES invoice layout:
+ * company block, INVOICE # + status badge, BILL TO / SHIP TO, items table,
+ * totals, bank-transfer payment details, footer.
+ * Same placeholders as DEFAULT_PACKING_SLIP_TEMPLATE.
+ */
+export const DEFAULT_INVOICE_TEMPLATE = `<!-- Tax invoice template. {{field}} placeholders, {{#each items}}...{{/each}} for line items. -->
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #1a1a1a; }
+  .inv { max-width: 794px; margin: 0 auto; padding: 32px; }
+  .inv ~ .inv { page-break-before: always; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .company { font-size: 13px; line-height: 1.6; }
+  .company .name { font-size: 15px; font-weight: 700; text-transform: uppercase; }
+  .title-block { text-align: right; }
+  .title-block h1 { font-size: 26px; font-weight: 800; letter-spacing: 2px; margin: 0; }
+  .title-block .num { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .meta { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; }
+  .date { font-size: 13px; }
+  .badge { display: inline-block; padding: 4px 14px; border-radius: 4px; font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+  .badge.unpaid { background: #fdecea; color: #c0392b; }
+  .badge.paid { background: #e8f5e9; color: #1e7e34; }
+  .parties { display: flex; gap: 40px; margin: 24px 0; }
+  .party { flex: 1; }
+  .party h2 { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #777; margin: 0 0 8px; text-transform: uppercase; }
+  .party .body { font-size: 13px; line-height: 1.6; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  table.items th { text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #777; border-bottom: 2px solid #1a1a1a; padding: 8px 6px; }
+  table.items th.qty, table.items td.qty { text-align: center; width: 60px; }
+  table.items th.price, table.items td.price, table.items th.total, table.items td.total { text-align: right; width: 110px; }
+  table.items td { padding: 10px 6px; border-bottom: 1px solid #e5e5e5; font-size: 13px; vertical-align: top; }
+  .item-sku { font-size: 11px; color: #777; margin-top: 2px; }
+  .totals { width: 240px; margin-left: auto; margin-top: 16px; font-size: 13px; }
+  .totals .row { display: flex; justify-content: space-between; padding: 5px 0; }
+  .totals .row.grand { font-weight: 800; font-size: 15px; border-top: 2px solid #1a1a1a; padding-top: 8px; margin-top: 4px; }
+  .payment { margin-top: 32px; }
+  .payment h2 { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #777; text-transform: uppercase; margin: 0 0 8px; }
+  .payment .box { border: 1px solid #e5e5e5; border-radius: 6px; padding: 14px 16px; font-size: 13px; line-height: 1.7; }
+  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #555; text-align: center; }
+</style>
+<div class="inv">
+  <div class="head">
+    <div class="company">
+      <div class="name">All Remotes Pty Ltd</div>
+      <div>ABN: {{abn}}</div>
+      <div>32 Bell Street, Yarra Glen, Victoria 3775</div>
+      <div>info@allremotes.com.au</div>
+      <div>allremotes.com.au</div>
+    </div>
+    <div class="title-block">
+      <h1>INVOICE</h1>
+      <div class="num">#{{orderId}}</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="date">{{orderDate}}</div>
+    <div class="badge {{paymentStatusClass}}">{{paymentStatus}}</div>
+  </div>
+
+  <div class="parties">
+    <div class="party">
+      <h2>Bill To</h2>
+      <div class="body">
+        {{buyerName}}<br>
+        {{buyerEmail}}<br>
+        {{buyerPhone}}
+      </div>
+    </div>
+    <div class="party">
+      <h2>Ship To</h2>
+      <div class="body">
+        {{shipTo.address}}<br>
+        {{shipTo.address2}}
+        {{shipTo.cityLine}}<br>
+        {{shipTo.country}}
+      </div>
+    </div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="qty">Qty</th>
+        <th class="price">Price</th>
+        <th class="total">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{name}}<div class="item-sku">SKU: {{sku}}</div></td>
+        <td class="qty">{{qty}}</td>
+        <td class="price">\${{price}}</td>
+        <td class="total">\${{lineTotal}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="row"><span>Subtotal</span><span>\${{subtotal}}</span></div>
+    <div class="row"><span>Shipping</span><span>\${{shippingCost}}</span></div>
+    <div class="row"><span>Discount</span><span>-\${{discount}}</span></div>
+    <div class="row grand"><span>Total</span><span>{{currency}} \${{total}}</span></div>
+    <div class="row" style="font-size:11px;color:#777;justify-content:flex-end;">All prices inclusive of GST</div>
+  </div>
+
+  <div class="payment">
+    <h2>Payment Details</h2>
+    <div class="box">
+      Please transfer to:<br>
+      <strong>Account name:</strong> All Remotes Pty Ltd<br>
+      <strong>BSB:</strong> 033-372<br>
+      <strong>Account number:</strong> 759094
+    </div>
+  </div>
+
+  <div class="footer">For future orders, visit allremotes.com.au or email info@allremotes.com.au</div>
 </div>`;

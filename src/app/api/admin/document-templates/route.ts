@@ -2,7 +2,16 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
-import { DEFAULT_PACKING_SLIP_TEMPLATE } from "@/lib/packingSlip";
+import { DEFAULT_INVOICE_TEMPLATE, DEFAULT_PACKING_SLIP_TEMPLATE } from "@/lib/packingSlip";
+
+const DEFAULT_TEMPLATES: Record<string, string> = {
+  "packing-slip": DEFAULT_PACKING_SLIP_TEMPLATE,
+  "invoice": DEFAULT_INVOICE_TEMPLATE,
+};
+
+function defaultTemplate(key: string): string {
+  return DEFAULT_TEMPLATES[key] || DEFAULT_PACKING_SLIP_TEMPLATE;
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,8 +48,9 @@ async function loadTemplate(key: string): Promise<{ html: string; updatedAt: str
     if (doc) {
       if (doc.html.includes("<!DOCTYPE html>") || doc.html.includes("</html>")) {
         const now = new Date().toISOString();
-        await col.updateOne({ _id: key }, { $set: { html: DEFAULT_PACKING_SLIP_TEMPLATE, updatedAt: now } });
-        return { html: DEFAULT_PACKING_SLIP_TEMPLATE, updatedAt: now };
+        const html = defaultTemplate(key);
+        await col.updateOne({ _id: key }, { $set: { html, updatedAt: now } });
+        return { html, updatedAt: now };
       }
       return { html: doc.html, updatedAt: doc.updatedAt };
     }
@@ -49,7 +59,7 @@ async function loadTemplate(key: string): Promise<{ html: string; updatedAt: str
     if (store[key]) {
       if (store[key].html.includes("<!DOCTYPE html>") || store[key].html.includes("</html>")) {
         const now = new Date().toISOString();
-        store[key] = { html: DEFAULT_PACKING_SLIP_TEMPLATE, updatedAt: now };
+        store[key] = { html: defaultTemplate(key), updatedAt: now };
         writeTemplatesFile(store);
         return store[key];
       }
@@ -59,7 +69,7 @@ async function loadTemplate(key: string): Promise<{ html: string; updatedAt: str
 
   // first read: seed the default and persist it
   const now = new Date().toISOString();
-  const seed = { html: DEFAULT_PACKING_SLIP_TEMPLATE, updatedAt: now };
+  const seed = { html: defaultTemplate(key), updatedAt: now };
 
   if (mongoEnabled()) {
     const db = await getDb();

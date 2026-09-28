@@ -1106,16 +1106,16 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     return best?.img || null;
   };
 
-  const printPackingSlips = async (ordersToPrint: any[]) => {
+  const printDocuments = async (ordersToPrint: any[], templateKey: string, printLabel: string) => {
     if (ordersToPrint.length === 0) return;
     let template: string;
     try {
-      const res = await fetch("/api/admin/document-templates?key=packing-slip");
+      const res = await fetch(`/api/admin/document-templates?key=${templateKey}`);
       const data = await res.json().catch(() => null);
-      if (!res.ok || typeof data?.html !== "string") throw new Error("Could not load packing slip template");
+      if (!res.ok || typeof data?.html !== "string") throw new Error(`Could not load ${templateKey} template`);
       template = data.html;
     } catch (err: any) {
-      alert(err.message || "Failed to load packing slip template.");
+      alert(err.message || "Failed to load document template.");
       return;
     }
     const win = window.open("", "_blank", "width=800,height=600");
@@ -1130,7 +1130,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoices</title>
+          <title>${printLabel}</title>
           <style>
             body { font-family: system-ui, sans-serif; margin: 0; padding: 0; }
             .no-print { position: fixed; top: 12px; right: 12px; z-index: 1000; }
@@ -1138,7 +1138,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           </style>
         </head>
         <body>
-          <div class="no-print"><button onclick="window.print()">Print invoices</button></div>
+          <div class="no-print"><button onclick="window.print()">${printLabel}</button></div>
           ${slips}
         </body>
       </html>
@@ -1150,6 +1150,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       win.print();
     }, 500);
   };
+
+  const printPackingSlips = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "packing-slip", "Print invoices");
+  const printInvoices = (ordersToPrint: any[]) => printDocuments(ordersToPrint, "invoice", "Print tax invoices");
 
   // Auto-open order modal when viewOrderId is set
   useEffect(() => {
@@ -2203,6 +2206,26 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         </button>
                       );
                     })()}
+                    {/* Tax invoice with bank details */}
+                    {(() => {
+                      const invoiceOrders = groupOrders.filter((o: any) => selection.has(o.id));
+                      return (
+                        <button
+                          type="button"
+                          disabled={invoiceOrders.length === 0}
+                          onClick={() => printInvoices(invoiceOrders)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Tax Invoice
+                          {invoiceOrders.length > 0 && (
+                            <span className="ml-0.5 rounded-full bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                              {invoiceOrders.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
                     {/* Print Dymo labels */}
                     {(() => {
                       const labelOrders = groupOrders.filter((o: any) => selection.has(o.id));
@@ -3147,6 +3170,12 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Print Label
+              </button>
+              <button
+                onClick={() => printInvoices([selectedOrder])}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+              >
+                Invoice
               </button>
               <div className="relative">
                 <button
