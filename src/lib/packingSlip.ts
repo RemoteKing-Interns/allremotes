@@ -111,10 +111,7 @@ export function buildPackingSlipData(order: any): PackingSlipData {
     total: formatMoney(pricing.total),
     currency,
     postageService: order.postageService || "",
-    footerText:
-      !order.channel || String(order.channel).toLowerCase() === "website"
-        ? ""
-        : "Users who create a trade account and order via our website receive special discounts.",
+    footerText: "",
   };
 
   return data;
