@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Users, Plus, Edit2, Trash2, Mail, Phone, Calendar, ShoppingCart, Shield, Search, Filter, Download, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, X, MapPin, ShoppingBag, Clock, Star, Award } from "lucide-react";
 import toast from "react-hot-toast";
+import AddressAutocomplete from "../AddressAutocomplete";
 
 interface ChannelBreakdown {
   channel: string;
@@ -886,15 +887,24 @@ export default function CustomerManagement() {
                   Address
                 </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Street"
+                  <AddressAutocomplete
+                    placeholder="Street — start typing to search"
                     value={formData.address.street}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      address: { ...prev.address, street: e.target.value }
+                    onChange={(v) => setFormData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, street: v }
                     }))}
-                    className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    onSelect={(s) => setFormData(prev => ({
+                      ...prev,
+                      address: {
+                        ...prev.address,
+                        street: s.addressLine1 || s.formatted,
+                        city: s.city || prev.address.city,
+                        state: s.state || prev.address.state,
+                        zip: s.postcode || prev.address.zip,
+                      }
+                    }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   />
                   <input
                     type="text"
@@ -1049,15 +1059,24 @@ export default function CustomerManagement() {
                   Address
                 </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Street"
+                  <AddressAutocomplete
+                    placeholder="Street — start typing to search"
                     value={formData.address.street}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      address: { ...prev.address, street: e.target.value }
+                    onChange={(v) => setFormData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, street: v }
                     }))}
-                    className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    onSelect={(s) => setFormData(prev => ({
+                      ...prev,
+                      address: {
+                        ...prev.address,
+                        street: s.addressLine1 || s.formatted,
+                        city: s.city || prev.address.city,
+                        state: s.state || prev.address.state,
+                        zip: s.postcode || prev.address.zip,
+                      }
+                    }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   />
                   <input
                     type="text"

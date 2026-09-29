@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useStore } from "../../../context/StoreContext";
+import AddressAutocomplete from "../../../components/AddressAutocomplete";
 import { FileText, Plus, Printer, Trash2 } from "lucide-react";
 
 interface InvoiceItem {
@@ -332,11 +333,12 @@ export default function AdminInvoicePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-neutral-700">Address</label>
-                <input
+                <AddressAutocomplete
                   value={shipping.address}
-                  onChange={(e) => setShipping((s) => ({ ...s, address: e.target.value }))}
+                  onChange={(v) => setShipping((s) => ({ ...s, address: v }))}
+                  onSelect={(s) => setShipping((prev) => ({ ...prev, address: s.addressLine1 || s.formatted, city: s.city || prev.city, state: s.state || prev.state, zipCode: s.postcode || prev.zipCode, country: prev.country || "AU" }))}
                   className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 focus:border-primary focus:outline-none"
-                  placeholder="Street address"
+                  placeholder="Street address — start typing to search"
                 />
               </div>
               <div>

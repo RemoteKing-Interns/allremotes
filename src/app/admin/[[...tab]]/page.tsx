@@ -24,6 +24,7 @@ import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
 import ProductImageGen from "../../../components/admin/ProductImageGen";
 import ProductImage from "../../../components/images/ProductImage";
+import AddressAutocomplete from "../../../components/AddressAutocomplete";
 import MediaPickerModal from "../../../components/images/MediaPickerModal";
 import { getPrimaryImage, getFallbackLetter } from "../../../lib/images";
 import { buildPackingSlipData, renderPackingSlipHtml } from "../../../lib/packingSlip";
@@ -2848,7 +2849,15 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
               <div>
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Shipping Address</h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                  <input placeholder="Street address" value={createForm.address} onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 sm:col-span-2" />
+                  <div className="sm:col-span-2">
+                    <AddressAutocomplete
+                      placeholder="Street address — start typing to search"
+                      value={createForm.address}
+                      onChange={(v) => setCreateForm({ ...createForm, address: v })}
+                      onSelect={(s) => setCreateForm((f) => ({ ...f, address: s.addressLine1 || s.formatted, city: s.city || f.city, state: s.state || f.state, zipCode: s.postcode || f.zipCode }))}
+                      className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </div>
                   <input placeholder="City" value={createForm.city} onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
                   <div className="grid grid-cols-2 gap-3">
                     <input placeholder="State" value={createForm.state} onChange={(e) => setCreateForm({ ...createForm, state: e.target.value })} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
