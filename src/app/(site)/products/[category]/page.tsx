@@ -21,6 +21,8 @@ function getCategoryDescription(category: string) {
       "Discover home remotes for TVs, air conditioners, ceiling fans, alarms and more at ALLREMOTES Australia.",
     locksmith:
       "Browse locksmith tools, key programmers, picks, decoders and key-cutting accessories at ALLREMOTES Australia.",
+    batteries:
+      "Shop genuine replacement batteries at ALLREMOTES Australia — CR2032, CR2025, 23A, 27A, AA, AAA, 9V and coin cells for garage remotes, car key fobs and electronics. Maxell, Panasonic and Energizer with fast Australia-wide shipping.",
   };
   return (
     descriptions[category] ||
@@ -35,6 +37,9 @@ function getCategoryTitle(category: string) {
   if (category === "automotive") {
     return "Automotive Keys & Transponders Australia | ALLREMOTES";
   }
+  if (category === "batteries") {
+    return "Batteries Australia | Coin Cells, AA, AAA, 9V | ALLREMOTES";
+  }
   const display = getCategoryPageTitle(category);
   return `${display} Remotes for Sale Australia | ALLREMOTES`;
 }
@@ -45,6 +50,9 @@ function getCategoryH1(category: string) {
   }
   if (category === "automotive") {
     return "Automotive Keys, Transponders & Car Remotes";
+  }
+  if (category === "batteries") {
+    return "Replacement Batteries for Remotes & Key Fobs";
   }
   return `${getCategoryPageTitle(category)} Remotes`;
 }
@@ -77,6 +85,20 @@ function getCategoryKeywords(category: string) {
       "key fob replacement",
       "immobilizer chip",
       "car remote key",
+    ];
+  }
+  if (category === "batteries") {
+    return [
+      "batteries australia",
+      "cr2032 battery",
+      "cr2025 battery",
+      "coin cell battery",
+      "button battery",
+      "garage remote battery",
+      "car key battery",
+      "23a battery",
+      "27a battery",
+      "buy batteries online australia",
     ];
   }
   return ["remote", "remotes", `${category} remote`, "Australia", "replacement remote"];

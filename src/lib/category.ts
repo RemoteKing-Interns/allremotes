@@ -18,6 +18,8 @@ const EXACT_CATEGORY_ALIASES: Record<string, string> = {
   "home-automation": "home",
   locksmithing: "locksmith",
   locksmith: "locksmith",
+  batteries: "batteries",
+  battery: "batteries",
 };
 
 const MENU_CATEGORY_TO_PRODUCTS_CATEGORY: Record<string, string> = {
@@ -36,6 +38,7 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   automotive: "Automotive",
   home: "For The Home",
   locksmith: "Locksmithing",
+  batteries: "Batteries",
 };
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {

@@ -182,7 +182,7 @@ export const navigationMenu = {
           },
           {
             name: "Batteries",
-            path: "/garage-gate/accessories/batteries",
+            path: "/products/batteries",
             icon: getIcon(10),
           },
           {
@@ -337,7 +337,7 @@ export const navigationMenu = {
           },
           {
             name: "Batteries",
-            path: "/automotive/keys/batteries",
+            path: "/products/batteries",
             icon: getIcon(5),
           },
           {
