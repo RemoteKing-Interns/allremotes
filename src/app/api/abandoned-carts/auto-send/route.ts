@@ -43,6 +43,7 @@ export async function POST(request: Request) {
             code: couponCode,
             discountPercent,
             validDays: 7,
+            maxUses: 1,
             customerEmail: cart.email,
             customerUserId: cart.userId
           })

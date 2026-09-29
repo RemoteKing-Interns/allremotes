@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import FraudDetection from '../../../../lib/fraudDetection';
+import { getDb, mongoEnabled } from '../../../../lib/mongo';
+import { emailHash } from '../../../../lib/pii-crypto';
 
 const fraudDetection = new FraudDetection();
 
@@ -15,7 +17,7 @@ function getStripeClient() {
 export async function POST(request) {
   try {
     const stripe = getStripeClient();
-    const { amount, items, customer_email, shippingCost, shippingName } = await request.json();
+    const { amount, items, customer_email, shippingCost, shippingName, couponCode } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -53,6 +55,45 @@ export async function POST(request) {
 
     // Order validation and fraud checks
     const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Server-side coupon validation — never trust the client's discount.
+    // An assigned/invalid coupon fails the checkout rather than charging full price.
+    let discounts;
+    if (couponCode) {
+      let coupon = null;
+      if (mongoEnabled()) {
+        const db = await getDb();
+        coupon = await db.collection("coupons").findOne({
+          code: String(couponCode).toUpperCase(),
+          isActive: true,
+        });
+      }
+      const now = new Date();
+      const valid = coupon
+        && !(coupon.validFrom && new Date(coupon.validFrom) > now)
+        && !(coupon.validUntil && new Date(coupon.validUntil) < now)
+        && !(coupon.maxUses && coupon.usedCount >= coupon.maxUses)
+        && !(coupon.minPurchase && totalAmount < coupon.minPurchase)
+        && !(coupon.customerEmailHash && (!customer_email || emailHash(customer_email) !== coupon.customerEmailHash));
+      if (!valid) {
+        return NextResponse.json(
+          { error: 'Coupon code is invalid or not assigned to this customer' },
+          { status: 400 }
+        );
+      }
+      const discountAmt = coupon.discountPercent
+        ? Math.min(totalAmount, Math.round(totalAmount * coupon.discountPercent) / 100)
+        : Math.min(totalAmount, Number(coupon.discountAmount) || 0);
+      if (discountAmt > 0) {
+        const stripeCoupon = await stripe.coupons.create({
+          amount_off: Math.round(discountAmt * 100),
+          currency: 'aud',
+          duration: 'once',
+          name: coupon.code,
+        });
+        discounts = [{ coupon: stripeCoupon.id }];
+      }
+    }
     const isHighValueOrder = totalAmount > 500; // 3D Secure for orders over $500
     const isNewCustomer = customer_email ? !customer_email.includes('@') : false; // Basic check
 
@@ -93,6 +134,7 @@ export async function POST(request) {
       },
       line_items,
       mode: 'payment',
+      ...(discounts ? { discounts } : {}),
       success_url: `${origin}/order-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,
       customer_email: customer_email,
