@@ -1584,6 +1584,25 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     [getProducts]
   );
 
+  // Catalog lookup for order search: item sku/rk_sku -> product searchable text
+  // (tags, model, brand etc.) so an order search like "cr2032" finds orders
+  // containing that product even when the order item only carries a SKU.
+  const productSearchIndex = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of getProducts() || []) {
+      const text = [
+        p.name, p.title, p.sku, p.rk_sku, p.model, p.brand, p.id,
+        p.description, p.seo_title, p.tags, p.features, p.compatibility,
+        p.category, p.cat1, p.cat2,
+      ].filter(Boolean).join(" ").toLowerCase();
+      for (const k of [p.sku, p.rk_sku, p.model]) {
+        const key = normalizeUnleashedSku(k);
+        if (key && !map.has(key)) map.set(key, text);
+      }
+    }
+    return map;
+  }, [getProducts]);
+
   // Assigns a SKU to an order item: persists to the order, copies rk_sku when
   // the SKU matches a catalog product, and pushes the SKU onto the eBay listing
   // (custom label) so resyncs keep it.
@@ -1985,7 +2004,12 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         o.customer?.fullName?.toLowerCase().includes(q) ||
         o.customer?.email?.toLowerCase().includes(q) ||
         o.customer?.phone?.toLowerCase().includes(q) ||
-        (o.items || []).some((item: any) => item.sku?.toLowerCase().includes(q) || item.name?.toLowerCase().includes(q));
+        (o.items || []).some((item: any) =>
+          item.sku?.toLowerCase().includes(q) ||
+          item.rk_sku?.toLowerCase().includes(q) ||
+          item.name?.toLowerCase().includes(q) ||
+          productSearchIndex.get(normalizeUnleashedSku(item.sku || item.rk_sku || ""))?.includes(q)
+        );
       if (!matches) return false;
     }
     return true;
@@ -7080,6 +7104,8 @@ function AdminProducts() {
       p.name,
       p.title,
       p.sku,
+      p.rk_sku,
+      p.model,
       p.brand,
       p.id,
       p.description,
@@ -7088,6 +7114,8 @@ function AdminProducts() {
       p.features,
       p.compatibility,
       p.category,
+      p.cat1,
+      p.cat2,
     ]
       .filter(Boolean)
       .join(" ")

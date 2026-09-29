@@ -462,10 +462,15 @@ export default function ProductListClient({
           p.category,
           p.brand,
           p.sku,
+          p.rk_sku,
+          p.model,
+          p.id,
           p.seo_title,
           p.tags,
           p.features,
           p.compatibility,
+          p.cat1,
+          p.cat2,
         ]
           .filter(Boolean)
           .join(" ")
