@@ -969,6 +969,23 @@ function OrderItemName({ name, imageUrl, truncate = false }: { name: string; ima
   );
 }
 
+// Paid = payment recorded as succeeded/paid, or a marketplace order where the
+// channel collects payment (no recorded status means paid). Anything else —
+// pending, missing, manual/invoice — is awaiting payment.
+const isOrderPaid = (o: any) => {
+  const ps = String(o?.payment?.status || "").toLowerCase();
+  if (["succeeded", "paid"].includes(ps)) return true;
+  return !o?.payment?.status && !!o?.channel && o.channel !== "manual";
+};
+
+// Warn before printing/shipping/pushing unpaid orders; confirm() to proceed.
+const confirmUnpaidAction = (ordersToCheck: any[], action: string) => {
+  const unpaid = (ordersToCheck || []).filter((o) => !isOrderPaid(o));
+  if (unpaid.length === 0) return true;
+  const ids = unpaid.slice(0, 5).map((o) => `#${o.id}`).join(", ") + (unpaid.length > 5 ? ` +${unpaid.length - 5} more` : "");
+  return confirm(`Awaiting payment — ${unpaid.length} unpaid order${unpaid.length !== 1 ? "s" : ""} (${ids}).\nStill wish to ${action}?`);
+};
+
 function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: string | null; setViewOrderId: (id: string | null) => void; activeTab: string }) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1114,6 +1131,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
   const printDocuments = async (ordersToPrint: any[], templateKey: string, printLabel: string, docOpts?: { includePaymentDetails?: boolean }) => {
     if (ordersToPrint.length === 0) return;
+    if (!confirmUnpaidAction(ordersToPrint, "print")) return;
     let template: string;
     try {
       const res = await fetch(`/api/admin/document-templates?key=${templateKey}`);
@@ -1248,6 +1266,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   ];
 
   const openLabelModal = async (order: any) => {
+    if (!confirmUnpaidAction([order], "print a label")) return;
     // Load saved templates from API
     let savedTemplates: any[] = [];
     try {
@@ -1316,6 +1335,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
   const printAllDymoLabels = async (ordersToPrint: any[]) => {
     if (ordersToPrint.length === 0) return;
+    if (!confirmUnpaidAction(ordersToPrint, "print labels")) return;
     try {
       let savedTemplates: any[] = [];
       const res = await fetch('/api/admin/label-templates');
@@ -1741,6 +1761,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   };
 
   const updateStatus = async (id: string, status: string) => {
+    const targetOrder = orders.find((o: any) => o.id === id);
+    if (["shipped", "delivered", "customer_received"].includes(status) && targetOrder && !confirmUnpaidAction([targetOrder], "ship")) return;
     setSavingId(id);
     setError("");
     try {
@@ -1807,6 +1829,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
     const selection = getGroupSelection(groupLabel, groupOrders);
     const selectedOrderIds = Array.from(selection);
     const selectedOrders = groupOrders.filter((o) => selectedOrderIds.includes(o.id));
+    if (!confirmUnpaidAction(selectedOrders, "push to Unleashed")) return;
 
     const catalogSkuMap = createUnleashedSkuMap(getProducts() || []);
     // Aggregate items: merge by product id, summing quantities
@@ -2239,6 +2262,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       onClick={async () => {
                         const orderIds = Array.from(selection);
                         if (orderIds.length === 0) return;
+                        if (!confirmUnpaidAction(groupOrders.filter((o: any) => selection.has(o.id)), "push to Starshipit")) return;
                         setPushingStarshipit(true);
                         let pushedCount = 0;
                         for (const orderId of orderIds) {
@@ -2353,6 +2377,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           type="button"
                           disabled={shipOrders.length === 0 || bulkShipping}
                           onClick={async () => {
+                            if (!confirmUnpaidAction(shipOrders, "ship")) return;
                             const trackedOrders = shipOrders.filter((o: any) => {
                               const sm = o?.shippingMethod || o?.pricing?.shippingMethod || 'untracked';
                               return sm === 'tracked' || sm === 'express';
@@ -2485,6 +2510,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                 #{o.id}
                                 {o.channel === "ebay" && (
                                   <span className="rounded bg-yellow-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-yellow-800">eBay</span>
+                                )}
+                                {!isOrderPaid(o) && (
+                                  <span title="Payment not received" className="rounded bg-rose-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-rose-700">Awaiting Payment</span>
                                 )}
                                 {Array.isArray(o.items) && o.items.some((it: any) => !it?.sku || String(it.sku) === String(it?.externalId)) && (
                                   <span title="Missing SKUs">
@@ -3022,11 +3050,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Payment</p>
                   {(() => {
-                    const ps = String(selectedOrder?.payment?.status || (selectedOrder?.type === "invoice" ? "unpaid" : "")).toLowerCase();
-                    // Marketplace orders (ebay/temu/amazon) are collected by the
-                    // channel — no recorded payment status means paid.
-                    const marketplacePaid = !selectedOrder?.payment?.status && !!selectedOrder?.channel && selectedOrder?.channel !== "manual";
-                    const paid = ["succeeded", "paid"].includes(ps) || marketplacePaid;
+                    const paid = isOrderPaid(selectedOrder);
                     return (
                       <div className="flex items-center gap-2">
                         <button
@@ -3961,6 +3985,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
               </button>
               <button
                 onClick={async () => {
+                  if (!confirmUnpaidAction([shipOrderModal.order], "ship")) return;
                   setShipOrderModal({ ...shipOrderModal, sending: true });
                   try {
                     const trackingLink = shipOrderModal.trackingLink.trim() ||
