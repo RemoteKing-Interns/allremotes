@@ -307,5 +307,7 @@ export async function getStarshipitTracking(orderNumber: string) {
     tracking_url: string;
     shipment_date: string;
     tracking_status: string;
+    last_updated_date?: string;
+    tracking_events?: { event_datetime: string; status: string; details: string }[];
   } | null;
 }

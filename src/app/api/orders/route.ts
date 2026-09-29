@@ -4,7 +4,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
 import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
-import { sendOrderConfirmationEmail, sendNewOrderNotification, sendShippingUpdateEmail } from "../../../lib/email";
+import { sendOrderConfirmationEmail, sendNewOrderNotification, sendShippingUpdateEmail, sendOrderDeliveredEmail } from "../../../lib/email";
 import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "../../../lib/pii-crypto";
 import { getStarshipitTracking, starshipitConfigured } from "../../../lib/starshipit";
 import { buildTrackingLink } from "../../../lib/tracking";
@@ -132,6 +132,46 @@ export async function GET(request: Request) {
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error(`Starshipit tracking poll failed for ${pending[i]?.id}:`, (r.reason as any)?.message || r.reason);
+          }
+        });
+
+        // Shipped orders with tracking: flip to delivered once Starshipit says so,
+        // email the customer once per order (silent for eBay).
+        const shippedOrders = decryptedOrders.filter((o: any) =>
+          o.starshipitOrderNumber &&
+          o.trackingNumber &&
+          String(o.status || "").toLowerCase() === "shipped"
+        );
+        const deliveredResults = await Promise.allSettled(shippedOrders.map(async (o: any) => {
+          const t = await getStarshipitTracking(o.starshipitOrderNumber);
+          if (String(t?.tracking_status || t?.order_status || "").toLowerCase() !== "delivered") return;
+          const now = new Date().toISOString();
+          // Same-status guard so concurrent refreshes can't double-deliver/email
+          const res = await col.updateOne(
+            { id: o.id, status: "shipped" },
+            { $set: { status: "delivered", deliveredAt: t.last_updated_date || now, updatedAt: now } }
+          );
+          if (!res.matchedCount) return;
+          o.status = "delivered";
+          o.deliveredAt = t.last_updated_date || now;
+          if (!o.deliveredEmailSentAt && o.channel !== "ebay" && o.customer?.email) {
+            const emailRes = await sendOrderDeliveredEmail({
+              to: o.customer.email,
+              orderId: o.id,
+              customerName: o.customer?.fullName || o.customer?.name || "Customer",
+              deliveredDate: new Date(o.deliveredAt).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }),
+            }).catch((e: any) => ({ success: false, error: e?.message }));
+            if (emailRes?.success) {
+              await col.updateOne({ id: o.id }, { $set: { deliveredEmailSentAt: now } });
+              o.deliveredEmailSentAt = now;
+            } else {
+              console.error(`Starshipit delivered email failed for ${o.id}:`, emailRes?.error);
+            }
+          }
+        }));
+        deliveredResults.forEach((r, i) => {
+          if (r.status === "rejected") {
+            console.error(`Starshipit delivered poll failed for ${shippedOrders[i]?.id}:`, (r.reason as any)?.message || r.reason);
           }
         });
       }
