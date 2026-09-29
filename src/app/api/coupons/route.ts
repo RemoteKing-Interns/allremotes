@@ -69,15 +69,22 @@ export async function GET(request: Request) {
     const db = await getDb();
     const col = db.collection("coupons");
 
-    const query: any = { code: code?.toUpperCase(), isActive: true };
-    
-    if (customerEmail) query.customerEmailHash = emailHash(customerEmail);
-    if (customerUserId) query.customerUserId = customerUserId;
-
-    const coupon = await col.findOne(query);
+    const coupon = await col.findOne({ code: code?.toUpperCase(), isActive: true });
 
     if (!coupon) {
       return NextResponse.json({ valid: false, error: "Coupon not found" });
+    }
+
+    // Coupons bound to a customer can only be redeemed by that customer
+    if (coupon.customerEmailHash) {
+      if (!customerEmail || emailHash(customerEmail) !== coupon.customerEmailHash) {
+        return NextResponse.json({ valid: false, error: "This code is linked to a different email address" });
+      }
+    }
+    if (coupon.customerUserId) {
+      if (customerUserId ? coupon.customerUserId !== customerUserId : !coupon.customerEmailHash) {
+        return NextResponse.json({ valid: false, error: "This code is linked to a different account" });
+      }
     }
 
     const now = new Date();

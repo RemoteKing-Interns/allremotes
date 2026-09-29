@@ -89,7 +89,8 @@ const Checkout = () => {
     try {
       const params = new URLSearchParams();
       params.append('code', couponCode.trim());
-      if (user?.email) params.append('customerEmail', user.email);
+      const couponEmail = user?.email || formData.email.trim();
+      if (couponEmail) params.append('customerEmail', couponEmail);
       if (user?.id) params.append('customerUserId', user.id);
 
       const resp = await fetch(`/api/coupons?${params.toString()}`, { cache: 'no-store' });
