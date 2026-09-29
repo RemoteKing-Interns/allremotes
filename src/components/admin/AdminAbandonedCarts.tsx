@@ -177,7 +177,9 @@ export default function AdminAbandonedCarts() {
     }
   };
 
-  const sendDiscountEmail = async (cart: any, discountPercent: number) => {
+  const sendDiscountEmail = async (cart: any, discountPercent: number, opts?: { skipConfirm?: boolean }) => {
+    if (!opts?.skipConfirm && cart.alreadyOrderedItems?.length > 0 &&
+      !confirm(`${cart.email} already ordered: ${cart.alreadyOrderedItems.join(", ")}.\nStill send the discount?`)) return;
     setSendingEmail(cart._id);
     setError("");
     try {
@@ -230,13 +232,24 @@ export default function AdminAbandonedCarts() {
 
   const sendBulkDiscount = async (discountPercent: number) => {
     const selected = carts.filter(c => selectedIds.has(c._id));
+    const alreadyOrdered = selected.filter(c => c.alreadyOrderedItems?.length > 0);
+    const fresh = selected.filter(c => !(c.alreadyOrderedItems?.length > 0));
+    let targets = selected;
+    if (alreadyOrdered.length > 0) {
+      if (confirm(`${alreadyOrdered.length} customer${alreadyOrdered.length > 1 ? "s" : ""} already ordered these items:\n${alreadyOrdered.map(c => `• ${c.email || c.userId}: ${c.alreadyOrderedItems.join(", ")}`).join("\n")}\n\nOK = send to everyone anyway. Cancel = skip them.`)) {
+        targets = selected;
+      } else {
+        targets = fresh;
+        if (targets.length === 0) { toast("Nothing to send — all selected carts already ordered"); return; }
+      }
+    }
     let success = 0;
     let failed = 0;
     setSendingEmail("bulk");
-    for (const cart of selected) {
+    for (const cart of targets) {
       if (!cart.email) { failed++; continue; }
       try {
-        await sendDiscountEmail(cart, discountPercent);
+        await sendDiscountEmail(cart, discountPercent, { skipConfirm: true });
         success++;
       } catch {
         failed++;
@@ -245,7 +258,7 @@ export default function AdminAbandonedCarts() {
     setSendingEmail(null);
     setEmailModal(null);
     setSelectedIds(new Set());
-    toast.success(`Sent ${success} emails${failed > 0 ? `, ${failed} failed` : ""}`);
+    toast.success(`Sent ${success} emails${failed > 0 ? `, ${failed} failed` : ""}${alreadyOrdered.length && targets === fresh ? `, ${alreadyOrdered.length} skipped (already ordered)` : ""}`);
   };
 
   const autoSend = async (discountPercent: number) => {
@@ -258,7 +271,7 @@ export default function AdminAbandonedCarts() {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data?.error || "Auto-send failed");
-      toast.success(`Auto-sent ${data.sent} of ${data.total} reminder emails`);
+      toast.success(`Auto-sent ${data.sent} of ${data.total} reminder emails${data.skippedAlreadyOrdered ? `, ${data.skippedAlreadyOrdered} skipped (already ordered)` : ""}`);
       await load();
       await loadStats();
     } catch (err: any) {
@@ -528,6 +541,16 @@ export default function AdminAbandonedCarts() {
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                           <Clock size={10} /> Pending
                         </span>
+                      )}
+                      {cart.alreadyOrderedItems?.length > 0 && (
+                        <div className="mt-1">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-sky-100 text-sky-700 rounded-full text-xs font-medium"
+                            title={`Already ordered: ${cart.alreadyOrderedItems.join(", ")}`}
+                          >
+                            <Package size={10} /> Already ordered
+                          </span>
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-4">

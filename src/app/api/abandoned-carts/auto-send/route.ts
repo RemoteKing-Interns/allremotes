@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { decryptPii } from "@/lib/pii-crypto";
+import { findPreviouslyOrderedItems } from "@/lib/abandoned-carts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,10 +29,27 @@ export async function POST(request: Request) {
       .toArray();
 
     let sent = 0;
+    let skippedAlreadyOrdered = 0;
     const errors: string[] = [];
 
     for (const cart of pendingCarts) {
       if (!cart.email) continue;
+      try {
+        // Don't discount items the customer already bought — mark the cart so
+        // it drops out of future pending runs too.
+        const alreadyOrdered = await findPreviouslyOrderedItems(db, cart);
+        if (alreadyOrdered.length > 0) {
+          await cartsCol.updateOne(
+            { _id: cart._id },
+            { $set: { abandoned: true, alreadyOrdered, updatedAt: new Date().toISOString() } }
+          );
+          skippedAlreadyOrdered++;
+          continue;
+        }
+      } catch (err: any) {
+        errors.push(`${cart.email}: order check failed — ${err.message}`);
+        continue;
+      }
       decryptPii(cart, ["email"]);
       try {
         const couponCode = `SAVE${discountPercent}${Date.now().toString(36).toUpperCase()}${sent}`;
@@ -75,7 +93,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ sent, total: pendingCarts.length, errors: errors.slice(0, 10) });
+    return NextResponse.json({ sent, skippedAlreadyOrdered, total: pendingCarts.length, errors: errors.slice(0, 10) });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Auto-send failed", details: err?.message || String(err) },
