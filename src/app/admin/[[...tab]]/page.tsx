@@ -1982,6 +1982,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         o.id?.toLowerCase().includes(q) ||
         o.customerName?.toLowerCase().includes(q) ||
         o.customer?.name?.toLowerCase().includes(q) ||
+        o.customer?.fullName?.toLowerCase().includes(q) ||
         o.customer?.email?.toLowerCase().includes(q) ||
         o.customer?.phone?.toLowerCase().includes(q) ||
         (o.items || []).some((item: any) => item.sku?.toLowerCase().includes(q) || item.name?.toLowerCase().includes(q));
