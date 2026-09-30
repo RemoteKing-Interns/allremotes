@@ -962,7 +962,7 @@ function OrderItemName({ name, imageUrl, truncate = false }: { name: string; ima
         <img
           src={imageUrl}
           alt={name}
-          className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden h-36 w-40 rounded-xl border border-neutral-200 bg-white object-contain p-2 shadow-xl group-hover/tip:block"
+          className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden h-64 w-72 rounded-xl border border-neutral-200 bg-white object-contain p-2 shadow-xl group-hover/tip:block"
         />
       )}
     </span>
@@ -1127,6 +1127,34 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       }
     }
     return best?.img || null;
+  };
+
+  // Exact key → catalog product for opening the item's product pages.
+  const productByKey = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const p of getProducts() || []) {
+      for (const k of [p.id, p.sku, p.rk_sku]) {
+        const key = k ? String(k).trim().toLowerCase() : "";
+        if (key && !map.has(key)) map.set(key, p);
+      }
+    }
+    return map;
+  }, [getProducts]);
+
+  const itemProduct = (item: any) => {
+    for (const k of [item?.sku, item?.rk_sku, item?.id, item?.externalId]) {
+      const p = k ? productByKey.get(String(k).trim().toLowerCase()) : undefined;
+      if (p) return p;
+    }
+    return null;
+  };
+
+  // Open our product page and the RemoteKing source listing in new tabs —
+  // whichever exists; both when both are available.
+  const openItemProduct = (item: any) => {
+    const p = itemProduct(item);
+    if (p?.id) window.open(`/product/${p.id}`, "_blank");
+    if (p?.rk_url) window.open(p.rk_url, "_blank");
   };
 
   const printDocuments = async (ordersToPrint: any[], templateKey: string, printLabel: string, docOpts?: { includePaymentDetails?: boolean }) => {
@@ -3270,9 +3298,23 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     return (
                     <div key={idx} className={`flex items-center justify-between p-3 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
-                        <p className="font-medium text-sm text-neutral-900">
-                          <OrderItemName name={item.name} imageUrl={itemImage(item)} />
-                        </p>
+                        {(() => {
+                          const prod = itemProduct(item);
+                          return prod ? (
+                            <button
+                              type="button"
+                              onClick={() => openItemProduct(item)}
+                              title={prod.rk_url ? "Open product page + RemoteKing listing" : "Open product page"}
+                              className="text-left font-medium text-sm text-neutral-900 transition-colors hover:text-emerald-700"
+                            >
+                              <OrderItemName name={item.name} imageUrl={itemImage(item)} />
+                            </button>
+                          ) : (
+                            <p className="font-medium text-sm text-neutral-900">
+                              <OrderItemName name={item.name} imageUrl={itemImage(item)} />
+                            </p>
+                          );
+                        })()}
                         {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
                         {hasRealSku && <p className="font-mono text-xs text-neutral-500">{item.sku}</p>}
                         {canAssignSku && !hasRealSku && (
