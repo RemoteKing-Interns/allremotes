@@ -27,56 +27,112 @@ const createTransporter = () => {
   });
 };
 
+// Brand palette shared across all emails
+const BRAND = {
+  red: '#C0392B',
+  teal: '#1A7A6E',
+  amber: '#d97706',
+  ink: '#1f2937',
+  muted: '#6b7280',
+  faint: '#9ca3af',
+  line: '#e5e7eb',
+  tint: '#f8f7f5',
+  pageBg: '#f4f4f5',
+  greenBg: '#dcfce7',
+  greenText: '#15803d',
+  blueBg: '#dbeafe',
+  blueText: '#1d4ed8',
+};
+
+// Reusable content blocks — keep every email consistent and client-safe (all inline styles)
+const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
+
+export const emailInfoBox = (inner: string, borderColor = BRAND.teal) => `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;">
+  <tr><td style="background:${BRAND.tint};border-left:4px solid ${borderColor};border-radius:8px;padding:18px 20px;font-size:15px;line-height:1.8;color:${BRAND.ink};">${inner}</td></tr>
+</table>`;
+
+export const emailCta = (href: string, label: string) => `
+<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:26px auto;">
+  <tr><td align="center" bgcolor="${BRAND.red}" style="border-radius:10px;">
+    <a href="${href}" style="display:inline-block;padding:15px 42px;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:0.2px;">${label}</a>
+  </td></tr>
+</table>`;
+
+export const emailDivider = `<hr style="border:none;border-top:1px solid ${BRAND.line};margin:28px 0;" />`;
+
+export const emailContactBlock = () => `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;">
+  <tr><td align="center" style="background:${BRAND.tint};border-radius:8px;padding:18px 20px;">
+    <p style="margin:0 0 6px;font-size:14px;color:${BRAND.ink};font-weight:600;">Questions? We're here to help.</p>
+    <p style="margin:0;font-size:14px;"><a href="mailto:shane@allremotes.com.au" style="color:${BRAND.teal};font-weight:700;text-decoration:none;">shane@allremotes.com.au</a></p>
+  </td></tr>
+</table>`;
+
+const stepPill = (label: string, state: 'done' | 'current' | 'todo') => {
+  const colors = { done: `background:${BRAND.greenBg};color:${BRAND.greenText};`, current: `background:${BRAND.blueBg};color:${BRAND.blueText};`, todo: `background:#f3f4f6;color:${BRAND.faint};` }[state];
+  const mark = state === 'done' ? '✓ ' : state === 'current' ? '● ' : '○ ';
+  return `<span style="display:inline-block;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;${colors}">${mark}${label}</span>`;
+};
+
+// Ordered → Shipped → Delivered progress row
+const emailStepsBar = (current: 'shipped' | 'delivered') => `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 6px;">
+  <tr>
+    <td align="right">${stepPill('Ordered', 'done')}</td>
+    <td align="center" width="26" style="color:${BRAND.faint};font-size:15px;">→</td>
+    <td align="center">${stepPill('Shipped', current === 'shipped' ? 'current' : 'done')}</td>
+    <td align="center" width="26" style="color:${BRAND.faint};font-size:15px;">→</td>
+    <td align="left">${stepPill('Delivered', current === 'delivered' ? 'current' : 'todo')}</td>
+  </tr>
+</table>`;
+
 // Base email template — branded, table-based layout for email client compatibility
-const baseTemplate = (content: string, title: string) => {
+export const baseTemplate = (content: string, title: string, preheader = '') => {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${title} - All Remotes</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #f5f5f5; -webkit-text-size-adjust: 100%; }
+    body { margin: 0; padding: 0; background-color: ${BRAND.pageBg}; -webkit-text-size-adjust: 100%; }
     table { border-collapse: collapse; }
-    h2 { color: #1a1a1a; font-size: 26px; font-weight: 800; margin: 0 0 18px; line-height: 1.3; }
-    h3 { color: #1a1a1a; font-size: 18px; font-weight: 700; margin: 26px 0 12px; }
-    p { color: #444; font-size: 16px; line-height: 1.7; margin: 14px 0; }
-    a { color: #1A7A6E; }
-    .content-table th, .content-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 15px; color: #444; }
-    .content-table th { font-weight: 700; background: #f9f9f9; color: #1a1a1a; }
-    .button { display: inline-block; padding: 16px 40px; background-color: #C0392B; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 17px; }
-    .info-box { background: #f9f9f9; border-left: 5px solid #1A7A6E; padding: 20px 22px; border-radius: 10px; margin: 22px 0; color: #1a1a1a; font-size: 16px; line-height: 1.8; }
-    .info-box strong { color: #1A7A6E; }
-    .divider { height: 1px; background: #eee; margin: 28px 0; border: none; }
-    .contact-section { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 26px; text-align: center; }
-    .contact-section p { margin: 6px 0; color: #1a1a1a; }
-    .contact-section a { color: #1A7A6E; font-weight: 700; text-decoration: none; }
+    h2 { color: ${BRAND.ink}; font-size: 24px; font-weight: 800; margin: 0 0 16px; line-height: 1.3; }
+    h3 { color: ${BRAND.ink}; font-size: 17px; font-weight: 700; margin: 24px 0 10px; }
+    p { color: #444; font-size: 15px; line-height: 1.7; margin: 12px 0; }
+    a { color: ${BRAND.teal}; }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:24px 0;">
+<body style="margin:0;padding:0;background-color:${BRAND.pageBg};">
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.pageBg};">
     <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:94%;">
-          <!-- Header -->
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;">
+          <!-- Logo -->
           <tr>
-            <td align="center" style="background-color:#ffffff;padding:36px 24px;border-radius:16px 16px 0 0;border-bottom:4px solid #1A7A6E;">
-              <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" width="190" style="display:block;max-width:190px;height:auto;margin:0 auto 12px;" />
-              <div style="color:#1a1a1a;font-size:24px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:0.3px;">${title}</div>
+            <td align="center" style="padding:0 0 20px;">
+              <a href="${siteUrl}" style="text-decoration:none;"><img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" width="170" style="display:block;max-width:170px;height:auto;margin:0 auto;border:0;" /></a>
             </td>
           </tr>
-          <!-- Content -->
+          <!-- Card -->
           <tr>
-            <td style="background-color:#ffffff;padding:40px 36px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 16px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.7;color:#444;">
+            <td style="background:#ffffff;border:1px solid ${BRAND.line};border-radius:14px;padding:34px 32px;font-family:${FONT};font-size:15px;line-height:1.7;color:${BRAND.ink};">
+              <p style="margin:0 0 22px;font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:${BRAND.teal};text-align:center;">${title}</p>
               ${content}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding:28px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <p style="margin:4px 0;color:#888;font-size:13px;">&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
-              <p style="margin:4px 0;"><a href="${siteUrl}" style="color:#1A7A6E;font-weight:600;text-decoration:none;font-size:13px;">allremotes.com.au</a></p>
+            <td align="center" style="padding:24px 16px 8px;font-family:${FONT};">
+              <p style="margin:0 0 6px;font-size:12px;color:${BRAND.muted};">
+                <a href="mailto:shane@allremotes.com.au" style="color:${BRAND.teal};text-decoration:none;font-weight:600;">shane@allremotes.com.au</a>
+                &nbsp;·&nbsp;
+                <a href="${siteUrl}" style="color:${BRAND.teal};text-decoration:none;font-weight:600;">allremotes.com.au</a>
+              </p>
+              <p style="margin:0;font-size:12px;color:${BRAND.faint};">&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -160,59 +216,57 @@ export async function sendOrderConfirmationEmail({
   total: number;
   shippingAddress: string;
 }) {
+  const th = `padding:10px 12px;text-align:left;background:${BRAND.tint};color:${BRAND.ink};font-weight:700;font-size:13px;border-bottom:1px solid ${BRAND.line};`;
+  const td = `padding:10px 12px;border-bottom:1px solid ${BRAND.line};font-size:14px;color:#444;`;
   const itemsHtml = items.map(item => `
     <tr>
-      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">${item.name}</td>
-      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">${item.quantity}</td>
-      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">AU$${item.price.toFixed(2)}</td>
-      <td style="padding:12px 14px;border-bottom:1px solid #eee8e1;font-size:15px;color:#34525a;">AU$${(item.quantity * item.price).toFixed(2)}</td>
+      <td style="${td}">${item.name}</td>
+      <td style="${td}text-align:center;">${item.quantity}</td>
+      <td style="${td}text-align:right;">AU$${item.price.toFixed(2)}</td>
+      <td style="${td}text-align:right;">AU$${(item.quantity * item.price).toFixed(2)}</td>
     </tr>
   `).join('');
 
   const content = `
     <h2>Thank you for your order, ${customerName}!</h2>
-    <p>Your order has been received and is being processed.</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Order ID:</strong> #${orderId}<br>
-      <strong>Order Date:</strong> ${new Date().toLocaleDateString('en-AU')}
-    </div>
-    
+    <p>Your order has been received and is being processed. We'll let you know as soon as it's on its way.</p>
+
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">Order:</strong> #${orderId}<br>
+      <strong style="color:${BRAND.teal};">Date:</strong> ${new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
+    `)}
+
     <h3>Order Summary</h3>
-    <table width="100%" style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">
       <thead>
         <tr>
-          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Product</th>
-          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Qty</th>
-          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Price</th>
-          <th style="padding:12px 14px;text-align:left;background:#f4efe8;color:#17353a;font-weight:700;font-size:15px;border-bottom:1px solid #eee8e1;">Total</th>
+          <th style="${th}">Product</th>
+          <th style="${th}text-align:center;">Qty</th>
+          <th style="${th}text-align:right;">Price</th>
+          <th style="${th}text-align:right;">Total</th>
         </tr>
       </thead>
-      <tbody>
-        ${itemsHtml}
-      </tbody>
+      <tbody>${itemsHtml}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="padding:12px;text-align:right;font-size:15px;font-weight:700;color:${BRAND.ink};">Total</td>
+          <td style="padding:12px;text-align:right;font-size:16px;font-weight:800;color:${BRAND.red};">AU$${total.toFixed(2)}</td>
+        </tr>
+      </tfoot>
     </table>
-    
-    <p style="text-align: right; font-size: 18px; font-weight: bold; color: #C0392B;">
-      Total: AU$${total.toFixed(2)}
-    </p>
-    
+
     <h3>Shipping Address</h3>
-    <p>${shippingAddress.replace(/\n/g, '<br>')}</p>
-    
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
-    
-    <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        View Order Details
-      </a>
-    </center>
+    ${emailInfoBox(shippingAddress.replace(/\n/g, '<br>'))}
+
+    ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders`, 'View Order Details')}
+
+    ${emailContactBlock()}
   `;
 
   return sendEmail({
     to,
     subject: `Order Confirmation #${orderId}`,
-    html: baseTemplate(content, 'Order Confirmation'),
+    html: baseTemplate(content, 'Order Confirmed', `Order #${orderId} received — thank you, ${customerName}!`),
   });
 }
 
@@ -237,36 +291,31 @@ export async function sendShippingUpdateEmail({
   trackingLink?: string;
 }) {
   const trackUrl = trackingLink || buildTrackingLink(carrier || '', trackingNumber || '');
+  const isShipped = /ship|transit/i.test(status);
 
   const content = `
-    <h2>Shipping Update for Order #${orderId}</h2>
-    <p>Hi ${customerName},</p>
-    <p>Great news! Your order status has been updated to: <strong style="color:#C0392B;">${status}</strong></p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      ${trackingNumber ? `<strong>Tracking Number:</strong> ${trackingNumber}<br>` : ''}
-      ${carrier ? `<strong>Carrier:</strong> ${carrier}<br>` : ''}
-      ${estimatedDelivery ? `<strong>Estimated Delivery:</strong> ${estimatedDelivery}<br>` : ''}
-    </div>
-    
-    ${trackUrl ? `
-      <center>
-        <a href="${trackUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Track Package</a>
-      </center>
-    ` : ''}
-    
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
-    
-    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
-      <p>Questions about your order? We're here to help!</p>
-      <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-    </div>
+    <h2>Your order is on its way!</h2>
+    <p>Hi ${customerName}, great news — order <strong>#${orderId}</strong> has been updated to <strong style="color:${BRAND.red};">${status}</strong>.</p>
+
+    ${emailStepsBar(isShipped ? 'shipped' : 'delivered')}
+
+    ${emailInfoBox(`
+      ${carrier ? `<strong style="color:${BRAND.teal};">Carrier:</strong> ${carrier}<br>` : ''}
+      ${trackingNumber ? `<strong style="color:${BRAND.teal};">Tracking:</strong> <span style="font-family:Consolas,Menlo,monospace;font-size:14px;">${trackingNumber}</span><br>` : ''}
+      ${estimatedDelivery ? `<strong style="color:${BRAND.teal};">Estimated Delivery:</strong> ${estimatedDelivery}` : ''}
+    `)}
+
+    ${trackUrl ? emailCta(trackUrl, 'Track Your Package') : ''}
+
+    <p style="font-size:13px;color:${BRAND.muted};">Tracking can take up to 24 hours to show its first scan — if the link shows nothing yet, check back shortly.</p>
+
+    ${emailContactBlock()}
   `;
 
   return sendEmail({
     to,
-    subject: `Shipping Update - Order #${orderId}`,
-    html: baseTemplate(content, 'Shipping Update'),
+    subject: `Your order #${orderId} has shipped`,
+    html: baseTemplate(content, 'Shipping Update', `Order #${orderId} is on its way — track it inside`),
   });
 }
 
@@ -283,32 +332,24 @@ export async function sendOrderDeliveredEmail({
   deliveredDate: string;
 }) {
   const content = `
-    <h2>Your Order Has Been Delivered!</h2>
-    <p>Hi ${customerName},</p>
-    <p>Great news! Your order #${orderId} has been delivered on <strong style="color:#C0392B;">${deliveredDate}</strong>.</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      We hope you enjoy your purchase! If you have any issues with your order, please contact us — all products are covered by our 12-month warranty.
-    </div>
-    
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
-    
-    <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        Leave a Review
-      </a>
-    </center>
-    
-    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
-      <p>Need help? We're here for you!</p>
-      <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-    </div>
+    <h2>Your order has been delivered!</h2>
+    <p>Hi ${customerName}, order <strong>#${orderId}</strong> was delivered on <strong style="color:${BRAND.red};">${deliveredDate}</strong>.</p>
+
+    ${emailStepsBar('delivered')}
+
+    ${emailInfoBox(`
+      We hope you enjoy your purchase! If anything isn't right, just reply to this email — all products are covered by our <strong>12-month warranty</strong>.
+    `)}
+
+    ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders`, 'View Your Order')}
+
+    ${emailContactBlock()}
   `;
 
   return sendEmail({
     to,
-    subject: `Order Delivered - Order #${orderId}`,
-    html: baseTemplate(content, 'Order Delivered'),
+    subject: `Order #${orderId} delivered`,
+    html: baseTemplate(content, 'Order Delivered', `Order #${orderId} has arrived — we hope you love it`),
   });
 }
 
@@ -326,146 +367,25 @@ export async function sendPasswordResetEmail({
 }) {
   const siteUrl = baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
   const resetUrl = `${siteUrl}/reset-password?token=${resetToken}`;
-  
-  const resetTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Password Reset - All Remotes</title>
-  <style>
-    body { 
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-      line-height: 1.6; 
-      color: #17353a; 
-      margin: 0; 
-      padding: 0; 
-      background-color: #fbf8f5;
-    }
-    .container { 
-      max-width: 600px; 
-      margin: 0 auto; 
-      padding: 20px; 
-    }
-    .header { 
-      background: linear-gradient(135deg, #C0392B 0%, #A02D23 100%); 
-      padding: 30px 20px; 
-      text-align: center; 
-      border-radius: 12px 12px 0 0;
-    }
-    .header img {
-      max-width: 180px;
-      height: auto;
-      margin-bottom: 10px;
-    }
-    .content { 
-      background: #ffffff; 
-      padding: 40px 30px; 
-      border: 1px solid #eee8e1; 
-      border-top: none;
-      border-radius: 0 0 12px 12px;
-    }
-    .title {
-      color: #C0392B;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-    .content p {
-      color: #34525a;
-      font-size: 16px;
-      margin: 15px 0;
-    }
-    .button { 
-      display: inline-block; 
-      padding: 14px 32px; 
-      background: #C0392B; 
-      color: white; 
-      text-decoration: none; 
-      border-radius: 8px; 
-      margin: 20px 0; 
-      font-weight: 600;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
-    }
-    .button:hover {
-      background: #A02D23;
-    }
-    .warning-box {
-      background: #fff8f0;
-      border-left: 4px solid #f59e0b;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 25px 0;
-    }
-    .warning-box p {
-      color: #92400e;
-      font-size: 14px;
-      margin: 0;
-    }
-    .footer { 
-      text-align: center; 
-      padding: 30px 20px; 
-      color: #67777d; 
-      font-size: 13px; 
-    }
-    .footer a {
-      color: #1A7A6E;
-      text-decoration: none;
-    }
-    .link-fallback {
-      background: #f4efe8;
-      padding: 12px;
-      border-radius: 6px;
-      margin: 15px 0;
-      word-break: break-all;
-      font-size: 13px;
-      color: #67777d;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" />
-    </div>
-    <div class="content">
-      <h2 class="title">Password Reset Request</h2>
-      <p>Hi ${customerName},</p>
-      <p>We received a request to reset your password for your All Remotes account. Click the button below to set a new password:</p>
-      
-      <center>
-        <a href="${resetUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Reset My Password</a>
-      </center>
-      
-      <p style="text-align: center; font-size: 14px; color: #67777d;">
-        Or copy and paste this link:
-      </p>
-      <div class="link-fallback">
-        ${resetUrl}
-      </div>
-      
-      <div class="warning-box">
-        <p><strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request a password reset, please ignore this email or contact us if you have concerns.</p>
-      </div>
-      
-      <p>Need help? Contact us at <a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-    </div>
-    <div class="footer">
-      <p>This email was sent from All Remotes.</p>
-      <p>&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
-      <p>${siteUrl}</p>
-    </div>
-  </div>
-</body>
-</html>
+
+  const content = `
+    <h2>Password Reset Request</h2>
+    <p>Hi ${customerName}, we received a request to reset the password for your All Remotes account. Click below to set a new one:</p>
+
+    ${emailCta(resetUrl, 'Reset My Password')}
+
+    <p style="text-align:center;font-size:13px;color:${BRAND.muted};margin-top:4px;">Or copy and paste this link:</p>
+    <div style="background:${BRAND.tint};padding:12px;border-radius:6px;margin:12px 0;word-break:break-all;font-size:12px;color:${BRAND.muted};">${resetUrl}</div>
+
+    ${emailInfoBox(`<strong style="color:${BRAND.amber};">Important:</strong> This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email.`, BRAND.amber)}
+
+    ${emailContactBlock()}
   `;
 
   return sendEmail({
     to,
     subject: 'Password Reset Request - All Remotes',
-    html: resetTemplate,
+    html: baseTemplate(content, 'Password Reset', `Reset your All Remotes password — link expires in 1 hour`),
   });
 }
 
@@ -478,168 +398,30 @@ export async function sendWelcomeEmail({
   customerName: string;
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au';
-  
-  const welcomeTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to All Remotes!</title>
-  <style>
-    body { 
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-      line-height: 1.6; 
-      color: #1a1a1a; 
-      margin: 0; 
-      padding: 0; 
-      background-color: #f5f5f5;
-    }
-    .container { 
-      max-width: 600px; 
-      margin: 0 auto; 
-      padding: 20px; 
-    }
-    .header { 
-      background: #ffffff; 
-      padding: 30px 20px; 
-      text-align: center; 
-      border-radius: 12px 12px 0 0;
-      border-bottom: 4px solid #1A7A6E;
-    }
-    .header img {
-      max-width: 180px;
-      height: auto;
-      margin-bottom: 10px;
-    }
-    .header h1 { 
-      color: #1a1a1a; 
-      margin: 0; 
-      font-size: 24px; 
-      font-weight: 600;
-    }
-    .content { 
-      background: #ffffff; 
-      padding: 40px 30px; 
-      border: 1px solid #e0e0e0; 
-      border-top: none;
-      border-radius: 0 0 12px 12px;
-    }
-    .welcome-title {
-      color: #C0392B;
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-    .content p {
-      color: #444;
-      font-size: 16px;
-      margin: 15px 0;
-    }
-    .info-box { 
-      background: #f9f9f9; 
-      border-left: 4px solid #1A7A6E;
-      padding: 20px; 
-      border-radius: 8px; 
-      margin: 25px 0; 
-    }
-    .info-box strong {
-      color: #1A7A6E;
-      font-size: 16px;
-    }
-    .info-box ul {
-      margin: 15px 0 0 0;
-      padding-left: 25px;
-      color: #444;
-    }
-    .info-box li {
-      margin: 10px 0;
-      font-size: 15px;
-    }
-    .button { 
-      display: inline-block; 
-      padding: 14px 32px; 
-      background: #C0392B; 
-      color: white; 
-      text-decoration: none; 
-      border-radius: 8px; 
-      margin: 20px 0; 
-      font-weight: 600;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
-    }
-    .button:hover {
-      background: #A02D23;
-    }
-    .footer { 
-      text-align: center; 
-      padding: 30px 20px; 
-      color: #888; 
-      font-size: 13px; 
-    }
-    .footer a {
-      color: #1A7A6E;
-      text-decoration: none;
-    }
-    .contact-section {
-      background: #f9f9f9;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 25px;
-      text-align: center;
-    }
-    .contact-section a {
-      color: #1A7A6E;
-      font-weight: 600;
-      text-decoration: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${siteUrl}/images/mainlogo.png" alt="All Remotes" />
-    </div>
-    <div class="content">
-      <h2 class="welcome-title">Welcome to All Remotes!</h2>
-      <p>Hi ${customerName},</p>
-      <p>Thank you for creating an account with us. We're excited to have you on board!</p>
-      
-      <div class="info-box" style="background:#f9f9f9;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#1a1a1a;font-size:16px;line-height:1.8;">
-        <strong>What you can do now:</strong>
-        <ul>
-          <li>Browse our extensive collection of remotes</li>
-          <li>Save your favorite products to your wishlist</li>
-          <li>Track your orders easily</li>
-          <li>Get exclusive offers and promotions</li>
-        </ul>
-      </div>
-      
-      <center>
-        <a href="${siteUrl}/products/all" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-          Start Shopping
-        </a>
-      </center>
-      
-      <div class="contact-section" style="background:#f9f9f9;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
-        <p>Questions? We're here to help!</p>
-        <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-      </div>
-    </div>
-    <div class="footer">
-      <p>This email was sent from All Remotes.</p>
-      <p>&copy; ${new Date().getFullYear()} All Remotes. All rights reserved.</p>
-      <p>${siteUrl}</p>
-    </div>
-  </div>
-</body>
-</html>
+
+  const content = `
+    <h2>Welcome to All Remotes!</h2>
+    <p>Hi ${customerName}, thanks for creating an account — we're excited to have you on board.</p>
+
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">What you can do now:</strong>
+      <ul style="margin:12px 0 0;padding-left:22px;color:#444;font-size:15px;">
+        <li style="margin:8px 0;">Browse our full range of remotes and accessories</li>
+        <li style="margin:8px 0;">Save favourites to your wishlist</li>
+        <li style="margin:8px 0;">Track your orders from your account</li>
+        <li style="margin:8px 0;">Get exclusive offers and promotions</li>
+      </ul>
+    `)}
+
+    ${emailCta(`${siteUrl}/products/all`, 'Start Shopping')}
+
+    ${emailContactBlock()}
   `;
 
   return sendEmail({
     to,
     subject: 'Welcome to All Remotes!',
-    html: welcomeTemplate,
+    html: baseTemplate(content, 'Welcome', `Welcome to All Remotes, ${customerName} — your account is ready`),
   });
 }
 
@@ -658,18 +440,14 @@ export async function sendLowStockNotification({
   const content = `
     <h2>Low Stock Alert</h2>
     <p>The following product is running low on stock:</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Product:</strong> ${productName}<br>
-      <strong>SKU:</strong> ${sku}<br>
-      <strong>Current Stock:</strong> ${currentStock}<br>
-    </div>
-    
-    <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        Manage Inventory
-      </a>
-    </center>
+
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">Product:</strong> ${productName}<br>
+      <strong style="color:${BRAND.teal};">SKU:</strong> <span style="font-family:Consolas,Menlo,monospace;font-size:14px;">${sku}</span><br>
+      <strong style="color:${BRAND.teal};">Current Stock:</strong> <span style="color:${BRAND.red};font-weight:700;">${currentStock}</span>
+    `, BRAND.amber)}
+
+    ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin`, 'Manage Inventory')}
   `;
 
   return sendEmail({
@@ -698,24 +476,20 @@ export async function sendReturnRequestEmail({
   const content = `
     <h2>New Return Request</h2>
     <p>A customer has submitted a return request:</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Order ID:</strong> #${orderId}<br>
-      <strong>Customer:</strong> ${customerName}<br>
-      <strong>Email:</strong> ${customerEmail}<br>
-      <strong>Reason:</strong> ${reason}<br>
-    </div>
-    
-    <h3>Items to Return:</h3>
-    <ul style="padding-left: 20px; color: #34525a;">
-      ${items.map(item => `<li style="margin: 8px 0;">${item}</li>`).join('')}
+
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">Order ID:</strong> #${orderId}<br>
+      <strong style="color:${BRAND.teal};">Customer:</strong> ${customerName}<br>
+      <strong style="color:${BRAND.teal};">Email:</strong> ${customerEmail}<br>
+      <strong style="color:${BRAND.teal};">Reason:</strong> ${reason}
+    `)}
+
+    <h3>Items to Return</h3>
+    <ul style="padding-left:20px;color:#444;font-size:15px;">
+      ${items.map(item => `<li style="margin:8px 0;">${item}</li>`).join('')}
     </ul>
-    
-    <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        Process Return
-      </a>
-    </center>
+
+    ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin`, 'Process Return')}
   `;
 
   return sendEmail({
@@ -742,26 +516,22 @@ export async function sendNewOrderNotification({
   items: string[];
 }) {
   const content = `
-    <h2>New Order Received!</h2>
+    <h2>New Order Received</h2>
     <p>You have received a new order:</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Order ID:</strong> #${orderId}<br>
-      <strong>Customer:</strong> ${customerName}<br>
-      <strong>Email:</strong> ${customerEmail}<br>
-      <strong>Total:</strong> AU$${total.toFixed(2)}<br>
-    </div>
-    
-    <h3>Items:</h3>
-    <ul style="padding-left: 20px; color: #34525a;">
-      ${items.map(item => `<li style="margin: 8px 0;">${item}</li>`).join('')}
+
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">Order ID:</strong> #${orderId}<br>
+      <strong style="color:${BRAND.teal};">Customer:</strong> ${customerName}<br>
+      <strong style="color:${BRAND.teal};">Email:</strong> ${customerEmail}<br>
+      <strong style="color:${BRAND.teal};">Total:</strong> <span style="color:${BRAND.red};font-weight:700;">AU$${total.toFixed(2)}</span>
+    `)}
+
+    <h3>Items</h3>
+    <ul style="padding-left:20px;color:#444;font-size:15px;">
+      ${items.map(item => `<li style="margin:8px 0;">${item}</li>`).join('')}
     </ul>
-    
-    <center>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        View Order
-      </a>
-    </center>
+
+    ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/admin`, 'View Order')}
   `;
 
   return sendEmail({
@@ -787,25 +557,17 @@ export async function sendVerificationEmail({
   
   const content = `
     <h2>Verify Your Email Address</h2>
-    <p>Hi ${customerName},</p>
-    <p>Thank you for registering with All Remotes! Please verify your email address to complete your registration.</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Why verify?</strong><br>
-      Verifying your email helps us ensure the security of your account and allows you to receive important notifications about your orders.
-    </div>
-    
-    <center>
-      <a href="${verificationUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Verify Email Address</a>
-    </center>
-    
-    <p style="margin-top: 20px; font-size: 13px; color: #67777d;">Or copy and paste this link into your browser:</p>
-    <p style="word-break: break-all; font-size: 12px; color: #67777d;">${verificationUrl}</p>
-    
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
-    
-    <p style="font-size: 13px; color: #67777d;">
-      This link will expire in 24 hours. If you didn't create an account with All Remotes, please ignore this email.
+    <p>Hi ${customerName}, thanks for registering with All Remotes! Please verify your email address to complete your registration.</p>
+
+    ${emailCta(verificationUrl, 'Verify Email Address')}
+
+    <p style="text-align:center;font-size:13px;color:${BRAND.muted};margin-top:4px;">Or copy and paste this link into your browser:</p>
+    <div style="background:${BRAND.tint};padding:12px;border-radius:6px;margin:12px 0;word-break:break-all;font-size:12px;color:${BRAND.muted};">${verificationUrl}</div>
+
+    ${emailDivider}
+
+    <p style="font-size:13px;color:${BRAND.muted};">
+      This link will expire in <strong>24 hours</strong>. If you didn't create an account with All Remotes, you can safely ignore this email.
     </p>
   `;
 
@@ -831,38 +593,32 @@ export function getPaymentRequestEmailHtml({
   message?: string;
 }) {
   const noteHtml = message?.trim()
-    ? `<div class="info-box" style="background:#e8f5f3;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;"><strong>Message from All Remotes:</strong><br>${message.replace(/\n/g, '<br>')}</div>`
+    ? emailInfoBox(`<strong style="color:${BRAND.teal};">Message from All Remotes:</strong><br>${message.replace(/\n/g, '<br>')}`)
     : '';
 
   const content = `
-    <h2>Payment required for order #${orderId}</h2>
-    <p>Hi ${customerName},</p>
-    <p>We are ready to process your order. Please complete payment using the secure link below:</p>
-    
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>Order ID:</strong> #${orderId}<br>
-      <strong>Amount Due:</strong> AU$${total.toFixed(2)}
-    </div>
+    <h2>Payment Required — Order #${orderId}</h2>
+    <p>Hi ${customerName}, we're ready to process your order. Please complete payment using the secure link below:</p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;">
+      <tr><td align="center" style="background:${BRAND.tint};border:1px solid ${BRAND.line};border-radius:10px;padding:20px;">
+        <p style="margin:0;font-size:13px;color:${BRAND.muted};">Order #${orderId}</p>
+        <p style="margin:6px 0 0;font-size:28px;font-weight:800;color:${BRAND.red};">AU$${total.toFixed(2)}</p>
+      </td></tr>
+    </table>
 
     ${noteHtml}
-    
-    <center>
-      <a href="${paymentUrl}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">Pay AU$${total.toFixed(2)} Now</a>
-    </center>
-    
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
-    
-    <p style="word-break: break-all; font-size: 12px; color: #67777d;">
+
+    ${emailCta(paymentUrl, `Pay AU$${total.toFixed(2)} Now`)}
+
+    <p style="word-break:break-all;font-size:12px;color:${BRAND.muted};text-align:center;">
       If the button does not work, copy this link:<br>${paymentUrl}
     </p>
-    
-    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
-      <p>Questions? We're here to help!</p>
-      <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-    </div>
+
+    ${emailContactBlock()}
   `;
 
-  return baseTemplate(content, 'Payment Required');
+  return baseTemplate(content, 'Payment Required', `Action needed — payment for order #${orderId}`);
 }
 
 export async function sendPaymentRequestEmail({
@@ -905,40 +661,29 @@ export async function sendReviewRequestEmail({
 
   const content = `
     <h2>How did we do, ${customerName}?</h2>
-    <p>Your order <strong>#${orderId}</strong> has been delivered! We'd love to hear your feedback.</p>
+    <p>Your order <strong>#${orderId}</strong> has been delivered — we'd love to hear your feedback.</p>
 
-    <div class="info-box" style="background:#f4efe8;border-left:5px solid #1A7A6E;padding:20px 22px;border-radius:10px;margin:22px 0;color:#17353a;font-size:16px;line-height:1.8;">
-      <strong>How was your experience with All Remotes?</strong><br><br>
-      <strong>Shipping:</strong> Was your order delivered quickly and safely?<br>
-      <strong>Product:</strong> Is your remote working as expected?<br>
-      <strong>Service:</strong> Were you happy with our customer support?<br>
-      <strong>Quality:</strong> Does the product meet your expectations?<br><br>
-      Your feedback helps us improve and helps other customers make informed decisions.
-    </div>
+    ${emailInfoBox(`
+      <strong style="color:${BRAND.teal};">Shipping</strong> — was your order delivered quickly and safely?<br>
+      <strong style="color:${BRAND.teal};">Product</strong> — is your remote working as expected?<br>
+      <strong style="color:${BRAND.teal};">Service</strong> — were you happy with our customer support?
+    `)}
 
-    <center>
-      <a href="${GOOGLE_REVIEW_URL}" class="button" style="display:inline-block;padding:16px 40px;background-color:#C0392B;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:17px;">
-        Leave a Google Review
-      </a>
-    </center>
+    ${emailCta(GOOGLE_REVIEW_URL, 'Leave a Google Review')}
 
-    <p style="margin-top:20px;text-align:center;font-size:14px;color:#67777d;">
+    <p style="text-align:center;font-size:13px;color:${BRAND.muted};">
       It only takes a minute and makes a big difference to our small business.
     </p>
 
-    <hr class="divider" style="height:1px;background:#eee8e1;margin:28px 0;border:none;" />
+    ${emailContactBlock()}
 
-    <div class="contact-section" style="background:#f4efe8;padding:20px;border-radius:10px;margin-top:26px;text-align:center;">
-      <p>Have an issue with your order? We're here to help!</p>
-      <p><a href="mailto:shane@allremotes.com.au">shane@allremotes.com.au</a></p>
-      <p style="font-size:13px;color:#67777d;">All products come with a 12-month warranty.</p>
-    </div>
+    <p style="text-align:center;font-size:12px;color:${BRAND.faint};">All products come with a 12-month warranty.</p>
   `;
 
   return sendEmail({
     to,
     subject: `How was your experience with All Remotes? — Order #${orderId}`,
-    html: baseTemplate(content, 'Share Your Feedback'),
+    html: baseTemplate(content, 'Share Your Feedback', `Order #${orderId} delivered — tell us how we did`),
   });
 }
 
