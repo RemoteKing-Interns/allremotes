@@ -3368,6 +3368,43 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   ))}
                 </datalist>
               </div>
+
+              {/* Timeline */}
+              {(() => {
+                const ev = (label: string, at?: any, sub?: string) => (at ? { label, at, sub } : null);
+                const events = [
+                  ev("Order received", selectedOrder?.createdAt),
+                  ev("Pushed to PickOps", selectedOrder?.pickopsPushedAt),
+                  ev("Pushed to Starshipit", selectedOrder?.starshipitPushedAt,
+                    selectedOrder?.starshipitOrderNumber ? `#${selectedOrder.starshipitOrderNumber}` : undefined),
+                  ev(`Shipped${selectedOrder?.carrier ? ` — ${selectedOrder.carrier}` : ""}`, selectedOrder?.shippedAt,
+                    selectedOrder?.trackingNumber ? `Tracking ${selectedOrder.trackingNumber}` : undefined),
+                  ev("Tracking email sent", selectedOrder?.trackingEmailSentAt),
+                  ev("Delivered", selectedOrder?.deliveredAt),
+                  ev("Delivery email sent", selectedOrder?.deliveredEmailSentAt),
+                ].filter(Boolean) as { label: string; at: any; sub?: string }[];
+                events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+                if (events.length === 0) return null;
+                return (
+                  <div>
+                    <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Timeline</h3>
+                    <div className="rounded-lg border border-neutral-200 p-3">
+                      <ol className="relative space-y-3 border-l border-neutral-200 pl-4">
+                        {events.map((e, i) => (
+                          <li key={i} className="relative">
+                            <span className={`absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white ring-1 ${i === events.length - 1 ? "bg-emerald-500 ring-emerald-300" : "bg-neutral-300 ring-neutral-200"}`} />
+                            <p className="text-xs font-semibold text-neutral-900">{e.label}</p>
+                            {e.sub && <p className="font-mono text-[10px] text-neutral-500">{e.sub}</p>}
+                            <p className="text-[10px] text-neutral-500">
+                              {new Date(e.at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </p>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <AdminSupportChat
