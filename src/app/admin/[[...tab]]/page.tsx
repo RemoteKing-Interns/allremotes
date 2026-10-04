@@ -3398,10 +3398,10 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           const last = i === events.length - 1;
                           return (
                             <li key={i} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
-                              {i > 0 && <span className="absolute left-0 top-[7px] h-0.5 w-1/2 bg-neutral-300" />}
-                              {!last && <span className="absolute right-0 top-[7px] h-0.5 w-1/2 bg-neutral-300" />}
-                              <span className={`relative z-10 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white ${last ? "bg-emerald-500 ring-2 ring-emerald-200" : "bg-neutral-400"}`} />
-                              <p className="mt-2 w-full text-[10px] font-semibold leading-tight text-neutral-900">{e.label}</p>
+                              {i > 0 && <span className="absolute left-0 top-[7px] h-0.5 w-1/2 bg-emerald-300" />}
+                              {!last && <span className="absolute right-0 top-[7px] h-0.5 w-1/2 bg-emerald-300" />}
+                              <span className={`relative z-10 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white ${last ? "bg-blue-500 ring-2 ring-blue-200" : "bg-emerald-500"}`} />
+                              <p className={`mt-2 w-full text-[10px] font-semibold leading-tight ${last ? "text-blue-700" : "text-neutral-900"}`}>{e.label}</p>
                               {e.sub && <p className="w-full truncate font-mono text-[9px] leading-tight text-neutral-500" title={e.sub}>{e.sub}</p>}
                               <p className="w-full text-[9px] leading-tight text-neutral-500">{fmt(e.at)}</p>
                             </li>
