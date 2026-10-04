@@ -3385,21 +3385,28 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 ].filter(Boolean) as { label: string; at: any; sub?: string }[];
                 events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
                 if (events.length === 0) return null;
+                const fmt = (at: any) => {
+                  const d = new Date(at);
+                  return `${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} · ${d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }).toLowerCase()}`;
+                };
                 return (
                   <div>
                     <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-neutral-500">Timeline</h3>
-                    <div className="rounded-lg border border-neutral-200 p-3">
-                      <ol className="relative space-y-3 border-l border-neutral-200 pl-4">
-                        {events.map((e, i) => (
-                          <li key={i} className="relative">
-                            <span className={`absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white ring-1 ${i === events.length - 1 ? "bg-emerald-500 ring-emerald-300" : "bg-neutral-300 ring-neutral-200"}`} />
-                            <p className="text-xs font-semibold text-neutral-900">{e.label}</p>
-                            {e.sub && <p className="font-mono text-[10px] text-neutral-500">{e.sub}</p>}
-                            <p className="text-[10px] text-neutral-500">
-                              {new Date(e.at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
-                            </p>
-                          </li>
-                        ))}
+                    <div className="rounded-lg border border-neutral-200 px-3 py-4">
+                      <ol className="flex">
+                        {events.map((e, i) => {
+                          const last = i === events.length - 1;
+                          return (
+                            <li key={i} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
+                              {i > 0 && <span className="absolute left-0 top-[7px] h-0.5 w-1/2 bg-neutral-300" />}
+                              {!last && <span className="absolute right-0 top-[7px] h-0.5 w-1/2 bg-neutral-300" />}
+                              <span className={`relative z-10 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white ${last ? "bg-emerald-500 ring-2 ring-emerald-200" : "bg-neutral-400"}`} />
+                              <p className="mt-2 w-full text-[10px] font-semibold leading-tight text-neutral-900">{e.label}</p>
+                              {e.sub && <p className="w-full truncate font-mono text-[9px] leading-tight text-neutral-500" title={e.sub}>{e.sub}</p>}
+                              <p className="w-full text-[9px] leading-tight text-neutral-500">{fmt(e.at)}</p>
+                            </li>
+                          );
+                        })}
                       </ol>
                     </div>
                   </div>
