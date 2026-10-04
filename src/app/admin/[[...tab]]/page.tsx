@@ -950,6 +950,27 @@ const LabelCanvasEditorLazy = dynamic(() => import("../../../components/admin/La
 
 // Item name with a hover image preview. The <img> only mounts after the first
 // hover, so order rows never fetch images until the admin actually asks for one.
+function ChannelLogo({ channel }: { channel?: string }) {
+  if (channel === "ebay") {
+    return (
+      <span className="inline-flex items-baseline text-[11px] font-bold leading-none tracking-tight" title="eBay order">
+        <span style={{ color: "#e53238" }}>e</span>
+        <span style={{ color: "#0064d2" }}>b</span>
+        <span style={{ color: "#f5af02" }}>a</span>
+        <span style={{ color: "#86b817" }}>y</span>
+      </span>
+    );
+  }
+  if (channel === "temu") {
+    return (
+      <span className="text-[11px] font-extrabold leading-none tracking-tight" style={{ color: "#FB7701" }} title="TEMU order">
+        TEMU
+      </span>
+    );
+  }
+  return null;
+}
+
 function OrderItemName({ name, imageUrl, truncate = false }: { name: string; imageUrl?: string | null; truncate?: boolean }) {
   const [armed, setArmed] = useState(false);
   return (
@@ -2536,9 +2557,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             <td className="px-4 py-4">
                               <span className="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-600">
                                 #{o.id}
-                                {o.channel === "ebay" && (
-                                  <span className="rounded bg-yellow-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-yellow-800">eBay</span>
-                                )}
+                                <ChannelLogo channel={o.channel} />
                                 {!isOrderPaid(o) && (
                                   <span title="Payment not received" className="rounded bg-rose-100 px-1.5 py-0.5 font-sans text-[10px] font-bold text-rose-700">Awaiting Payment</span>
                                 )}
