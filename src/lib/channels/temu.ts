@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { ChannelAdapter, ChannelCredentials, ChannelOrder, ListingPayload } from "./core";
 import { proxyFetch } from "@/lib/proxy-fetch";
+import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const TEMU_APP_KEY = process.env.TEMU_APP_KEY || "";
 const TEMU_APP_SECRET = process.env.TEMU_APP_SECRET || "";
@@ -508,8 +509,133 @@ export const temuAdapter: ChannelAdapter = {
     // Full inventory sync would need a goodsId→skuId mapping stored in ChannelListing.
   },
 
+  // TEMU parentOrderStatus: 1 pending, 2 awaiting shipment, 3 shipped,
+  // 4 delivered, 5 completed, 6 cancelled — 2 observed on an order due to ship.
+  // parentShippingTime being set is a more reliable "shipped" signal than the code.
   async fetchOrders(since, creds) {
-    // TODO: implement bg.order.list.get when order sync is needed
-    return [];
+    // TEMU's order API carries no prices (TEMU collects the payment), so
+    // price each line from our catalog via extCode (the SKU we pushed).
+    const priceBySku = new Map<string, number>();
+    if (mongoEnabled()) {
+      const db = await getDb();
+      const products = await db
+        .collection("products")
+        .find({}, { projection: { sku: 1, rk_sku: 1, price: 1 } })
+        .toArray();
+      for (const p of products) {
+        const price = Number(p.price || 0);
+        if (p.sku) priceBySku.set(String(p.sku).toLowerCase(), price);
+        if (p.rk_sku) priceBySku.set(String(p.rk_sku).toLowerCase(), price);
+      }
+    }
+
+    const mapStatus = (status: any, shippingTime: any): string => {
+      if (Number(shippingTime) > 0) return "shipped";
+      switch (Number(status)) {
+        case 3:
+          return "shipped";
+        case 4:
+        case 5:
+          return "delivered";
+        case 6:
+          return "cancelled";
+        default:
+          return "processing";
+      }
+    };
+
+    const pageSize = 50;
+    const orders: ChannelOrder[] = [];
+    let pageNumber = 1;
+    for (;;) {
+      const data = await temuCall(
+        "bg.order.list.v2.get",
+        {
+          pageNumber,
+          pageSize,
+          createTimeFrom: Math.floor(since.getTime() / 1000),
+          createTimeTo: Math.floor(Date.now() / 1000),
+        },
+        creds
+      );
+      const result = (data?.result ?? {}) as any;
+      const pageItems: any[] = result.pageItems || [];
+
+      for (const parent of pageItems) {
+        const map = parent?.parentOrderMap || {};
+        const parentOrderSn = String(map.parentOrderSn || "");
+        if (!parentOrderSn) continue;
+        // Skip out-of-range orders in case the API ignores the time filter.
+        if (map.parentOrderTime && Number(map.parentOrderTime) * 1000 < since.getTime()) continue;
+
+        // Buyer name/address live in a separate call per parent order.
+        let shipInfo: any = {};
+        try {
+          const ship = await temuCall("bg.order.shippinginfo.v2.get", { parentOrderSn }, creds);
+          shipInfo = (ship?.result as any) || {};
+        } catch (err: any) {
+          console.error(`[temu] shippinginfo failed for ${parentOrderSn}:`, err?.message || err);
+        }
+
+        const items = (parent.orderList || []).map((it: any) => {
+          const sku = String(it.productList?.[0]?.extCode || it.skuId || "");
+          const quantity = Number(it.quantity || it.originalOrderQuantity || 1);
+          const unitPrice = priceBySku.get(sku.toLowerCase()) ?? 0;
+          return {
+            sku,
+            name: String(it.goodsName || it.originalGoodsName || ""),
+            quantity,
+            unitPrice,
+            lineTotal: unitPrice * quantity,
+            externalId: it.goodsId ? String(it.goodsId) : undefined,
+            color: it.spec && it.spec !== "As Shown" ? String(it.spec) : undefined,
+          };
+        });
+        const subtotal = items.reduce((sum: number, i: { lineTotal: number }) => sum + i.lineTotal, 0);
+
+        orders.push({
+          orderId: parentOrderSn,
+          channel: "temu",
+          externalOrderId: parentOrderSn,
+          externalStatus: String(map.parentOrderStatus ?? ""),
+          status: mapStatus(map.parentOrderStatus, map.parentShippingTime),
+          createdAt: map.parentOrderTime
+            ? new Date(Number(map.parentOrderTime) * 1000).toISOString()
+            : new Date().toISOString(),
+          updatedAt: map.updateTime
+            ? new Date(Number(map.updateTime) * 1000).toISOString()
+            : new Date().toISOString(),
+          customer: {
+            fullName:
+              shipInfo.receiptName ||
+              `${shipInfo.addressExtra?.firstName || ""} ${shipInfo.addressExtra?.lastName || ""}`.trim() ||
+              "TEMU buyer",
+            email: shipInfo.mail || undefined,
+            phone: shipInfo.mobile || undefined,
+          },
+          shipping: {
+            address: shipInfo.addressLine1 || shipInfo.addressLineAll || "",
+            address2: [shipInfo.addressLine2, shipInfo.addressLine3].filter(Boolean).join(" ") || undefined,
+            city: shipInfo.regionName3 || "",
+            state: shipInfo.regionName2 || "",
+            zipCode: shipInfo.postCode || "",
+            country: shipInfo.regionName1 || "",
+            phone: shipInfo.mobile || undefined,
+          },
+          postageService: "TEMU seller shipping",
+          items,
+          pricing: {
+            currency: getCurrency(),
+            subtotal,
+            total: subtotal,
+          },
+        });
+      }
+
+      const total = Number(result.totalItemNum || 0);
+      if (pageNumber * pageSize >= total || pageItems.length === 0) break;
+      pageNumber++;
+    }
+    return orders;
   },
 };
