@@ -3350,7 +3350,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   {(selectedOrder?.items || []).map((item: any, idx: number) => {
                     const skuKey = String(item.externalId || idx);
                     const hasRealSku = !!item.sku && String(item.sku) !== String(item.externalId);
-                    const canAssignSku = selectedOrder?.channel === "ebay" && !!item.externalId;
                     return (
                     <div key={idx} className={`flex items-center justify-between p-3 ${idx !== (selectedOrder?.items?.length || 0) - 1 ? 'border-b border-neutral-100' : ''}`}>
                       <div>
@@ -3373,25 +3372,25 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         })()}
                         {item.rk_sku && <p className="font-mono text-xs text-violet-600">{item.rk_sku}</p>}
                         {hasRealSku && <p className="font-mono text-xs text-neutral-500">{item.sku}</p>}
-                        {canAssignSku && !hasRealSku && (
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <input
-                              list="order-item-sku-options"
-                              placeholder="Assign SKU"
-                              value={itemSkuDrafts[skuKey] ?? ""}
-                              onChange={(e) => setItemSkuDrafts((d) => ({ ...d, [skuKey]: e.target.value }))}
-                              className="w-36 rounded-lg border border-neutral-200 px-2 py-1 font-mono text-xs focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => saveItemSku(selectedOrder, idx)}
-                              disabled={savingItemSkuKey === skuKey || !(itemSkuDrafts[skuKey] || "").trim()}
-                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-                            >
-                              {savingItemSkuKey === skuKey ? "Saving…" : "Save"}
-                            </button>
-                          </div>
-                        )}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <input
+                            list="order-item-sku-options"
+                            placeholder={hasRealSku ? item.sku : "Assign SKU"}
+                            value={itemSkuDrafts[skuKey] ?? ""}
+                            onChange={(e) => setItemSkuDrafts((d) => ({ ...d, [skuKey]: e.target.value }))}
+                            onKeyDown={(e) => e.key === "Enter" && saveItemSku(selectedOrder, idx)}
+                            title={hasRealSku ? `Current: ${item.sku} — type a new SKU to reassign` : "Assign a catalog SKU"}
+                            className="w-36 rounded-lg border border-neutral-200 px-2 py-1 font-mono text-xs focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => saveItemSku(selectedOrder, idx)}
+                            disabled={savingItemSkuKey === skuKey || !(itemSkuDrafts[skuKey] || "").trim()}
+                            className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {savingItemSkuKey === skuKey ? "Saving…" : hasRealSku ? "Update" : "Save"}
+                          </button>
+                        </div>
                         <div className="mt-0.5 flex items-center gap-1 text-xs text-neutral-500">
                           <span>Qty:</span>
                           <input
