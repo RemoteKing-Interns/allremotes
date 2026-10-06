@@ -1096,6 +1096,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
   // ── Order item SKU assignment (eBay orders missing a listing SKU)
   const [itemSkuDrafts, setItemSkuDrafts] = useState<Record<string, string>>({});
+  const [itemQtyDrafts, setItemQtyDrafts] = useState<Record<string, string>>({});
+  const [savingItemQtyKey, setSavingItemQtyKey] = useState("");
   const [savingItemSkuKey, setSavingItemSkuKey] = useState("");
 
   // Order items only carry name/sku — resolve product images from the catalog.
@@ -1726,6 +1728,41 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       alert(err?.message || "Failed to save SKU");
     } finally {
       setSavingItemSkuKey("");
+    }
+  };
+
+  // Edit item quantity locally (e.g. a "2x" eBay pack sold as qty 1).
+  // Total paid stays fixed — unit price is re-derived so the line total is unchanged.
+  const saveItemQty = async (order: any, idx: number) => {
+    const item = order.items?.[idx];
+    if (!item) return;
+    const key = String(item.externalId || idx);
+    const qty = Math.round(Number(itemQtyDrafts[key]));
+    if (!Number.isFinite(qty) || qty < 1 || qty === item.quantity) return;
+    setSavingItemQtyKey(key);
+    try {
+      const lineTotal = Number(item.lineTotal ?? (Number(item.unitPrice || 0) * Number(item.quantity || 1)));
+      const items = order.items.map((it: any, i: number) =>
+        i === idx
+          ? { ...it, quantity: qty, unitPrice: Math.round((lineTotal / qty) * 100) / 100, lineTotal }
+          : it
+      );
+      const resp = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const savedOrder = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(savedOrder?.error || savedOrder?.details || "Failed to save quantity");
+      const savedItems = Array.isArray(savedOrder?.items) ? savedOrder.items : items;
+      const patch = { items: savedItems };
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      setSelectedOrder((prev: any) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
+      setItemQtyDrafts((d) => ({ ...d, [key]: "" }));
+    } catch (err: any) {
+      alert(err?.message || "Failed to save quantity");
+    } finally {
+      setSavingItemQtyKey("");
     }
   };
 
@@ -3355,7 +3392,30 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             </button>
                           </div>
                         )}
-                        <p className="text-xs text-neutral-500">Qty: {item.quantity} × AU${Number(item.unitPrice || 0).toFixed(2)}</p>
+                        <div className="mt-0.5 flex items-center gap-1 text-xs text-neutral-500">
+                          <span>Qty:</span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={itemQtyDrafts[skuKey] ?? String(item.quantity)}
+                            onChange={(e) => setItemQtyDrafts((d) => ({ ...d, [skuKey]: e.target.value }))}
+                            onKeyDown={(e) => e.key === "Enter" && saveItemQty(selectedOrder, idx)}
+                            title="Units to push to Unleashed/PickOps — total paid is preserved, unit price is adjusted"
+                            className="w-14 rounded border border-neutral-200 px-1.5 py-0.5 text-xs focus:border-emerald-400 focus:outline-none"
+                          />
+                          <span>× AU${Number(item.unitPrice || 0).toFixed(2)}</span>
+                          {Number(itemQtyDrafts[skuKey]) > 0 && Number(itemQtyDrafts[skuKey]) !== item.quantity && (
+                            <button
+                              type="button"
+                              onClick={() => saveItemQty(selectedOrder, idx)}
+                              disabled={savingItemQtyKey === skuKey}
+                              className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              {savingItemQtyKey === skuKey ? "…" : "Save"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="font-semibold text-sm text-neutral-900">AU${Number(item.lineTotal || 0).toFixed(2)}</p>
                     </div>
