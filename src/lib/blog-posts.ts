@@ -75,6 +75,8 @@ If your remote has multiple buttons (2-button or 4-button models), repeat Step 3
 ### Merlin E960M / E970M (433MHz, 4-Button)
 These are the most common Merlin remotes in Australia. They operate on 433MHz and use a rolling code system. The pairing process is the same as above — press Learn, then press the remote button.
 
+Need a replacement? We stock the [Merlin E960M remote](/product/merlin-e960m-434mhz-4button-remote-ar-rcmp7-65549084-f09c-4f5f-bb44-4ed33127163d) and the [Merlin E970M remote](/product/merlin-e970m-434mhz-4button-remote-ar-rcmp11-1e6aff99-75f5-4aa9-b3f8-3484a4d78cb4) — both pre-tested and backed by our 12-month warranty.
+
 ### Merlin E964M (433MHz, 4-Button)
 Similar to the E960M but with a different button layout. Same programming process.
 
@@ -104,7 +106,7 @@ Newer motors may have a **wireless learn** feature. Check your motor's manual �
 
 If you're still having trouble, contact our support team at **shane@allremotes.com.au** — we can help you identify the right remote and walk you through programming over the phone.
 
-Browse our full range of [Merlin replacement remotes](/brands/Merlin) to find the right one for your motor.
+Browse our full range of [Merlin replacement remotes](/brands/Merlin) to find the right one for your motor — or go straight to the [E960M](/product/merlin-e960m-434mhz-4button-remote-ar-rcmp7-65549084-f09c-4f5f-bb44-4ed33127163d) and [E970M](/product/merlin-e970m-434mhz-4button-remote-ar-rcmp11-1e6aff99-75f5-4aa9-b3f8-3484a4d78cb4), the two models most Merlin owners need.
     `,
   },
   {
@@ -175,6 +177,8 @@ Each button can control a different door or function.
 ### ATA PTX4 (SecuraCode, 4-Button)
 The most popular ATA remote. Operates on 433.92MHz with rolling code. Programming is straightforward — Learn button on motor, then press remote button.
 
+We stock the [ATA PTX4 replacement remote](/product/ata-ptx4-434mhz-4button-remote-ar-rcg12p-2fb3ed04-7472-4dc7-9576-61fb63dd7877) with step-by-step instructions included.
+
 ### ATA PTX5 (TrioCode, 4-Button)
 The PTX5 uses **TrioCode** technology which operates on **three frequencies** (433.92MHz, 915MHz, and another) for improved reliability in areas with interference. The programming process is the same as PTX4.
 
@@ -207,7 +211,7 @@ If you've lost a remote and want to start fresh:
 
 ## Need Help?
 
-Contact us at **shane@allremotes.com.au** or browse our [ATA replacement remotes](/brands/ATA).
+Contact us at **shane@allremotes.com.au** or browse our [ATA replacement remotes](/brands/ATA) — including the popular [PTX4 replacement](/product/ata-ptx4-434mhz-4button-remote-ar-rcg12p-2fb3ed04-7472-4dc7-9576-61fb63dd7877).
 
 ## Safety Note
 
@@ -308,7 +312,7 @@ If you've tried all the above and the remote still doesn't work, it may be dead.
 - Remote is physically damaged (cracked case, water damage)
 - Remote is more than 5-7 years old (electronics degrade over time)
 
-The good news: replacement remotes are affordable ($25-45) and easy to program yourself.
+The good news: replacement remotes are affordable ($25-45) and easy to program yourself. Popular direct replacements include the [Merlin E960M](/product/merlin-e960m-434mhz-4button-remote-ar-rcmp7-65549084-f09c-4f5f-bb44-4ed33127163d) and the [ATA PTX4](/product/ata-ptx4-434mhz-4button-remote-ar-rcg12p-2fb3ed04-7472-4dc7-9576-61fb63dd7877).
 
 Browse our full range of [replacement garage door remotes](/products/garage) — we stock compatible replacements for [Merlin](/brands/Merlin), [ATA](/brands/ATA), [B&D](/brands/B%26D), [Chamberlain](/brands/Chamberlain), [Gliderol](/brands/Gliderol) and more.
 

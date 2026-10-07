@@ -1,10 +1,16 @@
 import React from "react";
 import Link from "next/link";
 import type { LocationPage } from "@/lib/location-pages";
-import { buildLocationJsonLd } from "@/lib/location-pages";
+import {
+  buildLocationJsonLd,
+  getLocationDeliveryDays,
+  getLocationLocalNote,
+} from "@/lib/location-pages";
 
 export function LocationPageView({ page }: { page: LocationPage }) {
   const jsonLd = buildLocationJsonLd(page);
+  const deliveryDays = getLocationDeliveryDays(page);
+  const localNote = getLocationLocalNote(page);
 
   return (
     <>
@@ -51,8 +57,13 @@ export function LocationPageView({ page }: { page: LocationPage }) {
                     and more.
                   </p>
                   <p>
-                    Based in Yarra Glen, Victoria, we dispatch orders placed before 2pm AEST the same business day. Standard delivery to {page.city} metro typically takes 2-5 business days. Express shipping is available at checkout for urgent orders.
+                    Based in Yarra Glen, Victoria, we dispatch orders placed before 2pm AEST the same business day. Standard delivery to {page.city} metro typically takes {deliveryDays}. Express shipping is available at checkout for urgent orders.
                   </p>
+                  {localNote && (
+                    <p>
+                      {localNote}
+                    </p>
+                  )}
                 </div>
               </div>
 

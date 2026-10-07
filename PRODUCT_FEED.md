@@ -75,7 +75,7 @@ The return policy is automatically included in all product listings.
 
 ## Data Source
 
-The feed is automatically generated from the products stored in `products.json`. When you update products via the admin panel, the feed will reflect those changes.
+The feed is generated at request time from the live product catalog in **MongoDB** (via `src/app/api/feed/products/route.ts`, which uses `getPublicProducts()`). When you update products via the admin panel or a product-import script, the feed reflects those changes on the next request — no rebuild needed. (`products.json` in the repo root is a small dev mock, not the live catalog.)
 
 ## Caching
 
@@ -120,7 +120,7 @@ To modify the feed, edit `src/app/api/feed/products/route.ts`:
 ## Troubleshooting
 
 ### Feed not updating
-- Check if products.json has been updated
+- Check that products were actually saved to MongoDB (products via the admin panel or import scripts write to Mongo)
 - Clear the cache by waiting 1 hour or redeploying
 - Check browser/network caching
 
