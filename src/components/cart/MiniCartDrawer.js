@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { generateProductSlugUrl } from "../../lib/product-slugs";
 import ProductImage from "../images/ProductImage";
@@ -46,7 +47,9 @@ const MiniCartDrawer = ({ open, onClose }) => {
   const getProductHref = (item) =>
     generateProductSlugUrl(String(item.id), String(item.name || ""), item.sku || item.rk_sku);
 
-  return (
+  // Portal to body — the sticky header uses backdrop-blur, which would trap
+  // position:fixed descendants inside the header box.
+  return createPortal(
     <div
       className="fixed inset-0 z-[1600] bg-black/40 backdrop-blur-sm"
       onClick={onClose}
@@ -175,7 +178,8 @@ const MiniCartDrawer = ({ open, onClose }) => {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
