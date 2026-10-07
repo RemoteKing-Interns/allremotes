@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         </tr>
       </table>
 
-      ${emailCta(`${siteUrl}/checkout`, 'Complete Your Order')}
+      ${emailCta(`${siteUrl}/checkout?guest=1`, 'Complete Your Order')}
 
       <p style="text-align:center;font-size:13px;color:#6b7280;">
         This discount is exclusive to you — complete your purchase before it expires!
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       
       Total: AU$${cartTotal.toFixed(2)}
       
-      Complete your order now: ${siteUrl}/checkout
+      Complete your order now: ${siteUrl}/checkout?guest=1
       
       This discount is exclusive to you and can only be used once.
       

@@ -1,0 +1,30 @@
+name: Abandoned cart recovery
+
+# Daily trigger. 08:00 UTC = 6pm AEST / 7pm AEDT — evening in every
+# Australian timezone, the best open-rate window for retail email.
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to cron endpoint
+        env:
+          SITE_URL: "https://www.allremotes.com.au"
+          CRON_SECRET: ${{ secrets.ABANDONED_CART_CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ABANDONED_CART_CRON_SECRET not set — add it to repo secrets, skipping."
+            exit 0
+          fi
+          http_code=$(curl -s -o response.json -w "%{http_code}" -X POST \
+            "$SITE_URL/api/cron/abandoned-carts" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{"discountPercent": 10, "hours": 24}')
+          echo "HTTP $http_code"
+          cat response.json
+          if [ "$http_code" != "200" ]; then exit 1; fi
