@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Flame,
+  Clock,
 } from "lucide-react";
 import {
   getPriceBreakdown,
@@ -531,6 +532,12 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
                 <RotateCcw size={17} className="shrink-0 text-primary" />
                 <span><span className="font-semibold text-neutral-900">30-day returns</span> if it's not right for your door</span>
               </div>
+              {process.env.NEXT_PUBLIC_AFTERPAY_ENABLED === "1" && (
+                <div className="flex items-center gap-2.5">
+                  <Clock size={17} className="shrink-0 text-primary" />
+                  <span><span className="font-semibold text-neutral-900">Pay in 4</span> — interest-free instalments with Afterpay at checkout</span>
+                </div>
+              )}
               <div className="mt-1 flex items-center justify-between gap-3 border-t border-neutral-100 pt-3">
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Secure checkout</span>
                 <div className="flex items-center gap-1.5">

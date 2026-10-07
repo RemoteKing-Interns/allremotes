@@ -16,6 +16,32 @@ function getStripeClient() {
   return new Stripe(stripeSecretKey);
 }
 
+// Extra payment methods (BNPL etc.) enabled via STRIPE_PAYMENT_METHODS, e.g.
+// "card,afterpay_clearpay" or "card,zip". Only recognised methods pass
+// through — anything unrecognised is dropped, and the list always falls back
+// to card. Methods must also be activated on the Stripe account, otherwise
+// session creation would fail at checkout.
+const RECOGNISED_PAYMENT_METHODS = new Set([
+  'card',
+  'afterpay_clearpay',
+  'zip',
+  'klarna',
+  'link',
+]);
+
+function getConfiguredPaymentMethodTypes() {
+  const configured = String(process.env.STRIPE_PAYMENT_METHODS || 'card')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const allowed = configured.filter((m) => RECOGNISED_PAYMENT_METHODS.has(m));
+  const unknown = configured.filter((m) => !RECOGNISED_PAYMENT_METHODS.has(m));
+  if (unknown.length > 0) {
+    console.warn('STRIPE_PAYMENT_METHODS contained unknown methods, ignoring them:', unknown);
+  }
+  return allowed.length > 0 ? allowed : ['card'];
+}
+
 export async function POST(request) {
   try {
     const stripe = getStripeClient();
@@ -135,7 +161,7 @@ export async function POST(request) {
     
     // Create checkout session with fraud protection
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: getConfiguredPaymentMethodTypes(),
       payment_method_options: {
         card: {
           request_three_d_secure: isHighValueOrder ? 'always' : 'automatic',

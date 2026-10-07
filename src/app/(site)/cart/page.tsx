@@ -346,6 +346,12 @@ const Cart = () => {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>
                 Secure checkout — Visa, Mastercard, Amex, Apple &amp; Google Pay
               </li>
+              {process.env.NEXT_PUBLIC_AFTERPAY_ENABLED === "1" && (
+                <li className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>
+                  Pay in 4 interest-free instalments with Afterpay
+                </li>
+              )}
             </ul>
             <button
               onClick={clearCart}

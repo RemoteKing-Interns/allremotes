@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, Shield, CreditCard, Wallet, Globe } from "lucide-react";
+import { ArrowLeft, Shield, CreditCard, Wallet, Globe, Clock } from "lucide-react";
+
+// Keep in sync with STRIPE_PAYMENT_METHODS in create-checkout-session —
+// this section only advertises BNPL when the checkout actually offers it.
+const configuredPaymentMethods = String(process.env.STRIPE_PAYMENT_METHODS || "card").split(",");
+const BNPL_METHODS = [
+  { id: "afterpay_clearpay", name: "Afterpay" },
+  { id: "zip", name: "Zip" },
+].filter((m) => configuredPaymentMethods.includes(m.id));
 
 export default function PaymentOptionsPage() {
   return (
@@ -46,6 +54,27 @@ export default function PaymentOptionsPage() {
                 American Express and JCB are accepted subject to separate card scheme agreements.
               </p>
             </section>
+
+            {BNPL_METHODS.length > 0 && (
+              <section className="rounded-2xl border border-pink-200 bg-pink-50 p-6 sm:p-8 lg:col-span-2">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-pink-700">
+                  <Clock size={24} />
+                </div>
+                <h2 className="text-xl font-bold text-pink-900">
+                  Buy Now, Pay Later — {BNPL_METHODS.map((m) => m.name).join(" & ")}
+                </h2>
+                <p className="mt-3 text-pink-800">
+                  Split your purchase into 4 interest-free instalments with{" "}
+                  {BNPL_METHODS.map((m) => m.name).join(" or ")} at checkout. Eligibility and
+                  instalment limits apply; {BNPL_METHODS.map((m) => m.name).join("/")} will show
+                  automatically when your order qualifies.
+                </p>
+                <p className="mt-4 text-sm text-pink-700">
+                  Approved customers only. Late fees and terms are set by{" "}
+                  {BNPL_METHODS.map((m) => m.name).join(" & ")} — see their websites for details.
+                </p>
+              </section>
+            )}
 
             <section className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
