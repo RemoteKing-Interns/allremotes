@@ -79,8 +79,9 @@ const Checkout = () => {
 
   const normalizedAddressQuery = useMemo(() => formData.address.trim(), [formData.address]);
 
-  const validateCoupon = async () => {
-    if (!couponCode.trim()) {
+  const validateCoupon = async (codeArg) => {
+    const code = String(codeArg ?? couponCode).trim();
+    if (!code) {
       setCouponError('Please enter a coupon code');
       return;
     }
@@ -90,7 +91,7 @@ const Checkout = () => {
 
     try {
       const params = new URLSearchParams();
-      params.append('code', couponCode.trim());
+      params.append('code', code);
       const couponEmail = user?.email || formData.email.trim();
       if (couponEmail) params.append('customerEmail', couponEmail);
       if (user?.id) params.append('customerUserId', user.id);
@@ -101,6 +102,7 @@ const Checkout = () => {
       if (!resp.ok || !data?.valid) {
         setCouponError(data?.error || 'Invalid coupon code');
         setCouponDiscount(0);
+        localStorage.removeItem('allremotes_applied_coupon');
         return;
       }
 
@@ -117,6 +119,16 @@ const Checkout = () => {
       setValidatingCoupon(false);
     }
   };
+
+  // Prefill a coupon applied on the cart page so customers don't re-enter it.
+  useEffect(() => {
+    const saved = localStorage.getItem('allremotes_applied_coupon');
+    if (saved) {
+      setCouponCode(saved);
+      validateCoupon(saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const finalTotal = discountedTotal + shippingCost - couponDiscount;
 

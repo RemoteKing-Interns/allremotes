@@ -61,6 +61,7 @@ const OrderSuccessContent = () => {
               throw new Error(data?.error || 'Failed to create order');
             }
             sessionStorage.removeItem(`pendingOrder_${sessionId}`);
+            localStorage.removeItem('allremotes_applied_coupon');
             setOrderDetails({ paymentMethod: 'stripe', sessionId, status: 'succeeded', orderId: data?.id });
             if (data?.id) {
               trackPurchase(

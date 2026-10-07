@@ -31,10 +31,60 @@ const Cart = () => {
   const { getProducts } = useStore();
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponState, setCouponState] = useState({ status: "idle", message: "" });
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
   const isModalOpen = Boolean(selectedItem);
   const isAnyModalOpen = isModalOpen || showCheckoutModal;
   const totalItems = cart.reduce((count, item) => count + Number(item.quantity || 0), 0);
   const autoAddDone = useRef(false);
+
+  const applyCoupon = async (codeArg?: string) => {
+    const code = String(codeArg ?? couponCode).trim();
+    if (!code) {
+      setCouponState({ status: "invalid", message: "Please enter a coupon code" });
+      return;
+    }
+    setValidatingCoupon(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("code", code);
+      if (user?.email) params.append("customerEmail", user.email);
+      if (user?.id) params.append("customerUserId", user.id);
+      const resp = await fetch(`/api/coupons?${params.toString()}`, { cache: "no-store" });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.valid) {
+        localStorage.removeItem("allremotes_applied_coupon");
+        setCouponState({ status: "invalid", message: data?.error || "Invalid coupon code" });
+      } else {
+        localStorage.setItem("allremotes_applied_coupon", code.toUpperCase());
+        const discountLabel = data.coupon?.discountPercent
+          ? `${data.coupon.discountPercent}% off`
+          : `AU$${Number(data.coupon.discountAmount || 0).toFixed(2)} off`;
+        setCouponState({ status: "valid", message: `${code.toUpperCase()} applied — ${discountLabel} at checkout` });
+      }
+    } catch {
+      setCouponState({ status: "invalid", message: "Failed to validate coupon" });
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    localStorage.removeItem("allremotes_applied_coupon");
+    setCouponCode("");
+    setCouponState({ status: "idle", message: "" });
+  };
+
+  // Prefill a coupon applied earlier (e.g. from the mini-cart or a previous visit)
+  useEffect(() => {
+    const saved = localStorage.getItem("allremotes_applied_coupon");
+    if (saved) {
+      setCouponCode(saved);
+      applyCoupon(saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (autoAddDone.current) return;
@@ -333,6 +383,45 @@ const Cart = () => {
             >
               Proceed to Checkout
             </button>
+            <div className="mt-4 grid gap-2 border-t border-neutral-100 pt-4">
+              <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500" htmlFor="cart-coupon">
+                Discount code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="cart-coupon"
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value);
+                    setCouponState({ status: "idle", message: "" });
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }}
+                  placeholder="Enter code"
+                  className="h-10 flex-1 rounded-xl border border-neutral-300 bg-white px-3 text-sm uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => applyCoupon()}
+                  disabled={validatingCoupon || !couponCode.trim()}
+                  className="h-10 rounded-xl bg-neutral-900 px-4 text-sm font-extrabold text-white hover:bg-neutral-700 disabled:opacity-50"
+                >
+                  {validatingCoupon ? "Checking..." : "Apply"}
+                </button>
+              </div>
+              {couponState.message && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className={`text-xs font-semibold ${couponState.status === "valid" ? "text-emerald-700" : "text-red-600"}`}>
+                    {couponState.message}
+                  </p>
+                  {couponState.status === "valid" && (
+                    <button type="button" onClick={removeCoupon} className="text-xs text-neutral-500 underline hover:text-neutral-800">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <ul className="mt-4 grid gap-1.5 text-xs text-neutral-600">
               <li className="flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>

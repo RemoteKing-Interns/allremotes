@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { generateProductSlugUrl } from "../../lib/product-slugs";
 import ProductImage from "../images/ProductImage";
+import MiniCartDrawer from "../cart/MiniCartDrawer";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
 
@@ -62,9 +63,11 @@ const MainHeaderBar = ({
   openDrawer,
 }) => {
   const hasDiscount = isDiscountEligible(user);
+  const [miniCartOpen, setMiniCartOpen] = React.useState(false);
 
   return (
     <div>
+      <MiniCartDrawer open={miniCartOpen} onClose={() => setMiniCartOpen(false)} />
       <div className="container">
         <div className="flex flex-wrap items-center gap-3 py-3.5 sm:gap-4 md:gap-6 md:py-4">
           <Link href="/" className="shrink-0" aria-label="ALLREMOTES home">
@@ -331,10 +334,11 @@ const MainHeaderBar = ({
               </>
             )}
 
-            <Link
-              href="/cart"
+            <button
+              type="button"
               className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white/80 text-neutral-800 shadow-sm transition hover:bg-neutral-100"
               aria-label="Cart"
+              onClick={() => setMiniCartOpen(true)}
             >
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M6 6h15l-1.5 9h-13L6 6Z" />
@@ -347,7 +351,7 @@ const MainHeaderBar = ({
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </button>
 
             <button
               ref={hamburgerRef}
