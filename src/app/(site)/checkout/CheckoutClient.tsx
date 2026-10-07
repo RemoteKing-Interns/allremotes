@@ -10,6 +10,7 @@ import StripeCheckoutButton from "../../../components/StripeCheckoutButton";
 import ShippingCalculator from "../../../components/ShippingCalculator";
 import OrderSuccessAnimation from "../../../components/checkout/OrderSuccessAnimation";
 import { trackBeginCheckout, trackPurchase } from "../../../lib/gtag";
+import { belowMinCartValue, MIN_CART_SUBTOTAL } from "../../../lib/cartRules";
 
 const Checkout = () => {
   const {
@@ -63,6 +64,10 @@ const Checkout = () => {
   const originalTotal = getCartOriginalTotal();
   const discountTotal = getCartDiscountTotal();
   const discountedTotal = getCartTotal();
+  const belowMin = belowMinCartValue(
+    cart.map((item) => getItemPriceBreakdown(item).finalPrice),
+    discountedTotal,
+  );
 
   const shouldRedirectToCart = cartHydrated && cart.length === 0 && !orderPlaced;
 
@@ -352,6 +357,10 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setPlaceError("");
+    if (belowMin) {
+      setPlaceError(`Items under AU$${MIN_CART_SUBTOTAL} can only be purchased when the cart total reaches AU$${MIN_CART_SUBTOTAL}.`);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -834,10 +843,17 @@ const Checkout = () => {
                 </div>
               </div>
 
+              {belowMin && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs font-semibold leading-5 text-amber-800">
+                  Items under AU${MIN_CART_SUBTOTAL} can only be purchased when the cart
+                  total reaches AU${MIN_CART_SUBTOTAL}. Add AU$
+                  {(MIN_CART_SUBTOTAL - discountedTotal).toFixed(2)} more to check out.
+                </div>
+              )}
               <button
                 type="submit"
                 className="btn btn-primary btn-large place-order-btn mt-4"
-                disabled={loading}
+                disabled={loading || belowMin}
               >
                 {loading ? (
                   <>

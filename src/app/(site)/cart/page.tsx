@@ -7,6 +7,7 @@ import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
 import { generateProductSlugUrl } from "../../../lib/product-slugs";
+import { belowMinCartValue, MIN_CART_SUBTOTAL } from "../../../lib/cartRules";
 
 const Cart = () => {
   const {
@@ -132,6 +133,10 @@ const Cart = () => {
   const originalTotal = getCartOriginalTotal();
   const discountedTotal = getCartTotal();
   const discountTotal = getCartDiscountTotal();
+  const belowMin = belowMinCartValue(
+    cart.map((item) => getItemPriceBreakdown(item).finalPrice),
+    discountedTotal,
+  );
 
   return (
     <div className="animate-fadeIn">
@@ -314,9 +319,17 @@ const Cart = () => {
               </div>
             </div>
 
+            {belowMin && (
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs font-semibold leading-5 text-amber-800">
+                Items under AU${MIN_CART_SUBTOTAL} can only be purchased when the cart
+                total reaches AU${MIN_CART_SUBTOTAL}. Add AU$
+                {(MIN_CART_SUBTOTAL - discountedTotal).toFixed(2)} more to check out.
+              </div>
+            )}
             <button
               onClick={handleCheckout}
-              className="mt-6 w-full rounded-full bg-primary px-6 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark"
+              disabled={belowMin}
+              className="mt-6 w-full rounded-full bg-primary px-6 py-4 text-base font-extrabold text-white shadow-soft hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               Proceed to Checkout
             </button>

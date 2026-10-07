@@ -4,6 +4,7 @@ import FraudDetection from '../../../../lib/fraudDetection';
 import { getDb, mongoEnabled } from '../../../../lib/mongo';
 import { emailHash } from '../../../../lib/pii-crypto';
 import { stashPendingOrder } from '../../../../lib/pending-order-store';
+import { belowMinCartValue, MIN_CART_SUBTOTAL } from '../../../../lib/cartRules';
 
 const fraudDetection = new FraudDetection();
 
@@ -56,6 +57,13 @@ export async function POST(request) {
 
     // Order validation and fraud checks
     const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    if (belowMinCartValue(items.map((i) => Number(i.price || 0)), totalAmount)) {
+      return NextResponse.json(
+        { error: `Items under $${MIN_CART_SUBTOTAL} can only be purchased when the cart total reaches $${MIN_CART_SUBTOTAL}` },
+        { status: 400 }
+      );
+    }
 
     // Server-side coupon validation — never trust the client's discount.
     // An assigned/invalid coupon fails the checkout rather than charging full price.
