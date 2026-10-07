@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { pushAllToPickops } from "@/lib/pickops";
 import { createUnleashedSkuMap, getUnleashedProductCode, normalizeUnleashedSku } from "@/lib/unleashedSku";
 
 const UNLEASHED_BASE = "https://api.unleashedsoftware.com";
@@ -46,24 +45,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { groupLabel, selectedOrderIds, items: rawItems, perOrder: rawPerOrder, pushTargets } = body as {
+  const { groupLabel, selectedOrderIds, items: rawItems } = body as {
     groupLabel: string;
     selectedOrderIds: string[];
     items: { id: string; name: string; sku: string; rk_sku?: string; quantity: number; unitPrice?: number }[];
-    perOrder?: { orderId: string; customerName: string; items: { name: string; sku: string; rk_sku: string; quantity: number; unitPrice: number }[] }[];
-    pushTargets?: { unleashed?: boolean; pickops?: boolean };
   };
   let items = rawItems;
-  let perOrder = rawPerOrder || [];
-  const pushUnleashed = pushTargets?.unleashed !== false;
-  const pushPickops = pushTargets?.pickops !== false;
 
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "No items to push" }, { status: 400 });
   }
 
   // For items missing rk_sku or unitPrice, look them up from the products collection
-  const allItems = [...items, ...perOrder.flatMap((o: any) => o.items || [])];
+  const allItems = items;
   const needsLookup = allItems.some((i) => (!i.rk_sku && i.sku) || !i.unitPrice);
   if (needsLookup && mongoEnabled()) {
     try {
@@ -85,8 +79,6 @@ export async function POST(request: Request) {
         };
       };
       items = items.map(enrichItem);
-      // Enrich perOrder items with the same productMap
-      perOrder = perOrder.map((o) => ({ ...o, items: o.items.map(enrichItem) }));
     } catch {
       // Non-fatal — fall back to existing values
     }
@@ -177,7 +169,6 @@ export async function POST(request: Request) {
   let orderNumber = "";
   let orderUrl = "";
 
-  if (pushUnleashed) {
     const endpoint = `/SalesOrders/${orderGuid}`;
     const url = `${UNLEASHED_BASE}${endpoint}`;
 
@@ -219,7 +210,6 @@ export async function POST(request: Request) {
     orderUrl = orderNumber
       ? `https://app.unleashedsoftware.com/SalesOrders?searchString=${encodeURIComponent(orderNumber)}`
       : "";
-  }
 
   // Persist Unleashed data directly to MongoDB so it survives page refreshes
   if (mongoEnabled()) {
@@ -240,18 +230,6 @@ export async function POST(request: Request) {
       // Non-fatal — data already returned to client
     }
   }
-
-  // Push to PickOps warehouseOrders — one doc per individual order (non-fatal)
-  if (pushPickops) pushAllToPickops({
-    unleashedOrderNumber: orderNumber,
-    groupLabel,
-    perOrder,
-    customerCode,
-    customerName,
-    warehouseCode,
-    warehouseName: process.env.UNLEASHED_WAREHOUSE_NAME || "Remote King Warehouse",
-    orderDate: now.toISOString(),
-  }).catch((err) => console.error("[PickOps] push error:", err?.message));
 
   return NextResponse.json({ success: true, orderNumber, orderUrl, orderGuid });
 }

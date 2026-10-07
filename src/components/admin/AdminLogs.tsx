@@ -147,7 +147,7 @@ function getActionIcon(action: string) {
   if (action.includes("order")) return <ShoppingCart className="h-4 w-4 text-blue-500" />;
   if (action.includes("product")) return <Package className="h-4 w-4 text-violet-500" />;
   if (action.includes("setting")) return <Settings className="h-4 w-4 text-neutral-500" />;
-  if (action.includes("unleashed") || action.includes("pickops")) return <Zap className="h-4 w-4 text-amber-500" />;
+  if (action.includes("unleashed")) return <Zap className="h-4 w-4 text-amber-500" />;
   return <ArrowRight className="h-4 w-4 text-neutral-400" />;
 }
 

@@ -940,7 +940,7 @@ type UnleashedPushState = {
   // orderIds that have been pushed for this group label
   pushedOrderIds: string[];
   // Push targets per order ID
-  pushTargets: Record<string, { unleashed: boolean; pickops: boolean; starshipit?: boolean }>;
+  pushTargets: Record<string, { unleashed: boolean; starshipit?: boolean }>;
   // Unleashed order number returned after push (populated later)
   unleashedOrderNumber?: string;
   unleashedOrderUrl?: string;
@@ -1055,8 +1055,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   // ── Unleashed: push state per group label (persists pushed badge + order number)
   const [unleashedPushState, setUnleashedPushState] = useState<Record<string, UnleashedPushState>>({});
 
-  // ── PickOps: status per order ID (fetched from PickOps MongoDB)
-  const [pickopsStatus, setPickopsStatus] = useState<Record<string, { status: string; lastUpdatedAt: string | null }>>({});
+
 
   // ── Unleashed modal state
   const [unleashedModal, setUnleashedModal] = useState<{
@@ -1492,7 +1491,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         const groupResult = getDateGroup(order.createdAt || order.updatedAt || "");
         const groupLabel = typeof groupResult === "string" ? groupResult : (groupResult as any)?.label ?? String(groupResult);
 
-        if (order.unleashedOrderNumber || order.pickopsPushedAt || order.starshipitPushedAt || order.starshipitOrderId) {
+        if (order.unleashedOrderNumber || order.starshipitPushedAt || order.starshipitOrderId) {
           if (!rebuilt[groupLabel] || !rebuilt[groupLabel].unleashedOrderNumber) {
             rebuilt[groupLabel] = {
               pushedOrderIds: [],
@@ -1507,7 +1506,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           // Store push targets for this order
           rebuilt[groupLabel].pushTargets[order.id] = {
             unleashed: order.unleashedOrderNumber ? true : false,
-            pickops: order.pickopsPushedAt ? true : false,
             starshipit: order.starshipitPushedAt || order.starshipitOrderId ? true : false,
           };
         }
@@ -1529,23 +1527,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         setAllGroupStock((prev) => ({ ...rebuiltStock, ...prev }));
       }
 
-      // Fetch PickOps status for all orders
-      const orderIds = loaded.map((o) => o.id);
-      if (orderIds.length > 0) {
-        try {
-          const pickopsResp = await fetch("/api/admin/pickops-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderIds }),
-          });
-          if (pickopsResp.ok) {
-            const pickopsData = await pickopsResp.json();
-            setPickopsStatus(pickopsData.statusMap || {});
-          }
-        } catch {
-          // Non-fatal — PickOps status is optional
-        }
-      }
     } catch (err: any) {
       setOrders([]);
       setError(err?.message || "Failed to load orders");
@@ -1990,29 +1971,13 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
   };
 
   const [unleashedError, setUnleashedError] = useState<string>("");
-  const [pushTargets, setPushTargets] = useState<{ unleashed: boolean; pickops: boolean }>({ unleashed: true, pickops: true });
 
   const handlePushToUnleashed = async () => {
     if (!unleashedModal) return;
-    if (!pushTargets.unleashed && !pushTargets.pickops) return;
     setPushingToUnleashed(true);
     setUnleashedError("");
 
     const { groupLabel, selectedOrderIds } = unleashedModal;
-
-    // Build per-order breakdown for PickOps (individual docs per order)
-    const selectedOrders = orders.filter((o: any) => selectedOrderIds.includes(o.id));
-    const perOrder = selectedOrders.map((o: any) => ({
-      orderId: o.id,
-      customerName: o.customerName || o.customer?.name || "",
-      items: (o.items || []).map((item: any) => ({
-        name: item.name || "",
-        sku: getOrderSkuForUnleashed(item.sku, item.externalId, o.channel),
-        rk_sku: item.rk_sku || "",
-        quantity: Number(item.quantity || 1),
-        unitPrice: Number(item.unitPrice || item.price || 0),
-      })),
-    }));
 
     try {
       const resp = await fetch("/api/unleashed/sales-order", {
@@ -2022,8 +1987,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
           groupLabel,
           selectedOrderIds,
           items: modalItems,
-          perOrder,
-          pushTargets,
         }),
       });
       const data = await resp.json().catch(() => null);
@@ -2040,12 +2003,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         const merged = Array.from(new Set([...existing.pushedOrderIds, ...selectedOrderIds]));
         
         // Build push targets for each selected order
-        const newPushTargets: Record<string, { unleashed: boolean; pickops: boolean }> = {};
+        const newPushTargets: Record<string, { unleashed: boolean }> = {};
         selectedOrderIds.forEach(orderId => {
-          newPushTargets[orderId] = {
-            unleashed: pushTargets.unleashed,
-            pickops: pushTargets.pickops,
-          };
+          newPushTargets[orderId] = { unleashed: true };
         });
         
         return {
@@ -2073,7 +2033,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
         orderIds: selectedOrderIds,
         orderCount: selectedOrderIds.length,
         groupLabel,
-        targets: [pushTargets.unleashed && 'Unleashed', pushTargets.pickops && 'PickOps'].filter(Boolean).join(' + '),
+        targets: 'Unleashed',
         unleashedOrderNumber: data?.orderNumber || null,
       });
       setUnleashedModal(null);
@@ -2081,7 +2041,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
       activityLogger.error("orders_push_failed", {
         orderIds: selectedOrderIds,
         groupLabel,
-        targets: [pushTargets.unleashed && 'Unleashed', pushTargets.pickops && 'PickOps'].filter(Boolean).join(' + '),
+        targets: 'Unleashed',
         error: err?.message,
       });
       setUnleashedError(err?.message || "Unexpected error pushing to Unleashed");
@@ -2373,7 +2333,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             setUnleashedPushState((prev) => {
                               const existing = prev[groupLabel] || { pushedOrderIds: [], pushTargets: {} };
                               const merged = Array.from(new Set([...existing.pushedOrderIds, orderId]));
-                              const targets = existing.pushTargets[orderId] || { unleashed: false, pickops: false };
+                              const targets = existing.pushTargets[orderId] || { unleashed: false };
                               return {
                                 ...prev,
                                 [groupLabel]: {
@@ -2568,7 +2528,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         <th className="px-4 py-4 font-semibold text-center">Items</th>
                         <th className="px-4 py-4 font-semibold text-right">Total</th>
                         <th className="px-4 py-4 font-semibold text-center">Pushed</th>
-                        <th className="px-4 py-4 font-semibold text-center">PickOps</th>
                         <th className="px-4 py-4 font-semibold text-center">Status</th>
                       </tr>
                     </thead>
@@ -2644,7 +2603,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
                                 const labels = [];
                                 if (targets.unleashed) labels.push("Unleashed");
-                                if (targets.pickops) labels.push("PickOps");
                                 if (targets.starshipit) labels.push("Starshipit");
                                 if (labels.length === 0) {
                                   return <span className="text-xs text-neutral-300">—</span>;
@@ -2654,31 +2612,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                                   <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
                                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                     {labels.join(" + ")}
-                                  </span>
-                                );
-                              })()}
-                            </td>
-                            {/* PickOps status */}
-                            <td className="px-4 py-4 text-center">
-                              {(() => {
-                                const pickops = pickopsStatus[o.id];
-                                if (!pickops) {
-                                  return <span className="text-xs text-neutral-300">—</span>;
-                                }
-                                const statusColor = {
-                                  pending: "bg-amber-100 text-amber-700",
-                                  picked: "bg-blue-100 text-blue-700",
-                                  packed: "bg-indigo-100 text-indigo-700",
-                                  shipped: "bg-purple-100 text-purple-700",
-                                  completed: "bg-emerald-100 text-emerald-700",
-                                  cancelled: "bg-rose-100 text-rose-700",
-                                  backordered: "bg-orange-100 text-orange-700",
-                                  "Release to Pick": "bg-cyan-100 text-cyan-700",
-                                  "Backordered": "bg-orange-100 text-orange-700",
-                                }[pickops.status] || "bg-neutral-100 text-neutral-700";
-                                return (
-                                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColor}`}>
-                                    {pickops.status}
                                   </span>
                                 );
                               })()}
@@ -2835,36 +2768,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   {unleashedError}
                 </div>
               )}
-              {/* Push targets */}
-              <div className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5">
-                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Push to:</span>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={pushTargets.unleashed}
-                    onChange={(e) => {
-                      const next = { ...pushTargets, unleashed: e.target.checked };
-                      if (!next.unleashed && !next.pickops) return; // at least one must stay checked
-                      setPushTargets(next);
-                    }}
-                    className="h-4 w-4 rounded border-neutral-300 accent-violet-600"
-                  />
-                  <span className="text-sm font-semibold text-neutral-700">Unleashed</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={pushTargets.pickops}
-                    onChange={(e) => {
-                      const next = { ...pushTargets, pickops: e.target.checked };
-                      if (!next.unleashed && !next.pickops) return; // at least one must stay checked
-                      setPushTargets(next);
-                    }}
-                    className="h-4 w-4 rounded border-neutral-300 accent-violet-600"
-                  />
-                  <span className="text-sm font-semibold text-neutral-700">PickOps</span>
-                </label>
-              </div>
               <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -2877,7 +2780,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
               <button
                 type="button"
                 onClick={handlePushToUnleashed}
-                disabled={pushingToUnleashed || modalItems.length === 0 || (!pushTargets.unleashed && !pushTargets.pickops)}
+                disabled={pushingToUnleashed || modalItems.length === 0}
                 className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {pushingToUnleashed ? (
@@ -2888,7 +2791,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 ) : (
                   <>
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                    Push{pushTargets.unleashed && pushTargets.pickops ? " to Unleashed + PickOps" : pushTargets.unleashed ? " to Unleashed" : " to PickOps"}
+                    Push to Unleashed
                   </>
                 )}
               </button>
@@ -3204,35 +3107,6 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                   )}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">PickOps</p>
-                  {(() => {
-                    const pickops = pickopsStatus[selectedOrder.id];
-                    if (!pickops) {
-                      return <span className="text-xs text-neutral-400">Not in PickOps</span>;
-                    }
-                    const statusColor = {
-                      pending: "bg-amber-100 text-amber-700",
-                      picked: "bg-blue-100 text-blue-700",
-                      packed: "bg-indigo-100 text-indigo-700",
-                      shipped: "bg-purple-100 text-purple-700",
-                      completed: "bg-emerald-100 text-emerald-700",
-                      cancelled: "bg-rose-100 text-rose-700",
-                    }[pickops.status] || "bg-neutral-100 text-neutral-700";
-                    return (
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${statusColor}`}>
-                          {pickops.status}
-                        </span>
-                        {pickops.lastUpdatedAt && (
-                          <span className="text-[10px] text-neutral-400">
-                            Updated {new Date(pickops.lastUpdatedAt).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Starshipit</p>
                   {selectedOrder.starshipitPushedAt || selectedOrder.starshipitOrderId ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
@@ -3400,7 +3274,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                             value={itemQtyDrafts[skuKey] ?? String(item.quantity)}
                             onChange={(e) => setItemQtyDrafts((d) => ({ ...d, [skuKey]: e.target.value }))}
                             onKeyDown={(e) => e.key === "Enter" && saveItemQty(selectedOrder, idx)}
-                            title="Units to push to Unleashed/PickOps — total paid is preserved, unit price is adjusted"
+                            title="Units to push to Unleashed — total paid is preserved, unit price is adjusted"
                             className="w-14 rounded border border-neutral-200 px-1.5 py-0.5 text-xs focus:border-emerald-400 focus:outline-none"
                           />
                           <span>× AU${Number(item.unitPrice || 0).toFixed(2)}</span>
@@ -3433,7 +3307,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 const ev = (label: string, at?: any, sub?: string) => (at ? { label, at, sub } : null);
                 const events = [
                   ev("Order received", selectedOrder?.createdAt),
-                  ev("Pushed to PickOps", selectedOrder?.pickopsPushedAt),
+
                   ev("Pushed to Starshipit", selectedOrder?.starshipitPushedAt,
                     selectedOrder?.starshipitOrderNumber ? `#${selectedOrder.starshipitOrderNumber}` : undefined),
                   ev(`Shipped${selectedOrder?.carrier ? ` — ${selectedOrder.carrier}` : ""}`, selectedOrder?.shippedAt,

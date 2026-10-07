@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { mongoEnabled, getDb } from "@/lib/mongo";
-import { pickopsMongoEnabled, getPickopsDb } from "@/lib/pickops-mongo";
 
 export const dynamic = "force-dynamic";
 
@@ -19,20 +18,6 @@ export async function GET() {
     }
   } else {
     results.allremotes_mongo = { ok: false, detail: "MONGODB_URI not set" };
-  }
-
-  // Test PickOps MongoDB
-  if (pickopsMongoEnabled()) {
-    try {
-      const db = await getPickopsDb();
-      await db.command({ ping: 1 });
-      const count = await db.collection("warehouseOrders").countDocuments();
-      results.pickops_mongo = { ok: true, detail: `Connected — ${count} warehouseOrders` };
-    } catch (err: any) {
-      results.pickops_mongo = { ok: false, detail: err?.message };
-    }
-  } else {
-    results.pickops_mongo = { ok: false, detail: "PICKOPS_MONGODB_URI not set" };
   }
 
   const allOk = Object.values(results).every((r) => r.ok);
