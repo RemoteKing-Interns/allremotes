@@ -7,6 +7,7 @@ import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
+import { getReturnUrl } from "../../../lib/return-url";
 import { Button } from "../../../components/ui/button";
 
 // Remove border and hover effects from Google Sign-In button
@@ -82,7 +83,7 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
       const result = await login(email, password);
 
       if (result.success) {
-        router.push("/");
+        router.push(getReturnUrl());
       } else {
         setError(result.error || "Failed to login");
         // Check if email is not verified
@@ -139,7 +140,7 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
       const result = await loginWithOAuth("google", googleUser);
 
       if (result.success) {
-        router.push("/");
+        router.push(getReturnUrl());
       } else {
         setError("Failed to login with Google");
       }
@@ -188,7 +189,7 @@ const Login = ({ googleEnabled }: { googleEnabled: boolean }) => {
       });
 
       if (result.success) {
-        router.push("/");
+        router.push(getReturnUrl());
       } else {
         setError("Failed to login with Apple");
       }

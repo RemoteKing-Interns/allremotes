@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
@@ -24,12 +24,10 @@ const Checkout = () => {
     getItemLineTotal,
     clearCart,
   } = useCart();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { getSettings } = useStore();
   const settings = getSettings();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isGuest = searchParams.get('guest') === '1';
   const geoapifyApiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
   const geoapifyCountryFilter = 'au';
   const [formData, setFormData] = useState({
@@ -66,7 +64,6 @@ const Checkout = () => {
   const discountTotal = getCartDiscountTotal();
   const discountedTotal = getCartTotal();
 
-  const shouldRedirectToLogin = !authLoading && !user && !isGuest;
   const shouldRedirectToCart = cartHydrated && cart.length === 0 && !orderPlaced;
 
   useEffect(() => {
@@ -188,10 +185,6 @@ const Checkout = () => {
   }, [geoapifyApiKey, geoapifyCountryFilter, normalizedAddressQuery]);
 
   useEffect(() => {
-    if (shouldRedirectToLogin) router.replace("/login");
-  }, [router, shouldRedirectToLogin]);
-
-  useEffect(() => {
     if (shouldRedirectToCart) router.replace("/cart");
   }, [router, shouldRedirectToCart]);
 
@@ -213,7 +206,7 @@ const Checkout = () => {
     }
   }, [user]);
 
-  if (shouldRedirectToLogin || shouldRedirectToCart) return null;
+  if (shouldRedirectToCart) return null;
 
   const handleChange = (e) => {
     if (e.target.name === 'address') {

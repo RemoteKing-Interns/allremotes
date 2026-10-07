@@ -503,7 +503,7 @@ const Cart = () => {
                   className="rounded-full border-2 border-emerald-500 bg-white px-6 py-3 text-sm font-extrabold text-emerald-700 shadow-xs hover:bg-emerald-50 transition"
                   onClick={() => {
                     setShowCheckoutModal(false);
-                    router.push("/login");
+                    router.push("/login?next=" + encodeURIComponent("/checkout"));
                   }}
                 >
                   Login & Save
@@ -524,7 +524,7 @@ const Cart = () => {
                 <button
                   type="button"
                   className="text-accent-dark hover:underline font-semibold"
-                  onClick={() => { setShowCheckoutModal(false); router.push("/login?signup=1"); }}
+                  onClick={() => { setShowCheckoutModal(false); router.push("/register?next=" + encodeURIComponent("/checkout")); }}
                 >
                   Create one free — it only takes a minute
                 </button>

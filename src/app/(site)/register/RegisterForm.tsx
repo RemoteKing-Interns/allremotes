@@ -6,6 +6,7 @@ import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getReturnUrl } from "../../../lib/return-url";
 import { useAuth } from "../../../context/AuthContext";
 import { Button } from "../../../components/ui/button";
 import { validatePassword, getPasswordStrengthColor, getPasswordStrengthLabel, getPasswordRequirements } from "../../../lib/password-policy";
@@ -195,7 +196,7 @@ const Register = ({ googleEnabled }: { googleEnabled: boolean }) => {
           setRegistrationSuccess(true);
           setRegisteredEmail(email);
         } else {
-          router.push("/");
+          router.push(getReturnUrl());
         }
       } else {
         setError(result.error || "Failed to register");
@@ -251,7 +252,7 @@ const Register = ({ googleEnabled }: { googleEnabled: boolean }) => {
       const result = await loginWithOAuth("google", googleUser);
 
       if (result.success) {
-        router.push("/");
+        router.push(getReturnUrl());
       } else {
         setError("Failed to register with Google");
       }
@@ -302,7 +303,7 @@ const Register = ({ googleEnabled }: { googleEnabled: boolean }) => {
       });
 
       if (result.success) {
-        router.push("/");
+        router.push(getReturnUrl());
       } else {
         setError("Failed to register with Apple");
       }
