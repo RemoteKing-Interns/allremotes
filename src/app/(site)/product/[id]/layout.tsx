@@ -1,6 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { getProductDetail } from "@/lib/product-detail";
+import { getProductReviewSummary } from "@/lib/product-reviews";
 import { getSiteUrl } from "@/lib/site-url";
 import { toAbsoluteImageUrl } from "@/lib/images";
 import { getCategoryPageTitle } from "@/lib/category";
@@ -72,7 +73,11 @@ export async function generateMetadata({
   };
 }
 
-function buildProductJsonLd(product: any, siteUrl: string) {
+function buildProductJsonLd(
+  product: any,
+  siteUrl: string,
+  reviewSummary?: { average: number | null; count: number }
+) {
   const id = String(product.id || "");
   const allImages = Array.isArray(product.images)
     ? product.images.filter((img: any) => typeof img === "string")
@@ -96,12 +101,14 @@ function buildProductJsonLd(product: any, siteUrl: string) {
     priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   };
 
+  // Real aggregate rating from verified-buyer reviews, only when present —
+  // structured data must reflect visible on-page content.
   const aggregateRating =
-    product.ratingValue && product.reviewCount
+    reviewSummary && reviewSummary.count > 0 && reviewSummary.average
       ? {
           "@type": "AggregateRating" as const,
-          ratingValue: Number(product.ratingValue).toFixed(1),
-          reviewCount: Number(product.reviewCount),
+          ratingValue: reviewSummary.average.toFixed(1),
+          reviewCount: reviewSummary.count,
         }
       : undefined;
 
@@ -156,10 +163,16 @@ function buildBreadcrumbJsonLd(product: any, siteUrl: string) {
   };
 }
 
-function ProductJsonLd({ product }: { product: any }) {
+function ProductJsonLd({
+  product,
+  reviewSummary,
+}: {
+  product: any;
+  reviewSummary?: { average: number | null; count: number };
+}) {
   const siteUrl = getSiteUrl();
   const schemas = [
-    buildProductJsonLd(product, siteUrl),
+    buildProductJsonLd(product, siteUrl, reviewSummary),
     buildBreadcrumbJsonLd(product, siteUrl),
     {
       "@context": "https://schema.org",
@@ -233,10 +246,12 @@ export default async function ProductLayout({
     redirect(slugUrl);
   }
 
+  const reviewSummary = await getProductReviewSummary(String(product.id || ""));
+
   return (
     <>
       {children}
-      <ProductJsonLd product={product} />
+      <ProductJsonLd product={product} reviewSummary={reviewSummary} />
     </>
   );
 }

@@ -341,6 +341,10 @@ export async function sendOrderDeliveredEmail({
       We hope you enjoy your purchase! If anything isn't right, just reply to this email — all products are covered by our <strong>12-month warranty</strong>.
     `)}
 
+    <p style="text-align:center;font-size:14px;color:${BRAND.muted};">Happy with your remote? A quick Google review helps other Aussies find us — it only takes a minute.</p>
+
+    ${emailCta(GOOGLE_REVIEW_URL, 'Leave a Google Review')}
+
     ${emailCta(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.allremotes.com.au'}/account/orders`, 'View Your Order')}
 
     ${emailContactBlock()}

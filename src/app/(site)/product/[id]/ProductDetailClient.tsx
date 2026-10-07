@@ -22,6 +22,7 @@ import {
 } from "../../../../utils/pricing";
 import ProductCard from "../../../../components/ProductCard";
 import ImageGallery from "../../../../components/images/ImageGallery";
+import ProductReviews from "./ProductReviews";
 import { extractIdFromSlugParam } from "../../../../lib/product-slugs";
 
 // Helper to clean HTML description - remove font styles but preserve colors/bold/italic
@@ -635,6 +636,8 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
             </div>
           </div>
         )}
+
+        <ProductReviews productId={String(product.id)} />
 
         {relatedProducts.length > 0 && (
           <div className="mt-8 sm:mt-10">
