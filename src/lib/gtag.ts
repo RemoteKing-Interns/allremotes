@@ -1,5 +1,10 @@
 const GOOGLE_ADS_ID = "AW-18410791303";
 
+// Conversion action label from Google Ads (Goals > Conversions > purchase action
+// details, the part after the slash in "AW-XXXXXXXXX/LABEL"). Without it the
+// purchase conversion cannot be attributed, so we skip firing it entirely.
+const GOOGLE_ADS_PURCHASE_LABEL = process.env.NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL || "";
+
 type GtagEvent = {
   event: string;
   [key: string]: any;
@@ -58,12 +63,16 @@ export function trackPurchase(orderId: string, value: number, items: Array<{ id:
     })),
   });
 
-  // Google Ads conversion event
-  trackGtagEvent({
-    event: "conversion",
-    send_to: `${GOOGLE_ADS_ID}/${GOOGLE_ADS_ID}`,
-    value,
-    currency: "AUD",
-    transaction_id: orderId,
-  });
+  // Google Ads conversion event — only when a conversion label is configured
+  if (GOOGLE_ADS_PURCHASE_LABEL) {
+    trackGtagEvent({
+      event: "conversion",
+      send_to: `${GOOGLE_ADS_ID}/${GOOGLE_ADS_PURCHASE_LABEL}`,
+      value,
+      currency: "AUD",
+      transaction_id: orderId,
+    });
+  } else if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+    console.warn("Google Ads purchase conversion skipped: NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL is not set");
+  }
 }

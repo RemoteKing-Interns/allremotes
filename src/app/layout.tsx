@@ -149,6 +149,11 @@ export const viewport: Viewport = {
   themeColor: "#f5f5f7",
 };
 
+// GA4 property measurement ID (format "G-XXXXXXXXXX"). Loaded alongside the
+// Google Ads gtag; commerce events (purchase, add_to_cart, begin_checkout)
+// fire into the shared dataLayer and are measured by both.
+const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || "";
+
 export default function RootLayout({
   children,
 }: {
@@ -163,12 +168,19 @@ export default function RootLayout({
           src="https://www.googletagmanager.com/gtag/js?id=AW-18410791303"
           strategy="afterInteractive"
         />
+        {GA4_MEASUREMENT_ID && (
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
+        )}
         <Script id="google-ads-gtag" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'AW-18410791303');
+            ${GA4_MEASUREMENT_ID ? `gtag('config', '${GA4_MEASUREMENT_ID}');` : ""}
           `}
         </Script>
       </head>

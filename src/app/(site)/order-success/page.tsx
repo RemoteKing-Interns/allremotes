@@ -63,7 +63,16 @@ const OrderSuccessContent = () => {
             sessionStorage.removeItem(`pendingOrder_${sessionId}`);
             setOrderDetails({ paymentMethod: 'stripe', sessionId, status: 'succeeded', orderId: data?.id });
             if (data?.id) {
-              trackPurchase(data.id, 0, []);
+              trackPurchase(
+                data.id,
+                Number(pending?.pricing?.total) || 0,
+                (pending?.items || []).map((i: any) => ({
+                  id: String(i.id),
+                  name: String(i.name),
+                  price: Number(i.unitPrice ?? i.price ?? 0),
+                  quantity: Number(i.quantity) || 1,
+                }))
+              );
             }
           }
         } catch (err) {
