@@ -305,6 +305,9 @@ const Cart = () => {
                 <span>Shipping</span>
                 <span>Free</span>
               </div>
+              <p className="-mt-1.5 text-xs leading-5 text-neutral-500">
+                Free untracked shipping on this order. Tracked ($12) and express ($18) options are available at checkout.
+              </p>
               <div className="mt-2 flex items-center justify-between text-base font-extrabold text-neutral-900">
                 <span>Total</span>
                 <span>AU${discountedTotal.toFixed(2)}</span>
@@ -317,6 +320,20 @@ const Cart = () => {
             >
               Proceed to Checkout
             </button>
+            <ul className="mt-4 grid gap-1.5 text-xs text-neutral-600">
+              <li className="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>
+                Fast dispatch Australia-wide from Yarra Glen VIC
+              </li>
+              <li className="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>
+                12-month warranty and 30-day returns on every remote
+              </li>
+              <li className="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><polyline points="20 6 9 17 4 12"/></svg>
+                Secure checkout — Visa, Mastercard, Amex, Apple &amp; Google Pay
+              </li>
+            </ul>
             <button
               onClick={clearCart}
               className="mt-3 w-full rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-100"

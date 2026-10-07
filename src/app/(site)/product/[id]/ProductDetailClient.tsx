@@ -11,6 +11,10 @@ import {
   ArrowLeft,
   Heart,
   Check,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
+  Flame,
 } from "lucide-react";
 import {
   getPriceBreakdown,
@@ -436,6 +440,13 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
                 {product.inStock ? <Check size={16} /> : null}
                 {product.inStock ? "In Stock" : "Out of Stock"}
               </span>
+
+              {product.inStock && typeof product.stock === "number" && product.stock > 0 && product.stock <= 10 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-2 text-xs font-extrabold text-amber-800">
+                  <Flame size={14} />
+                  Only {product.stock} left in stock
+                </span>
+              )}
             </div>
 
             {/* Discount Applied Badge */}
@@ -503,6 +514,36 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
                 <Heart size={18} />
                 {inWishlist ? "In Wishlist" : "Add to Wishlist"}
               </button>
+            </div>
+
+            {/* Trust block: shipping, warranty, returns, payments */}
+            <div className="mt-5 grid gap-2.5 rounded-2xl border border-neutral-200 bg-white/70 p-4 text-sm text-neutral-700 sm:mt-6">
+              <div className="flex items-center gap-2.5">
+                <Truck size={17} className="shrink-0 text-primary" />
+                <span><span className="font-semibold text-neutral-900">Fast, free shipping</span> — dispatched Australia-wide from Yarra Glen VIC</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck size={17} className="shrink-0 text-primary" />
+                <span><span className="font-semibold text-neutral-900">12-month warranty</span> on every remote we sell</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <RotateCcw size={17} className="shrink-0 text-primary" />
+                <span><span className="font-semibold text-neutral-900">30-day returns</span> if it's not right for your door</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3 border-t border-neutral-100 pt-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Secure checkout</span>
+                <div className="flex items-center gap-1.5">
+                  {["visa", "mastercard", "eftpos", "amex", "apple-pay", "google-pay"].map((icon) => (
+                    <img
+                      key={icon}
+                      src={`/icons/payments/${icon}.png`}
+                      alt={icon.replace(/-/g, " ")}
+                      className="h-5 w-auto"
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Specs */}
