@@ -429,6 +429,7 @@ const Checkout = () => {
           shippingCost,
           shippingName: selectedShipping?.name || 'Shipping',
           couponCode: couponDiscount > 0 ? couponCode.trim() : null,
+          order: orderData,
         }),
       });
       const stripeData = await stripeResp.json().catch(() => null);

@@ -1,13 +1,17 @@
-import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "../../../lib/mongo";
-import { sendOrderConfirmationSms, sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
-import { sendOrderConfirmationEmail, sendNewOrderNotification, sendShippingUpdateEmail, sendOrderDeliveredEmail } from "../../../lib/email";
-import { encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "../../../lib/pii-crypto";
+import { sendOrderShippedSms, sendOrderDeliveredSms, isSmsConfigured } from "../../../lib/sms";
+import { sendShippingUpdateEmail, sendOrderDeliveredEmail } from "../../../lib/email";
+import { decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "../../../lib/pii-crypto";
 import { getStarshipitTracking, starshipitConfigured } from "../../../lib/starshipit";
 import { buildTrackingLink } from "../../../lib/tracking";
+import {
+  createOrderRecord,
+  findOrderBySessionId,
+  readOrdersFile,
+  writeOrdersFile,
+  OrderDoc,
+} from "../../../lib/order-create";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
@@ -18,46 +22,6 @@ const CORS_HEADERS = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const ORDERS_JSON_PATH = path.resolve(process.cwd(), "orders.json");
-
-type OrderDoc = Record<string, any> & {
-  id: string;
-  createdAt: string;
-  updatedAt?: string;
-};
-
-async function makeOrderId(): Promise<string> {
-  if (mongoEnabled()) {
-    const db = await getDb();
-    const result = await db.collection("counters").findOneAndUpdate(
-      { _id: "orders" as any },
-      { $inc: { seq: 1 } },
-      { upsert: true, returnDocument: "after" }
-    );
-    const seq: number = (result as any)?.seq ?? (result as any)?.value?.seq ?? 1;
-    return `ARSO-${String(seq).padStart(6, "0")}`;
-  }
-  // File-based fallback: count existing orders and add 1
-  const existing = readOrdersFile();
-  const seq = existing.length + 1;
-  return `ARSO-${String(seq).padStart(6, "0")}`;
-}
-
-function readOrdersFile(): OrderDoc[] {
-  try {
-    const raw = fs.readFileSync(ORDERS_JSON_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as OrderDoc[]) : [];
-  } catch (err: any) {
-    if (err?.code === "ENOENT") return [];
-    throw err;
-  }
-}
-
-function writeOrdersFile(orders: OrderDoc[]) {
-  fs.writeFileSync(ORDERS_JSON_PATH, JSON.stringify(orders, null, 2) + "\n", "utf8");
-}
 
 export async function GET(request: Request) {
   try {
@@ -228,123 +192,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const now = new Date().toISOString();
-    const order: OrderDoc = {
-      ...(body as Record<string, any>),
-      id: await makeOrderId(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Store plaintext copies for emails/SMS before encrypting
-    const plaintextCustomerEmail = order.customer?.email;
-    const plaintextCustomerName = order.customer?.fullName || order.customer?.name;
-    const plaintextCustomerPhone = order.customer?.phone || order.shipping?.phone;
-    const plaintextShippingAddress = [
-      order.shipping?.address,
-      [order.shipping?.city, order.shipping?.state, order.shipping?.zipCode]
-        .filter(Boolean)
-        .join(" "),
-      order.shipping?.country,
-    ].filter(Boolean).join("\n");
-
-    // Add emailHash for searchable email field
-    if (order.customer?.email) {
-      if (!order.customer) order.customer = {} as any;
-      (order.customer as any).emailHash = emailHash(order.customer.email);
+    // Idempotency: the Stripe webhook safety net may already have created this
+    // order for the same checkout session. Return the existing order instead
+    // of creating a duplicate.
+    const sessionId = (body as any).payment?.sessionId;
+    const existing = await findOrderBySessionId(sessionId);
+    if (existing) {
+      return NextResponse.json(existing, { headers: CORS_HEADERS });
     }
 
-    // Encrypt PII before storing
-    encryptPii(order, PII_FIELDS.order);
-
-    if (mongoEnabled()) {
-      const db = await getDb();
-      const col = db.collection("orders");
-      await col.insertOne({ ...(order as any) });
-    } else {
-      const orders = readOrdersFile();
-      orders.push(order);
-      writeOrdersFile(orders);
-    }
-
-    // Increment coupon usage if coupon was used
-    if (mongoEnabled() && order.couponCode) {
-      try {
-        const db = await getDb();
-        const couponsCol = db.collection("coupons");
-        await couponsCol.updateOne(
-          { code: order.couponCode.toUpperCase() },
-          { $inc: { usedCount: 1 } }
-        );
-      } catch (err) {
-        console.error("Failed to increment coupon usage:", err);
-      }
-    }
-
-    // Admin manual orders can pass sendNotifications:false to skip SMS/emails
-    const notify = (body as any).sendNotifications !== false;
-
-    // Send SMS confirmation if phone number provided
-    if (notify && isSmsConfigured() && plaintextCustomerPhone && order.total != null) {
-      const formattedTotal = typeof order.total === 'number' 
-        ? `AU$${order.total.toFixed(2)}`
-        : order.total;
-      
-      try {
-        const result = await sendOrderConfirmationSms(plaintextCustomerPhone, order.id, formattedTotal);
-        if (result.success) {
-          console.log(`[SMS] Order confirmation sent to ${plaintextCustomerPhone} for order ${order.id}`);
-        } else {
-          console.error(`[SMS] Failed to send confirmation for order ${order.id}:`, result.error);
-        }
-      } catch (smsError) {
-        console.error(`[SMS] Order SMS error for ${order.id}:`, smsError);
-      }
-    }
-
-    // Send order confirmation emails (non-blocking)
-    if (notify && plaintextCustomerEmail && plaintextCustomerName && Array.isArray(order.items) && order.items.length > 0) {
-      const emailItems = order.items.map((item: any) => ({
-        name: String(item.name),
-        quantity: Number(item.quantity) || 1,
-        price: Number(item.price ?? item.unitPrice ?? 0),
-      }));
-
-      const orderTotal = Number(order.pricing?.total ?? order.total ?? 0);
-
-      try {
-        const [customerResult, adminResult] = await Promise.all([
-          sendOrderConfirmationEmail({
-            to: plaintextCustomerEmail,
-            orderId: order.id,
-            customerName: plaintextCustomerName,
-            items: emailItems,
-            total: orderTotal,
-            shippingAddress: plaintextShippingAddress,
-          }),
-          sendNewOrderNotification({
-            to: "shane@allremotes.com.au",
-            orderId: order.id,
-            customerName: plaintextCustomerName,
-            customerEmail: plaintextCustomerEmail,
-            total: orderTotal,
-            items: order.items.map((item: any) => `${item.name} x${item.quantity || 1}`),
-          }),
-        ]);
-        if (!customerResult.success) {
-          console.error(`[Email] Customer confirmation failed for ${order.id}:`, customerResult.error);
-        } else {
-          console.log(`[Email] Customer confirmation sent for order ${order.id}`);
-        }
-        if (!adminResult.success) {
-          console.error(`[Email] Admin notification failed for ${order.id}:`, adminResult.error);
-        } else {
-          console.log(`[Email] Admin notification sent for order ${order.id}`);
-        }
-      } catch (emailError) {
-        console.error(`[Email] Order email error for ${order.id}:`, emailError);
-      }
-    }
+    const order = await createOrderRecord(body as Record<string, any>, {
+      notify: (body as any).sendNotifications !== false,
+    });
 
     // Decrypt a copy for the response
     const orderResponse = { ...order };
@@ -355,9 +214,9 @@ export async function POST(request: Request) {
   } catch (err: any) {
     return NextResponse.json(
       { error: "Failed to create order", details: err?.message || String(err) },
-      { 
+      {
         status: 500,
-        headers: CORS_HEADERS 
+        headers: CORS_HEADERS
       }
     );
   }

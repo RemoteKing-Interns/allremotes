@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import FraudDetection from '../../../../lib/fraudDetection';
 import { getDb, mongoEnabled } from '../../../../lib/mongo';
 import { emailHash } from '../../../../lib/pii-crypto';
+import { stashPendingOrder } from '../../../../lib/pending-order-store';
 
 const fraudDetection = new FraudDetection();
 
@@ -17,7 +18,7 @@ function getStripeClient() {
 export async function POST(request) {
   try {
     const stripe = getStripeClient();
-    const { amount, items, customer_email, shippingCost, shippingName, couponCode } = await request.json();
+    const { amount, items, customer_email, shippingCost, shippingName, couponCode, order } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -146,8 +147,17 @@ export async function POST(request) {
         order_value: totalAmount.toString(),
         requires_extra_verification: isHighValueOrder.toString(),
         customer_type: isNewCustomer ? 'new' : 'returning',
+        shipping_cost: Math.round((shippingCost || 0) * 100).toString(),
+        shipping_name: shippingName || 'Shipping',
+        coupon_code: couponCode || '',
       },
     });
+
+    // Server-side stash so the webhook can create the order even if the
+    // customer's browser never makes it back to /order-success.
+    if (order && typeof order === 'object') {
+      await stashPendingOrder(session.id, order);
+    }
 
     return NextResponse.json({
       sessionId: session.id,
