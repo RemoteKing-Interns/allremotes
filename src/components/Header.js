@@ -8,6 +8,9 @@ import { useStore } from "../context/StoreContext";
 import MainHeaderBar from "./header/MainHeaderBar";
 import NavBar from "./header/NavBar";
 import TopInfoBar from "./header/TopInfoBar";
+import { buildProductSearchIndex, searchIndex } from "../lib/search";
+import { generateProductSlugUrl } from "../lib/product-slugs";
+import { trackSearch } from "../lib/gtag";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -23,6 +26,7 @@ const Header = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeResultIndex, setActiveResultIndex] = useState(-1);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
@@ -82,34 +86,13 @@ const Header = () => {
     setShowSearchResults(false);
   }, [pathname]);
 
-  // Memoize the product list + precomputed searchable text once per
+  // Memoize the product list + precomputed search index once per
   // productsVersion change (getProducts() JSON.parses a ~2.3MB blob and
   // re-enriches every product — running it per keystroke was the bottleneck).
-  const searchableProducts = React.useMemo(() => {
-    const list = getProducts() || [];
-    return list.map((product) => ({
-      product,
-      searchableText: [
-        product.name,
-        product.description,
-        product.category,
-        product.brand,
-        product.sku,
-        product.rk_sku,
-        product.model,
-        product.id,
-        product.seo_title,
-        product.tags,
-        product.features,
-        product.compatibility,
-        product.cat1,
-        product.cat2,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase(),
-    }));
-  }, [getProducts]);
+  const searchableProducts = React.useMemo(
+    () => buildProductSearchIndex(getProducts() || []),
+    [getProducts],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -119,17 +102,15 @@ const Header = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    const query = debouncedQuery.trim().toLowerCase();
-    if (query.length > 0) {
-      const filtered = searchableProducts
-        .filter(({ searchableText }) => searchableText.includes(query))
-        .map(({ product }) => product);
-      setSearchResults(filtered.slice(0, 8));
+    if (debouncedQuery.trim().length > 0) {
+      const filtered = searchIndex(searchableProducts, debouncedQuery);
+      setSearchResults(filtered.slice(0, 8).map((r) => r.product));
       setShowSearchResults(true);
     } else {
       setSearchResults([]);
       setShowSearchResults(false);
     }
+    setActiveResultIndex(-1);
     setIsSearching(false);
   }, [debouncedQuery, searchableProducts]);
 
@@ -145,10 +126,33 @@ const Header = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/products/all?search=${encodeURIComponent(searchQuery)}`);
+    const term = searchQuery.trim();
+    if (term) {
+      trackSearch(term, searchResults.length);
+      router.push(`/products/all?search=${encodeURIComponent(term)}`);
       setSearchQuery("");
       setShowSearchResults(false);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Escape") {
+      setShowSearchResults(false);
+      setActiveResultIndex(-1);
+      return;
+    }
+    if (!showSearchResults || searchResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveResultIndex((i) => (i + 1) % searchResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveResultIndex((i) => (i - 1 + searchResults.length) % searchResults.length);
+    } else if (e.key === "Enter" && activeResultIndex >= 0) {
+      e.preventDefault();
+      const p = searchResults[activeResultIndex];
+      router.push(generateProductSlugUrl(String(p.id), String(p.name || ""), p.sku || p.rk_sku));
+      handleProductClick();
     }
   };
 
@@ -218,6 +222,8 @@ const Header = () => {
         mobileDrawerOpen={mobileDrawerOpen}
         handleSearchSubmit={handleSearchSubmit}
         handleSearchChange={handleSearchChange}
+        handleSearchKeyDown={handleSearchKeyDown}
+        activeResultIndex={activeResultIndex}
         handleSearchClear={handleSearchClear}
         handleProductClick={handleProductClick}
         openAccountMenu={openAccountMenu}

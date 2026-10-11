@@ -9,6 +9,26 @@ import MiniCartDrawer from "../cart/MiniCartDrawer";
 import { getPriceBreakdown, isDiscountEligible } from "../../utils/pricing";
 import { Button } from "../ui/button";
 
+// Non-product destinations — surfaced in search so queries like "returns" or
+// "track" still lead somewhere (site search should cover help content, not
+// just products).
+const SEARCH_PAGES = [
+  { title: "Track your order", href: "/account/orders", keys: "track tracking parcel delivery status order where" },
+  { title: "Shipping & delivery", href: "/shipping-delivery", keys: "shipping delivery postage cost time express tracked australia" },
+  { title: "Returns & refunds", href: "/return-policy", keys: "return refund exchange warranty money back" },
+  { title: "Payment options", href: "/payment-options", keys: "payment pay afterpay zip klarna card instalments" },
+  { title: "Contact us", href: "/contact", keys: "contact phone email help support talk" },
+  { title: "Your account", href: "/account", keys: "account login orders profile password" },
+];
+
+const matchingPages = (query) => {
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
+  if (!tokens.length) return [];
+  return SEARCH_PAGES.filter((p) =>
+    tokens.every((t) => `${p.title} ${p.keys}`.toLowerCase().includes(t)),
+  ).slice(0, 3);
+};
+
 function HighlightText({ text, query }) {
   if (!query) return text;
   const q = query.toLowerCase();
@@ -52,6 +72,8 @@ const MainHeaderBar = ({
   handleSearchSubmit,
   handleSearchChange,
   handleSearchClear,
+  handleSearchKeyDown,
+  activeResultIndex,
   isSearching,
   handleProductClick,
   openAccountMenu,
@@ -88,10 +110,16 @@ const MainHeaderBar = ({
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
+                role="combobox"
+                aria-expanded={showSearchResults}
+                aria-controls="header-search-results"
+                aria-activedescendant={activeResultIndex >= 0 ? `header-search-result-${activeResultIndex}` : undefined}
+                aria-autocomplete="list"
                 placeholder="Search remote, brand, or model"
                 className="h-12 w-full rounded-lg border border-neutral-300 bg-white pl-5 pr-24 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-400 focus:border-accent/50 focus:ring-1 focus:ring-accent/20 focus:outline-none transition-colors"
                 value={searchQuery}
                 onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
                 onFocus={() => searchQuery && setShowSearchResults(true)}
               />
               {searchQuery && (
@@ -120,7 +148,12 @@ const MainHeaderBar = ({
             </form>
 
             {showSearchResults && searchQuery.trim().length > 0 && (
-              <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong">
+              <div
+                id="header-search-results"
+                role="listbox"
+                aria-label="Search results"
+                className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-[1300] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-strong"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-1 border-b border-neutral-200 px-4 py-3 text-xs font-semibold text-neutral-700">
                   <span>
                     {isSearching
@@ -141,7 +174,7 @@ const MainHeaderBar = ({
                 ) : searchResults.length > 0 ? (
                   <>
                     <div className="max-h-[22rem] overflow-auto">
-                      {searchResults.map((product) => {
+                      {searchResults.map((product, index) => {
                         const pricing = getPriceBreakdown(product.price, hasDiscount, {
                           promotions,
                           product,
@@ -150,8 +183,12 @@ const MainHeaderBar = ({
                         return (
                           <Link
                             key={product.id}
+                            id={`header-search-result-${index}`}
+                            role="option"
+                            aria-selected={index === activeResultIndex}
                             href={generateProductSlugUrl(String(product.id), String(product.name || ""), product.sku || product.rk_sku)}
-                            className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100"
+                            className={`flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-100 ${index === activeResultIndex ? "bg-neutral-100" : ""}`}
+                            ref={index === activeResultIndex ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
                             onClick={handleProductClick}
                           >
                             <div className="relative h-12 w-12 shrink-0">
@@ -209,6 +246,17 @@ const MainHeaderBar = ({
                     </p>
                   </div>
                 )}
+
+                {matchingPages(searchQuery).map((p) => (
+                  <Link
+                    key={p.href}
+                    href={p.href}
+                    onClick={handleProductClick}
+                    className="block border-t border-neutral-100 px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
+                  >
+                    {p.title} →
+                  </Link>
+                ))}
               </div>
             )}
           </div>

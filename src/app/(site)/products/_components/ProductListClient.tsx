@@ -19,6 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../../../../components/ui/sheet";
+import { buildProductSearchIndex, searchIndex } from "../../../../lib/search";
 
 const PAGE_SIZE = 15;
 const EMPTY_BRANDS: string[] = [];
@@ -450,32 +451,10 @@ export default function ProductListClient({
     return brands;
   }, [brands, selectedBrands]);
 
-  // Precompute searchable text once per products list — joining 9 fields
-  // per product on every keystroke made the listing filter lag.
+  // Precompute the shared search index once per products list — building
+  // per-product haystacks on every keystroke made the listing filter lag.
   const searchableProducts = useMemo(
-    () =>
-      (products || []).map((p: any) => ({
-        product: p,
-        searchableText: [
-          p.name,
-          p.description,
-          p.category,
-          p.brand,
-          p.sku,
-          p.rk_sku,
-          p.model,
-          p.id,
-          p.seo_title,
-          p.tags,
-          p.features,
-          p.compatibility,
-          p.cat1,
-          p.cat2,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase(),
-      })),
+    () => buildProductSearchIndex(products || []),
     [products]
   );
 
@@ -491,11 +470,8 @@ export default function ProductListClient({
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
       const matched = new Set(
-        searchableProducts
-          .filter(({ searchableText }) => searchableText.includes(q))
-          .map(({ product }) => product)
+        searchIndex(searchableProducts, searchQuery).map((r) => r.product)
       );
       result = result.filter((p) => matched.has(p));
     }

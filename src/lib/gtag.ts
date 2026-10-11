@@ -18,6 +18,14 @@ export function trackGtagEvent(payload: GtagEvent) {
   }
 }
 
+export function trackSearch(searchTerm: string, resultCount: number) {
+  trackGtagEvent({
+    event: "search",
+    search_term: searchTerm,
+    results_count: resultCount,
+  });
+}
+
 export function trackAddToCart(product: { id: string; name: string; price: number; quantity: number; category?: string }) {
   trackGtagEvent({
     event: "add_to_cart",
