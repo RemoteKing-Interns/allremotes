@@ -1,18 +1,20 @@
 #!/usr/bin/env tsx
 /**
- * TEMU can't enforce a minimum cart value, so products under $10 are listed
- * as multi-packs: `<SKU>xN` goods priced >= $10 (N = ceil(10/price), min 2).
+ * TEMU can't enforce a minimum cart value, so products under $15 are listed
+ * as multi-packs: `<SKU>xN` goods priced >= $15 (N = ceil(15/price), min 2).
  * Order import explodes `xN` extCodes back into the base SKU x N units
  * (see fetchOrders in src/lib/channels/temu.ts), so catalog pricing and
  * Unleashed codes keep resolving.
  *
  * After publishing a pack, the original single listing is taken off-shelf
  * via bg.local.goods.sale.status.set so it can no longer sell alone.
+ * A final pass also delists older packs whose price now falls under $15
+ * (e.g. X3 packs created when the threshold was $10).
  *
  * Usage:
  *   npx tsx scripts/temu-multipack.ts --dry         # preview
  *   npx tsx scripts/temu-multipack.ts --sku AR-27A-5 # one product
- *   npx tsx scripts/temu-multipack.ts                # all sub-$10 TEMU listings
+ *   npx tsx scripts/temu-multipack.ts                # all sub-$15 TEMU listings
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -21,7 +23,7 @@ import { MongoClient } from "mongodb";
 const DRY = process.argv.includes("--dry");
 const SKU_ARG = process.argv.indexOf("--sku");
 const SKU = SKU_ARG > -1 ? process.argv[SKU_ARG + 1] : undefined;
-const MIN_PRICE = 10;
+const MIN_PRICE = 15;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -54,7 +56,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (listedSkus.has(packSku)) {
       // Pack already exists — still make sure the single is delisted.
       const single = listingBySku.get(p.sku) as any;
-      if (single?.status !== "delisted") {
+      if (single?.status !== "delisted" && !DRY) {
         try {
           await temuCall("bg.local.goods.sale.status.set", {
             goodsId: Number(single.externalId), onsale: 0, operationType: 1,
@@ -72,8 +74,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     const single = listingBySku.get(p.sku) as any;
     const stock = Number(p.quantity || p.stock || 0);
-    if (stock <= 0) {
-      console.log(`SKIP ${p.sku} — out of stock, nothing to protect`);
+    if (stock < n) {
+      // Can't fill even one pack. Leave the single listed — TEMU's $15 min is
+      // cart-level, so it can still sell as an add-on; delisting would just
+      // kill a possible sale.
+      console.log(`SKIP ${p.sku} — stock ${stock} < pack size ${n}, single left listed`);
       skipped++;
       continue;
     }
@@ -140,6 +145,33 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     await sleep(1200);
   }
+  // Cleanup pass: packs created under the old $10 threshold may now be under
+  // $15 (e.g. a $4.75 product packed x3 = $14.25). Delist them on TEMU so only
+  // >= $15 packs (created above as X4 etc.) remain sellable.
+  const productById = new Map((await db.collection("products").find({}).toArray())
+    .map((p: any) => [String(p.id ?? p._id), p]));
+  for (const l of await db.collection("channelListings").find({ channel: "temu", status: { $ne: "delisted" } }).toArray()) {
+    const m = /^(.*)X(\d+)$/.exec(String(l.sku || ""));
+    if (!m) continue;
+    const base = [...productById.values()].find((p: any) => p.sku === m[1]);
+    const packPrice = base ? Math.round(Number(base.price) * Number(m[2]) * 100) / 100 : 0;
+    if (!base || packPrice >= MIN_PRICE) continue;
+    if (DRY) {
+      console.log(`DRY  delist undersized pack ${l.sku} ($${packPrice})`);
+      continue;
+    }
+    try {
+      await temuCall("bg.local.goods.sale.status.set", {
+        goodsId: Number(l.externalId), onsale: 0, operationType: 1,
+      }, creds);
+      await db.collection("channelListings").updateOne({ _id: l._id }, { $set: { status: "delisted" } });
+      console.log(`DELIST undersized pack ${l.sku} ($${packPrice})`);
+    } catch (e: any) {
+      console.log(`WARN could not delist pack ${l.sku}: ${String(e?.message || e).slice(0, 120)}`);
+    }
+    await sleep(1200);
+  }
+
   console.log(`\ndone. ok=${ok} fail=${fail} skipped=${skipped}`);
   await c.close();
 })();

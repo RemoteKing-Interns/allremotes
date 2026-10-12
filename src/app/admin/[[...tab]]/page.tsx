@@ -3141,7 +3141,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                           setShipOrderModal({
                             order: selectedOrder,
                             trackingNumber: selectedOrder?.trackingNumber || "",
-                            carrier: selectedOrder?.carrier || "",
+                            carrier: selectedOrder?.carrier || (selectedOrder?.channel === 'temu' ? 'AusPost Envelope (Tracked)' : ""),
                             trackingLink: selectedOrder?.trackingLink || "",
                             sending: false,
                           });
@@ -3442,7 +3442,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                         setShipOrderModal({
                           order: selectedOrder,
                           trackingNumber: selectedOrder?.trackingNumber || "",
-                          carrier: selectedOrder?.carrier || "",
+                          carrier: selectedOrder?.carrier || (selectedOrder?.channel === 'temu' ? 'AusPost Envelope (Tracked)' : ""),
                           trackingLink: selectedOrder?.trackingLink || "",
                           sending: false,
                         });
@@ -3962,6 +3962,9 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
               {shipOrderModal.order.status === 'shipped' ? 'Edit Tracking Info' : 'Mark Order as Shipped'}
             </h3>
             <p className="text-sm text-neutral-500 mb-4">Order #{shipOrderModal.order.id}</p>
+            {shipOrderModal.order.channel === 'temu' && (
+              <p className="-mt-2 mb-4 text-xs font-semibold text-orange-600">Saving also marks this order as shipped on TEMU (AusPost tracked-envelope tracking).</p>
+            )}
 
             <div className="space-y-4">
               <div>
@@ -3978,6 +3981,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                 >
                   <option value="">Select carrier</option>
                   <option value="Australia Post">Australia Post</option>
+                  <option value="AusPost Envelope (Tracked)">AusPost Envelope (Tracked)</option>
                   <option value="StarTrack">StarTrack</option>
                   <option value="Sendle">Sendle</option>
                   <option value="Toll">Toll</option>
@@ -4031,6 +4035,7 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
 
                     const isAlreadyShipped = shipOrderModal.order.status === 'shipped';
                     const isEbay = shipOrderModal.order.channel === 'ebay';
+                    const isTemu = shipOrderModal.order.channel === 'temu';
 
                     const patchBody: Record<string, any> = {
                       trackingNumber: shipOrderModal.trackingNumber.trim(),
@@ -4049,8 +4054,8 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     });
                     if (!resp.ok) throw new Error('Failed to update order');
 
-                    // Send shipping email only for new ship + non-eBay
-                    if (!isAlreadyShipped && !isEbay) {
+                    // Send shipping email only for new ship + non-marketplace
+                    if (!isAlreadyShipped && !isEbay && !isTemu) {
                       await fetch('/api/orders/send-emails', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4066,6 +4071,26 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                       }).catch(() => {});
                     }
 
+                    // Push the tracking number to TEMU so the marketplace
+                    // order flips to shipped there too.
+                    let temuNote = '';
+                    if (isTemu) {
+                      try {
+                        const r = await fetch('/api/admin/channels/temu/ship', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            orderId: shipOrderModal.order.externalOrderId || shipOrderModal.order.id,
+                            trackingNumber: shipOrderModal.trackingNumber.trim(),
+                          }),
+                        });
+                        const d = await r.json().catch(() => ({}));
+                        temuNote = r.ok ? ' TEMU marked as shipped.' : ` TEMU ship confirm failed: ${d.details || d.error || 'unknown error'}`;
+                      } catch (e: any) {
+                        temuNote = ` TEMU ship confirm failed: ${e?.message || e}`;
+                      }
+                    }
+
                     // Update local state
                     const updated = {
                       ...shipOrderModal.order,
@@ -4075,10 +4100,12 @@ function AdminOrders({ viewOrderId, setViewOrderId, activeTab }: { viewOrderId: 
                     setSelectedOrder(updated);
                     setShipOrderModal(null);
                     alert(isAlreadyShipped
-                      ? 'Tracking info updated.'
+                      ? 'Tracking info updated.' + temuNote
                       : isEbay
                         ? 'Order marked as shipped (no email — eBay order).'
-                        : 'Order marked as shipped and tracking email sent to customer.');
+                        : isTemu
+                          ? 'Order marked as shipped (no email — TEMU order).' + temuNote
+                          : 'Order marked as shipped and tracking email sent to customer.');
                   } catch (err: any) {
                     alert('Failed to update: ' + (err?.message || 'Unknown error'));
                     setShipOrderModal({ ...shipOrderModal, sending: false });

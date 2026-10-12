@@ -651,3 +651,51 @@ export const temuAdapter: ChannelAdapter = {
     return orders;
   },
 };
+
+// Australia Post carrier id from bg.logistics.companies.get (region AU).
+// "Envelope with tracking" (TMP… consignments) ships under this provider.
+const TEMU_SHIP_CARRIER_ID = Number(process.env.TEMU_SHIP_CARRIER_ID || 847519587);
+const TEMU_WAREHOUSE_ID = process.env.TEMU_WAREHOUSE_ID || "WH-08720513761431522";
+
+/**
+ * Mark a TEMU parent order as shipped with the seller's own tracking number
+ * (self-fulfilled). Resolves the sub-order lines via bg.order.detail.v2.get,
+ * then confirms via bg.logistics.shipment.v2.confirm (sendType 0 = whole
+ * parent order, one package, one tracking number).
+ */
+export async function temuMarkOrderShipped(
+  parentOrderSn: string,
+  trackingNumber: string,
+  creds: ChannelCredentials,
+): Promise<unknown> {
+  const detail = await temuCall("bg.order.detail.v2.get", { parentOrderSn }, creds);
+  const orderList: any[] = (detail.result as any)?.orderList || [];
+  const orderSendInfoList = orderList
+    .filter((it) => it.orderSn)
+    .map((it) => ({
+      parentOrderSn,
+      orderSn: String(it.orderSn),
+      goodsId: it.goodsId ? Number(it.goodsId) : undefined,
+      skuId: it.skuId ? Number(it.skuId) : undefined,
+      quantity: Math.max(1, Number(it.quantity ?? it.originalOrderQuantity ?? 1)),
+    }));
+  if (!orderSendInfoList.length) {
+    throw new Error(`No fulfillable order lines found for ${parentOrderSn}`);
+  }
+  const resp = await temuCall(
+    "bg.logistics.shipment.v2.confirm",
+    {
+      sendType: 0,
+      sendRequestList: [
+        {
+          carrierId: TEMU_SHIP_CARRIER_ID,
+          trackingNumber,
+          selfShippingWarehouseId: TEMU_WAREHOUSE_ID,
+          orderSendInfoList,
+        },
+      ],
+    },
+    creds
+  );
+  return resp.result;
+}
