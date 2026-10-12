@@ -30,6 +30,8 @@ export async function POST(request: Request) {
   const currencyCode = process.env.UNLEASHED_CURRENCY_CODE || "AUD";
   const taxCode = process.env.UNLEASHED_TAX_CODE || "G.S.T.";
   const exchangeRate = Number(process.env.UNLEASHED_EXCHANGE_RATE || "1");
+  // Custom order status (an extension of Parked in Unleashed), e.g. "Release to Pick".
+  const customOrderStatus = process.env.UNLEASHED_CUSTOM_ORDER_STATUS || "Release to Pick";
 
   if (!apiId || !apiKey) {
     return NextResponse.json(
@@ -138,6 +140,7 @@ export async function POST(request: Request) {
     OrderDate: orderDate,
     RequiredDate: orderDate,
     OrderStatus: "Parked",
+    CustomOrderStatus: customOrderStatus,
     SubTotal: subTotal,
     TaxTotal: taxTotal,
     Total: Math.round((subTotal + taxTotal) * 100) / 100,
