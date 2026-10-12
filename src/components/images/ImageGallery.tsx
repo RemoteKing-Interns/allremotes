@@ -66,6 +66,29 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
     });
   };
 
+  // Step through images, skipping broken ones
+  const stepImage = (dir: 1 | -1) => {
+    setSelectedImageIndex((i) => {
+      for (let k = 1; k <= images.length; k++) {
+        const j = (i + dir * k + images.length) % images.length;
+        if (!brokenImageIndices.has(j)) return j;
+      }
+      return i;
+    });
+  };
+
+  // Keyboard controls while the lightbox is open: Esc closes, arrows navigate
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+      else if (e.key === "ArrowRight") stepImage(1);
+      else if (e.key === "ArrowLeft") stepImage(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen, images.length, brokenImageIndices]);
+
   if (images.length === 0) {
     return (
       <div className={`flex items-center justify-center bg-neutral-100 rounded-2xl ${className}`}>
@@ -100,10 +123,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
         />
       </button>
 
-      {/* Lightbox — light fullscreen overlay, tap anywhere to close */}
+      {/* Lightbox — light fullscreen overlay, tap anywhere to close.
+          z-[1700] must sit above the sticky header (z-[1200]) and the cart
+          drawer (z-[1600]) or the close/nav buttons are unreachable. */}
       {lightboxOpen && images.length > 0 && (
         <div
-          className="fixed inset-0 z-[100] bg-white"
+          className="fixed inset-0 z-[1700] bg-white"
           onClick={() => setLightboxOpen(false)}
           role="dialog"
           aria-modal="true"
@@ -118,6 +143,30 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ product, className = "" }) 
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
+          {/* Prev / Next — only when there's more than one image */}
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); stepImage(-1); }}
+                className="absolute left-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 shadow-sm transition-colors hover:bg-neutral-200 active:bg-neutral-300 sm:left-5"
+                aria-label="Previous image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); stepImage(1); }}
+                className="absolute right-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 shadow-sm transition-colors hover:bg-neutral-200 active:bg-neutral-300 sm:right-5"
+                aria-label="Next image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">
+                {safeCurrentImageIndex + 1} / {images.length}
+              </span>
+            </>
+          )}
           {/* Image area — tapping outside the image closes; tapping the
               image keeps it open so customers can inspect it */}
           <div className="flex h-full w-full items-center justify-center p-4 pb-16 pt-16 sm:p-10">
