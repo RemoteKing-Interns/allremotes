@@ -36,7 +36,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const { enrichProductsWithS3Images } = await import("../src/lib/products-json");
   const { buildFeedFields } = await import("../src/lib/feed-fields");
-  const { getMetaCatalogCreds, metaItemsBatch, metaCheckBatch } = await import("../src/lib/channels/meta");
+  const { getMetaCatalogCreds, metaItemsBatch, metaCheckBatch, metaGetProductSets, metaCreateProductSet } =
+    await import("../src/lib/channels/meta");
 
   const products = enrichProductsWithS3Images(mongoProducts);
   console.log(`${products.length} active products`);
@@ -44,24 +45,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   // retailer_id = product.id — same key the XML feed uses as <g:id>, so a
   // catalog mixing feed + API sources stays consistent.
   const requests: any[] = [];
+  const productTypes = new Set<string>();
   for (const p of products) {
     const f = await buildFeedFields(p);
     if (!f) continue;
+    productTypes.add(f.productType);
+    // items_batch uses catalog FEED field names: id (the retailer key),
+    // title, image[] of {url}, product_type — not the legacy
+    // retailer_id/name/image_link names.
     requests.push({
       method: "UPDATE",
       data: {
-        retailer_id: f.id,
-        name: f.title.slice(0, 150),
+        id: f.id,
+        title: f.title.slice(0, 150),
         description: f.description.slice(0, 5000),
         availability: f.availability,
         condition: "new",
         price: f.price,
         link: f.link,
-        image_link: f.imageLink,
-        ...(f.additionalImages.length ? { additional_image_link: f.additionalImages } : {}),
+        image: [
+          { url: f.imageLink },
+          ...f.additionalImages.map((url) => ({ url })),
+        ],
         brand: f.brand,
-        custom_label_0: f.productType,
-        custom_label_1: f.sku,
+        product_type: f.productType,
+        mpn: f.sku,
+        quantity_to_sell_on_facebook: Math.max(0, Number(p.quantity || p.stock || 0)),
       },
     });
   }
@@ -73,6 +82,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }
 
   const creds = getMetaCatalogCreds();
+
+  // Product sets = the catalog's "categories" in the shop — one per site
+  // category, filtered on the product_type field we send with each item.
+  try {
+    const existing = new Set((await metaGetProductSets(creds)).map((s: any) => String(s.name)));
+    for (const pt of productTypes) {
+      if (existing.has(pt)) continue;
+      const res = await metaCreateProductSet(pt, pt, creds);
+      console.log(`product set "${pt}": ${res.id || JSON.stringify(res).slice(0, 120)}`);
+    }
+  } catch (e: any) {
+    console.log(`product sets: ${String(e?.message || e).slice(0, 200)}`);
+  }
+
   const handles: string[] = [];
   let errors = 0;
   for (let i = 0; i < requests.length; i += BATCH_SIZE) {
@@ -98,7 +121,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   for (const h of handles) {
     try {
       const status = await metaCheckBatch(h, creds);
-      console.log(`handle ${h}: ${status.status} — ${status.items_processed ?? "?"} processed, ${status.items_failed ?? 0} failed`);
+      const d = status.data?.[0] || {};
+      console.log(`handle ${h}: ${d.status} — errors=${d.errors_total_count ?? 0}`);
     } catch (e: any) {
       console.log(`status check ${h}: ${String(e?.message || e).slice(0, 200)}`);
     }

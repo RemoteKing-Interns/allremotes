@@ -19,11 +19,18 @@ export function getMetaCatalogCreds(): MetaCatalogCreds {
   return { catalogId, accessToken };
 }
 
-async function metaPost(path: string, body: Record<string, unknown>, accessToken: string) {
+// Graph API expects form-encoded params — a JSON body silently drops the
+// `requests` field and every item validates as an empty (duplicate) id.
+async function metaPost(path: string, params: Record<string, unknown>, accessToken: string) {
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    form.set(k, typeof v === "string" ? v : JSON.stringify(v));
+  }
+  form.set("access_token", accessToken);
   const res = await fetch(`${GRAPH}/${META_API_VERSION}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ...body, access_token: accessToken }),
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
@@ -39,6 +46,26 @@ export async function metaItemsBatch(requests: any[], creds: MetaCatalogCreds) {
   return metaPost(`/${creds.catalogId}/items_batch`, {
     item_type: "PRODUCT_ITEM",
     requests,
+  }, creds.accessToken);
+}
+
+// Product sets = catalog "categories" shown as collections in the shop.
+// Filter syntax: {"product_type":{"i_contains":"Garage & Gate"}}.
+export async function metaGetProductSets(creds: MetaCatalogCreds) {
+  const url = `${GRAPH}/${META_API_VERSION}/${creds.catalogId}/product_sets?access_token=${encodeURIComponent(creds.accessToken)}`;
+  const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    const e = data.error || {};
+    throw new Error(`Meta product_sets failed: ${e.code ?? res.status} ${e.message || ""}`);
+  }
+  return data.data || [];
+}
+
+export async function metaCreateProductSet(name: string, productType: string, creds: MetaCatalogCreds) {
+  return metaPost(`/${creds.catalogId}/product_sets`, {
+    name,
+    filter: { product_type: { i_contains: productType } },
   }, creds.accessToken);
 }
 
