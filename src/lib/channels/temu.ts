@@ -76,7 +76,7 @@ interface TemuResponse {
  * Common params (type, app_key, access_token, timestamp, data_type, sign) are
  * added automatically. Business params are merged in and included in the signature.
  */
-async function temuCall(
+export async function temuCall(
   type: string,
   businessParams: Record<string, unknown>,
   creds: ChannelCredentials
@@ -140,7 +140,7 @@ async function uploadImageToTemu(
  * Used as a fallback when publishListing hits "SKU duplicated" but no local
  * ChannelListing record exists (e.g., pushed from another environment).
  */
-async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials): Promise<string | null> {
+export async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials): Promise<string | null> {
   let data: any;
   try {
     data = await temuCall(
@@ -578,15 +578,25 @@ export const temuAdapter: ChannelAdapter = {
         }
 
         const items = (parent.orderList || []).map((it: any) => {
-          const sku = String(it.productList?.[0]?.extCode || it.skuId || "");
-          const quantity = Number(it.quantity || it.originalOrderQuantity || 1);
-          const unitPrice = priceBySku.get(sku.toLowerCase()) ?? 0;
+          let sku = String(it.productList?.[0]?.extCode || it.skuId || "");
+          let quantity = Number(it.quantity || it.originalOrderQuantity || 1);
+          let unitPrice = priceBySku.get(sku.toLowerCase());
+          if (unitPrice === undefined) {
+            // Multi-pack listings are pushed as `<SKU>xN` — explode back into
+            // the base SKU so catalog pricing and Unleashed codes resolve.
+            const m = sku.match(/^(.+?)[xX](\d+)$/);
+            if (m && priceBySku.has(m[1].toLowerCase())) {
+              sku = m[1];
+              quantity *= Number(m[2]);
+              unitPrice = priceBySku.get(m[1].toLowerCase());
+            }
+          }
           return {
             sku,
             name: String(it.goodsName || it.originalGoodsName || ""),
             quantity,
-            unitPrice,
-            lineTotal: unitPrice * quantity,
+            unitPrice: unitPrice ?? 0,
+            lineTotal: (unitPrice ?? 0) * quantity,
             externalId: it.goodsId ? String(it.goodsId) : undefined,
             color: it.spec && it.spec !== "As Shown" ? String(it.spec) : undefined,
           };
