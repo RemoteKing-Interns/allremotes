@@ -141,25 +141,27 @@ async function uploadImageToTemu(
  * ChannelListing record exists (e.g., pushed from another environment).
  */
 export async function findGoodsIdByOutSkuSn(outSkuSn: string, creds: ChannelCredentials): Promise<string | null> {
-  let data: any;
-  try {
-    data = await temuCall(
-      "bg.local.goods.list.query",
-      { searchText: outSkuSn, pageNo: 1, pageSize: 50 },
-      creds
-    );
-  } catch {
-    // List query can return BUSINESS_SERVICE_ERROR for some searches;
-    // treat as "not found" so the caller falls through to a clear error.
-    return null;
-  }
-  const list = ((data?.result as any)?.goodsList || []) as Array<{
-    goodsId: string | number;
-    outSkuSnList?: string[];
-  }>;
-  for (const g of list) {
-    if (g.outSkuSnList?.includes(outSkuSn)) {
-      return String(g.goodsId);
+  // goodsSearchType is required: 1 available/off-shelf, 4 not-yet-published,
+  // 5 draft. Search each bucket since we don't know where the goods lives.
+  for (const goodsSearchType of [1, 4, 5]) {
+    let data: any;
+    try {
+      data = await temuCall(
+        "bg.local.goods.list.query",
+        { searchText: outSkuSn, pageNo: 1, pageSize: 50, goodsSearchType },
+        creds
+      );
+    } catch {
+      continue;
+    }
+    const list = ((data?.result as any)?.goodsList || []) as Array<{
+      goodsId: string | number;
+      outSkuSnList?: string[];
+    }>;
+    for (const g of list) {
+      if (g.outSkuSnList?.includes(outSkuSn)) {
+        return String(g.goodsId);
+      }
     }
   }
   return null;
