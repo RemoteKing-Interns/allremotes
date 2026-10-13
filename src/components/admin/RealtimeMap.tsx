@@ -65,7 +65,19 @@ interface Visitor { id: string; page: string; device: string; source: string; lo
 
 export default function RealtimeMap({ sessions }: { sessions: Visitor[] }) {
   const land = useMemo(buildLandDots, []);
-  const visitors = sessions.filter((s) => s.lat !== undefined && s.lon !== undefined);
+  // Cluster visitors sharing a location into one bubble with a count —
+  // keeps the map readable when several visitors hit the same city.
+  const clusters = useMemo(() => {
+    const map = new Map<string, { x: number; y: number; items: Visitor[] }>();
+    for (const v of sessions) {
+      if (v.lat === undefined || v.lon === undefined) continue;
+      const key = `${v.lat!.toFixed(1)}|${v.lon!.toFixed(1)}`;
+      const c = map.get(key) || { x: px(v.lon!), y: py(v.lat!), items: [] };
+      c.items.push(v);
+      map.set(key, c);
+    }
+    return [...map.values()];
+  }, [sessions]);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1500);
@@ -78,20 +90,26 @@ export default function RealtimeMap({ sessions }: { sessions: Visitor[] }) {
         {land.map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r={2.2} className="fill-neutral-300" />
         ))}
-        {visitors.map((v, i) => {
-          const x = px(v.lon!), y = py(v.lat!);
-          const r = 5 + ((tick + i) % 3) * 3;
+        {clusters.map((c, i) => {
+          const n = c.items.length;
+          const pulse = 6 + ((tick + i) % 3) * 3;
+          const r = n > 1 ? 11 : 4.5;
           return (
-            <g key={v.id}>
-              <circle cx={x} cy={y} r={r} className="fill-emerald-400 opacity-30 transition-all duration-700" />
-              <circle cx={x} cy={y} r={4.5} className="fill-emerald-500 stroke-white" strokeWidth={1.5}>
-                <title>{v.location || "Unknown"} — {v.page}</title>
+            <g key={i}>
+              <circle cx={c.x} cy={c.y} r={pulse + n * 2} className="fill-emerald-400 opacity-30 transition-all duration-700" />
+              <circle cx={c.x} cy={c.y} r={r} className="fill-emerald-500 stroke-white" strokeWidth={1.5}>
+                <title>{c.items.map((v) => `${v.location || "Unknown"} — ${v.page}`).join("\n")}</title>
               </circle>
+              {n > 1 && (
+                <text x={c.x} y={c.y + 4} textAnchor="middle" fontSize={11} fontWeight={700} className="fill-white pointer-events-none">
+                  {n}
+                </text>
+              )}
             </g>
           );
         })}
       </svg>
-      {visitors.length === 0 && (
+      {clusters.length === 0 && (
         <p className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
           No located visitors right now
         </p>

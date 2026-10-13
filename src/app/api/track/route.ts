@@ -6,6 +6,13 @@ export const dynamic = "force-dynamic";
 
 const ALLOWED_TYPES = ["heartbeat", "page_view", "product_view", "add_to_cart", "checkout_start", "purchase", "search"] as const;
 
+// IP is used once for a geo lookup and never stored.
+function clientIp(request: NextRequest) {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return request.headers.get("x-real-ip") || undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as any;
@@ -18,7 +25,7 @@ export async function POST(request: NextRequest) {
     const path = typeof page === "string" && page ? page : "/";
 
     if (type === "heartbeat") {
-      await liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone });
+      await liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone, ip: clientIp(request) });
       return NextResponse.json({ ok: true });
     }
 
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Update active session and record the action.
     await Promise.all([
-      liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone }),
+      liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone, ip: clientIp(request) }),
       liveViewStore.recordActivity(sessionId, type, path, title, metadata),
     ]);
 

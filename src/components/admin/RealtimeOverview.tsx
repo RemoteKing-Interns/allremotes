@@ -36,7 +36,7 @@ export default function RealtimeOverview() {
             <h2 className="text-lg font-bold text-neutral-900">
               {active} visitor{active === 1 ? "" : "s"} online now
             </h2>
-            <p className="text-xs text-neutral-500">Realtime overview — location from timezone, no IPs stored</p>
+            <p className="text-xs text-neutral-500">Realtime overview — city-level geo, IPs are never stored</p>
           </div>
         </div>
         <button onClick={load} className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50">

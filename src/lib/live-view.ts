@@ -61,6 +61,25 @@ function geoForTimezone(tz?: string): { lat: number; lon: number; label: string 
   return f ? { lat: f[0], lon: f[1], label: region } : undefined;
 }
 
+// IP → city-level geo via ipwho.is (free HTTPS). The IP itself is discarded
+// after the lookup — only coarse city/country/coords are stored on the session.
+async function geoFromIp(ip?: string) {
+  if (!ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("10.") || ip.startsWith("192.168.")) return undefined;
+  try {
+    const res = await fetch(`https://ipwho.is/${ip}?fields=success,latitude,longitude,city,country,country_code`,
+      { signal: AbortSignal.timeout(3000) });
+    const d = await res.json();
+    if (!d.success || d.latitude === undefined) return undefined;
+    return {
+      lat: d.latitude, lon: d.longitude,
+      label: [d.city, d.country].filter(Boolean).join(", "),
+      city: d.city, country: d.country, countryCode: d.country_code,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 function sourceFromReferrer(referrer?: string) {
   if (!referrer) return "Direct";
   try {
@@ -80,14 +99,30 @@ class LiveViewStore {
     await ensureIndexes();
     const db = await getDb();
     const now = new Date();
+    const { ip, ...rest } = extras; // ip is for one-shot geo lookup only — never stored
     await db.collection(COLLECTION_SESSIONS).updateOne(
       { sessionId },
       {
-        $set: { page, lastSeen: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS), ...extras },
+        $set: { page, lastSeen: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS), ...rest },
         $setOnInsert: { sessionId, firstSeen: now, source: sourceFromReferrer(String(extras.referrer || "")) },
       },
       { upsert: true },
     );
+
+    // Resolve location once per session — real geo when possible, timezone
+    // fallback. Runs in background so heartbeats never wait on the lookup.
+    void (async () => {
+      try {
+        const doc = await db.collection(COLLECTION_SESSIONS)
+          .findOne({ sessionId }, { projection: { geo: 1 } });
+        if (doc?.geo) return;
+        let geo: Record<string, unknown> | undefined = await geoFromIp(ip as string | undefined);
+        if (!geo) geo = geoForTimezone(String(rest.timezone || ""));
+        if (geo) {
+          await db.collection(COLLECTION_SESSIONS).updateOne({ sessionId }, { $set: { geo } });
+        }
+      } catch {}
+    })();
   }
 
   async recordActivity(sessionId: string, type: ActivityType, page: string, title?: string, metadata?: Record<string, unknown>) {
@@ -130,11 +165,12 @@ class LiveViewStore {
       devices: ranked(deviceCounts, "device"),
       sources: ranked(sourceCounts, "source"),
       sessions: sessions.map((s) => {
-        const geo = geoForTimezone(s.timezone);
+        const geo = s.geo || geoForTimezone(s.timezone);
         return {
           id: String(s.sessionId).slice(-8), page: s.page, title: s.title,
           device: s.device || "unknown", source: s.source || "Direct",
-          location: geo?.label, lat: geo?.lat, lon: geo?.lon,
+          location: s.geo?.label || geo?.label, lat: geo?.lat, lon: geo?.lon,
+          countryCode: s.geo?.countryCode,
           lastSeen: s.lastSeen,
         };
       }),
