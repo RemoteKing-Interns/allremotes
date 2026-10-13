@@ -45,10 +45,15 @@ export default function RealtimeLeafletMap({ sessions }: { sessions: Visitor[] }
         className="h-[420px] w-full"
         attributionControl
       >
-        {/* Carto Positron — clean light basemap, same look as GA4 dashboards */}
+        {/* Mapbox light-v11 — clean GA4-style basemap; falls back to CARTO if
+            the public token isn't configured. */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          url={process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+            ? `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
+          tileSize={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? 512 : 256}
+          zoomOffset={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? -1 : 0}
+          attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
         <FitBounds points={points} />
         {clusters.map((c, i) => (
