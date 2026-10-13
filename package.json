@@ -25,6 +25,7 @@
     "handsontable": "17.1.0",
     "https-proxy-agent": "^9.1.0",
     "jwt-decode": "^4.0.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
     "mongodb": "^6.19.0",
     "next": "15.5.12",
@@ -34,6 +35,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^5.0.0",
     "recharts": "^3.9.2",
     "resend": "^6.12.3",
     "stripe": "^20.4.1",
@@ -51,6 +53,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
     "@types/bcryptjs": "^2.4.6",
+    "@types/leaflet": "^1.9.20",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.0.0",
