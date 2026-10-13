@@ -49,7 +49,7 @@ export default function RealtimeLeafletMap({ sessions }: { sessions: Visitor[] }
             the public token isn't configured. */}
         <TileLayer
           url={process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-            ? `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            ? `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
           tileSize={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? 512 : 256}
           zoomOffset={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? -1 : 0}
