@@ -23,6 +23,7 @@ import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
 import MetaAdsInsights from "../../../components/admin/MetaAdsInsights";
+import StoreAnalytics from "../../../components/admin/StoreAnalytics";
 import ProductImageGen from "../../../components/admin/ProductImageGen";
 import ProductImage from "../../../components/images/ProductImage";
 import AddressAutocomplete from "../../../components/AddressAutocomplete";
@@ -6228,11 +6229,20 @@ function LiveViewSection() {
             <span className="text-lg font-semibold text-neutral-900">{activeVisitors} visitors right now</span>
           </div>
 
-          <div className="h-64 flex items-center justify-center bg-neutral-50 rounded-lg border border-dashed border-neutral-300">
-            <div className="text-center text-neutral-500">
-              <Eye size={40} className="mx-auto mb-2 text-neutral-400" />
-              <p className="text-sm">{activeVisitors === 0 ? 'No active visitors' : `${activeVisitors} active session${activeVisitors !== 1 ? 's' : ''}`}</p>
-              <p className="text-xs text-neutral-400 mt-1">Real-time session counter</p>
+          <div className="overflow-hidden rounded-lg border border-neutral-200">
+            <div className="grid grid-cols-[1fr_90px_100px] bg-neutral-50 px-3 py-2 text-xs font-semibold uppercase text-neutral-500">
+              <span>Current page</span><span>Device</span><span>Source</span>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {(stats?.sessions || []).length === 0 ? (
+                <div className="py-12 text-center text-neutral-500"><Eye size={32} className="mx-auto mb-2 text-neutral-300" /><p className="text-sm">No active visitors</p></div>
+              ) : (stats.sessions || []).map((session: any) => (
+                <div key={session.id} className="grid grid-cols-[1fr_90px_100px] border-t border-neutral-100 px-3 py-2.5 text-sm">
+                  <span className="truncate text-neutral-800" title={session.page}>{session.page}</span>
+                  <span className="capitalize text-neutral-500">{session.device}</span>
+                  <span className="truncate text-neutral-500">{session.source}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -10396,6 +10406,7 @@ GSC_SERVICE_ACCOUNT_JSON={"type":"service_account",...}`}</pre>
           )}
         </div>
       )}
+      <StoreAnalytics />
       <MetaAdsInsights />
     </div>
   );

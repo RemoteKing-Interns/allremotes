@@ -33,6 +33,7 @@ function track(type: "heartbeat" | "page_view" | "product_view" | "add_to_cart" 
     page: path,
     title: title || document.title,
     device: getDeviceType(),
+    referrer: document.referrer,
     metadata,
   });
 

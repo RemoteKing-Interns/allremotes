@@ -1,148 +1,122 @@
-/**
- * In-memory live visitor tracking.
- *
- * Ponytail: This is a single-process in-memory store. It works fine for dev
- * and a single-production Node instance. If you scale to multiple servers, swap
- * this for Redis or a shared store keyed by session ID.
- */
+import { getDb } from "@/lib/mongo";
 
 export type ActivityType = "page_view" | "product_view" | "add_to_cart" | "checkout_start" | "purchase" | "search";
 
-export interface Session {
-  id: string;
-  ip?: string;
-  userAgent?: string;
-  country?: string;
-  lastSeen: number;
-  page: string;
-  device?: string;
+const SESSION_TTL_MS = 5 * 60 * 1000;
+const COLLECTION_SESSIONS = "analyticsLiveSessions";
+const COLLECTION_EVENTS = "analyticsEvents";
+let indexesReady: Promise<void> | null = null;
+
+function ensureIndexes() {
+  if (!indexesReady) indexesReady = (async () => {
+    const db = await getDb();
+    await Promise.all([
+      db.collection(COLLECTION_SESSIONS).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+      db.collection(COLLECTION_SESSIONS).createIndex({ lastSeen: -1 }),
+      db.collection(COLLECTION_EVENTS).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+      db.collection(COLLECTION_EVENTS).createIndex({ timestamp: -1 }),
+    ]);
+  })();
+  return indexesReady;
 }
 
-export interface ActivityItem {
-  id: string;
-  sessionId: string;
-  type: ActivityType;
-  page: string;
-  title?: string;
-  metadata?: Record<string, any>;
-  timestamp: number;
+function sourceFromReferrer(referrer?: string) {
+  if (!referrer) return "Direct";
+  try {
+    const host = new URL(referrer).hostname.replace(/^www\./, "");
+    if (host.endsWith("allremotes.com.au")) return "Internal";
+    if (/google\./.test(host)) return "Google";
+    if (/facebook\.com|instagram\.com|fb\.com/.test(host)) return "Meta";
+    if (/bing\.com/.test(host)) return "Bing";
+    return host;
+  } catch {
+    return "Other";
+  }
 }
-
-export interface LiveViewStats {
-  activeVisitors: number;
-  topPages: { path: string; views: number }[];
-  recentActivity: { id: string; type: ActivityType; label: string; timeAgo: string; page: string }[];
-}
-
-const SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_ACTIVITY = 50;
-const CLEANUP_INTERVAL_MS = 30 * 1000;
 
 class LiveViewStore {
-  private sessions = new Map<string, Session>();
-  private pageViews = new Map<string, number>();
-  private activity: ActivityItem[] = [];
-  private cleanupTimer: NodeJS.Timeout | null = null;
-
-  constructor() {
-    if (typeof globalThis === "undefined") return;
-    this.startCleanup();
+  async heartbeat(sessionId: string, page: string, extras: Record<string, unknown> = {}) {
+    await ensureIndexes();
+    const db = await getDb();
+    const now = new Date();
+    await db.collection(COLLECTION_SESSIONS).updateOne(
+      { sessionId },
+      {
+        $set: { page, lastSeen: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS), ...extras },
+        $setOnInsert: { sessionId, firstSeen: now, source: sourceFromReferrer(String(extras.referrer || "")) },
+      },
+      { upsert: true },
+    );
   }
 
-  private startCleanup() {
-    if (this.cleanupTimer) return;
-    this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
-  }
-
-  private cleanup() {
-    const now = Date.now();
-    for (const [id, session] of this.sessions) {
-      if (now - session.lastSeen > SESSION_TTL_MS) {
-        this.sessions.delete(id);
-      }
-    }
-  }
-
-  heartbeat(sessionId: string, page: string, extras: Partial<Session> = {}) {
-    const now = Date.now();
-    const existing = this.sessions.get(sessionId);
-    const previousPage = existing?.page;
-    this.sessions.set(sessionId, {
-      id: sessionId,
-      lastSeen: now,
-      page,
-      ...(existing ?? {}),
-      ...extras,
+  async recordActivity(sessionId: string, type: ActivityType, page: string, title?: string, metadata?: Record<string, unknown>) {
+    await ensureIndexes();
+    const db = await getDb();
+    const now = new Date();
+    await db.collection(COLLECTION_EVENTS).insertOne({
+      sessionId, type, page, title, metadata, timestamp: now,
+      expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     });
-    if (previousPage !== page && page) {
-      this.pageViews.set(page, (this.pageViews.get(page) ?? 0) + 1);
-    }
   }
 
-  recordActivity(sessionId: string, type: ActivityType, page: string, title?: string, metadata?: Record<string, any>) {
-    const item: ActivityItem = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      sessionId,
-      type,
-      page,
-      title,
-      metadata,
-      timestamp: Date.now(),
+  async getStats() {
+    await ensureIndexes();
+    const db = await getDb();
+    const cutoff = new Date(Date.now() - SESSION_TTL_MS);
+    const [sessions, recent] = await Promise.all([
+      db.collection(COLLECTION_SESSIONS).find({ lastSeen: { $gte: cutoff } })
+        .sort({ lastSeen: -1 }).limit(100).toArray(),
+      db.collection(COLLECTION_EVENTS).find({}).sort({ timestamp: -1 }).limit(20).toArray(),
+    ]);
+
+    const pageCounts = new Map<string, number>();
+    const deviceCounts = new Map<string, number>();
+    const sourceCounts = new Map<string, number>();
+    for (const s of sessions) {
+      const page = String(s.page || "/");
+      const device = String(s.device || "unknown");
+      const source = String(s.source || "Direct");
+      pageCounts.set(page, (pageCounts.get(page) || 0) + 1);
+      deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1);
+      sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
+    }
+    const ranked = (m: Map<string, number>, key: string) => [...m.entries()]
+      .map(([name, count]) => ({ [key]: name, count })).sort((a, b) => b.count - a.count);
+
+    return {
+      activeVisitors: sessions.length,
+      topPages: [...pageCounts.entries()].map(([path, views]) => ({ path, views })).sort((a, b) => b.views - a.views).slice(0, 10),
+      devices: ranked(deviceCounts, "device"),
+      sources: ranked(sourceCounts, "source"),
+      sessions: sessions.map((s) => ({
+        id: String(s.sessionId).slice(-8), page: s.page, title: s.title,
+        device: s.device || "unknown", source: s.source || "Direct",
+        lastSeen: s.lastSeen,
+      })),
+      recentActivity: recent.map((a) => ({
+        id: String(a._id), type: a.type, page: a.page,
+        label: labelForActivity(a), timeAgo: timeAgo(new Date(a.timestamp).getTime()),
+      })),
     };
-    this.activity.unshift(item);
-    if (this.activity.length > MAX_ACTIVITY) this.activity = this.activity.slice(0, MAX_ACTIVITY);
-  }
-
-  getStats(): LiveViewStats {
-    const now = Date.now();
-    const active = [...this.sessions.values()].filter((s) => now - s.lastSeen <= SESSION_TTL_MS);
-
-    const pages = new Map<string, number>();
-    for (const s of active) {
-      pages.set(s.page, (pages.get(s.page) ?? 0) + 1);
-    }
-    const topPages = [...pages.entries()]
-      .map(([path, views]) => ({ path, views }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 10);
-
-    const recentActivity = this.activity.slice(0, 20).map((a) => {
-      const seconds = Math.floor((now - a.timestamp) / 1000);
-      let timeAgo: string;
-      if (seconds < 60) timeAgo = `${seconds}s ago`;
-      else if (seconds < 3600) timeAgo = `${Math.floor(seconds / 60)}m ago`;
-      else timeAgo = `${Math.floor(seconds / 3600)}h ago`;
-      return {
-        id: a.id,
-        type: a.type,
-        label: labelForActivity(a),
-        timeAgo,
-        page: a.page,
-      };
-    });
-
-    return { activeVisitors: active.length, topPages, recentActivity };
   }
 }
 
-function labelForActivity(a: ActivityItem): string {
+function timeAgo(timestamp: number) {
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  return `${Math.floor(seconds / 3600)}h ago`;
+}
+
+function labelForActivity(a: any) {
   const display = a.title || a.page;
-  switch (a.type) {
-    case "page_view":
-      return `Page viewed: ${display}`;
-    case "product_view":
-      return `Product viewed: ${display}`;
-    case "add_to_cart":
-      return `Added to cart: ${a.metadata?.productName || display}`;
-    case "checkout_start":
-      return "Checkout started";
-    case "purchase":
-      return "Order completed";
-    case "search":
-      return `Searched: "${a.metadata?.q || ""}"`;
-    default:
-      return display;
-  }
+  if (a.type === "page_view") return `Page viewed: ${display}`;
+  if (a.type === "product_view") return `Product viewed: ${display}`;
+  if (a.type === "add_to_cart") return `Added to cart: ${a.metadata?.productName || display}`;
+  if (a.type === "checkout_start") return "Checkout started";
+  if (a.type === "purchase") return "Order completed";
+  if (a.type === "search") return `Searched: "${a.metadata?.q || ""}"`;
+  return display;
 }
 
 export const liveViewStore = new LiveViewStore();
