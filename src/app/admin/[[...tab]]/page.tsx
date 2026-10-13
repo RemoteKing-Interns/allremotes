@@ -22,6 +22,7 @@ import CustomerManagement from "../../../components/admin/CustomerManagement";
 import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
+import MetaAdsInsights from "../../../components/admin/MetaAdsInsights";
 import ProductImageGen from "../../../components/admin/ProductImageGen";
 import ProductImage from "../../../components/images/ProductImage";
 import AddressAutocomplete from "../../../components/AddressAutocomplete";
@@ -10395,6 +10396,7 @@ GSC_SERVICE_ACCOUNT_JSON={"type":"service_account",...}`}</pre>
           )}
         </div>
       )}
+      <MetaAdsInsights />
     </div>
   );
 }

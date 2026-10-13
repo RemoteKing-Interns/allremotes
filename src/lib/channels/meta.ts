@@ -71,13 +71,38 @@ export async function metaCreateProductSet(name: string, productType: string, cr
 
 // Poll a batch handle until Meta finishes ingesting it.
 export async function metaCheckBatch(handle: string, creds: MetaCatalogCreds) {
-  const url = `${GRAPH}/${META_API_VERSION}/${creds.catalogId}/check_batch_request_status?` +
-    `handle=${encodeURIComponent(handle)}&access_token=${encodeURIComponent(creds.accessToken)}`;
-  const res = await fetch(url);
+  return metaGet(`/${creds.catalogId}/check_batch_request_status`, { handle }, creds.accessToken);
+}
+
+// Generic GET — returns { data, paging } or throws on Meta errors.
+export async function metaGet(path: string, params: Record<string, unknown>, accessToken: string) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    q.set(k, typeof v === "string" ? v : JSON.stringify(v));
+  }
+  q.set("access_token", accessToken);
+  const res = await fetch(`${GRAPH}/${META_API_VERSION}${path}?${q.toString()}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
     const e = data.error || {};
-    throw new Error(`Meta check_batch_request_status failed: ${e.code ?? res.status} ${e.message || ""}`);
+    throw new Error(`Meta ${path} failed: ${e.code ?? res.status} ${e.message || JSON.stringify(data)}`);
   }
   return data;
+}
+
+export function getMetaAdAccountId() {
+  const id = process.env.META_AD_ACCOUNT_ID;
+  if (!id) throw new Error("META_AD_ACCOUNT_ID must be set (numeric ID from Ads Manager URL)");
+  return `act_${String(id).replace(/^act_/, "")}`;
+}
+
+// Ads insights: spend/impressions/clicks per campaign (or account/adset/ad level).
+export async function metaAdInsights(level: "account" | "campaign" | "adset" | "ad", datePreset: string) {
+  const { accessToken } = getMetaCatalogCreds();
+  return metaGet(`/${getMetaAdAccountId()}/insights`, {
+    fields: "spend,impressions,reach,clicks,ctr,cpc,actions,cost_per_action_type,campaign_name,adset_name,ad_name",
+    level,
+    date_preset: datePreset,
+    limit: 100,
+  }, accessToken);
 }
