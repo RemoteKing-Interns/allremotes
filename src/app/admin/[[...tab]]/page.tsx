@@ -23,6 +23,8 @@ import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
 import MetaAdsInsights from "../../../components/admin/MetaAdsInsights";
+import RealtimeMap from "../../../components/admin/RealtimeMap";
+import RealtimeOverview from "../../../components/admin/RealtimeOverview";
 import StoreAnalytics from "../../../components/admin/StoreAnalytics";
 import ProductImageGen from "../../../components/admin/ProductImageGen";
 import ProductImage from "../../../components/images/ProductImage";
@@ -6229,7 +6231,9 @@ function LiveViewSection() {
             <span className="text-lg font-semibold text-neutral-900">{activeVisitors} visitors right now</span>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-neutral-200">
+          <RealtimeMap sessions={stats?.sessions || []} />
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200">
             <div className="grid grid-cols-[1fr_90px_100px] bg-neutral-50 px-3 py-2 text-xs font-semibold uppercase text-neutral-500">
               <span>Current page</span><span>Device</span><span>Source</span>
             </div>
@@ -6427,6 +6431,8 @@ function AdminDashboard({
           {new Date().toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
         </div>
       </div>
+
+      <RealtimeOverview />
 
       {loadingStats ? (
         <div className="mb-8 flex h-44 items-center justify-center rounded-lg border border-neutral-200 bg-white shadow-sm">

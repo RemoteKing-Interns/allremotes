@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const path = typeof page === "string" && page ? page : "/";
 
     if (type === "heartbeat") {
-      await liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer });
+      await liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone });
       return NextResponse.json({ ok: true });
     }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Update active session and record the action.
     await Promise.all([
-      liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer }),
+      liveViewStore.heartbeat(sessionId, path, { device, title, referrer: body?.referrer, timezone: body?.timezone }),
       liveViewStore.recordActivity(sessionId, type, path, title, metadata),
     ]);
 

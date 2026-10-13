@@ -34,6 +34,7 @@ function track(type: "heartbeat" | "page_view" | "product_view" | "add_to_cart" 
     title: title || document.title,
     device: getDeviceType(),
     referrer: document.referrer,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     metadata,
   });
 
