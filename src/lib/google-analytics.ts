@@ -64,7 +64,7 @@ export async function getGA4Dashboard(days: number) {
   const dateRanges = [{ startDate: `${days}daysAgo`, endDate: "today" }];
   const [summary, pages, sources, devices, countries, funnel] = await Promise.all([
     report({ dateRanges, metrics: ["activeUsers", "sessions", "screenPageViews", "engagementRate", "averageSessionDuration", "newUsers"].map((name) => ({ name })) }),
-    report({ dateRanges, dimensions: [{ name: "pagePath" }, { name: "pageTitle" }], metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }, { name: "averageEngagementTime" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 20 }),
+    report({ dateRanges, dimensions: [{ name: "pagePath" }, { name: "pageTitle" }], metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }, { name: "userEngagementDuration" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 20 }),
     report({ dateRanges, dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }, { name: "activeUsers" }, { name: "conversions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 15 }),
     report({ dateRanges, dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "activeUsers" }, { name: "sessions" }] }),
     report({ dateRanges, dimensions: [{ name: "country" }], metrics: [{ name: "activeUsers" }, { name: "sessions" }], orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit: 15 }),
