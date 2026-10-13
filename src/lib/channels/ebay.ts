@@ -1,4 +1,5 @@
 import type { ChannelAdapter, ChannelCredentials, ChannelOrder, ListingPayload } from "./core";
+import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const EBAY_AUTH_URL = process.env.EBAY_AUTH_URL || "https://auth.ebay.com/oauth2/authorize";
 const EBAY_API_URL = process.env.EBAY_API_URL || "https://api.ebay.com";
@@ -409,6 +410,17 @@ export const eBayAdapter: ChannelAdapter = {
   },
 
   async fetchOrders(since, creds) {
+    const catalogSkus = new Set<string>();
+    if (mongoEnabled()) {
+      try {
+        const db = await getDb();
+        for (const p of await db.collection("products").find({}).project({ sku: 1, rk_sku: 1 }).toArray()) {
+          if (p.sku) catalogSkus.add(String(p.sku).toLowerCase());
+          if (p.rk_sku) catalogSkus.add(String(p.rk_sku).toLowerCase());
+        }
+      } catch {}
+    }
+
     const start = since.toISOString();
     const end = new Date().toISOString();
     const filter = `creationdate:[${start}..${end}]`;
@@ -460,15 +472,26 @@ export const eBayAdapter: ChannelAdapter = {
       const email = shipTo.email || registration.email || buyer.email || undefined;
       const username = buyer.username || undefined;
 
-      const lineItems = (order.lineItems || []).map((line: any) => ({
-        sku: line.sku || line.legacyItemId || "",
-        name: line.title || "",
-        quantity: Number(line.quantity || 1),
-        unitPrice: Number(line.lineItemCost?.value || 0) / (Number(line.quantity) || 1),
-        lineTotal: Number(line.lineItemCost?.value || 0),
-        externalId: line.itemId || line.legacyItemId || undefined,
-        color: line.variationDetails?.["Color"] || line.variationDetails?.["color"] || undefined,
-      }));
+      // Pack SKUs are `<base>X<n>`; explode only when the base SKU exists in
+      // the catalog (some real SKUs legitimately end in Xn, e.g. MX1616-5).
+      const lineItems = (order.lineItems || []).map((line: any) => {
+        let sku = String(line.sku || line.legacyItemId || "");
+        let quantity = Number(line.quantity || 1);
+        const m = sku.match(/^(.+?)[xX](\d+)$/);
+        if (m && catalogSkus.has(m[1].toLowerCase()) && !catalogSkus.has(sku.toLowerCase())) {
+          sku = m[1];
+          quantity *= Number(m[2]);
+        }
+        return {
+          sku,
+          name: line.title || "",
+          quantity,
+          unitPrice: Number(line.lineItemCost?.value || 0) / (quantity || 1),
+          lineTotal: Number(line.lineItemCost?.value || 0),
+          externalId: line.itemId || line.legacyItemId || undefined,
+          color: line.variationDetails?.["Color"] || line.variationDetails?.["color"] || undefined,
+        };
+      });
 
       const lineSubtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
       const currency = order.pricingSummary?.total?.currency || order.pricingSummary?.priceSubtotal?.currency || "AUD";
@@ -635,6 +658,14 @@ async function getApplicationAccessToken(): Promise<string> {
   if (!res.ok) throw new Error(`eBay app token failed: ${await res.text()}`);
   const data = await res.json();
   return data.access_token;
+}
+
+// Take a live offer off eBay (ends the listing; offer stays in inventory API).
+export async function ebayWithdrawOffer(offerId: string, accessToken: string) {
+  return ebayFetch(`/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/withdraw`, {
+    method: "POST",
+    accessToken,
+  });
 }
 
 export async function guessCategory(query: string): Promise<string | null> {
