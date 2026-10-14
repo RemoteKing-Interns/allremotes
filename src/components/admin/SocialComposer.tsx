@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Send } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus, Send } from "lucide-react";
 
 export default function SocialComposer() {
   const [message, setMessage] = useState("");
@@ -10,7 +10,29 @@ export default function SocialComposer() {
   const [facebook, setFacebook] = useState(true);
   const [instagram, setInstagram] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<Record<string, { ok: boolean; id?: string; error?: string }> | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", files[0]);
+      const res = await fetch("/api/media", { method: "POST", body: formData });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Upload failed");
+      const url = data?.urls?.[0]?.url;
+      if (!url) throw new Error("Upload returned no URL");
+      setImageUrl(String(url).split("?")[0]);
+    } catch (e: any) {
+      setResults({ upload: { ok: false, error: e.message } });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const post = async () => {
     setPosting(true);
@@ -48,20 +70,31 @@ export default function SocialComposer() {
           placeholder="Write your post…"
           className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage(e.target.files)} />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50"
+          >
+            <ImagePlus size={15} />
+            {uploading ? "Uploading…" : "Upload image"}
+          </button>
+          <span className="text-xs text-neutral-400">or</span>
           <input
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="Image URL (https — required for Instagram)"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-          />
-          <input
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="Link (optional, e.g. product URL)"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            placeholder="Paste image URL (https — required for Instagram)"
+            className="min-w-[220px] flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           />
         </div>
+        <input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Link (optional, e.g. product URL)"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        />
         {imageUrl && /^https:\/\//.test(imageUrl) && (
           <img src={imageUrl} alt="Post preview" className="h-28 w-28 rounded-lg border border-neutral-200 object-cover" />
         )}
@@ -76,7 +109,7 @@ export default function SocialComposer() {
           </label>
           <button
             onClick={post}
-            disabled={posting || (!message.trim() && !imageUrl.trim()) || (!facebook && !instagram) || (instagram && !imageUrl.trim())}
+            disabled={posting || uploading || (!message.trim() && !imageUrl.trim()) || (!facebook && !instagram) || (instagram && !imageUrl.trim())}
             className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-primary-dark disabled:opacity-50"
           >
             <Send size={15} />
