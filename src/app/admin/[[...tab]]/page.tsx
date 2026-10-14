@@ -23,6 +23,7 @@ import AdminAbandonedCarts from "../../../components/admin/AdminAbandonedCarts";
 import AdminImageGallery from "../../../components/images/AdminImageGallery";
 import AdminMediaLibrary from "../../../components/admin/AdminMediaLibrary";
 import MetaAdsInsights from "../../../components/admin/MetaAdsInsights";
+import SocialComposer from "../../../components/admin/SocialComposer";
 import RealtimeMap from "../../../components/admin/RealtimeMap";
 import RealtimeOverview from "../../../components/admin/RealtimeOverview";
 import StoreAnalytics from "../../../components/admin/StoreAnalytics";
@@ -10453,6 +10454,7 @@ GSC_SERVICE_ACCOUNT_JSON={"type":"service_account",...}`}</pre>
         </div>
       )}
       <StoreAnalytics />
+      <SocialComposer />
       <MetaAdsInsights />
     </div>
   );

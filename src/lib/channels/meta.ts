@@ -106,3 +106,62 @@ export async function metaAdInsights(level: "account" | "campaign" | "adset" | "
     limit: 100,
   }, accessToken);
 }
+
+// ── Organic publishing (Facebook Page + linked Instagram business account) ──
+
+export function getMetaPageId() {
+  return process.env.META_PAGE_ID || "1282105401659900"; // "All Remotes" page
+}
+
+// Posting to a Page requires a Page-scoped token — the system-user token
+// can mint one because the page is assigned to it in Business Manager.
+async function getPageAccessToken() {
+  const { accessToken } = getMetaCatalogCreds();
+  const page = await metaGet(`/${getMetaPageId()}`, { fields: "access_token" }, accessToken);
+  if (!page?.access_token) {
+    throw new Error("No Page access token — assign the system user to the Page in Business Settings and grant pages_manage_posts");
+  }
+  return page.access_token as string;
+}
+
+export async function getInstagramBusinessId() {
+  const { accessToken } = getMetaCatalogCreds();
+  const page = await metaGet(`/${getMetaPageId()}`, { fields: "instagram_business_account" }, accessToken);
+  return page?.instagram_business_account?.id as string | undefined;
+}
+
+export async function postToFacebook(opts: { message: string; link?: string; imageUrl?: string }) {
+  const pageToken = await getPageAccessToken();
+  const pageId = getMetaPageId();
+  if (opts.imageUrl) {
+    return metaPost(`/${pageId}/photos`, {
+      url: opts.imageUrl,
+      caption: opts.message,
+      ...(opts.link ? { link: opts.link } : {}),
+    }, pageToken);
+  }
+  return metaPost(`/${pageId}/feed`, {
+    message: opts.message,
+    ...(opts.link ? { link: opts.link } : {}),
+  }, pageToken);
+}
+
+// IG publishing is two-step: create a media container from a public image
+// URL, wait for processing, then publish it. Text-only posts are not
+// possible — every IG post needs an image or video.
+export async function postToInstagram(opts: { imageUrl: string; caption: string }) {
+  const { accessToken } = getMetaCatalogCreds();
+  const igId = await getInstagramBusinessId();
+  if (!igId) throw new Error("No Instagram business account linked to the Page");
+  const container = await metaPost(`/${igId}/media`, { image_url: opts.imageUrl, caption: opts.caption }, accessToken);
+  if (!container?.id) throw new Error("Instagram media container creation failed");
+  for (let i = 0; i < 15; i++) {
+    const status = await metaGet(`/${container.id}`, { fields: "status_code" }, accessToken).catch(() => null);
+    if (status?.status_code === "FINISHED") {
+      return metaPost(`/${igId}/media_publish`, { creation_id: container.id }, accessToken);
+    }
+    if (status?.status_code === "ERROR") throw new Error("Instagram media processing failed (check the image URL is public HTTPS)");
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  throw new Error("Instagram media processing timed out");
+}
