@@ -6344,13 +6344,13 @@ function AdminDashboard({
 }: {
   onNavigateTab?: (tabId: string) => void;
 }) {
-  const { getHomeContent, getPromotions } = useStore();
+  const { getPromotions } = useStore();
   const router = useRouter();
-  const home = getHomeContent();
   const [productCount, setProductCount] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [promotionCount, setPromotionCount] = useState(0);
+  const [latestOrders, setLatestOrders] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
@@ -6372,6 +6372,11 @@ function AdminDashboard({
         if (!cancelled) {
           setProductCount(Array.isArray(productsData) ? productsData.length : 0);
           setOrderCount(Array.isArray(ordersData) ? ordersData.length : 0);
+          setLatestOrders(
+            (Array.isArray(ordersData) ? [...ordersData] : [])
+              .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+              .slice(0, 6),
+          );
           setReviewCount(
             Array.isArray(reviewsData?.data) ? reviewsData.data.length : 0,
           );
@@ -6381,6 +6386,7 @@ function AdminDashboard({
           setProductCount(0);
           setOrderCount(0);
           setReviewCount(0);
+          setLatestOrders([]);
         }
       } finally {
         if (!cancelled) {
@@ -6429,12 +6435,13 @@ function AdminDashboard({
     },
   ];
 
-  const recentActivity = [
-    { action: "Product added", item: "New Remote Control", time: "2 hours ago" },
-    { action: "Review updated", item: "Customer feedback", time: "5 hours ago" },
-    { action: "Price changed", item: "Premium Remote", time: "1 day ago" },
-    { action: "Navigation updated", item: "Main menu", time: "2 days ago" },
-  ];
+  const orderTimeAgo = (ts: any) => {
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(ts || 0).getTime()) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  };
 
   const quickActions = [
     {
@@ -6518,69 +6525,53 @@ function AdminDashboard({
 
           {/* Main two-column layout */}
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            {/* Left column */}
-            <div className="space-y-6">
-              {/* Recent Activity */}
-              <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-neutral-900">Recent Activity</h3>
-                  <button
-                    onClick={() => onNavigateTab?.('orders')}
-                    className="text-sm font-semibold text-primary hover:text-primary-dark"
-                  >
-                    View all
-                  </button>
-                </div>
-                <div className="relative border-l-2 border-dashed border-neutral-200 pl-4 space-y-6">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="relative flex items-start gap-4 text-sm">
-                      <div className="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white" />
+            {/* Latest Orders */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-neutral-900">Latest Orders</h3>
+                <button
+                  onClick={() => onNavigateTab?.('orders')}
+                  className="text-sm font-semibold text-primary hover:text-primary-dark"
+                >
+                  View all
+                </button>
+              </div>
+              {latestOrders.length === 0 ? (
+                <p className="py-8 text-center text-sm text-neutral-500">No orders yet</p>
+              ) : (
+                <div className="divide-y divide-neutral-100">
+                  {latestOrders.map((o: any) => (
+                    <button
+                      key={o.id}
+                      onClick={() => onNavigateTab?.('orders')}
+                      className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-neutral-50 -mx-2 px-2 rounded-lg"
+                    >
                       <div className="min-w-0 flex-1">
-                        <strong className="text-neutral-900">{activity.action}</strong>
-                        <p className="mt-0.5 text-neutral-600">{activity.item}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-neutral-900">#{String(o.id || '').slice(0, 8)}</span>
+                          {o.channel && o.channel !== 'web' && (
+                            <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-neutral-600">{o.channel}</span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-neutral-500">
+                          {o.customer?.fullName || o.customer?.name || o.customer?.email || 'Guest'} · {orderTimeAgo(o.createdAt)}
+                        </p>
                       </div>
-                      <div className="shrink-0 pt-0.5 text-xs font-semibold text-neutral-600">{activity.time}</div>
-                    </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                        o.status === 'delivered' ? 'bg-emerald-50 text-emerald-700'
+                        : o.status === 'shipped' ? 'bg-blue-50 text-blue-700'
+                        : o.status === 'cancelled' ? 'bg-red-50 text-red-600'
+                        : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {o.status || 'pending'}
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold text-neutral-900">
+                        AU${Number(o?.pricing?.total || 0).toFixed(2)}
+                      </span>
+                    </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Hero Preview */}
-              <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-neutral-900">Hero Preview</h3>
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">Featured</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-6 rounded-lg border border-neutral-200 bg-neutral-50 p-5">
-                  <div className="flex-1 space-y-3 text-sm">
-                    <div>
-                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Title</span>
-                      <span className="mt-1 block font-semibold text-neutral-900">{home?.hero?.title || "Not set"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Subtitle</span>
-                      <span className="mt-1 block font-medium text-neutral-800">{home?.hero?.subtitle || "Not set"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold uppercase tracking-[0.08em] text-neutral-600">Description</span>
-                      <span className="mt-1 block leading-relaxed text-neutral-700 line-clamp-2">{home?.hero?.description || "Not set"}</span>
-                    </div>
-                  </div>
-                  <div className="flex h-32 w-full sm:w-56 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-neutral-800 to-neutral-900 shadow-sm text-sm text-white relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
-                    <strong className="tracking-tight">HERO SECTION</strong>
-                    <span className="mt-1 text-xs text-neutral-200">Main landing area</span>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-end">
-                  <button
-                    onClick={() => onNavigateTab?.('home')}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark transition-colors"
-                  >
-                    Review Performance
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Quick Actions */}
