@@ -500,6 +500,8 @@ const AdminContent = () => {
   }, []);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const seenNotifIdsRef = useRef<Set<string> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
   const [viewOrderId, setViewOrderId] = useState<string | null>(() =>
@@ -571,6 +573,25 @@ const AdminContent = () => {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  const playOrderChime = () => {
+    try {
+      const ctx = audioCtxRef.current || new AudioContext();
+      audioCtxRef.current = ctx;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      [880, 1320].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain).connect(ctx.destination);
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + i * 0.15;
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
+      });
+    } catch {}
+  };
 
   const fetchNotifications = async () => {
     setNotifLoading(true);
@@ -645,6 +666,23 @@ const AdminContent = () => {
 
       notifs.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
       setNotifications(notifs);
+
+      // Alert on genuinely new order notifications (first fetch only seeds the seen-set)
+      const seen = seenNotifIdsRef.current;
+      const freshOrders = notifs.filter((n) => n.type === 'order' && !seen?.has(n.id));
+      if (seen && freshOrders.length > 0) {
+        playOrderChime();
+        freshOrders.slice(0, 3).forEach((n) => {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const browserNotif = new Notification(n.title, { body: n.body, tag: n.id });
+            browserNotif.onclick = () => {
+              window.focus();
+              window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: { tab: 'orders' } }));
+            };
+          }
+        });
+      }
+      seenNotifIdsRef.current = new Set(notifs.map((n) => n.id));
     } catch (err) {
       console.error('Failed to fetch notifications', err);
     } finally {
@@ -656,7 +694,18 @@ const AdminContent = () => {
     if (!isAdmin) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    // Browser notification permission needs a user gesture — ask on first click
+    const askPermission = () => {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', askPermission);
+    };
+    window.addEventListener('pointerdown', askPermission);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pointerdown', askPermission);
+    };
   }, [isAdmin]);
 
   // ── ⌘K / Ctrl+K global keyboard shortcut
