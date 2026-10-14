@@ -5,6 +5,7 @@ export type ActivityType = "page_view" | "product_view" | "add_to_cart" | "check
 const SESSION_TTL_MS = 5 * 60 * 1000;
 const COLLECTION_SESSIONS = "analyticsLiveSessions";
 const COLLECTION_EVENTS = "analyticsEvents";
+const COLLECTION_ARCHIVE = "analyticsSessions";
 let indexesReady: Promise<void> | null = null;
 
 function ensureIndexes() {
@@ -15,6 +16,8 @@ function ensureIndexes() {
       db.collection(COLLECTION_SESSIONS).createIndex({ lastSeen: -1 }),
       db.collection(COLLECTION_EVENTS).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
       db.collection(COLLECTION_EVENTS).createIndex({ timestamp: -1 }),
+      db.collection(COLLECTION_EVENTS).createIndex({ type: 1, timestamp: -1 }),
+      db.collection(COLLECTION_ARCHIVE).createIndex({ lastSeen: -1 }),
     ]);
   })();
   return indexesReady;
@@ -100,14 +103,27 @@ class LiveViewStore {
     const db = await getDb();
     const now = new Date();
     const { ip, ...rest } = extras; // ip is for one-shot geo lookup only — never stored
-    await db.collection(COLLECTION_SESSIONS).updateOne(
-      { sessionId },
-      {
-        $set: { page, lastSeen: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS), ...rest },
-        $setOnInsert: { sessionId, firstSeen: now, source: sourceFromReferrer(String(extras.referrer || "")) },
-      },
-      { upsert: true },
-    );
+    const source = sourceFromReferrer(String(extras.referrer || ""));
+    await Promise.all([
+      db.collection(COLLECTION_SESSIONS).updateOne(
+        { sessionId },
+        {
+          $set: { page, lastSeen: now, expiresAt: new Date(now.getTime() + SESSION_TTL_MS), ...rest },
+          $setOnInsert: { sessionId, firstSeen: now, source },
+        },
+        { upsert: true },
+      ),
+      // Permanent archive for historical device/source/location stats.
+      db.collection(COLLECTION_ARCHIVE).updateOne(
+        { sessionId },
+        {
+          $set: { page, lastSeen: now, title: rest.title, device: rest.device, timezone: rest.timezone },
+          $setOnInsert: { sessionId, firstSeen: now, source },
+          $inc: { hits: 1 },
+        },
+        { upsert: true },
+      ),
+    ]);
 
     // Resolve location once per session — real geo when possible, timezone
     // fallback. Runs in background so heartbeats never wait on the lookup.
@@ -119,7 +135,10 @@ class LiveViewStore {
         let geo: Record<string, unknown> | undefined = await geoFromIp(ip as string | undefined);
         if (!geo) geo = geoForTimezone(String(rest.timezone || ""));
         if (geo) {
-          await db.collection(COLLECTION_SESSIONS).updateOne({ sessionId }, { $set: { geo } });
+          await Promise.all([
+            db.collection(COLLECTION_SESSIONS).updateOne({ sessionId }, { $set: { geo } }),
+            db.collection(COLLECTION_ARCHIVE).updateOne({ sessionId }, { $set: { geo } }),
+          ]);
         }
       } catch {}
     })();
@@ -178,6 +197,53 @@ class LiveViewStore {
         id: String(a._id), type: a.type, page: a.page,
         label: labelForActivity(a), timeAgo: timeAgo(new Date(a.timestamp).getTime()),
       })),
+    };
+  }
+
+  // Historical visitor stats from the permanent session archive + events.
+  async getHistoryStats(days: number) {
+    await ensureIndexes();
+    const db = await getDb();
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const [sessions, pageAgg, eventCounts] = await Promise.all([
+      db.collection(COLLECTION_ARCHIVE)
+        .find({ lastSeen: { $gte: cutoff } })
+        .project({ device: 1, source: 1, geo: 1, timezone: 1, hits: 1 })
+        .toArray(),
+      db.collection(COLLECTION_EVENTS).aggregate([
+        { $match: { type: "page_view", timestamp: { $gte: cutoff } } },
+        { $group: { _id: "$page", views: { $sum: 1 }, users: { $addToSet: "$sessionId" } } },
+        { $project: { path: "$_id", _id: 0, views: 1, users: { $size: "$users" } } },
+        { $sort: { views: -1 } },
+        { $limit: 25 },
+      ]).toArray(),
+      db.collection(COLLECTION_EVENTS).aggregate([
+        { $match: { timestamp: { $gte: cutoff } } },
+        { $group: { _id: "$type", count: { $sum: 1 } } },
+      ]).toArray(),
+    ]);
+
+    const events = Object.fromEntries(eventCounts.map((e: any) => [e._id, e.count]));
+    const devices = new Map<string, number>();
+    const sources = new Map<string, number>();
+    const locations = new Map<string, number>();
+    for (const s of sessions) {
+      devices.set(String(s.device || "unknown"), (devices.get(String(s.device || "unknown")) || 0) + 1);
+      sources.set(String(s.source || "Direct"), (sources.get(String(s.source || "Direct")) || 0) + 1);
+      const loc = s.geo?.label || geoForTimezone(String(s.timezone || ""))?.label || "Unknown";
+      locations.set(loc, (locations.get(loc) || 0) + 1);
+    }
+    const ranked = (m: Map<string, number>, key: string, limit = 20) => [...m.entries()]
+      .map(([name, count]) => ({ [key]: name, count })).sort((a, b) => b.count - a.count).slice(0, limit);
+
+    return {
+      visitors: sessions.length,
+      pageviews: events.page_view || 0,
+      pages: pageAgg,
+      devices: ranked(devices, "device", 5),
+      sources: ranked(sources, "source"),
+      locations: ranked(locations, "location"),
+      events,
     };
   }
 }
