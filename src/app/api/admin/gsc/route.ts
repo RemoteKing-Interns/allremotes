@@ -50,22 +50,22 @@ async function getAccessToken(serviceAccount: { client_email: string; private_ke
 
 export async function GET() {
   const siteUrl = process.env.GSC_SITE_URL;
+  const jsonEnv = process.env.GSC_SERVICE_ACCOUNT_JSON;
   const keyFile = process.env.GSC_SERVICE_ACCOUNT_FILE;
 
-  if (!siteUrl || !keyFile) {
+  if (!siteUrl || (!jsonEnv && !keyFile)) {
     return NextResponse.json(
-      { error: "GSC credentials not configured. Set GSC_SITE_URL and GSC_SERVICE_ACCOUNT_FILE in .env.local" },
+      { error: "GSC credentials not configured. Set GSC_SITE_URL and GSC_SERVICE_ACCOUNT_JSON (or GSC_SERVICE_ACCOUNT_FILE locally)." },
       { status: 503 }
     );
   }
 
   let serviceAccount: { client_email: string; private_key: string };
   try {
-    const raw = fs.readFileSync(keyFile, "utf-8");
-    serviceAccount = JSON.parse(raw);
+    serviceAccount = JSON.parse(jsonEnv || fs.readFileSync(keyFile!, "utf-8"));
   } catch {
     return NextResponse.json(
-      { error: `Service account file not found at ${keyFile}. Download it from Google Cloud Console → IAM → Service Accounts → Keys.` },
+      { error: `Service account credentials unreadable${keyFile ? ` (file: ${keyFile})` : ""}. Check GSC_SERVICE_ACCOUNT_JSON is valid JSON or the key file exists.` },
       { status: 503 }
     );
   }
