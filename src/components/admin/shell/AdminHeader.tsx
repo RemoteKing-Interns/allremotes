@@ -84,7 +84,7 @@ export default function AdminHeader({
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-1rem))] rounded-xl border border-neutral-200 bg-white shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-1rem))] rounded-xl border border-neutral-200 bg-white shadow-xl z-[1100] overflow-hidden">
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
                 <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
                 <span className="text-xs text-neutral-500">{notifications.length} items</span>
