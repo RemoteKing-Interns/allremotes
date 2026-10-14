@@ -3,18 +3,41 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
-const RANGE_DAYS: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
+const WINDOW_SECS: Record<string, number> = {
+  "30s": 30, "1m": 60, "5m": 300, "15m": 900, "30m": 1800,
+  "1h": 3600, "6h": 21600, "24h": 86400, "7d": 604800, "30d": 2592000,
+};
+const WINDOW_LABELS: Record<string, string> = {
+  "30s": "Last 30 seconds", "1m": "Last minute", "5m": "Last 5 minutes", "15m": "Last 15 minutes",
+  "30m": "Last 30 minutes", "1h": "Last hour", "6h": "Last 6 hours", "24h": "Last 24 hours",
+  "7d": "Last 7 days", "30d": "Last 30 days",
+};
 
 export default function StoreAnalytics() {
   const [range, setRange] = useState("30d");
+  const [timeWindow, setTimeWindow] = useState("24h");
   const [data, setData] = useState<any>(null);
   const [onsite, setOnsite] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const loadOnsite = useCallback(() => {
+    fetch(`/api/admin/live-view?secs=${WINDOW_SECS[timeWindow] || 86400}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null)).then(setOnsite).catch(() => setOnsite(null));
+  }, [timeWindow]);
+
+  useEffect(() => {
+    loadOnsite();
+    // Under an hour the stats are near-realtime — keep them fresh
+    if ((WINDOW_SECS[timeWindow] || 86400) < 3600) {
+      const id = setInterval(loadOnsite, 15000);
+      return () => clearInterval(id);
+    }
+  }, [loadOnsite, timeWindow]);
+
   const load = useCallback(async () => {
     setLoading(true); setError("");
-    fetch(`/api/admin/live-view?days=${RANGE_DAYS[range] || 30}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null)).then(setOnsite).catch(() => setOnsite(null));
+    loadOnsite();
     try {
       const ga4Res = await fetch(`/api/admin/analytics?range=${range}`, { cache: "no-store" });
       const j = await ga4Res.json();
@@ -23,7 +46,7 @@ export default function StoreAnalytics() {
     } catch (e: any) {
       setError(e.message);
     } finally { setLoading(false); }
-  }, [range]);
+  }, [range, loadOnsite]);
   useEffect(() => { load(); }, [load]);
 
   const s = data?.summary || [];
@@ -53,9 +76,21 @@ export default function StoreAnalytics() {
 
       {onsite && (
         <section className="mb-10 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-neutral-900">On-site Visitor Stats</h2>
-            <p className="text-sm text-neutral-500">Tracked by the store itself — page, device, source and location for every visitor (last {RANGE_DAYS[range]} days)</p>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">On-site Visitor Stats</h2>
+              <p className="text-sm text-neutral-500">Tracked by the store itself — page, device, source and location for every visitor</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(WINDOW_SECS[timeWindow] || 0) < 3600 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />Live
+                </span>
+              )}
+              <select value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} className="h-9 rounded-lg border border-neutral-300 bg-white px-3 text-sm font-semibold">
+                {Object.keys(WINDOW_SECS).map((w) => <option key={w} value={w}>{WINDOW_LABELS[w]}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
