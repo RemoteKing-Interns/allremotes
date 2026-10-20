@@ -393,19 +393,27 @@ export const eBayAdapter: ChannelAdapter = {
   },
 
   async updateInventory(sku, price, quantity, creds) {
-    const payload = {
-      requests: [
-        {
-          sku,
-          price: { currency: process.env.DEFAULT_CURRENCY || "AUD", value: price.toFixed(2) },
-          availability: { shipToLocationAvailability: { quantity } },
-        },
-      ],
+    // eBay requires price under offers[] (with offerId) — resolve it from the
+    // stored channel listing (externalId = offerId from publishListing).
+    let offerId: string | undefined;
+    if (mongoEnabled()) {
+      try {
+        const db = await getDb();
+        const listing = await db.collection("channelListings").findOne({ channel: "ebay", sku });
+        offerId = listing?.externalId ? String(listing.externalId) : undefined;
+      } catch {}
+    }
+    const item: any = {
+      sku,
+      shipToLocationAvailability: { quantity },
     };
+    if (offerId) {
+      item.offers = [{ offerId, price: { currency: process.env.DEFAULT_CURRENCY || "AUD", value: price.toFixed(2) } }];
+    }
     await ebayFetch("/sell/inventory/v1/bulk_update_price_quantity", {
       method: "POST",
       accessToken: creds.accessToken,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ requests: [item] }),
     });
   },
 
