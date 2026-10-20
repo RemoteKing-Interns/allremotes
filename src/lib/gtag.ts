@@ -18,11 +18,44 @@ export function trackGtagEvent(payload: GtagEvent) {
   }
 }
 
+// Meta pixel — same helper shape; fires only when fbevents.js is loaded
+export function trackFbEvent(event: string, payload: Record<string, any> = {}) {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+  if (typeof w.fbq === "function") {
+    w.fbq("track", event, payload);
+  }
+}
+
 export function trackSearch(searchTerm: string, resultCount: number) {
   trackGtagEvent({
     event: "search",
     search_term: searchTerm,
     results_count: resultCount,
+  });
+  trackFbEvent("Search", { search_string: searchTerm });
+}
+
+export function trackViewItem(product: { id: string; name: string; price: number; category?: string }) {
+  trackGtagEvent({
+    event: "view_item",
+    currency: "AUD",
+    value: product.price || 0,
+    items: [
+      {
+        item_id: product.id,
+        item_name: product.name,
+        price: product.price,
+        item_category: product.category || "",
+      },
+    ],
+  });
+  trackFbEvent("ViewContent", {
+    content_ids: [String(product.id)],
+    content_name: product.name,
+    content_type: "product",
+    value: product.price || 0,
+    currency: "AUD",
   });
 }
 
@@ -41,6 +74,13 @@ export function trackAddToCart(product: { id: string; name: string; price: numbe
       },
     ],
   });
+  trackFbEvent("AddToCart", {
+    content_ids: [String(product.id)],
+    content_name: product.name,
+    content_type: "product",
+    value: (product.price || 0) * (product.quantity || 1),
+    currency: "AUD",
+  });
 }
 
 export function trackBeginCheckout(value: number, items: Array<{ id: string; name: string; price: number; quantity: number }>) {
@@ -54,6 +94,13 @@ export function trackBeginCheckout(value: number, items: Array<{ id: string; nam
       price: i.price,
       quantity: i.quantity,
     })),
+  });
+  trackFbEvent("InitiateCheckout", {
+    content_ids: items.map((i) => String(i.id)),
+    content_type: "product",
+    num_items: items.reduce((n, i) => n + (i.quantity || 1), 0),
+    value,
+    currency: "AUD",
   });
 }
 
@@ -69,6 +116,13 @@ export function trackPurchase(orderId: string, value: number, items: Array<{ id:
       price: i.price,
       quantity: i.quantity,
     })),
+  });
+  trackFbEvent("Purchase", {
+    content_ids: items.map((i) => String(i.id)),
+    content_type: "product",
+    num_items: items.reduce((n, i) => n + (i.quantity || 1), 0),
+    value,
+    currency: "AUD",
   });
 
   // Google Ads conversion event — only when a conversion label is configured

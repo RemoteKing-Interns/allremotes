@@ -25,6 +25,7 @@ import ProductCard from "../../../../components/ProductCard";
 import ImageGallery from "../../../../components/images/ImageGallery";
 import ProductReviews from "./ProductReviews";
 import { extractIdFromSlugParam } from "../../../../lib/product-slugs";
+import { trackViewItem } from "../../../../lib/gtag";
 
 // Helper to clean HTML description - remove font styles but preserve colors/bold/italic
 const sanitizeDescription = (html: string): string => {
@@ -110,6 +111,16 @@ const ProductDetailClient = ({ initialProduct }: { initialProduct?: any }) => {
     };
     if (id) fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    trackViewItem({
+      id: String(product.id),
+      name: String(product.name || ""),
+      price: Number(product.price) || 0,
+      category: product.category || product.cat1 || "",
+    });
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product?.id || !product?.rk_sku) return;
