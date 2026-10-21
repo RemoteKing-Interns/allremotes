@@ -45,6 +45,9 @@ function getS3Client() {
   if (!s3Client) {
     s3Client = new S3Client({
       region: S3_REGION,
+      // WHEN_REQUIRED: newer SDK default signs x-amz-checksum-mode into
+      // presigned URLs, which makes plain GETs (feed crawlers) 403.
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "",
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || "",

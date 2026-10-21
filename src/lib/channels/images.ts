@@ -49,7 +49,9 @@ export async function toPublicImageUrl(url: string): Promise<string> {
   if (!region || !accessKeyId || !secretAccessKey || !bucket) return url;
 
   try {
-    const client = new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
+    // WHEN_REQUIRED: newer SDK default (WHEN_SUPPORTED) signs x-amz-checksum-mode
+    // into presigned URLs — plain GETs (TEMU/eBay image fetchers) then 403.
+    const client = new S3Client({ region, credentials: { accessKeyId, secretAccessKey }, requestChecksumCalculation: "WHEN_REQUIRED" });
     return await getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
       expiresIn: 604800,
     });
