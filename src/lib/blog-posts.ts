@@ -331,6 +331,305 @@ These are mechanical issues, not remote issues — a new remote won't fix them.
 If you're not sure which remote you need, [check our compatibility guide](/support/which-garage-door-remote-do-i-need) or email us at **shane@allremotes.com.au** with a photo of your existing remote or motor label — we'll identify the right replacement for you.
     `,
   },
+  {
+    slug: "4d-doors-remote-programming-replacement",
+    title: "4D Doors Remote: Replacement & Programming Guide (RC01, R4D1, R4D2)",
+    metaTitle: "4D Doors Remote Programming & Replacement Guide | RC01, R4D1, R4D2",
+    metaDescription:
+      "Lost or broken 4D Doors remote? Official programming steps for RC01, R4D1 and R4D2 remotes on 4DS2 and GA103 motors — plus the correct replacements to buy in Australia.",
+    keywords: [
+      "4d doors remote",
+      "4d doors remote programming",
+      "4d doors remote replacement",
+      "4ddoors remote",
+      "4d garage door remote",
+      "rc01 remote programming",
+    ],
+    category: "Programming Guides",
+    date: "2026-10-26",
+    author: "ALLREMOTES Support Team",
+    excerpt:
+      "4D Doors remotes pair in under a minute once you know the Code button sequence. Here's the official procedure — and which replacement remote your motor needs.",
+    content: `
+## Which 4D Doors Remote Do You Have?
+
+4D Doors motors are common on sectional and tilt doors across Australia. The three remotes you'll see most often:
+
+- **RC01** — 433MHz 4-button remote, standard on the **4DS2** motor and GA103 receiver setups
+- **R4D2** — 2-button remote used on several 4D openers
+- **R4D1** — earlier 4-button remote
+
+Not sure? The model number is printed inside the battery cover. We stock genuine [4D Doors RC01 remotes](/product/4d-doors-rc01-433mhz-4button-remote-ar-rc01-e3f7c7cf-f649-4331-a02c-35a434b9994c), the [4D Doors R4D2](/product/4d-doors-r4d2-remote-control-ar-r4d2-f6d42fe8-5ebe-4148-bada-b2f12d9ae357) and the [4D Doors R4D1](/product/4d-doors-r4d1-remote-control-ar-r4d1-ee8a7050-0884-4fd9-a206-a26c698c6f40).
+
+## Programming a New Remote — 4DS2 Motor (Official Steps)
+
+1. Open the motor cover (lid) to expose the control panel
+2. Press and release the **Code** button **once** — the red dot in the corner of the display lights up
+3. Press and release the button on your **new remote** — the red dot turns off
+4. Press and release the **same remote button again** — the red dot and motor LED will flash
+5. Test the remote — the door should now respond
+
+## Programming to a GA103 Receiver (c1 button)
+
+Some 4D installations use a separate GA103 receiver board instead of the motor's panel:
+
+1. Press the **c1** button once on the receiver board — the blue LED flashes
+2. Press the button on the remote you want to program
+3. Release — the remote is paired
+4. Test operation
+
+## Deleting All Remotes
+
+Lost a remote? Wipe the motor memory so it can't be used:
+
+- **4DS2 motor**: press and **hold** the Code button until **C** shows on the display — all stored remotes are deleted. Re-pair any remotes you want to keep.
+- **GA103 receiver**: press and hold **c1** for ~10 seconds until the blue LED flashes.
+
+## Troubleshooting
+
+- **Red dot doesn't light?** You're pressing the wrong button — look for the button labelled "Code" (not the door-operate or light buttons)
+- **Remote won't pair?** Fresh battery first (most 4D remotes use a **12V 27A** battery), then retry within a metre of the motor
+- **Paired but door doesn't move?** Check the manual release hasn't been pulled and the door isn't locked
+
+## Need Help?
+
+Email **shane@allremotes.com.au** with a photo of your remote or motor label and we'll confirm the right replacement — or browse all [garage & gate remotes](/products/garage).
+    `,
+  },
+  {
+    slug: "garage-remote-frequencies-explained",
+    title: "Garage Remote Frequencies Explained: 27, 92, 315, 390, 433, 434 & 868MHz",
+    metaTitle: "Garage Door Remote Frequencies Explained (390/433/434/868MHz) | Australia",
+    metaDescription:
+      "What frequency is your garage remote? Guide to 27MHz, 92MHz, 315MHz, 390MHz, 433MHz, 434MHz and 868MHz remotes in Australia — which brands use which, and why it matters.",
+    keywords: [
+      "433mhz remote",
+      "434mhz remote",
+      "390mhz garage door remote",
+      "868mhz garage door remote",
+      "433.92mhz remote",
+      "garage remote frequency",
+      "315mhz remote",
+      "27mhz remote",
+    ],
+    category: "Buying Guides",
+    date: "2026-10-26",
+    author: "ALLREMOTES Support Team",
+    excerpt:
+      "Buying a replacement garage remote? Getting the frequency wrong means it will never pair — even if it looks identical. Here's how to check yours in 30 seconds.",
+    content: `
+## Why Frequency Matters
+
+A replacement remote must transmit on the **same frequency** as your motor's receiver — a 433MHz remote cannot pair with a 390MHz motor, no matter how similar they look. Frequency is the #1 reason "compatible-looking" remotes fail to program.
+
+## How to Find Your Remote's Frequency
+
+1. **Check the battery cover** — most remotes print the frequency inside the battery compartment or on the back sticker
+2. **Check the motor label** — the receiver spec is often on the motor housing
+3. **Google your remote model** — the model code (e.g. "TM390", "PTX4") usually resolves to a spec sheet
+4. **Still stuck?** Email us a photo of the remote — we identify dozens a week at **shane@allremotes.com.au**
+
+## The Australian Frequency Cheat-Sheet
+
+| Frequency | Common on |
+|---|---|
+| **27MHz** | Very old openers — Gliderol TM27 and similar 1980s-90s motors |
+| **92MHz** | B&D 4335E series, Merlin/Grifco older units, Nice ON series, some Dominator |
+| **304/310/315MHz** | Gliderol TM305C (315MHz), Steel-line/Boss BHT4 (304MHz), older American-style imports |
+| **318MHz** | B&D MPC2 / MPC3 remotes |
+| **390MHz** | **Gliderol TM390** — distinctive frequency, almost nothing else uses it |
+| **433/433.92/434MHz** | The modern standard — Merlin, ATA, B&D TriTran, FAAC, BFT, Nice, DEA, most universal remotes |
+| **868MHz** | Some DEA and European gate systems (GTI/868 variants) |
+| **915MHz+** | ATA PTX5 TrioCode uses multiple frequencies including 915MHz band |
+
+## "433MHz" vs "433.92MHz" vs "434MHz" — Are They the Same?
+
+**Effectively yes.** These are the same ISM band; manufacturers and resellers round differently. A remote labelled 433MHz, 433.92MHz or 434MHz operates on the same channel and they are interchangeable with each other — but **not** with 390MHz or 315MHz.
+
+## Frequency ≠ Coding
+
+Even at the right frequency, the remote must speak the right **code** — fixed code, rolling code (SecuraCode, TriTran, HCS) or brand-specific protocols. That's why "universal" remotes only work on listed systems. Genuine or quality aftermarket replacements matched to your model are far more reliable.
+
+## Common Replacements by Frequency
+
+- **390MHz**: [Gliderol TM390 remote](/product/gliderol-tm390-390mhz-3button-remote-ar-rcg50-0399b641-0188-4882-ad1b-5bbce10152be)
+- **315MHz**: [Gliderol TM305C remote](/product/gliderol-tm305c-315mhz-3button-remote-ar-rcg01-b9443921-6567-4ca7-a2b0-7b3222e152d1)
+- **433/434MHz**: covers most of our range — see [all garage remotes](/products/garage) or jump to [Merlin](/brands/Merlin), [ATA](/brands/ATA), [B&D](/brands/B%26D), [FAAC](/brands/FAAC)
+
+## Quick Rule
+
+Same frequency + same code system + a "Learn" button on your motor = almost always a 2-minute DIY pairing. Wrong frequency = will never work, return it.
+    `,
+  },
+  {
+    slug: "dea-remote-programming-guide",
+    title: "DEA Remote Programming Guide: GTI, GTX, Ziggy & Mhouse Remotes",
+    metaTitle: "DEA Remote Programming Guide (GTI, GTX, Ziggy, Mhouse) | ALLREMOTES",
+    metaDescription:
+      "How to program DEA GTI, GTX, Ziggy and Mhouse gate remotes. Rolling code vs D.A.R.T. vs cloning explained, plus the right replacement for your DEA gate or garage opener.",
+    keywords: [
+      "dea gtx",
+      "dea remote programming",
+      "dea gti remote",
+      "dea ziggy remote",
+      "dea gate remote",
+      "mhouse gtx4",
+      "mhouse remote",
+    ],
+    category: "Programming Guides",
+    date: "2026-10-26",
+    author: "ALLREMOTES Support Team",
+    excerpt:
+      "DEA gate remotes program through the receiver, not the motor panel — and some models can clone an existing remote without touching the gate at all.",
+    content: `
+## Know Your DEA Remote First
+
+DEA System (Italy) remotes fall into a few families — the programming method depends on which you have:
+
+- **GTI series** (GTI2/GTI4, GTI2B/GTI4B) — 433.92MHz, supports rolling code, fixed (HT12) and D.A.R.T.
+- **GTX series** (GTX2/GTX4) — the newer replacement for GTI
+- **Ziggy** — popular DEA-compatible 4-button
+- **Mhouse GTX4** — Mhouse is a DEA-group brand; GTX4 uses the same receiver logic
+
+Check the LED flash when you press a button — it tells you the code mode:
+
+- **Red LED** — HCS rolling code (factory default)
+- **Green LED** — fixed code (HT12 dip-switch style)
+- **Alternating red/green** — D.A.R.T. (DEA Advanced Rolling Transmission)
+- **Flashing green** — cloned signal (GTI2M/GTI4M only)
+
+## Method 1: Program via the Receiver (most common)
+
+You'll need physical access to the gate/garage control board:
+
+1. Open the control unit — look for the receiver card (often a small plug-in module)
+2. Briefly press the **programming/learn button** on the receiver
+3. The receiver LED lights or flashes to show it's in learn mode
+4. Press the button on your **new remote** you want to use
+5. The LED confirms storage — test the remote
+
+To program a second door/gate, repeat using a different remote button.
+
+## Method 2: Clone an Existing Remote (GTI2M/GTI4M only)
+
+If your receiver is locked or in a shared complex, the "M" (memory/clonable) variants can copy a working remote's signal:
+
+1. On the new remote, press and hold the button (T) you want to program, then press any second button on the same remote
+2. After ~10 seconds the remote's LEDs light — release the second button, keep holding T
+3. LEDs flash rapidly — bring the **working remote** close
+4. Press the button on the working remote you want to duplicate
+5. The new remote stores the signal — test it
+
+> Note: cloning copies the code — if the original was rolling-code, only compatible receiver setups will accept the clone.
+
+## Changing the Code Type (if pairing fails)
+
+The remote may be in the wrong transmission mode. To cycle code types:
+
+1. Hold **T1 + T2** together until the LEDs turn on (~10s)
+2. Keep holding T1 — tap T2 to cycle: 1 flash = HCS rolling, 2 = HT12 fixed, 3 = D.A.R.T.
+3. Hold T2 ~5s until LEDs switch off to save
+
+## Which Replacement Do You Need?
+
+- DEA GTX2B → [DEA GTX2B 434MHz remote](/product/dea-gtx2b-434mhz-2button-remote-ar-reax02-d76c2fd3-8b74-4319-9f44-611c10376373)
+- DEA GTX4B → [4-button GTX4B remote](/product/4button-dea-gtx4b-garage-door-opener-remote-ar-zigx4w-4455249c-f21b-4d62-a26c-74258ddaa189)
+- DEA GTI2B → [DEA GTI2B 434MHz remote](/product/dea-gti2b-434mhz-2button-remote-ar-rea02-04ebc196-f882-493f-8cf7-6c977d392879)
+- DEA Ziggy → [DEA Ziggy remote](/product/dea-ziggy-garage-gate-remote-ar-zig-rb-6ca712f2-18d0-4e34-9ea5-ed40144a9825)
+- Mhouse GTX4 → [Mhouse GTX4 remote](/product/mhouse-gtx4-garage-gate-remote-ar-gtds-rb-764b15a4-1161-4110-86e6-428ff67f410e)
+
+## Troubleshooting
+
+- **Receiver button not responding?** Some receivers need the button held 1-2 seconds, not tapped
+- **Apartment/shared gate?** The receiver may be locked by the body corporate — use the cloning method or ask the strata
+- **Remote pairs but range is poor?** The receiver antenna wire should hang straight and uncoiled
+
+Questions? Email **shane@allremotes.com.au** with a photo of your remote and motor/receiver.
+    `,
+  },
+  {
+    slug: "garage-remote-battery-sizes-guide",
+    title: "Garage Remote & Watch Battery Sizes Explained: CR2032, 23A, 27A, LR44 & Silver Oxide",
+    metaTitle: "Remote & Watch Battery Size Guide (2032, 23A, 27A, LR44, 321, 377)",
+    metaDescription:
+      "Which battery does your garage remote or watch need? CR2032 vs 23A vs 27A vs LR44 vs silver oxide 321/377 — sizes, equivalents and where to buy in Australia.",
+    keywords: [
+      "garage remote battery",
+      "cr2032 battery",
+      "27a battery",
+      "23a battery",
+      "321 battery",
+      "377 battery",
+      "616 battery",
+      "626 battery",
+      "lr44 battery",
+      "2032 battery maxell",
+    ],
+    category: "Buying Guides",
+    date: "2026-10-26",
+    author: "ALLREMOTES Support Team",
+    excerpt:
+      "A dead battery causes 70% of 'broken' remotes. Match the code on your old battery to this table and you'll have the right replacement in your hand for under $5.",
+    content: `
+## First Step: Read the Old Battery
+
+The replacement code is stamped on the battery itself — a flat remote is almost always fixed by matching that code. If the old battery is missing, check the compartment: many remotes print the battery type inside.
+
+## The Common Sizes
+
+### 12V Alkaline (small cylinder — most garage remotes)
+
+| Code | Also labelled | Common in |
+|---|---|---|
+| **23A** | A23, LRV08, MN21 | Merlin, ATA, most 433MHz gate remotes |
+| **27A** | A27, MN27 | ATA PTX5/PTX6, 4D Doors, many keyring remotes |
+| **4LR44 / 6V** | 4AG13, PX28A | Older remotes, dog collars, cameras |
+
+23A and 27A are both 12V but **different sizes** (27A is shorter) — they're not interchangeable. We carry [23A card packs of 5](/product/battery-23a-card-pack-of-5-ar-23a-5-be0abbea-5af6-495a-9644-7af73add0f98) and [27A card packs of 5](/product/battery-27a-card-pack-of-5-ar-27a-5-f68d2780-1d38-4647-8aed-9fb55cc5375e).
+
+### Lithium Coin Cells (flat, 3V)
+
+| Code | Size | Common in |
+|---|---|---|
+| **CR2032** | 20mm × 3.2mm | ATA PTX4, Merlin E960M series, car keys, scales |
+| **CR2025** | 20mm × 2.5mm | Slim remotes, some car keys |
+| **CR2016 / CR1632 / CR1620 / CR1616 / CR1220 / CR2430 / CR2450** | varies | Car keys, smaller remotes, motherboards |
+
+CR2025 fits a CR2032 slot in a pinch but has less capacity — buy the right code. Shop [Maxell CR2032](/product/maxell-battery-cr-2032-pack-of-5-ar-mx2032-5-a3805c8a-3a11-4ac8-a8b0-fd070c9c61ff) and the rest of the [battery range](/products/batteries).
+
+### Silver Oxide Watch Cells (1.55V — the confusing numbering)
+
+Watch/remotes cells have **two names**: the size number and the chemistry code. Same battery, different label:
+
+| Watch size | Silver oxide code | Alkaline equivalent |
+|---|---|---|
+| **321** | SR616SW | LR616 |
+| **364** | SR621SW | AG1 |
+| **371/370** | SR920SW | AG6 |
+| **377** | SR626SW | AG4 |
+| **395** | SR927SW | AG7 |
+| **A76** | — | LR44 / AG13 |
+
+So "SR626SW", "377" and "AG4" are the **same cell** — and "SR616SW" is the "321" battery people search for. We stock [Maxell SR626SW (377)](/product/maxell-battery-sr626sw-377-pack-of-5-ar-sr626-5mx-58c8147c-ea72-4ea5-825f-3da3621a638a), [SR616SW (321)](/product/maxell-battery-sr616sw-321-pack-of-5-ar-sr616-5mx-a58977c7-0c91-461f-a6d5-722aee3baf36) and [LR44/A76 packs](/product/maxell-battery-lr44-a76-pack-of-5-ar-lr44-a76-5mx-5f784c22-fc43-4477-987d-8f2ad2dcbc48).
+
+## Which Battery for Which Remote?
+
+- **Merlin E960M / E970M**: CR2032
+- **ATA PTX4**: CR2032 · **PTX5/PTX6**: 27A
+- **B&D TriTran / 4335A**: 27A or CR2032 (check yours)
+- **4D Doors RC01**: 27A
+- **FAAC XT2/XT4**: 2× CR2016
+- **Most universal/keyring remotes**: 23A or 27A
+
+## Safety Note — Button Batteries
+
+Button and coin cells are a serious ingestion hazard for children. Keep spare and used batteries locked away, tape used ones before disposal, and if a battery may have been swallowed call the **Poisons Information Centre 13 11 26** immediately.
+
+## Still Not Sure?
+
+Send a photo of your remote or old battery to **shane@allremotes.com.au** — we'll name the cell and link you straight to it.
+    `,
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
