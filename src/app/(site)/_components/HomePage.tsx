@@ -555,7 +555,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
           }
         />
         {popularProducts.length === 0 ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white/70 p-8 text-sm font-semibold text-neutral-700">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-sm font-semibold text-neutral-700">
             No products available right now.
           </div>
         ) : (
@@ -613,7 +613,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
             body="From gate and garage openers to smart access controls, filter by brand, model, or frequency."
           />
           {products.length === 0 ? (
-            <div className="rounded-2xl border border-neutral-200 bg-white/70 p-8 text-sm font-semibold text-neutral-700">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-sm font-semibold text-neutral-700">
               No products available right now.
             </div>
           ) : (
