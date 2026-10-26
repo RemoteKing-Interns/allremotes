@@ -384,7 +384,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
     <main className="animate-fadeIn">
       {/* HERO */}
       <section
-        className="relative min-h-[100dvh] max-h-[900px] overflow-hidden bg-neutral-900 touch-pan-y"
+        className="relative min-h-[70dvh] max-h-[620px] overflow-hidden bg-neutral-900 touch-pan-y"
         onPointerDown={onHeroPointerDown}
         onPointerUp={onHeroPointerUp}
         onPointerCancel={onHeroPointerCancel}
@@ -426,7 +426,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
         </div>
 
         {/* Content */}
-        <div className="container relative z-10 flex h-full min-h-[100dvh] max-h-[900px] items-center px-4 sm:px-6 lg:px-8">
+        <div className="container relative z-10 flex h-full min-h-[70dvh] max-h-[620px] items-center px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl py-16 sm:py-24 lg:py-0">
             <motion.span
               {...fadeInUp}
