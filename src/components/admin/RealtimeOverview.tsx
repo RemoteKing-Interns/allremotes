@@ -25,7 +25,7 @@ export default function RealtimeOverview() {
   const active = stats?.activeVisitors ?? 0;
 
   return (
-    <div className="mb-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="glass-card mb-8 rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="relative flex h-3 w-3">
@@ -47,8 +47,8 @@ export default function RealtimeOverview() {
       <RealtimeMap sessions={sessions} />
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 overflow-hidden rounded-lg border border-neutral-200">
-          <div className="grid grid-cols-[1fr_80px_90px_110px] bg-neutral-50 px-3 py-2 text-xs font-semibold uppercase text-neutral-500">
+        <div className="glass-inset lg:col-span-2 overflow-hidden rounded-xl">
+          <div className="grid grid-cols-[1fr_80px_90px_110px] bg-white/40 px-3 py-2 text-xs font-semibold uppercase text-neutral-500">
             <span>Current page</span><span>Device</span><span>Source</span><span>Location</span>
           </div>
           <div className="max-h-48 overflow-y-auto">
@@ -66,7 +66,7 @@ export default function RealtimeOverview() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border border-neutral-200 p-4">
+          <div className="glass-inset rounded-xl p-4">
             <h3 className="mb-2 text-sm font-semibold text-neutral-900">Top pages now</h3>
             {(stats?.topPages || []).slice(0, 5).map((p: any) => (
               <div key={p.path} className="flex justify-between py-1 text-sm">
@@ -78,7 +78,7 @@ export default function RealtimeOverview() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {(stats?.devices || []).slice(0, 4).map((d: any) => (
-              <div key={d.device} className="rounded-lg bg-neutral-50 p-3 text-center">
+              <div key={d.device} className="glass-inset rounded-lg p-3 text-center">
                 <p className="text-lg font-bold text-neutral-900">{d.count}</p>
                 <p className="text-xs capitalize text-neutral-500">{d.device}</p>
               </div>

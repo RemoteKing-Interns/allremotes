@@ -940,7 +940,7 @@ const AdminContent = () => {
         />
 
         {/* Page Content — only the active tab is mounted; inactive tabs are unmounted to save DOM nodes and API calls */}
-        <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto bg-[linear-gradient(135deg,#eef1f6_0%,#e9edf5_40%,#f0ecf9_100%)] p-4 sm:p-6">
           {/* Permission guard fallback */}
           {activeTab !== 'profile' && !navItems.some(n => n.id === activeTab) && (
             <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -6484,7 +6484,7 @@ function AdminDashboard({
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
           <p className="text-sm text-neutral-500 mt-1">Overview of your store today.</p>
         </div>
-        <div className="inline-flex h-10 items-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-600 shadow-sm">
+        <div className="glass-card inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold text-neutral-600">
           {new Date().toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
         </div>
       </div>
@@ -6492,7 +6492,7 @@ function AdminDashboard({
       <RealtimeOverview />
 
       {loadingStats ? (
-        <div className="mb-8 flex h-44 items-center justify-center rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <div className="glass-card mb-8 flex h-44 items-center justify-center rounded-lg">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-600">
             <div className="spinner" />
             Loading dashboard metrics...
@@ -6507,7 +6507,7 @@ function AdminDashboard({
               return (
                 <div
                   key={index}
-                  className="group relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                  className="glass-card group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(31,38,135,0.12)]"
                 >
                   <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${stat.tone} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
                   <div className="flex items-start justify-between">
@@ -6527,7 +6527,7 @@ function AdminDashboard({
           {/* Main two-column layout */}
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             {/* Latest Orders */}
-            <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="glass-card rounded-2xl p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-neutral-900">Latest Orders</h3>
                 <button
@@ -6576,7 +6576,7 @@ function AdminDashboard({
             </div>
 
             {/* Quick Actions */}
-            <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="glass-card rounded-2xl p-6">
               <h3 className="text-base font-semibold text-neutral-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-3">
                 {quickActions.map((action, i) => {
@@ -6586,9 +6586,9 @@ function AdminDashboard({
                       key={i}
                       type="button"
                       onClick={action.onClick}
-                      className="group flex flex-col items-center justify-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-center text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary-dark"
+                      className="glass-inset group flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-center text-sm font-semibold text-neutral-700 transition-colors hover:border-primary/30 hover:bg-white/60 hover:text-primary-dark"
                     >
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors group-hover:border-primary/25 group-hover:bg-primary/10 group-hover:text-primary-dark">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/80 text-neutral-500 shadow-sm transition-colors group-hover:bg-white group-hover:text-primary-dark">
                         <ActionIcon size={17} strokeWidth={2.2} />
                       </span>
                       <span className="leading-tight">{action.label}</span>

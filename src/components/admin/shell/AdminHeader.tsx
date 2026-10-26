@@ -50,7 +50,7 @@ export default function AdminHeader({
   }, [setNotifOpen]);
 
   return (
-    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+    <header className="h-14 bg-white/60 backdrop-blur-xl border-b border-white/70 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
       <div className="flex items-center gap-3 min-w-0">
         {onOpenNav && (
           <button
@@ -84,7 +84,7 @@ export default function AdminHeader({
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-1rem))] rounded-xl border border-neutral-200 bg-white shadow-xl z-[1100] overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-[min(24rem,calc(100vw-1rem))] rounded-xl border border-white/70 bg-white/90 backdrop-blur-xl shadow-xl z-[1100] overflow-hidden">
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
                 <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
                 <span className="text-xs text-neutral-500">{notifications.length} items</span>
