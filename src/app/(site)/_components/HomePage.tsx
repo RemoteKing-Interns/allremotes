@@ -635,6 +635,47 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
         </div>
       </section>
 
+      {/* HOW IT WORKS + STATS */}
+      <section className="container py-12 sm:py-16 lg:py-20">
+        <SectionHeader
+          eyebrow="How it works"
+          title="From flat remote to working door in minutes"
+          body="No technician, no tools, no guesswork — most customers are done before the kettle boils."
+        />
+        <div className="grid gap-5 md:grid-cols-3">
+          {[
+            { n: "01", title: "Find your remote", body: "Search by brand, model, or the code on your old remote. Not sure? Send us a photo — we'll match it." },
+            { n: "02", title: "We ship fast", body: "Order before dispatch cut-off and your replacement leaves our Victorian warehouse the same day." },
+            { n: "03", title: "Program in 60 seconds", body: "Press the Learn button on your motor, press your new remote, done. Step-by-step guides included." },
+          ].map((step) => (
+            <div
+              key={step.n}
+              className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-strong"
+            >
+              <span className="text-4xl font-extrabold tracking-tight text-accent/20 transition-colors group-hover:text-accent/40">
+                {step.n}
+              </span>
+              <h3 className="mt-3 text-base font-semibold text-neutral-900">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">{step.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-200 sm:grid-cols-4">
+          {[
+            { value: `${Math.floor(products.length / 10) * 10}+`, label: "Products in stock" },
+            { value: `${new Set(products.map((p: any) => p.brand).filter(Boolean)).size}+`, label: "Brands covered" },
+            { value: "12 mo", label: "Warranty on every remote" },
+            { value: "30 d", label: "Returns accepted" },
+          ].map((s) => (
+            <div key={s.label} className="bg-white px-4 py-6 text-center">
+              <p className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">{s.value}</p>
+              <p className="mt-1 text-xs font-medium text-neutral-500">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* REVIEWS */}
       <section className="bg-neutral-50 py-12 sm:py-16 lg:py-20">
         <div className="container">
