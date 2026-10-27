@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function HomeSeoContent() {
   return (
-    <section className="bg-white py-16 sm:py-20 lg:py-24" aria-label="About garage and gate remotes">
+    <section className="bg-white py-10 sm:py-12 lg:py-14" aria-label="About garage and gate remotes">
       <div className="container">
         <div className="mx-auto max-w-4xl">
           <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
@@ -35,31 +35,41 @@ export default function HomeSeoContent() {
               Losing or breaking your garage door remote is a common problem — and replacing it shouldn&apos;t be complicated. At ALLREMOTES, we make it easy to find the exact replacement remote for your garage door motor. Our catalogue covers the most popular motor brands in Australia, with detailed compatibility information for each product so you can order with confidence.
             </p>
 
-            <h4 className="text-lg font-semibold text-neutral-900">Merlin Garage Remotes</h4>
-            <p>
-              <Link href="/brands/Merlin" className="font-semibold text-primary hover:underline">Merlin remotes</Link>{" "}
-              are among the most popular garage door remotes in Australia. We stock compatible replacements for the Merlin E960M, E970M, E964M, E8003, and the entire Merlin+ range. Our Merlin-compatible remotes operate on 433MHz and are programmed to work with your existing motor in minutes — no technician required. Whether you have a Merlin ProLift, Commander, or SilentDrive opener, we have the right remote for you.
-            </p>
-
-            <h4 className="text-lg font-semibold text-neutral-900">ATA Garage Remotes</h4>
-            <p>
-              <Link href="/brands/ATA" className="font-semibold text-primary hover:underline">ATA remotes</Link>{" "}
-              are widely used across Australian homes and businesses. We carry compatible replacements for the ATA PTX5, PTX4, and PTX6 remote models, which work with ATA SecuraCode openers. ATA remotes use a rolling code technology for enhanced security, and our compatible versions replicate this functionality perfectly. If your ATA remote has stopped working or you need a spare, browse our ATA range for fast delivery.
-            </p>
-
-            <h4 className="text-lg font-semibold text-neutral-900">B&amp;D Garage Remotes</h4>
-            <p>
-              <Link href="/brands/B%26D" className="font-semibold text-primary hover:underline">B&amp;D remotes</Link>{" "}
-              are found in many Australian garages, particularly with B&amp;D Panelift, Roll-A-Door, and Controll-A-Door openers. We stock compatible B&amp;D TriTran and TriTran+ remotes that work seamlessly with your existing motor. Our B&amp;D replacement remotes are pre-tested for compatibility and come with a 12-month warranty for peace of mind.
-            </p>
-
-            <h4 className="text-lg font-semibold text-neutral-900">Gliderol &amp; Chamberlain Remotes</h4>
-            <p>
-              <Link href="/brands/Gliderol" className="font-semibold text-primary hover:underline">Gliderol remotes</Link>{" "}
-              are designed for Gliderol garage door openers, including the Gliderol GTS, GTA, and GRD series. We also stock{" "}
-              <Link href="/brands/Chamberlain" className="font-semibold text-primary hover:underline">Chamberlain remotes</Link>{" "}
-              compatible with Chamberlain, LiftMaster, and MotorLift openers. All our Gliderol and Chamberlain replacement remotes are quality-tested and ship with programming instructions.
-            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <h4 className="text-base font-semibold text-neutral-900">
+                  <Link href="/brands/Merlin" className="text-primary hover:underline">Merlin Garage Remotes</Link>
+                </h4>
+                <p className="mt-2">
+                  The most popular remotes in Australia. Compatible replacements for E960M, E970M, E964M, E8003 and the Merlin+ range — 433MHz, programs in minutes, no technician needed.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <h4 className="text-base font-semibold text-neutral-900">
+                  <Link href="/brands/ATA" className="text-primary hover:underline">ATA Garage Remotes</Link>
+                </h4>
+                <p className="mt-2">
+                  Compatible PTX4, PTX5 and PTX6 remotes for ATA SecuraCode openers — full rolling-code functionality, pre-tested, fast delivery.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <h4 className="text-base font-semibold text-neutral-900">
+                  <Link href="/brands/B%26D" className="text-primary hover:underline">B&amp;D Garage Remotes</Link>
+                </h4>
+                <p className="mt-2">
+                  TriTran and TriTran+ remotes for B&amp;D Panelift, Roll-A-Door and Controll-A-Door openers — compatibility-tested, 12-month warranty.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <h4 className="text-base font-semibold text-neutral-900">
+                  <Link href="/brands/Gliderol" className="text-primary hover:underline">Gliderol</Link> &amp;{" "}
+                  <Link href="/brands/Chamberlain" className="text-primary hover:underline">Chamberlain</Link> Remotes
+                </h4>
+                <p className="mt-2">
+                  Gliderol GTS, GTA and GRD openers, plus Chamberlain, LiftMaster and MotorLift — quality-tested, ships with programming instructions.
+                </p>
+              </div>
+            </div>
 
             <h3 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               Gate Remotes &amp; Automatic Gate Openers
@@ -71,6 +81,13 @@ export default function HomeSeoContent() {
               </Link>{" "}
               for automatic swing gates, sliding gates, and barrier arm openers. Whether you have a Centurion gate motor, an Elsema receiver, or a generic 433MHz gate opener, we have compatible remotes in stock. Our gate remotes are suitable for residential, commercial, and industrial applications across Australia.
             </p>
+
+            <details className="group rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-4 sm:px-7 sm:py-5 [&_summary]:list-none">
+              <summary className="flex cursor-pointer items-center justify-between gap-4 text-sm font-semibold text-neutral-900">
+                <span>How to choose the right remote, why buy from us &amp; programming help</span>
+                <span className="shrink-0 text-neutral-400 transition-transform group-open:rotate-90">&#8250;</span>
+              </summary>
+              <div className="mt-4 space-y-5">
 
             <h3 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               How to Choose the Right Replacement Remote
@@ -114,6 +131,9 @@ export default function HomeSeoContent() {
               </Link>{" "}
               or contact our support team for assistance.
             </p>
+
+              </div>
+            </details>
 
             <h3 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               Shop by Category

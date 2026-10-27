@@ -132,6 +132,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           onClick={onClick}
           onLoad={onLoad}
           fill={fill}
+          {...(fill ? {} : { width: 300, height: 300 })}
           sizes={sizes}
           priority={loading === "eager"}
           unoptimized={isS3Url(fallbackSrc || "")}
@@ -157,6 +158,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
           onClick={onClick}
           onLoad={onLoad}
           fill={fill}
+          {...(fill ? {} : { width: 300, height: 300 })}
           sizes={sizes}
           priority={loading === "eager"}
           unoptimized={isS3Url(fallbackSrc || "")}
@@ -179,6 +181,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
       onClick={onClick}
       onLoad={onLoad}
       fill={fill}
+      {...(fill ? {} : { width: 300, height: 300 })}
       sizes={sizes}
       priority={loading === "eager"}
       unoptimized={isS3Url(imgSrc || "")}

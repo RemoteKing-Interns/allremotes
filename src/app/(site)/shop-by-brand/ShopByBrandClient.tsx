@@ -29,13 +29,30 @@ export default function ShopByBrandClient() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetch("/api/products")
-      .then((r) => r.json())
-      .then((data) => {
-        setAllProducts(Array.isArray(data) ? data : []);
-      })
-      .catch(() => setAllProducts([]))
-      .finally(() => setLoading(false));
+    let alive = true;
+    const parse = (d: any): Product[] =>
+      Array.isArray(d) ? d : Array.isArray(d?.products) ? d.products : [];
+    const load = (retry: boolean) =>
+      fetch("/api/products")
+        .then((r) => r.json())
+        .then((d) => {
+          if (!alive) return;
+          const list = parse(d);
+          if (!list.length && retry) {
+            // transient API blip (cold start/deploy) — retry once
+            setTimeout(() => alive && load(false), 1200);
+            return;
+          }
+          setAllProducts(list);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (!alive) return;
+          if (retry) setTimeout(() => alive && load(false), 1200);
+          else { setAllProducts([]); setLoading(false); }
+        });
+    load(true);
+    return () => { alive = false; };
   }, []);
 
   // Derive unique brands from products

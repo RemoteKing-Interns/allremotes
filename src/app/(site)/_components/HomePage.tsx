@@ -186,7 +186,7 @@ function getFeatureImage(title: string) {
 
 function SectionHeader({ eyebrow, title, body, action }: { eyebrow?: string; title: string; body?: string; action?: React.ReactNode }) {
   return (
-    <div className="mb-10 max-w-2xl lg:mb-14">
+    <div className="mb-6 max-w-2xl lg:mb-8">
       {eyebrow && (
         <span className="mb-3 inline-block text-xs font-extrabold uppercase tracking-[0.18em] text-primary">
           {eyebrow}
@@ -332,7 +332,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
   }, [home?.whyBuy]);
 
   const feedbackReviews = useMemo(() => {
-    const normalized = (reviews || [])
+    const normalized = (mounted ? reviews : [])
       .map((r: any, idx: number) => ({
         rating: Math.max(1, Math.min(5, Number(r?.rating) || 5)),
         text: String(r?.text || "").trim(),
@@ -350,7 +350,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       next.push(review);
     }
     return next.length > 0 ? next : DEFAULT_FEEDBACK_REVIEWS;
-  }, [reviews]);
+  }, [reviews, mounted]);
 
   const cta = home?.ctaSection || DEFAULT_CTA;
 
@@ -384,7 +384,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
     <main className="animate-fadeIn">
       {/* HERO */}
       <section
-        className="relative min-h-[70dvh] max-h-[620px] overflow-hidden bg-neutral-900 touch-pan-y"
+        className="relative min-h-[58dvh] max-h-[540px] overflow-hidden bg-neutral-900 touch-pan-y"
         onPointerDown={onHeroPointerDown}
         onPointerUp={onHeroPointerUp}
         onPointerCancel={onHeroPointerCancel}
@@ -426,8 +426,8 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
         </div>
 
         {/* Content */}
-        <div className="container relative z-10 flex h-full min-h-[70dvh] max-h-[620px] items-center px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl py-16 sm:py-24 lg:py-0">
+        <div className="container relative z-10 flex h-full min-h-[58dvh] max-h-[540px] items-center px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl py-12 sm:py-16 lg:py-0">
             <motion.span
               {...fadeInUp}
               className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-white/90 backdrop-blur"
@@ -524,7 +524,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
           ].map((item, index) => (
             <div
               key={index}
-              className="flex flex-col items-center gap-2 px-3 py-5 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:px-4 sm:py-8 sm:text-left"
+              className="flex flex-col items-center gap-2 px-3 py-5 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:px-4 sm:py-6 sm:text-left"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark sm:h-11 sm:w-11">
                 <item.icon size={20} strokeWidth={1.8} className="sm:h-[22px] sm:w-[22px]" />
@@ -539,7 +539,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* POPULAR PRODUCTS */}
-      <section className="container py-12 sm:py-16 lg:py-20">
+      <section className="container py-8 sm:py-10 lg:py-12">
         <SectionHeader
           eyebrow="Popular Picks"
           title="The remotes customers choose first"
@@ -567,36 +567,39 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
         )}
       </section>
 
-      {/* WHY BUY */}
-      <section className="container py-12 sm:py-16 lg:py-20">
-        <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
-          <div>
-            <SectionHeader
-              eyebrow="Why All Remotes"
-              title="Built for trade, workshops, and homeowners"
-              body="We stock genuine and compatible remotes you can actually program, backed by local support and fast Australian shipping."
-            />
-            <Link
-              href="/products/all"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.98]"
-            >
-              Start browsing
-              <ArrowRight size={16} strokeWidth={2} />
-            </Link>
+      {/* WHY BUY — compact strip */}
+      <section className="container py-10 sm:py-12">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-xl">
+            <span className="mb-2 inline-block text-xs font-extrabold uppercase tracking-[0.18em] text-primary">
+              Why All Remotes
+            </span>
+            <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+              Built for trade, workshops, and homeowners
+            </h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <Link
+            href="/products/all"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.98]"
+          >
+            Start browsing
+            <ArrowRight size={16} strokeWidth={2} />
+          </Link>
+        </div>
+        <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="grid w-max grid-flow-col gap-4 sm:w-full sm:grid-flow-row sm:grid-cols-5">
             {whyBuyItems.map((card: any, index: number) => {
               const Icon = resolveWhyBuyIcon(card, index);
               return (
                 <div
                   key={index}
-                  className="rounded-2xl border border-neutral-200 bg-white/85 p-6 shadow-panel backdrop-blur"
+                  className="w-52 rounded-2xl border border-neutral-200 bg-white p-5 sm:w-auto"
                 >
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
-                    <Icon size={22} strokeWidth={1.8} />
+                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-dark">
+                    <Icon size={19} strokeWidth={1.8} />
                   </div>
-                  <h3 className="text-base font-semibold text-neutral-900">{card.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-600">{card.description}</p>
+                  <h3 className="text-sm font-semibold leading-snug text-neutral-900">{card.title}</h3>
+                  <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-neutral-600">{card.description}</p>
                 </div>
               );
             })}
@@ -605,7 +608,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* FEATURED RANGE */}
-      <section className="border-t border-neutral-200 bg-white py-12 sm:py-16 lg:py-20">
+      <section className="border-t border-neutral-200 bg-white py-8 sm:py-10 lg:py-12">
         <div className="container">
           <SectionHeader
             eyebrow="Full Range"
@@ -623,7 +626,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
               ))}
             </div>
           )}
-          <div className="mt-10 text-center">
+          <div className="mt-8 text-center">
             <Link
               href="/products/all"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-extrabold text-white shadow-soft transition hover:bg-primary-dark active:scale-[0.98]"
@@ -636,7 +639,7 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* HOW IT WORKS + STATS */}
-      <section className="container py-12 sm:py-16 lg:py-20">
+      <section className="container py-8 sm:py-10 lg:py-12">
         <SectionHeader
           eyebrow="How it works"
           title="From flat remote to working door in minutes"
@@ -677,14 +680,14 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       </section>
 
       {/* REVIEWS */}
-      <section className="bg-neutral-50 py-12 sm:py-16 lg:py-20">
+      <section className="bg-neutral-50 py-8 sm:py-10 lg:py-12">
         <div className="container">
           <SectionHeader
             eyebrow="Reviews"
             title="Trusted by homeowners, workshops, and trade buyers"
             body="Real feedback from customers ordering replacement remotes and access-control products."
           />
-          <div className="feedback-marquee -mx-4 mt-10 px-4" aria-live="polite">
+          <div className="feedback-marquee -mx-4 mt-6 px-4" aria-live="polite">
             <div className="feedback-marquee-track flex gap-4">
               {feedbackReviews.map((r: any, i: number) => (
                 <div
@@ -717,8 +720,8 @@ export default function HomePage({ initialProducts }: { initialProducts?: any[] 
       <HomeSeoContent />
 
       {/* CTA */}
-      <section className="container py-12 sm:py-16 lg:py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 px-5 py-10 text-center shadow-strong sm:px-12 sm:py-16 lg:py-24">
+      <section className="container py-8 sm:py-10 lg:py-12">
+        <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 px-5 py-8 text-center shadow-strong sm:px-12 sm:py-12 lg:py-14">
           <img
             src="/images/remote-banner.jpg"
             alt="Australian garage door and gate remotes"
