@@ -12,6 +12,20 @@ import {
   writeOrdersFile,
   OrderDoc,
 } from "../../../lib/order-create";
+import { getAdminSession } from "../../../lib/session-token";
+import Stripe from "stripe";
+
+// Verify a Stripe checkout session is actually paid before trusting it.
+async function verifyPaidStripeSession(sessionId: string | undefined): Promise<boolean> {
+  if (!sessionId || !process.env.STRIPE_SECRET_KEY) return false;
+  try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return session.payment_status === "paid";
+  } catch {
+    return false;
+  }
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
@@ -29,7 +43,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
     const orderId = searchParams.get("orderId");
-    
+
+    // Unfiltered dumps (no email and no orderId) are admin-only.
+    // A lone orderId is enumerable (sequential ids) — require the customer email too.
+    if (!email && !orderId && !(await getAdminSession(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
+    }
+    if (orderId && !email && !(await getAdminSession(request))) {
+      return NextResponse.json({ error: "Order ID and email are required" }, { status: 401, headers: CORS_HEADERS });
+    }
+
     if (mongoEnabled()) {
       const db = await getDb();
       const col = db.collection("orders");
@@ -192,10 +215,19 @@ export async function POST(request: Request) {
       });
     }
 
+    // Payment must be proven: a Stripe-verified paid session or an admin session.
+    // Previously any client could create 'paid' orders without paying.
+    const sessionId = (body as any).payment?.sessionId;
+    if (!(await getAdminSession(request)) && !(await verifyPaidStripeSession(sessionId))) {
+      return NextResponse.json({ error: "Payment verification required" }, {
+        status: 401,
+        headers: CORS_HEADERS
+      });
+    }
+
     // Idempotency: the Stripe webhook safety net may already have created this
     // order for the same checkout session. Return the existing order instead
     // of creating a duplicate.
-    const sessionId = (body as any).payment?.sessionId;
     const existing = await findOrderBySessionId(sessionId);
     if (existing) {
       return NextResponse.json(existing, { headers: CORS_HEADERS });
@@ -225,6 +257,20 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const { orderId, status, trackingNumber, customerEmail, payment } = await request.json();
+
+    // Status changes are admin-only. The public order-success flow only marks
+    // payment succeeded — and only with a Stripe-verified paid session.
+    const isAdmin = !!(await getAdminSession(request));
+    const sessionId = payment?.sessionId;
+    if (!isAdmin) {
+      // Public flow can only confirm payment (processing/paid) — never shipped/refunded/etc.
+      if (!["paid", "processing"].includes(status) || !(await verifyPaidStripeSession(sessionId))) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401, headers: CORS_HEADERS }
+        );
+      }
+    }
 
     if (!orderId || !status) {
       return NextResponse.json(

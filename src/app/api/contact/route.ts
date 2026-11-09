@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from '../../../lib/mongo';
 import { sendEmail } from '../../../lib/email';
 import { encrypt, encryptPii, decryptPiiArray, emailHash, PII_FIELDS } from '../../../lib/pii-crypto';
@@ -63,7 +64,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     if (!mongoEnabled()) {
       return NextResponse.json([]);

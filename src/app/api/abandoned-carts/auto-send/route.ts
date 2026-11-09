@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { runAbandonedCartAutoSend } from "@/lib/abandoned-cart-auto-send";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => ({}));
     const result = await runAbandonedCartAutoSend({

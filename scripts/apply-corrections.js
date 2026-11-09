@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
 async function main() {
-  const uri = 'mongodb+srv://intern:Z9axiy75zxpxwekF@allremotes.9jdilke.mongodb.net/';
+  const uri = '';
   const client = new MongoClient(uri);
   await client.connect();
   const db = client.db('allremotes');

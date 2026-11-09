@@ -61,10 +61,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const origin =
-      request.headers.get("origin") ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://www.allremotes.com.au";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.allremotes.com.au";
 
     const resetUrl = `${origin}/admin/reset-password?token=${resetToken}`;
 

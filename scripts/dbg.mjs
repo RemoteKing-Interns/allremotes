@@ -1,0 +1,15 @@
+import { config } from "dotenv"; config({ path: ".env.local" });
+const sharp = (await import("sharp")).default;
+const { fetch: uf } = await import("undici");
+const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+const { MongoClient } = await import("mongodb");
+const url = "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-MYQ-B-1-clean.jpg";
+const buf = Buffer.from(await (await uf(url)).arrayBuffer());
+const big = await sharp(buf).rotate().resize(500,500,{fit:"contain",background:"#ffffff"}).jpeg({quality:92}).toBuffer();
+const s3 = new S3Client({region:"ap-southeast-2",requestChecksumCalculation:"WHEN_REQUIRED",credentials:{accessKeyId:process.env.S3_ACCESS_KEY_ID||process.env.AWS_ACCESS_KEY_ID,secretAccessKey:process.env.S3_SECRET_ACCESS_KEY||process.env.AWS_SECRET_ACCESS_KEY}});
+await s3.send(new PutObjectCommand({Bucket:"allremotes",Key:"images/AR-MYQ-B-1-500.jpg",Body:big,ContentType:"image/jpeg",CacheControl:"public, max-age=31536000"}));
+const nu = "https://allremotes.s3.ap-southeast-2.amazonaws.com/images/AR-MYQ-B-1-500.jpg";
+const c = new MongoClient(process.env.MONGODB_URI); await c.connect();
+await c.db("allremotes").collection("products").updateOne({sku:"AR-MYQ-B"},{$set:{image:nu,images:[nu],updatedAt:new Date().toISOString()}});
+console.log("upsized:",nu);
+await c.close(); process.exit(0);

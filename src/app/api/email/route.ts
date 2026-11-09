@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAdminSession } from "@/lib/session-token";
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import {
@@ -16,6 +17,9 @@ import {
 
 // POST /api/email - Send an email
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { type, data } = body;

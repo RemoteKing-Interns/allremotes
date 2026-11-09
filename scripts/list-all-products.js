@@ -1,5 +1,5 @@
 const { MongoClient } = require("mongodb");
-const uri = "mongodb+srv://intern:Z9axiy75zxpxwekF@allremotes.9jdilke.mongodb.net/";
+const uri = "";
 
 async function main() {
   const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });

@@ -8,6 +8,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useStore } from "../../../context/StoreContext";
 import { generateProductSlugUrl } from "../../../lib/product-slugs";
 import { belowMinCartValue, MIN_CART_SUBTOTAL } from "../../../lib/cartRules";
+import { stripExecutableHtml } from "../../../lib/html-strip";
 
 const Cart = () => {
   const {
@@ -501,7 +502,7 @@ const Cart = () => {
                   selectedItem.description.trim().toLowerCase() !== String(selectedItem?.name || "").trim().toLowerCase() ? (
                     <div
                       className="prose prose-sm mt-3 max-w-none break-words text-neutral-600"
-                      dangerouslySetInnerHTML={{ __html: selectedItem.description }}
+                      dangerouslySetInnerHTML={{ __html: stripExecutableHtml(String(selectedItem.description || "")) }}
                     />
                   ) : (
                     <p className="mt-3 break-words text-sm leading-7 text-neutral-600">

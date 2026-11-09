@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -33,7 +34,9 @@ async function saveToLocal(formData: FormData, productId: string | null) {
 
   const ext = file.name.split(".").pop() || "jpg";
   const safeName = sanitizeFilename(file.name);
-  const dir = productId ? `uploads/products/${productId}` : "uploads/products";
+  // productId must not contain path separators — '..' would escape public/uploads.
+  const safeProductId = productId && /^[a-zA-Z0-9_-]+$/.test(productId) ? productId : null;
+  const dir = safeProductId ? `uploads/products/${safeProductId}` : "uploads/products";
   const filename = safeName;
   const fullDir = path.join(process.cwd(), "public", dir);
   const fullPath = path.join(fullDir, filename);
@@ -57,6 +60,9 @@ async function saveToLocal(formData: FormData, productId: string | null) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const config = getConfig();
 
   console.log("Upload config check:", { region: config.region, bucket: config.bucket, configured: config.configured });

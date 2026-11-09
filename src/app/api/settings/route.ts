@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 
 export const runtime = "nodejs";
@@ -48,6 +49,9 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {

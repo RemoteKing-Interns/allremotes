@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import crypto from "crypto";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { createUnleashedSkuMap, getUnleashedProductCode, normalizeUnleashedSku } from "@/lib/unleashedSku";
@@ -22,6 +23,9 @@ function unleashedHeaders(apiId: string, apiKey: string, queryString = "") {
 }
 
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const apiId = process.env.UNLEASHED_API_ID;
   const apiKey = process.env.UNLEASHED_API_KEY;
   const warehouseCode = process.env.UNLEASHED_WAREHOUSE_CODE || "MAIN";

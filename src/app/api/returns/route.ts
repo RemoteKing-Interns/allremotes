@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { sendEmail } from "@/lib/email";
 import { encrypt, encryptPii, decryptPii, decryptPiiArray, emailHash, PII_FIELDS } from "@/lib/pii-crypto";
@@ -87,6 +88,9 @@ function writeReturnsFile(returns: ReturnRequest[]) {
 }
 
 export async function GET(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");

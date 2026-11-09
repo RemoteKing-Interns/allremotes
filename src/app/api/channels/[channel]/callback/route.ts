@@ -18,8 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
     return NextResponse.json({ error: "Missing code" }, { status: 400 });
   }
 
-  const verified = state ? verifyState(state) : false;
-  if (state && !verified) {
+  if (!state || !verifyState(state)) {
     return NextResponse.json({ error: "Invalid state" }, { status: 400 });
   }
 

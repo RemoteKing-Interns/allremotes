@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { encrypt, decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 
@@ -52,6 +53,9 @@ function makeThreadId() {
 }
 
 export async function GET(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const customerEmail = searchParams.get("customerEmail");
@@ -108,7 +112,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid body" }, { status: 400, headers: CORS_HEADERS });
     }
 
-    const { orderId, returnId, customerEmail, customerName, sender, message, attachments, threadId } = body;
+    const { orderId, returnId, customerEmail, customerName, sender: rawSender, message, attachments, threadId } = body;
+    // Never trust a client-claimed 'admin' sender — only a verified admin session may send as admin.
+    const sender = rawSender === "admin" && (await getAdminSession(request)) ? "admin" : "customer";
 
     if (!customerEmail || !sender || !message) {
       return NextResponse.json(
@@ -193,6 +199,9 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => null);
     const { threadId, status, markAsRead } = body;

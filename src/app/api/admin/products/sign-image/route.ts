@@ -55,8 +55,11 @@ export async function GET(request: NextRequest) {
   }
 
   // Browser fetch() to S3/external URLs can be blocked by CORS (unlike <img> tags).
-  // Fetch the bytes here on the server and stream them back to avoid that entirely.
+  // Only proxy when we recognized+signed our own S3 object — never arbitrary URLs.
   if (fetchBytes) {
+    if (!key) {
+      return NextResponse.json({ error: "Only S3-hosted images can be proxied" }, { status: 400 });
+    }
     try {
       const imgRes = await fetch(resolvedUrl);
       if (!imgRes.ok) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { mongoEnabled, getDb } from "@/lib/mongo";
 import { enrichProductWithS3Images } from "@/lib/products-json";
 

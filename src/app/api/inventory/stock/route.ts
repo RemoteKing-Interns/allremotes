@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { revalidateTag } from "next/cache";
 import crypto from "crypto";
 import { mongoEnabled, getDb } from "@/lib/mongo";
@@ -75,6 +76,9 @@ async function fetchProductStock(apiId: string, apiKey: string, productCode: str
 }
 
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const apiId = process.env.UNLEASHED_API_ID;
   const apiKey = process.env.UNLEASHED_API_KEY;
 
@@ -87,7 +91,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, rk_sku } = await request.json();
+    const raw = await request.json();
+    // Coerce to string — raw JSON objects would otherwise become Mongo operators ($ne/$regex).
+    const id = typeof raw.id === "string" ? raw.id : null;
+    const rk_sku = typeof raw.rk_sku === "string" ? raw.rk_sku : null;
     if (!id && !rk_sku) {
       return NextResponse.json({ error: "Product id or RK SKU is required" }, { status: 400 });
     }

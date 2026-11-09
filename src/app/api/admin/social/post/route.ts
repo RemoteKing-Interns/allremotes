@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,6 +8,9 @@ export const dynamic = "force-dynamic";
 // Publishes to the "All Remotes" Facebook Page and/or the linked Instagram
 // business account (@all_remotes). Instagram requires imageUrl.
 export async function POST(request: NextRequest) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => ({}));
     const message = String(body?.message || "").trim();

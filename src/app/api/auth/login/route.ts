@@ -3,6 +3,7 @@ import { getDb } from '../../../../lib/mongo';
 import bcrypt from 'bcryptjs';
 import { serverLogger } from '../../../../lib/server-logger';
 import { emailHash, decryptPii, PII_FIELDS } from '../../../../lib/pii-crypto';
+import { mintSessionToken } from '../../../../lib/session-token';
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +40,16 @@ export async function POST(request: Request) {
         createdAt: adminUser.createdAt,
       };
       await serverLogger.info('admin_login', { email, name: adminUser.name }, { userEmail: email, ip: (request as any).headers?.get?.('x-forwarded-for') || 'unknown' });
-      return NextResponse.json({ success: true, user: userResponse, message: 'Login successful' });
+      const res = NextResponse.json({ success: true, user: userResponse, message: 'Login successful' });
+      const sessionToken = await mintSessionToken(adminUser.email, 'admin', adminUser.permissions || ['*']);
+      res.cookies.set('admin_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 12,
+      });
+      return res;
     }
 
     // Fall through to customer users

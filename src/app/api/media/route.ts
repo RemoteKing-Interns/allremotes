@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import {
   S3Client,
   ListObjectsV2Command,
@@ -98,6 +99,9 @@ function topLevelFolder(key: string) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const config = getConfig();
   if (!config.configured) {
     return NextResponse.json({ configured: false, items: [] }, { status: 200 });
@@ -190,6 +194,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const config = getConfig();
   if (!config.configured) {
     return NextResponse.json({ error: "S3 is not configured" }, { status: 503 });
@@ -269,6 +276,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const config = getConfig();
   if (!config.configured) {
     return NextResponse.json({ error: "S3 is not configured" }, { status: 503 });

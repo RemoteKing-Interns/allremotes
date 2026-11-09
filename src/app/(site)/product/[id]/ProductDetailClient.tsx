@@ -26,11 +26,12 @@ import ImageGallery from "../../../../components/images/ImageGallery";
 import ProductReviews from "./ProductReviews";
 import { extractIdFromSlugParam } from "../../../../lib/product-slugs";
 import { trackViewItem } from "../../../../lib/gtag";
+import { stripExecutableHtml } from "../../../../lib/html-strip";
 
 // Helper to clean HTML description - remove font styles but preserve colors/bold/italic
 const sanitizeDescription = (html: string): string => {
   if (!html) return '';
-  return html
+  return stripExecutableHtml(html)
     // Remove font-family and font-size styles
     .replace(/font-family:\s*[^;"']+;?/gi, '')
     .replace(/font-size:\s*[^;"']+;?/gi, '')

@@ -54,6 +54,25 @@ export async function POST(request) {
       );
     }
 
+    // Resolve prices server-side from the products catalog — never trust
+    // client-supplied item.price (price-tampering fix).
+    const db = mongoEnabled() ? await getDb() : null;
+    if (db && Array.isArray(items) && items.length) {
+      const ids = items.map((i) => String(i.id || i.sku || '')).filter(Boolean);
+      const products = await db.collection('products')
+        .find({ $or: [{ id: { $in: ids } }, { sku: { $in: ids } }] })
+        .toArray();
+      const byKey = new Map();
+      for (const p of products) { byKey.set(String(p.id), p); if (p.sku) byKey.set(String(p.sku), p); }
+      for (const item of items) {
+        const p = byKey.get(String(item.id || item.sku || ''));
+        if (p && typeof p.price === 'number') {
+          item.price = p.price;
+          item.name = p.name || item.name;
+        }
+      }
+    }
+
     // Convert items to Stripe line items format
     const line_items = items.map(item => ({
       price_data: {
@@ -96,8 +115,7 @@ export async function POST(request) {
     let discounts;
     if (couponCode) {
       let coupon = null;
-      if (mongoEnabled()) {
-        const db = await getDb();
+      if (db) {
         coupon = await db.collection("coupons").findOne({
           code: String(couponCode).toUpperCase(),
           isActive: true,
@@ -156,8 +174,8 @@ export async function POST(request) {
       );
     }
     
-    // Get the actual origin from the request
-    const origin = request.headers.get('origin') || request.headers.get('referer') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+    // Never trust Origin/Referer for redirect targets — use the configured site URL.
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     
     // Create checkout session with fraud protection
     const session = await stripe.checkout.sessions.create({

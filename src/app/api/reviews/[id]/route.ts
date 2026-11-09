@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const CORS_HEADERS = {
@@ -97,6 +98,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 }
 
 export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await getAdminSession(_))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { id: rawId } = await context.params;
     const id = String(rawId || "").trim();

@@ -12,7 +12,7 @@ const CORS_HEADERS = {
 
 // Generate 6-digit OTP
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 // Hash OTP for storage

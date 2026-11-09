@@ -19,6 +19,27 @@ export async function GET(
     // Decode the URL
     const decodedUrl = decodeURIComponent(imageUrl);
 
+    // Allowlist: only fetch public https images from known asset hosts
+    let parsed: URL;
+    try {
+      parsed = new URL(decodedUrl);
+    } catch {
+      return NextResponse.redirect(new URL('/images/placeholder-remote-key.png', request.url));
+    }
+    const ALLOWED_HOSTS = [
+      'allremotes.s3.ap-southeast-2.amazonaws.com',
+      'www.allremotes.com.au',
+      'allremotes.com.au',
+      'cdn.shopify.com',
+      'i.ebayimg.com',
+      'ae01.alicdn.com',
+      'images-na.ssl-images-amazon.com',
+      'm.media-amazon.com',
+    ];
+    if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.includes(parsed.hostname) || parsed.username || parsed.password) {
+      return NextResponse.redirect(new URL('/images/placeholder-remote-key.png', request.url));
+    }
+
     // Fetch the image from the original source
     const response = await fetch(decodedUrl);
 

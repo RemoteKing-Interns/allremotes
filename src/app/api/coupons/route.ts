@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { encrypt, emailHash } from "@/lib/pii-crypto";
+import { getAdminSession } from "@/lib/session-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { code, discountPercent, discountAmount, minPurchase, maxUses, validDays, customerEmail, customerUserId } = body;
@@ -118,6 +122,9 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { code, incrementUsage } = body;

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 
 const CORS_HEADERS = {
@@ -79,6 +80,9 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => null);
     const section = String(body?.section || "").trim().toLowerCase();

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAdminSession } from "@/lib/session-token";
 import { getDb } from '../../../lib/mongo';
 import { sendWelcomeEmail } from '../../../lib/email';
 import { encrypt } from '../../../lib/pii-crypto';
@@ -82,6 +83,9 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
@@ -143,6 +147,9 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { email, updates } = await request.json();
 

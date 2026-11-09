@@ -6,7 +6,7 @@
 
 const { MongoClient } = require('mongodb');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://intern:Z9axiy75zxpxwekF@allremotes.9jdilke.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI || '';
 const DB_NAME = 'allremotes';
 
 async function findLinks() {

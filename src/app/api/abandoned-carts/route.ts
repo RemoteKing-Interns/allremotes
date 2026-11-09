@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { encrypt, decryptPii, decryptPiiArray, emailHash } from "@/lib/pii-crypto";
 import { matchCartItemsAgainstOrders } from "@/lib/abandoned-carts";
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic";
 const ABANDONMENT_THRESHOLD_HOURS = 24;
 
 export async function GET(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const hoursThreshold = parseInt(searchParams.get("hours") || String(ABANDONMENT_THRESHOLD_HOURS));

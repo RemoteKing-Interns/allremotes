@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/session-token";
 import { getDb, mongoEnabled } from "@/lib/mongo";
 import { decryptPii } from "@/lib/pii-crypto";
 import type { ReturnRequest, ReturnStatus } from "../route";
@@ -54,6 +55,9 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { id: rawId } = await context.params;
     const id = String(rawId || "").trim();

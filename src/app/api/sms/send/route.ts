@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAdminSession } from "@/lib/session-token";
 import { sendSms, isSmsConfigured } from '../../../../lib/sms';
 
 const CORS_HEADERS = {
@@ -8,6 +9,9 @@ const CORS_HEADERS = {
 };
 
 export async function POST(request: Request) {
+  if (!(await getAdminSession(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { to, message, from } = await request.json();
 
